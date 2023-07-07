@@ -1,0 +1,18 @@
+"""
+DO NOT CHANGE THESE, RATHER CHANGE THE .units MEMBER OF THE FORCEFIELD CLASS!!
+"""
+
+from openmm import unit
+
+DISTANCE_UNIT = unit.angstrom
+ENERGY_UNIT = unit.kilocalorie_per_mole
+FORCE_UNIT = ENERGY_UNIT / DISTANCE_UNIT
+ANGLE_UNIT = unit.radian
+CHARGE_UNIT = unit.elementary_charge
+MASS_UNIT = unit.dalton
+
+FORCE_CONSTANT_UNIT = ENERGY_UNIT / (DISTANCE_UNIT ** 2)
+ANGLE_FORCE_CONSTANT_UNIT = ENERGY_UNIT / (ANGLE_UNIT ** 2)
+TORSION_FORCE_CONSTANT_UNIT = ENERGY_UNIT
+
+RESIDUES = ['ACE', 'NME', 'CYS', 'ASP', 'SER', 'GLN', 'LYS', 'ILE', 'PRO', 'THR', 'PHE', 'ASN', 'GLY', 'HIS', 'LEU', 'ARG', 'TRP', 'ALA', 'VAL', 'GLU', 'TYR', 'MET', "HIE", "HID", "HIP", "DOP", "HYP"]

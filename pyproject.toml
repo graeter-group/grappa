@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grappa"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+    "dgl",
+    "torch",
+    "openmm",
+    "openff-toolkit"
+]
+
+[project.scripts]
+grappa_run = "grappa.run.client:run_client"
+grappa_eval = "grappa.run.eval:eval_client"
+
+[tool.setuptools]
+include-package-data = true
+# This is already the default behaviour if your are using
+# pyproject.toml to configure your build.
+# You can deactivate that with `include-package-data = false`
+
+[tool.setuptools.packages.find]
+where=["src"]

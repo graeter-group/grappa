@@ -1,0 +1,12 @@
+AMBER99SB*-ILDNP (Aliev et al., Proteins 82, 195, 2014)
+
+********************************************************************
+* Amber99sb*-ildnp is Amber99SB*-ildn with improved Pro and Hyp    *
+* parameters                                                       *
+* The primary publication (please cite) is                         *
+* Aliev, A.E., Kulke, M., Khaneja, H.S., Chudasama, V., Sheppard,  * 
+* T.D., Lanigan, R.M. Motional timescale predictions by molecular  * 
+* dynamics simulations: Case study using proline and               * 
+* hydroxyproline sidechain dynamics, Proteins 82:195–215 (2014)    *
+********************************************************************
+
