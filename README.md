@@ -10,10 +10,10 @@ Openmm and openff-toolkit are requirements that will be made optional in the fut
 `conda activate base && conda install -n base --override-channels -c conda-forge mamba 'python_abi=*=*cp*'`
 
 - Create a new conda environment, install grappas dependecies using mamba, clone the repository and install grappa from source:
-`
+```
 conda env create -n grappa && conda activate grappa
 mamba env update --file environment.yml
 
 git clone git@github.com:hits-mbm-dev/grappa.git; cd grappa;
 pip install -e .
-`
+```
