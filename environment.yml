@@ -1,0 +1,16 @@
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - dglteam/label/cu117
+dependencies:
+  - pytorch-cuda=11.7
+  - qcportal
+  - rdkit
+  - dgl
+  - openmm
+  - openmmtools
+  - openmmforcefields=0.11.2
+  - openff-toolkit
+  - openff-units
+  - python=3.8
