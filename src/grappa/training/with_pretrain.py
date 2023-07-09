@@ -8,8 +8,8 @@ import os
 import shutil
 
 import torch
-from grappa.training import esp_training, utilities
-from grappa.run.eval_utils import evaluate
+from . import grappa_training, utilities
+from ..run.eval_utils import evaluate
 import json
 import pandas as pd
 pd.options.display.float_format = '{:.2E}'.format
@@ -32,7 +32,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
     load = not (load_path is None and continue_path is None)
 
     if not load:
-        trainer = esp_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"mse":torch.nn.MSELoss(), "mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
+        trainer = grappa_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"mse":torch.nn.MSELoss(), "mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
@@ -109,7 +109,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
                     new_name = "1-" + file.name
                 shutil.copy(str(file), os.path.join(str(file.parent), new_name))
 
-        class myTrainer(esp_training.TrainSequentialParams):
+        class ScheduledTrainer(grappa_training.TrainSequentialParams):
             def get_scheduler(self, optimizer):
                 # meaning of threshold: to make the epoch count as better than before it has to reduce the loss by this amount, i.e. large threshold leads to early reduction in lr
                 # in this setting "better" means lowering the train loss by one percent
@@ -131,7 +131,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         if direct_eval:
             direct_epochs = 0
 
-        trainer = myTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
+        trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],

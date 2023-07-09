@@ -2,9 +2,9 @@
 This class is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
 """
 
-from grappa.training import training
-from grappa.models.energy import WriteEnergy
-from grappa.training import utilities
+from . import training
+from ..models.energy import WriteEnergy
+from . import utilities
 
 import dgl
 import os
@@ -14,14 +14,14 @@ import matplotlib.pyplot as plt
 
 
 
-# configure some methods to espaloma graph data
-class EspalomaTrain(training.Train):
+class GrappaTrain(training.Train):
     """
+    Training class with some methods configured to having a dataset of dgl graphs containing grappa data.
     This class is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
     """
     # some additional parameters for automated evaluation
     def __init__(self, *args, reference_energy="u_ref", reference_forcefield="amber99_sbildn", energy_writer=WriteEnergy(),levels=["n2","n3"], energies=["bond", "angle", "total"], bond_help=0, angle_help=0, average=True, errors=False, by_atom=False, eval_interval=None, eval_forces=False, **kwargs):
-        super(EspalomaTrain, self).__init__(*args, **kwargs)
+        super(GrappaTrain, self).__init__(*args, **kwargs)
         self.reference_energy = reference_energy
         self.reference_forcefield = reference_forcefield
         self.levels = levels
@@ -48,7 +48,7 @@ class EspalomaTrain(training.Train):
         return super().training_epoch(model, do_all)
 
     @staticmethod
-    def get_targets_(model, batch, device=None, reference_energy="u_ref", esp_energy="u", average=True, energy_writer=WriteEnergy()):
+    def get_targets_(model, batch, device=None, reference_energy="u_ref", energy="u", average=True, energy_writer=WriteEnergy()):
         if not device is None:
             batch = batch.to(device)
         batch = model(batch)
@@ -56,10 +56,10 @@ class EspalomaTrain(training.Train):
         if "weights" in list(batch.nodes["g"].data.keys()):
             raise RuntimeError("weighted case not implemented correctly with mean subtraction.")
             onehot_weights = out.nodes["g"].data["weights"]
-            y_pred = out.nodes["g"].data[esp_energy][onehot_weights!=0]
+            y_pred = out.nodes["g"].data[energy][onehot_weights!=0]
             y_true = out.nodes["g"].data[reference_energy][onehot_weights!=0]
         else:
-            y_pred = batch.nodes["g"].data[esp_energy]
+            y_pred = batch.nodes["g"].data[energy]
             y_true = batch.nodes["g"].data[reference_energy]
             if average:
                 y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
@@ -70,7 +70,7 @@ class EspalomaTrain(training.Train):
     
 
     def get_targets(self, model, batch, device=None):
-        return EspalomaTrain.get_targets_(model, batch, device, self.reference_energy, esp_energy="u", average=self.average, energy_writer=self.energy_writer)
+        return GrappaTrain.get_targets_(model, batch, device, self.reference_energy, energy="u", average=self.average, energy_writer=self.energy_writer)
 
     def get_num_instances(self, batch):
         if "weights" in list(batch.nodes["g"].data.keys()):
@@ -85,7 +85,7 @@ class EspalomaTrain(training.Train):
         return coll_fn
     
     def init_metric_data(self):
-        super(EspalomaTrain, self).init_metric_data()
+        super(GrappaTrain, self).init_metric_data()
         if self.eval_forces:
             self.metric_data["f_mae_vl"] = []
 
@@ -106,7 +106,7 @@ class EspalomaTrain(training.Train):
             if key in self.metric_data.keys():
                 self.metric_data[key].append(torch.nn.functional.l1_loss(force_diffs, torch.zeros_like(force_diffs)).detach().clone().to("cpu").item())
 
-        return super(EspalomaTrain, self).evaluation(model)
+        return super(GrappaTrain, self).evaluation(model)
 
     def get_dataset_info(self, loader):
         stat_dic = {}
@@ -303,19 +303,19 @@ class EspalomaTrain(training.Train):
                     batch = energy_writer(batch)
                 with torch.no_grad():
                     if atom_diff:
-                        batch = EspalomaTrain.make_atomic_numbers(batch)
+                        batch = GrappaTrain.make_atomic_numbers(batch)
                     for level in levels:
                         # for angle and bond, diff between atom types
                         if not "n4" in level and atom_diff:
-                            atoms = EspalomaTrain.get_parameters(batch, level=level, param_name="atoms", forcefield_name="")
+                            atoms = GrappaTrain.get_parameters(batch, level=level, param_name="atoms", forcefield_name="")
                             out[dataset_names[i]][level+"_atoms"] = torch.cat((out[dataset_names[i]][level+"_atoms"], atoms.to(out_device)), dim=0)
                         ff_name = forcefield_name
 
                         for param_name in param_names:
                             if "n4" in level:
                                 param_name = "k"
-                            y_true = EspalomaTrain.get_parameters(batch, level=level, param_name=param_name, forcefield_name=ff_name)
-                            y_pred = EspalomaTrain.get_parameters(batch, level=level, param_name=param_name, forcefield_name="")
+                            y_true = GrappaTrain.get_parameters(batch, level=level, param_name=param_name, forcefield_name=ff_name)
+                            y_pred = GrappaTrain.get_parameters(batch, level=level, param_name=param_name, forcefield_name="")
 
                             out[dataset_names[i]][level + "_" +param_name+"_pred"] = torch.cat((out[dataset_names[i]][level + "_" +param_name+"_pred"], (y_pred.flatten()).to(out_device)))
                             if not forcefield_name =="":
@@ -355,8 +355,8 @@ class EspalomaTrain(training.Train):
 
                         if contrib=="total":
                             en_name = "u_total"
-                            y_true = EspalomaTrain.get_energy(batch, level="g", energy_name="u_total", forcefield_name=forcefield_name)*energy_factor
-                            y_pred = EspalomaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor + EspalomaTrain.get_energy(batch, level="g", energy_name="u_nonbonded", forcefield_name=forcefield_name)*energy_factor
+                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u_total", forcefield_name=forcefield_name)*energy_factor
+                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor + GrappaTrain.get_energy(batch, level="g", energy_name="u_nonbonded", forcefield_name=forcefield_name)*energy_factor
                             AVERAGE = True
                             if AVERAGE:
                                 y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
@@ -364,8 +364,8 @@ class EspalomaTrain(training.Train):
 
                         elif contrib=="ref":
                             en_name = "u_ref"
-                            y_true = EspalomaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="ref")*energy_factor
-                            y_pred = EspalomaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor
+                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="ref")*energy_factor
+                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor
                             AVERAGE = True
                             if AVERAGE:
                                 y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
@@ -373,19 +373,19 @@ class EspalomaTrain(training.Train):
 
                         elif contrib=="reference_ff":
                             en_name = "u_reference_ff"
-                            y_true = EspalomaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="ref")*energy_factor
-                            y_pred = EspalomaTrain.get_energy(batch, level="g", energy_name="u_bonded", forcefield_name=forcefield_name)*energy_factor
+                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="ref")*energy_factor
+                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u_bonded", forcefield_name=forcefield_name)*energy_factor
                             AVERAGE = True
                             if AVERAGE:
                                 y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
                                 y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
 
                         else:
-                            y_pred = EspalomaTrain.get_energy(batch, level="g", energy_name=level, forcefield_name="") * energy_factor
+                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name=level, forcefield_name="") * energy_factor
                             if not en_name_graph+"_"+forcefield_name in batch.nodes["g"].data.keys():
                                 en_name_graph = level
                             if reference:
-                                y_true = EspalomaTrain.get_energy(batch, level="g", energy_name=en_name_graph, forcefield_name=forcefield_name) * energy_factor
+                                y_true = GrappaTrain.get_energy(batch, level="g", energy_name=en_name_graph, forcefield_name=forcefield_name) * energy_factor
                                 y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
                                 y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
                             elif contrib == "bonded_averaged":
@@ -394,7 +394,7 @@ class EspalomaTrain(training.Train):
                                 y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
                                 y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
                             else:
-                                y_true = EspalomaTrain.get_energy(batch, level="g", energy_name=en_name_graph, forcefield_name=forcefield_name) * energy_factor
+                                y_true = GrappaTrain.get_energy(batch, level="g", energy_name=en_name_graph, forcefield_name=forcefield_name) * energy_factor
 
                         out[dataset_names[i]][en_name+"_pred"] = torch.cat((out[dataset_names[i]][en_name+"_pred"], (y_pred.flatten()).to(out_device)))
                         if forcefield_name !="" or contrib=="ref":
@@ -423,7 +423,7 @@ class EspalomaTrain(training.Train):
                 name = "_"+name
  
         if parameter_dict is None:
-            parameter_dict = EspalomaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=param_names, levels=levels, forcefield_name=forcefield_name, dataset_names=dataset_names)
+            parameter_dict = GrappaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=param_names, levels=levels, forcefield_name=forcefield_name, dataset_names=dataset_names)
         
         for key in parameter_dict.keys():
             for param_name in param_names:
@@ -538,7 +538,7 @@ class EspalomaTrain(training.Train):
                 name = "_"+name
  
         if parameter_dict is None:
-            parameter_dict = EspalomaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=param_names, levels=levels, forcefield_name=forcefield_name, dataset_names=dataset_names, energies=[], atom_diff=False)
+            parameter_dict = GrappaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=param_names, levels=levels, forcefield_name=forcefield_name, dataset_names=dataset_names, energies=[], atom_diff=False)
 
         for l_name in dataset_names:
             for level in levels:
@@ -576,7 +576,7 @@ class EspalomaTrain(training.Train):
         assert forcefield_name!="" or energies==["ref"]
 
         if parameter_dict is None:
-            parameter_dict = EspalomaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=[], levels=[], forcefield_name=forcefield_name, dataset_names=dataset_names, energies=energies, model_device=device, grads=grads, atom_diff=False)
+            parameter_dict = GrappaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=[], levels=[], forcefield_name=forcefield_name, dataset_names=dataset_names, energies=energies, model_device=device, grads=grads, atom_diff=False)
         if dataset_names is None:
             if loaders is None:
                 raise RuntimeError("specify the dataset names if not using a list of loaders.")
@@ -661,15 +661,15 @@ class EspalomaTrain(training.Train):
         if parameter_dict is None:
             if verbose:
                 print("    Calculating parameters and energies for plots...")
-            parameter_dict = EspalomaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=param_names, levels=levels, forcefield_name=forcefield_name, dataset_names=dataset_names, energies=energies, model_device=device, grads=grads, atom_diff=by_atom)
+            parameter_dict = GrappaTrain.get_parameter_dict(model=model,loaders=loaders, param_names=param_names, levels=levels, forcefield_name=forcefield_name, dataset_names=dataset_names, energies=energies, model_device=device, grads=grads, atom_diff=by_atom)
 
-        EspalomaTrain.compare_energies(min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, folder_path=os.path.join(folder_path, "energies"), log_scale_accuracy=log_scale_accuracy, percentile=percentile, forcefield_name=forcefield_name, energies=energies, parameter_dict=parameter_dict, dataset_names=dataset_names, errors=errors, grads=grads, verbose=verbose)
+        GrappaTrain.compare_energies(min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, folder_path=os.path.join(folder_path, "energies"), log_scale_accuracy=log_scale_accuracy, percentile=percentile, forcefield_name=forcefield_name, energies=energies, parameter_dict=parameter_dict, dataset_names=dataset_names, errors=errors, grads=grads, verbose=verbose)
 
         if params:
-            EspalomaTrain.compare_parameters(min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, folder_path=os.path.join(folder_path, "parameters"), log_scale_accuracy=log_scale_accuracy, percentile=percentile, forcefield_name=forcefield_name, param_names=param_names, levels=levels, parameter_dict=parameter_dict, dataset_names=dataset_names, errors=errors, verbose=verbose)
+            GrappaTrain.compare_parameters(min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, folder_path=os.path.join(folder_path, "parameters"), log_scale_accuracy=log_scale_accuracy, percentile=percentile, forcefield_name=forcefield_name, param_names=param_names, levels=levels, parameter_dict=parameter_dict, dataset_names=dataset_names, errors=errors, verbose=verbose)
 
         if by_atom:
-            EspalomaTrain.compare_atom_parameters(min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, folder_path=os.path.join(folder_path, "atom_parameters"), percentile=percentile, forcefield_name=forcefield_name, param_names=param_names, levels=levels, parameter_dict=parameter_dict, partition_atoms=partition_atoms, dataset_names=dataset_names, errors=errors)
+            GrappaTrain.compare_atom_parameters(min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, folder_path=os.path.join(folder_path, "atom_parameters"), percentile=percentile, forcefield_name=forcefield_name, param_names=param_names, levels=levels, parameter_dict=parameter_dict, partition_atoms=partition_atoms, dataset_names=dataset_names, errors=errors)
 
 
     def upon_end_of_training(self, model, plots=True, suffix=""):
@@ -682,14 +682,14 @@ class EspalomaTrain(training.Train):
             if dset_names is None:
                 dset_names = [""]
             dnames = [n+"_vl" for n in dset_names]
-            EspalomaTrain.compare_all(model=torch.nn.Sequential(model, self.energy_writer), loaders=self.val_loaders, dataset_names=dnames, folder_path=os.path.join(self.version_path, "comparision"+suffix), forcefield_name=self.reference_forcefield, levels=self.levels, energies=self.energies, device="cpu")
+            GrappaTrain.compare_all(model=torch.nn.Sequential(model, self.energy_writer), loaders=self.val_loaders, dataset_names=dnames, folder_path=os.path.join(self.version_path, "comparision"+suffix), forcefield_name=self.reference_forcefield, levels=self.levels, energies=self.energies, device="cpu")
         else:
             pass
             # dset_names = self.dataset_names
             # if dset_names is None:
             #     dset_names = [""]
             # dnames = [n+"_vl" for n in dset_names]
-            # EspalomaTrain.compare_energies(model=model, loaders=self.val_loaders, dataset_names=dnames, folder_path=os.path.join(self.version_path, "energies"), forcefield_name="ref", levels=[], energies=["ref"])
+            # GrappaTrain.compare_energies(model=model, loaders=self.val_loaders, dataset_names=dnames, folder_path=os.path.join(self.version_path, "energies"), forcefield_name="ref", levels=[], energies=["ref"])
 
             print("Done")
 
@@ -699,28 +699,22 @@ class EspalomaTrain(training.Train):
             if dset_names is None:
                 dset_names = [""]
             dnames = [n+"_vl" for n in dset_names]
-            EspalomaTrain.compare_all(model=model, loaders=self.val_loaders, dataset_names=dnames, folder_path=os.path.join(path, "comparision"), forcefield_name=self.reference_forcefield, levels=self.levels, energies=self.energies)
+            GrappaTrain.compare_all(model=model, loaders=self.val_loaders, dataset_names=dnames, folder_path=os.path.join(path, "comparision"), forcefield_name=self.reference_forcefield, levels=self.levels, energies=self.energies)
 
 
 
 
-class TrainSequentialParams(EspalomaTrain):
+class TrainSequentialParams(GrappaTrain):
     """
-    This class is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
+    Class for first training on parameters directly, then on energies and forces.
+    This class is neither written efficiently, nor well documented or tested. Only to be used for internal testing. 
     """
-    DEFAULT_STATISTICS = {
-        'mean':
-            {'n2_k': torch.Tensor([763.2819]), 'n2_eq': torch.Tensor([1.2353]), 'n3_k': torch.Tensor([105.6576]), 'n3_eq': torch.Tensor([1.9750]), 'n4_k': torch.Tensor([ 1.5617e-01, -5.8312e-01,  7.0820e-02, -6.3840e-04,  4.7139e-04, -4.1655e-04]), 'n4_improper_k': torch.Tensor([ 0.0000, -2.3933,  0.0000,  0.0000,  0.0000,  0.0000])},
-        'std':
-            {'n2_k': torch.Tensor([161.2278]), 'n2_eq': torch.Tensor([0.1953]), 'n3_k': torch.Tensor([26.5965]), 'n3_eq': torch.Tensor([0.0917]), 'n4_k': torch.Tensor([0.4977, 1.2465, 0.1466, 0.0192, 0.0075, 0.0066]), 'n4_improper_k': torch.Tensor([0.0000, 4.0571, 0.0000, 0.0000, 0.0000, 0.0000])}}
-
-
 
     def __init__(self, *args, direct_epochs=10, bce_weight=0, classification_epochs=5, energy_factor=1., force_factor=0., param_factor=0., param_statistics=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         if param_statistics is None:
-            param_statistics = TrainSequentialParams.DEFAULT_STATISTICS
+            param_statistics = utilities.get_param_statistics
 
         self.param_statistics = param_statistics
         for key_ in self.param_statistics.keys():
