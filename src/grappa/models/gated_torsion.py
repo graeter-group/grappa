@@ -7,13 +7,19 @@ import torch
 from grappa.models.residual import ResidualDenseLayer
 from grappa.models.readout import skippedLinear
 
-"""
-Get a prediction by multiplying a final linear layer with a final softmax layer, allowing the network to get more accurate around zero.
-This is still very experimental. 
-"""
 #NOTE: Include a std deviation parameter here too and decide for the C infty version.
 
 class GatedTorsion(torch.nn.Module):
+    """
+    Multiply with a final binary softmax (ie sigmoid) layer, allowing the network to be more accurate around zero.
+    This is still experimental. 
+    
+    GatedTorsion layer that takes as input the output of the representation layer and writes the torsion parameters into the graph enforcing the permutation symmetry by a symmetrizer network \psi:
+    symmetric_feature = \sum_symmetric_permutations \psi(xi,xj,xk,xl)
+    out = \phi(symmetric_feature) * sigmoid(\chi(symmetric_feature))
+
+    \phi is a dense neural network and \chi is a classifier network, predicting a gate score of "how nonzero" the torsion parameter should be.
+    """
     def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=6, magnitude=0.001, turn_on_at_p=0.1, improper=False, dead=False, hardness=1):
         super().__init__()
         self.suffix = suffix

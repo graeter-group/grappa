@@ -46,10 +46,15 @@ class skippedLinear(torch.nn.Module):
         return h
 
 
-"""
-Use a NN with normalized output to predict bond parameters. pooling is trivial as of now. The mean and std deviation of the dataset can be overwritten by handing over a dict with key tree mean/std -> level_name
-"""
+
 class WriteBondParameters(torch.nn.Module):
+    """
+    Layer that takes as input the output of the representation layer and writes the torsion parameters into the graph enforcing the permutation symmetry by a symmetrizer network \psi:
+    symmetric_feature = \psi(xi,xj) + \psi(xj,xi)
+    out = \phi(symmetric_feature)
+
+    The default mean and std deviation of the dataset can be overwritten by handing over a stat_dict with stat_dict['mean'/'std'][level_name] = value
+    """
     def __init__(self, rep_feats, between_feats, suffix="", stat_dict=None):
         super().__init__()
 
@@ -110,6 +115,14 @@ class WriteBondParameters(torch.nn.Module):
     
 #%%
 class WriteAngleParameters(torch.nn.Module):
+    """
+    Layer that takes as input the output of the representation layer and writes the torsion parameters into the graph enforcing the permutation symmetry by a symmetrizer network \psi:
+    symmetric_feature = \psi(xi,xj,xk) + \psi(xk,xj,xi)
+    out = \phi(symmetric_feature)
+
+    The default mean and std deviation of the dataset can be overwritten by handing over a stat_dict with stat_dict['mean'/'std'][level_name] = value
+    """
+
     def __init__(self, rep_feats, between_feats, suffix="", stat_dict=None):
         super().__init__()
 

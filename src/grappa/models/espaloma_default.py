@@ -1,4 +1,4 @@
-# espaloma default model for comparision
+
 
 
 # MIT License
@@ -28,6 +28,9 @@ import torch
 
 
 def get_model():
+    """
+    Returns a default espaloma model (https://espaloma.wangyq.net/experiments/qm_fitting.html) for comparision. In the espaloma code, improper torsion were not considered yet.
+    """
     import espaloma as esp
     representation = esp.nn.Sequential(
         feature_units=117,
@@ -58,9 +61,9 @@ def get_model():
             return g
 
     model = torch.nn.Sequential(
-                    representation, readout, esp.nn.readout.janossy.ExpCoefficients(),
-                    esp.nn.readout.janossy.LinearMixtureToOriginal(),
-                    set_improper_zero(),
+        representation, readout, esp.nn.readout.janossy.ExpCoefficients(),
+        esp.nn.readout.janossy.LinearMixtureToOriginal(),
+        set_improper_zero(),
     )
     
     return model

@@ -2,15 +2,17 @@ import torch
  
 from grappa.models.geometry import GeometryInGraph
 
-# no factor 1/2 included!
-# does not support batching:
-# shape of k: tuple x periodicity
-# shape of angle: tuple x confs
-# phases are all zero
-# k[some_tuple] must be ordered with increasing periodicity, starting at 1
-# angle must be in radians
-# if offset if False, implements \sum_n k_n cos(n*phi) (i.e. without offset)
 def torsion_energy(k, angle, offset=True):
+    """
+    no factor 1/2 included!
+    does not support batching:
+    shape of k: tuple x periodicity
+    shape of angle: tuple x confs
+    phases are all zero
+    k[some_tuple] must be ordered with increasing periodicity, starting at 1
+    angle must be in radians
+    if offset if False, implements \sum_n k_n cos(n*phi) (i.e. without offset)
+    """
     max_periodicity = k.shape[1]
     # n_tuples = k.shape[0]
     # n_batches = angle.shape[0]
@@ -30,17 +32,23 @@ def torsion_energy(k, angle, offset=True):
     return energy
 
 
-# does not support batching
-# 1/2 is included!
-# shape of k, eq: tuple x 1
-# shape of distances: tuple x confs
 def harmonic_energy(k, eq, distances):
+    """
+    does not support batching
+    1/2 is included!
+    shape of k, eq: tuple x 1
+    shape of distances: tuple x confs
+    """
     energy = k*torch.square(distances-eq)
     # sum over all dims except the tuple dim
     energy = energy.sum(dim=0)
     return 0.5*energy
 
+
 class WriteEnergy(torch.nn.Module):
+    """
+    Class that writes the bonded energy of molecule conformations into a graph. First, torsional angles, angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["u"+suffix] and g.nodes["g"].data["u_"+term+suffix] for each term in terms.
+    """
     def __init__(self, terms=["n2", "n3", "n4", "n4_improper"], suffix="", offset_torsion=True):
         super().__init__()
         self.offset_torsion = offset_torsion
@@ -49,6 +57,9 @@ class WriteEnergy(torch.nn.Module):
         self.geom = GeometryInGraph()
 
     def forward(self, g):
+        """
+        First, torsional angles, angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["u"+suffix] and g.nodes["g"].data["u_"+term+suffix] for each term.
+        """
         if not "xyz" in g.nodes["n1"].data.keys():
             return g
         
