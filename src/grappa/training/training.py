@@ -14,7 +14,6 @@ import warnings
 import time
 import datetime
 import shutil
-import inspect
 import math
 # import main  # for __main__.__file__
 
@@ -173,8 +172,6 @@ class Train:
 
         self.loss_show_factor = loss_show_factor
 
-        self.loss_name = self.loss_name
-
         if device is None:
             self.device = "cpu"
             if torch.cuda.is_available():
@@ -183,7 +180,7 @@ class Train:
             self.device=device
 
         # evaluation and training metrics:
-        self.metrics = {self.loss_name: lambda batch, model: self.get_loss(model=model, batch=batch)}
+        self.metrics = {"loss": lambda y, y_pred: 0}
         self.metrics.update(self.evaluation_metrics)
 
         self.best_loss = float("inf")
@@ -414,6 +411,7 @@ class Train:
 
                 b = time.time()
                 loss.backward()
+                print('\n\n\n backward succesful \n\n\n')
                 self.backward_time += time.time() - b
 
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip_value)
@@ -531,7 +529,7 @@ class Train:
 
     # returns a dictionary containing the total values (summed over all instances) for each metric
     @staticmethod
-    def get_total_metrics(model, metrics:dict, loader, get_targets, get_num_instances, metrics_are_averaged=True, suffix="", device="cpu", target_factor=1., loss_factor=1.):
+    def get_total_metrics(model, metrics:dict, loader, get_targets, get_num_instances, metrics_are_averaged=True, suffix="", device="cpu", target_factor=1., get_loss=None):
         out = {}
         total_num_instances = 0
         for mname in metrics.keys():
@@ -545,18 +543,23 @@ class Train:
                 num_instances = get_num_instances(batch)
                 total_num_instances += num_instances
                 for mname in metrics.keys():
+                    if mname == "loss":
+                        if get_loss is None:
+                            continue
+                        else:
+                            with torch.no_grad():
+                                mfun = get_loss
                     mfun = metrics[mname]
-                    if "model" in inspect.getargspec(mfun)[0]:
-                        batchloss = mfun(model=model, batch=batch)*loss_factor
-                    else:
-                        batchloss = mfun(y_pred, y)
+                    batchloss = mfun(y_pred, y)
                     if metrics_are_averaged:
                         out[mname+suffix] += batchloss * num_instances
                     else:
                         out[mname+suffix] += batchloss
+
         for mname in metrics.keys():
             try:
-                out[mname+suffix] = out[mname+suffix].item()
+                if isinstance(out[mname+suffix], torch.Tensor):
+                    out[mname+suffix] = out[mname+suffix].item()
             except:
                 if math.isnan(out[mname+suffix]):
                     out[mname+suffix] = float("nan")
@@ -570,12 +573,13 @@ class Train:
     # returns a dictionary of metric_names containing a dictionary of dataset_names mapped to metric values
     # if average is True, the metric values will be averaged, else, every dict entry will be a tuple of total value and total number of instances
     @staticmethod
-    def calc_metrics(model, metrics:dict, loaders, dataset_names, get_targets, get_num_instances, metrics_are_averaged=True, average=True, device="cpu", target_factor=1., loss_factor=1.):
+    def calc_metrics(model, metrics:dict, loaders, dataset_names, get_targets, get_num_instances, metrics_are_averaged=True, average=True, device="cpu", target_factor=1., loss_factor=1., get_loss=None):
+        assert loss_factor == 1., "this is deprecated"
         with torch.no_grad():
             out = {}
             for idx, loader in enumerate(loaders):
                 l_name = dataset_names[idx]
-                l_out, t_num_inst = Train.get_total_metrics(model=model, metrics=metrics, loader=loader, metrics_are_averaged=metrics_are_averaged, device=device, get_targets=get_targets, get_num_instances=get_num_instances, target_factor=target_factor, loss_factor=loss_factor)
+                l_out, t_num_inst = Train.get_total_metrics(model=model, metrics=metrics, loader=loader, metrics_are_averaged=metrics_are_averaged, device=device, get_targets=get_targets, get_num_instances=get_num_instances, target_factor=target_factor, get_loss=get_loss)
                 out[l_name] = l_out
                 for key in l_out.keys():
                     if average:
@@ -601,7 +605,7 @@ class Train:
                 val_names = ["vl_" + n for n in self.dataset_names]
             dataset_names_ += val_names
 
-            out = Train.calc_metrics(model=model, metrics=metrics, loaders=loaders, dataset_names=dataset_names_, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor)
+            out = Train.calc_metrics(model=model, metrics=metrics, loaders=loaders, dataset_names=dataset_names_, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor, get_loss=self.get_loss)
             out["vl"] = {}
             for mname in metrics.keys():
                 total_loss = sum([out[l_name][mname][0] for l_name in val_names])
@@ -616,7 +620,7 @@ class Train:
                     tr_names = ["dummy"]
                 else:
                     tr_names = ["tr_" + n for n in self.dataset_names]
-                out_tr = Train.calc_metrics(model=model, metrics=metrics, loaders=self.train_loaders, dataset_names=tr_names, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor)
+                out_tr = Train.calc_metrics(model=model, metrics=metrics, loaders=self.train_loaders, dataset_names=tr_names, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor, get_loss=self.get_loss)
                 out_tr["tr"] = {}
                 for mname in metrics.keys():
                     total_loss = sum([out_tr[l_name][mname][0] for l_name in tr_names])
@@ -900,8 +904,9 @@ class Train:
         y_pred = y_pred.detach().cpu().numpy()
         
         max_error_plotted = None
+        y_mean = None
         if min_y is None or max_y is None:
-            y_mean = np.mean(y_true)
+            y_mean = np.mean(y_true)    
             max_plotted_a = np.percentile(np.abs(y_true-y_mean), percentile)
             max_plotted_b = np.percentile(np.abs(y_pred-y_mean), percentile)
             max_error_plotted = max(max_plotted_a, max_plotted_b)
@@ -1132,7 +1137,7 @@ class Train:
 
     def init_metric_data(self):
         self.metric_data = {"epoch":[]}
-        for metric in self.metrics.keys():
+        for metric in list(self.metrics.keys()):
             name = metric + "_vl"
             self.metric_data[name] = []
             if not self.dataset_names is None:

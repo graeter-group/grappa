@@ -31,7 +31,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
     # only do load and passed load_pretrained is true
     load = not (load_path is None and continue_path is None)
 
-    if not load:
+    if (not load) and (pretrain_epochs > 0):
         trainer = grappa_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"mse":torch.nn.MSELoss(), "mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
@@ -70,7 +70,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
             model.load_state_dict(torch.load(model_path, map_location=device))
             print("continuing training of model from ", model_path, "\n")
         else:
-            if not pretrain_name is None:
+            if (not pretrain_name is None) and (pretrain_epochs > 0):
                 model_path = os.path.join(storage_path,version_name,pretrain_name,"last_model.pt")
 
                 model.load_state_dict(torch.load(model_path, map_location=device))
@@ -131,7 +131,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         if direct_eval:
             direct_epochs = 0
 
-        trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
+        trainer = ScheduledTrainer(energy_factor=0, force_factor=0, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
