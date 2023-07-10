@@ -71,3 +71,5 @@ npy_charge_dicts/
 **/model.pth
 
 mains/runs
+
+.venv

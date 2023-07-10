@@ -15,7 +15,6 @@ import time
 import datetime
 import shutil
 import inspect
-import pytorch_warmup as warmup
 import math
 # import main  # for __main__.__file__
 
@@ -115,6 +114,7 @@ class Train:
     def get_warmup_scheduler(self, optimizer):
         # based on the pytorch_warmup library:
         # use the default values, i.e. the number of warmup steps is warmup_period = 2 / (1 - beta2)
+        import pytorch_warmup as warmup
         return warmup.UntunedLinearWarmup(optimizer)
         
 
@@ -213,7 +213,7 @@ class Train:
             self.warmup_scheduler = self.get_warmup_scheduler(self.optimizer)
 
         else:
-            self.warmup_scheduler = warmup.LinearWarmup(self.optimizer, warmup_period=1)
+            self.warmup_scheduler = None
         self.warmup_scheduler_helper = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=1, gamma=1.) # does nothing, only beacuse the warmup scheduler needs a scheduler to work
 
 
@@ -448,9 +448,11 @@ class Train:
             model = self.evaluation(model)
             self.log()
             if not self.scheduler is None:
-                with self.warmup_scheduler.dampening():
-                    # self.scheduler criterion is the last train loss:
-                    self.scheduler.step(self.metric_data[self.loss_name+"_tr"][-1])
+                # commented out due for independency of pytorch-warmup
+                # with self.warmup_scheduler.dampening():
+                #     # self.scheduler criterion is the last train loss:
+                #     self.scheduler.step(self.metric_data[self.loss_name+"_tr"][-1])
+                self.scheduler.step(self.metric_data[self.loss_name+"_tr"][-1])
                     
         # write the new lr to the param file
         lr = self.optimizer.state_dict()["param_groups"][0]["lr"]
