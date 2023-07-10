@@ -5,6 +5,8 @@ from grappa.training.with_pretrain import train_with_pretrain
 from grappa.training.utilities import get_param_statistics
 from grappa.run.eval_utils import evaluate
 
+from ..deploy.deploy import get_default_model_config, model_from_config
+
 import torch
 from pathlib import Path
 from typing import Union, List, Tuple
@@ -16,20 +18,17 @@ import math
 import pandas as pd
 
 
-
-def get_default_args():
+def get_default_run_config():
     args = {
+        "ds_path":None,
         "storage_path":str(Path.cwd()/Path("versions")),
         "force_factor":1.,
         "energy_factor":1.,
-        "width":512,
-        "n_res":5,
         "param_weight":0.1,
         "confs":None,
         "mols":None,
         "seed":0,
         "test":False,
-        "in_feat_name":["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "is_radical"],
         "pretrain_steps":500,
         "train_steps":1e5,
         "patience":5e-2,
@@ -39,60 +38,84 @@ def get_default_args():
         "description":[""],
         "lr":1e-5,
         "warmup":False,
-        "partial_charges":True,
-        "n_heads":6,
+        "name":"",
+        "test_ds_tags":None,
+        "recover_optimizer":False,
     }
+
     return args
 
 
-def run_from_config(config_path:Union[Path,str]=None, idx=None, **kwargs):
+def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Union[Path,str]=None, idx=None, **kwargs):
     """
     Load default parameters from a config file and overwrite them with kwargs passed by the user.
     """
+
     # load the default args
-    args = get_default_args()
+    run_args = get_default_run_config()
+    model_args = get_default_model_config()
 
-
-    # overwrite the default args with those occuring in the config file
-    if not config_path is None:
-        if not os.path.exists(str(config_path)):
-            print(f"Config file {str(config_path)} does not exist, using the passed and default args only.")
+    # overwrite the default args with those occuring in the config file or those passed by kwargs with priority for kawrgs:
+    for path in (run_config_path, model_config_path):
+        if not path is None:
+            # load the config file (this has higher prio than the defualt args but lower than the kwargs)
+            if os.path.exists(str(path)):
+                config_args = run_utils.load_yaml(path)
+            else:
+                raise ValueError(f"Config file {str(path)} does not exist, using the passed and default args only.")
         else:
-            config_args = run_utils.load_yaml(config_path)
-            for key in config_args.keys():
-                args[key] = config_args[key]
+            config_args = {}
 
-    # overwrite the current args with those passed by the user
-    for key in kwargs.keys():
-        args[key] = kwargs[key]
+        # all arguments that are specified:
+        keys = set(config_args.keys())
+        keys = keys.union(set(kwargs.keys()))
+
+        for key in keys:
+            # if provided in kwargs, overwrite it
+            if key in kwargs.keys():
+                config_args[key] = kwargs[key]
+            # write the argument in the run_args or model_args dict
+            if key in run_args.keys() or key in ["load_path", "continue_path"]:
+                run_args[key] = config_args[key]
+            elif key in model_args.keys():
+                model_args[key] = config_args[key]
+            else:
+                raise ValueError(f"key {key} not recognized")
 
 
-    if not "ds_path" in args.keys():
+    if not "ds_path" in run_args.keys():
+        raise ValueError("ds_path must be specified in the config file or as a keyword argument.")
+    if run_args["ds_path"] is None:
         raise ValueError("ds_path must be specified in the config file or as a keyword argument.")
 
-    # these are not stored in the config file
-    if not "load_path" in args.keys():
-        args["load_path"] = None
-    if not "continue_path" in args.keys():
-        args["continue_path"] = None
+    # these are not stored in the config file, we set them to None
+    if not "load_path" in run_args.keys():
+        run_args["load_path"] = None
+    if not "continue_path" in run_args.keys():
+        run_args["continue_path"] = None
+
 
     # write a config file to the version path
-    run_utils.write_config(args, idx)
+    run_utils.write_run_config(run_args, idx)
 
+    run_utils.write_model_config(model_args=model_args, run_args=run_args)
 
-    if "description" in args.keys():
-        args.pop("description")
+    if "description" in run_args.keys():
+        run_args.pop("description")
     
-    if "name" in args.keys():
-        args.pop("name")
+    if "name" in run_args.keys():
+        run_args.pop("name")
 
-    run_once(**args)
+
+    run_once(model_config=model_args, **run_args)
+
+
 
 
 # param weight is wrt to the energy mse
 # the zeroth data
 # NOTE: use model_args dict, loaded from a config file
-def run_once(storage_path, version_name, pretrain_name, width=512, n_res=3, param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, in_feat_name=None, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, ref_ff="amber99sbildn", device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, partial_charges:bool=False, old_model=False, n_heads=6):
+def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config(), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, ref_ff="amber99sbildn", device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False):
 
 
     if device is None:
@@ -154,16 +177,8 @@ def run_once(storage_path, version_name, pretrain_name, width=512, n_res=3, para
     # only use the training set for statistics
     statistics = get_param_statistics(loader=tr_loader, class_ff=ref_ff)
 
-    REP_FEATS = width
-    BETWEEN_FEATS = width*2
-
-    bonus_feats = []
-    bonus_dims = []
-    if partial_charges:
-        bonus_feats = ["q_ref"]
-        bonus_dims = [1]
-
-    model = get_models.get_full_model(statistics=statistics, n_res=n_res, rep_feats=REP_FEATS, between_feats=BETWEEN_FEATS, in_feat_name=in_feat_name, bonus_features=bonus_feats, bonus_dims=bonus_dims, old=old_model, n_heads=n_heads)
+    # initialize the model
+    model = model_from_config(config=model_config, stat_dict=statistics)
 
     ###################
     pretrain_epochs = math.ceil(pretrain_steps/len(ds_tr))
@@ -172,6 +187,7 @@ def run_once(storage_path, version_name, pretrain_name, width=512, n_res=3, para
 
     ###################
 
+    # do the actual training (this function is a mess, will be cleaned up)
     train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=3, direct_eval=False, final_eval=False, reduce_factor=0.5, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup)
 
     ###################

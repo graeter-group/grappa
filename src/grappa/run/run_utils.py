@@ -278,17 +278,17 @@ def init_dirs(storage_path:str, idx:int, vname:str='', continue_path:str=None):
     return str(version_name), str(pretrain_name)
 
 
-def write_config(args, idx=None):
-    version_name, pretrain_name = init_dirs(storage_path=args["storage_path"], idx=idx, vname=args["name"], continue_path=args["continue_path"])
-    args["version_name"] = version_name
-    args["pretrain_name"] = pretrain_name
-    args_ = copy.deepcopy(args)
-    args_.pop("load_path")
-    args_.pop("continue_path")
+def write_run_config(run_args, idx=None):
+    version_name, pretrain_name = init_dirs(storage_path=run_args["storage_path"], idx=idx, vname=run_args["name"], continue_path=run_args["continue_path"])
+    run_args["version_name"] = version_name
+    run_args["pretrain_name"] = pretrain_name
+    run_args_ = copy.deepcopy(run_args)
+    run_args_.pop("load_path")
+    run_args_.pop("continue_path")
 
-    conf_p = Path(args["storage_path"])/Path(version_name)/Path("config.yaml")
+    conf_p = Path(run_args["storage_path"])/Path(run_args["version_name"])/Path("run_config.yaml")
 
-    if not args["continue_path"] is None:
+    if not run_args["continue_path"] is None:
         for file in conf_p.parent.glob("*.yaml"):
             # rename the old config:
             if len(file.name.split("-")) != 1:
@@ -298,7 +298,14 @@ def write_config(args, idx=None):
                 new_name = "1-" + file.name
             shutil.copy(str(file), os.path.join(str(file.parent), new_name))
 
-    store_yaml(args_, str(conf_p))
+    store_yaml(run_args_, str(conf_p))
+
+def write_model_config(model_args, run_args):
+    conf_p = Path(run_args["storage_path"])/Path(run_args["version_name"])/Path("model_config.yaml")
+    store_yaml(model_args, str(conf_p))
+
+
+
 
 
 def get_loaders(datasets:Tuple[List[dgl.graph]])->Tuple[dgl.dataloading.GraphDataLoader]:

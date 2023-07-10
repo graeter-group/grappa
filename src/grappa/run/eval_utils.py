@@ -63,7 +63,7 @@ ONELETTER = {
 
 import torch
 from grappa.training.utilities import get_grad
-from grappa.training.esp_training import EspalomaTrain
+from grappa.training.grappa_training import GrappaTrain
 from grappa.run import run_utils
 from grappa.models import get_models
 import matplotlib.pyplot as plt
@@ -435,7 +435,7 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
     if plot:
         if verbose:
             print("  Plotting...")
-        EspalomaTrain.compare_all(model=model, loaders=loaders, dataset_names=loader_names, device=device, energies=["ref", "reference_ff"], forcefield_name="amber99sbildn", folder_path=plot_folder, grads=on_forces, verbose=verbose)
+        GrappaTrain.compare_all(model=model, loaders=loaders, dataset_names=loader_names, device=device, energies=["ref", "reference_ff"], forcefield_name="amber99sbildn", folder_path=plot_folder, grads=on_forces, verbose=verbose)
 
 
     return {"eval_data":eval_data, "rmse_data": rmse_data}

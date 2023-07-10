@@ -10,18 +10,16 @@ def run_client():
         epilog="If not using the ds_path argument, your dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'.",
         description="Run a model from a config file. If no config file is specified, a default config file is created.")
 
-    parser.add_argument('--config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
+    parser.add_argument('--run_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
+    parser.add_argument('--model_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
     parser.add_argument('-p', '--ds_path', type=str, nargs='+', default=None, help="path to dataset. setting this overwrites the effect of ds_tag. (default: None)")
     parser.add_argument('--ds_base', type=str, default="/hits/fast/mbm/seutelf/data/datasets/PDBDatasets", help="if tags are used, this is the base path to the datasets (default: /hits/fast/mbm/seutelf/data/datasets/PDBDatasets)")
     parser.add_argument('-t', '--ds_tag', type=str, nargs='+', default=[], help=" (dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'. default: [])")
     parser.add_argument('--force_factor','-f', type=float, default=None, help=" (default: 1.)")
     parser.add_argument('--energy_factor','-e', type=float, default=None, help=" (default: 1.)")
-    parser.add_argument('--n_res', type=int, default=None, help=" (default: 3)")
-    parser.add_argument('--width', type=int, default=None, help=" (default: 512)")
     parser.add_argument('--recover_optimizer', action='store_true', default=False, help=" (if true, instead of a warm restart, we use the optimizer from the version specified by --load_path. default: False)")
     parser.add_argument('--warmup', action='store_true', default=False, help=" (if true, instead of a warm restart, we use the optimizer from the version specified by --load_path. default: False)")
     parser.add_argument('--continue_path', type=str, default=None, help="the version path of the version where we wish to continue training. the old logfile and models are stored, the rest is overwritten. (default: None)") 
-    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "is_radical"])')
     parser.add_argument('--param_weight', type=float, default=None, help=" (default: 0)")
     parser.add_argument('-d', '--description', type=str, nargs='+', default=[""], help='does nothing. only written in the config file for keeping track of several options that could be specified by hand like different datasets. (default: [""])')
     parser.add_argument('--load_path', type=str, default=None, help="path to the version-directory of the model to continue from. this overwrites the pretraining options, i.e. if both are specified, there is no pretraining. either absolute or relative to the path from where the command is being run. (default: None)")
@@ -39,11 +37,16 @@ def run_client():
     parser.add_argument('--ref_ff', type=str, default="amber99sbildn", help="suffix of the reference parameters for pretraining and plotting (default: 'amber99sbildn')")
     parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-6')")
     parser.add_argument('--device', type=str, default=None)
-    parser.add_argument('--partial_charges', default=None, action="store_true", help="Whether or not to use partial charges as an input feature. (default: False)")
     parser.add_argument('--ds_short', default=[], type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
     parser.add_argument('--collagen', default=False, action="store_true", help="Whether or not to use the collagen forcefield and dataset, i.e. including hyp and dop. (default: False)")
-    parser.add_argument('--old_model', '-o', default=False, action="store_true", help="Whether or not to use the old model architecture (default: False)")
+
+    parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
+    parser.add_argument('--n_att', type=int, default=None, help=" (default: 3)")
     parser.add_argument('--n_heads', type=int, default=None, help="Number of attention heads in the graph attention model. (default: 6)")
+    parser.add_argument('--width', type=int, default=None, help=" (default: 512)")
+    parser.add_argument('--rep_feats', type=int, default=None, help=" (default: 512)")
+    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "is_radical", "q_ref"])')
+    parser.add_argument('--old_model', '-o', default=False, action="store_true", help="Whether or not to use the old model architecture (default: False)")
 
     args = parser.parse_args()
 
@@ -64,7 +67,7 @@ def run_client():
 
     tags = None
     if args.ds_path is None:
-        if args.ds_tag is None and args.config_path is None:
+        if args.ds_tag is None and args.run_config_path is None:
             raise ValueError("either ds_path or ds_tag or a config path must be specified")
     if len(args.ds_tag)>0:
         if args.ds_path is None:
@@ -82,12 +85,19 @@ def run_client():
     if seeds is None:
         seeds = [0]
 
-    config_path = args.config_path
+    run_config_path = args.run_config_path
+    model_config_path = args.model_config_path
 
-    assert args.continue_path is None or config_path is None, "cannot specify both continue_path and config_path"
+    assert args.continue_path is None or run_config_path is None, "cannot specify both continue_path and run_config_path"
 
     if not args.continue_path is None:
-        config_path = f"{args.continue_path}/config.yaml"
+        run_config_path = f"{args.continue_path}/config.yaml"
+
+    if not args.continue_path is None:
+        model_config_path = f"{args.continue_path}/model_config.yaml"
+    
+    if not args.load_path is None:
+        model_config_path = f"{args.load_path}/model_config.yaml"
 
     args = vars(args)
     
@@ -96,7 +106,8 @@ def run_client():
     args.pop("seed")
     args.pop("ds_tag")
     args.pop("ds_base")
-    args.pop("config_path")
+    args.pop("run_config_path")
+    args.pop("model_config_path")
 
     if not args["continue_path"] is None:
         args["ds_path"] = None
@@ -112,12 +123,13 @@ def run_client():
         specified_args["test_ds_tags"] = tags
         specified_args["description"] += tags
 
+    print(specified_args)
 
     if len(seeds)==1:
-        run_from_config(config_path=config_path, idx=None, seed=seeds[0], **specified_args)
+        run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=None, seed=seeds[0], **specified_args)
     else:
         for idx, seed in enumerate(seeds):
-            run_from_config(config_path=config_path, idx=idx, seed=seed, **specified_args)
+            run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=idx, seed=seed, **specified_args)
 
 if __name__ == "__main__":
     run_client()
