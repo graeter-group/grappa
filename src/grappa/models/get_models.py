@@ -38,18 +38,19 @@ def get_readout(statistics, rep_feats=500, between_feats=1000, old=False):
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=1024, n_res=5, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge"], bonus_features=[], bonus_dims=[], old=False, n_heads=6):
+def get_full_model(statistics=None, rep_feats=512, between_feats=1024, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "q_ref"], bonus_features=[], bonus_dims=[], old=False, n_heads=6):
     
     if statistics is None:
         statistics = get_default_statistics()
 
     if old:
-        representation = old_Representation(h_feats=between_feats, out_feats=rep_feats, n_residuals=n_res, n_conv=1, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims)
+        assert n_att == 0, "old model does not support attention"
+        representation = old_Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims)
     else:
-        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_res, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads)
+        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads)
 
 
-    readout = get_readout(statistics, rep_feats=rep_feats, between_feats=between_feats, old=old)
+    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=between_feats, old=old)
 
     model = torch.nn.Sequential(
         representation,

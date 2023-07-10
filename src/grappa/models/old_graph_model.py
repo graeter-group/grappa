@@ -42,7 +42,7 @@ class ResidualGraphBlock(torch.nn.Module):
 Implementing a stack of ResidualGraphBlocks followed by message passing layers without skip connection and one large skip connection skipping all message passing steps. Also implements linear layers with node-level-shared weights as first and final layer.
 """
 class Representation(torch.nn.Module):
-    def __init__(self, h_feats:int, out_feats:int, in_feats:int=None, n_residuals=3, n_conv=2, large_skip:bool=True, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "partial_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
+    def __init__(self, h_feats:int, out_feats:int, in_feats:int=None, n_residuals=3, n_conv=2, large_skip:bool=True, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "q_ref", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
         super().__init__()
 
         if not isinstance(in_feat_name, list):
@@ -57,7 +57,7 @@ class Representation(torch.nn.Module):
                 "mass": 1,
                 "degree": 7,
                 "formal_charge": 1,
-                "partial_charge":1,
+                "q_ref":1,
                 "is_radical": 1,
             }
             # overwrite/append to these default values:

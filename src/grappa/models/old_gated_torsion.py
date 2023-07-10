@@ -1,10 +1,9 @@
 #%%
 
-# better residuals: skip further, not layerwise, concat instead of add
 
 import torch
 
-from grappa.models.residual import ResidualDenseLayer
+from grappa.models.old_readout import ResidualDenseLayer
 
 
 """

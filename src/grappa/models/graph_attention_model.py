@@ -5,7 +5,7 @@ import dgl
 from typing import List, Tuple, Dict, Union, Callable
 import math
 
-class ResidualGraphBlock(torch.nn.Module):
+class ResidualAttentionBlock(torch.nn.Module):
     """
     Implements one residual layer consisting of 1 multi-head-attention message passing step (linear, activation on the node features with shared weights), and a skip connection. Block has a nonlinearity at the end but not in the beginning.
     Can only be used for homogeneous graphs.
@@ -15,8 +15,14 @@ class ResidualGraphBlock(torch.nn.Module):
     Layer norm is performed at the beginning of the block, over the feature dimension, not the node dimension.
     The gated_attention parameter determines whether the procedure from https://arxiv.org/pdf/1803.07294.pdf is used, assigning each attention head a gate that determines how important the head is. This is applied before the fully connected layer that mixes the different heads.
     """
-    def __init__(self, in_feats:int, out_feats:int, num_heads:int=10, activation=torch.nn.ELU(), self_interaction=True, layer_norm=True, attention_layer=dgl.nn.pytorch.conv.DotGatConv, gated_attention:bool=False):
+    def __init__(self, in_feats:int, out_feats:int=None, num_heads:int=10, activation=torch.nn.ELU(), self_interaction=True, layer_norm=True, attention_layer=dgl.nn.pytorch.conv.DotGatConv, gated_attention:bool=False):
         super().__init__()
+
+        if out_feats is None:
+            out_feats = in_feats
+            
+        self.in_feats = in_feats
+        self.out_feats = out_feats
 
         assert attention_layer in [dgl.nn.pytorch.conv.DotGatConv, dgl.nn.pytorch.conv.GATConv, dgl.nn.pytorch.conv.GATv2Conv], "Attention layer must be one of the dgl attention layers"
 
@@ -56,6 +62,7 @@ class ResidualGraphBlock(torch.nn.Module):
 
     def forward(self, g, h):
 
+        # do the skip only after the layer norm to keep normalization
         if self.do_layer_norm:
             h = self.layer_norm(h)
  
@@ -73,7 +80,8 @@ class ResidualGraphBlock(torch.nn.Module):
         h = h.flatten(start_dim=-2, end_dim=-1) # flatten the head dimension to shape (num_nodes, out_feat*num_heads)
         h = self.head_reducer(h) # now has the shape num_nodes, out_feats
 
-        h += h_skip
+        if self.in_feats == self.out_feats:
+            h += h_skip
 
         if not self.self_interaction is None:
 
@@ -88,11 +96,79 @@ class ResidualGraphBlock(torch.nn.Module):
 
 
 
-"""
-Implementing a stack of ResidualGraphBlocks followed by message passing layers without skip connection and one large skip connection skipping all message passing steps. Also implements linear layers with node-level-shared weights as first and final layer.
-"""
+class ResidualConvBlock(torch.nn.Module):
+    """
+    Implements one residual layer consisting of 1 graph convolutional step, and a skip connection. Block has a nonlinearity at the end but not in the beginning.
+    Can only be used for homogeneous graphs. If self_interaction is True, a skipped linear layer is put behind the convolution.
+    """
+    def __init__(self, in_feats, *message_args, activation=torch.nn.ELU(), message_class=dgl.nn.pytorch.conv.SAGEConv, self_interaction=True, layer_norm=True):
+        super().__init__()
+
+        if len(message_args) == 0 and message_class == dgl.nn.pytorch.conv.SAGEConv:
+            message_args = (in_feats, in_feats, "mean")
+
+        self.module = message_class(*message_args)
+        self.activation = activation
+
+        if layer_norm:
+            self.layer_norm = torch.nn.LayerNorm(normalized_shape=(in_feats,)) # normalize over the feature dimension, not the node dimension (since this is not of constant length)
+
+        if self_interaction:
+            self.self_interaction = torch.nn.Sequential(
+                torch.nn.Linear(in_feats,in_feats),
+                self.activation,
+            )
+            if layer_norm:
+                self.interaction_norm = torch.nn.LayerNorm(normalized_shape=(in_feats,))
+        else:
+            self.self_interaction = None
+
+
+        self.do_layer_norm = layer_norm
+
+
+
+    def forward(self, g, h):
+
+        # do the skip only after the layer norm to keep normalization
+        if self.do_layer_norm:
+            h = self.layer_norm(h)
+
+        h_skip = h
+
+        h = self.module(g,h) + h_skip
+
+        if self.self_interaction is not None:
+            if self.do_layer_norm:
+                h = self.interaction_norm(h)
+            
+            h_skip = h
+            h = self.self_interaction(h)
+            h += h_skip
+
+        return h
+
+
+
 class Representation(torch.nn.Module):
-    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=5, n_heads=10, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "q_ref", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[], many_skips:bool=False):
+    """
+    Implementing:
+        - a single linear layer with node-level-shared weights mapping from in_feats to h_feats
+        - a stack of n_conv ResidualConvBlocks with self interaction and width h_feats
+        - a stack of n_att ResidualAttentionBlocks with self interaction, output width h_feats and num_heads attention heads
+        - a single linear layer with node-level-shared weights mapping from h_feats to out_feats
+    """
+    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "q_ref", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
+        """
+        Implementing:
+            - a single linear layer with node-level-shared weights mapping from in_feats to h_feats
+            - a stack of n_conv ResidualConvBlocks with self interaction and width h_feats
+            - a stack of n_att ResidualAttentionBlocks with self interaction, output width h_feats and num_heads attention heads
+            - a single linear layer with node-level-shared weights mapping from h_feats to out_feats
+
+        If in_feats is None, the number of input features are inferred from the in_feat_name. The input graph of the forward call must have an entry at g.nodes["n1"].data[feat] for each feat in in_feat_name.
+        The in_feat_dims dictionary can be used to overwrite the default dimensions of the in-features.
+        """
         super().__init__()
 
         if not isinstance(in_feat_name, list):
@@ -141,9 +217,14 @@ class Representation(torch.nn.Module):
             torch.nn.Linear(h_feats, out_feats),
         )
 
-        self.blocks = torch.nn.ModuleList([
-                ResidualGraphBlock(in_feats=h_feats, out_feats=h_feats, num_heads=n_heads, activation=torch.nn.ELU(), self_interaction=True)
+        self.conv_blocks = torch.nn.ModuleList([
+                ResidualConvBlock(in_feats=h_feats, activation=torch.nn.ELU(), self_interaction=True)
                 for i in range(n_conv)
+            ])
+        
+        self.att_blocks = torch.nn.ModuleList([
+                ResidualAttentionBlock(in_feats=h_feats, num_heads=n_heads, activation=torch.nn.ELU(), self_interaction=True)
+                for i in range(n_att)
             ])
 
 
@@ -156,12 +237,16 @@ class Representation(torch.nn.Module):
 
         g_ = dgl.to_homogeneous(g.node_type_subgraph(["n1"]))
 
-        for block in self.blocks:
+        for block in self.conv_blocks:
+            h = block(g_,h)
+
+        for block in self.att_blocks:
             h = block(g_,h)
 
         h = self.post_dense(h)
         g.nodes["n1"].data["h"] = h
         return g
+    
 # %%
 # model = Representation(256, out_feats=1, in_feats=1)
 

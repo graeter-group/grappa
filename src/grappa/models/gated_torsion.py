@@ -1,10 +1,6 @@
 #%%
-
-# better residuals: skip further, not layerwise, concat instead of add
-
 import torch
 
-from grappa.models.residual import ResidualDenseLayer
 from grappa.models.readout import skippedLinear
 
 #NOTE: Include a std deviation parameter here too and decide for the C infty version.
@@ -13,7 +9,7 @@ class GatedTorsion(torch.nn.Module):
     """
     Multiply with a final binary softmax (ie sigmoid) layer, allowing the network to be more accurate around zero.
     This is still experimental. 
-    
+
     GatedTorsion layer that takes as input the output of the representation layer and writes the torsion parameters into the graph enforcing the permutation symmetry by a symmetrizer network \psi:
     symmetric_feature = \sum_symmetric_permutations \psi(xi,xj,xk,xl)
     out = \phi(symmetric_feature) * sigmoid(\chi(symmetric_feature))
