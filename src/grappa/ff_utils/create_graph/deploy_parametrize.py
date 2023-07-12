@@ -1,24 +1,18 @@
 
 # NOTE: If we also have e.g. water, we only want to parametrize some part of the topology. how can we do this in openmm?
 
-# supress openff warning:
-import logging
-logging.getLogger("openff").setLevel(logging.ERROR)
-from openff.toolkit.topology import Molecule
-
 import openmm
 import numpy as np
 import tempfile
 import os.path
 import torch
 import dgl
-import openff.toolkit.topology
 from typing import Union
 from pathlib import Path
 from typing import List, Tuple, Dict, Union, Callable
 
 from . import utils, find_radical
-from .. import units, charge_models
+from ... import units
 from ..classical_ff.parametrize import add_radical_residues
 
 import copy

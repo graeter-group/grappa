@@ -14,6 +14,69 @@ import copy
 
 #%%
 
+def add_radical_residues(forcefield, topology):
+    """
+    For each residue that is not matched to a template, add a template with the same atoms but with the Hs removed to be able to parametrize radicals.
+    NOTE: This might cause issues for histidin if the histidin type cannot be determined due to the missing Hs.
+    """
+
+    forcefield = copy.deepcopy(forcefield)
+
+    # effectively delete the residues that can be mistaken with radicals:
+    # LYN and CYM
+    ######################
+    try:
+        matches = forcefield.getMatchingTemplates(topology)
+    except ValueError:
+        # this happens when there are no matched residues
+        matches = None
+    
+    if not matches is None:
+        for (residue, match) in zip(topology.residues(), matches):
+            if match.name in generate_unmatched_templates.corrections.keys():
+                match.name = ""
+    ######################
+
+    [templates, residues] = generate_unmatched_templates(topology=topology, forcefield=forcefield)
+
+    for t_idx, template in enumerate(templates):
+        resname = template.name
+        if resname == "HIS":
+            resname = "HIE"
+        ref_template = forcefield._templates[resname]
+        # the atom names stored in the template of the residue
+        ref_names = [a.name for a in ref_template.atoms]
+        ref_names = [one_atom_replace_h23_to_h12(n, resname=resname) for n in ref_names]
+
+        # check whether all atoms can be matched:
+        atom_names = [a.name for a in template.atoms]
+        diff1 = set(atom_names) - set(ref_names)
+        diff2 = set(ref_names) - set(atom_names)
+        if len(diff2) > 2 or len(diff1) > 0:
+            raise ValueError(f"Template {template.name} does not match reference template:\nIn pdb, not in reference: {diff1}\nIn reference, not in pdb:{diff2},\nallowed is at most one Hydrogen atom that is not in the pdb and no atom that is not in the reference.")
+            
+
+        for atom in template.atoms:
+            name = atom.name
+
+            # find the atom with that name in the reference template
+            try:
+                ref_idx = ref_names.index(name)
+            except ValueError:
+                print(f"Atom {name} not found in reference template {template.name}: {ref_names}")
+                raise
+            atom.type = ref_template.atoms[ref_idx].type
+
+        # create a new template
+        template.name = template.name +f"_rad_{t_idx}"
+        forcefield.registerResidueTemplate(template)
+
+    for res in generate_unmatched_templates.corrections.keys():
+        forcefield._templates.pop(res)
+
+    return forcefield
+
+
 def generate_unmatched_templates(topology:topology, forcefield:ForceField=ForceField("amber99sbildn.xml")):
     """
     Removes the entries LYN and CYM from the forcefield.

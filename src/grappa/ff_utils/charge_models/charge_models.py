@@ -11,7 +11,7 @@ from pathlib import Path
 from ..create_graph.find_radical import get_radicals
 from ..create_graph.read_pdb import replace_h23_to_h12, one_atom_replace_h23_to_h12
 from ..classical_ff.collagen_utility import get_collagen_forcefield
-from .. import units as grappa_units
+from ... import units as grappa_units
 
 CHARGE_DICT_UNIT = unit.elementary_charge
 #%%
@@ -136,9 +136,11 @@ def randomize_model(get_charges, noise_level:float=0.1):
     return get_random_charges
 
 
-def rename_caps(name, res):
-    # hard code the H naming of caps (maybe do this in the to_openmm function instead?)
-    # also hard-code the naming of the terminal atoms.
+def rename_caps(name:str, res:str):
+    """
+    hard code the H naming of caps (maybe do this in the to_openmm function instead?)
+    also hard-code the naming of the terminal atoms.
+    """
     if res == "ACE":
         if "H" in name and not "C" in name:
             name = "HH31"
@@ -347,7 +349,7 @@ def from_atoms_dict(d:dict, atom_names:List[str], residues:List[str], d_rad:dict
 
 #%%
 if __name__=="__main__":
-    from PDBData.PDBDataset import PDBDataset
+    from ...PDBData.PDBDataset import PDBDataset
     get_charges_bmk = model_from_dict("bmk")
     spicepath = Path(__file__).parent.parent.parent.parent / Path("mains/small_spice")
     dspath = Path(spicepath)/Path("small_spice.hdf5")
@@ -384,7 +386,7 @@ if __name__=="__main__":
     #%%
     #############################
     # TEST RADICALS
-    from PDBData.PDBMolecule import PDBMolecule
+    from ...PDBData.PDBMolecule import PDBMolecule
     rad = PDBMolecule.from_pdb("./../../../mains/tests/radicals/F_radA.pdb")
     mol = PDBMolecule.from_pdb("./../../../mains/tests/radicals/F.pdb")
     fail_rad = PDBMolecule.from_pdb("./../../../mains/tests/radicals/F_rad.pdb")

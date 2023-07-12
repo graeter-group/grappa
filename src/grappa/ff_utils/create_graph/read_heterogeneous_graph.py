@@ -1,4 +1,85 @@
-# inspired from espaloma:
+
+import numpy as np
+import torch
+from . import tuple_indices
+import dgl
+
+from rdkit.Chem.rdchem import Mol
+
+from typing import Dict
+
+
+
+
+def from_homogeneous_and_idxs(g:dgl.DGLGraph, bond_idxs:torch.Tensor, angle_idxs:torch.Tensor, proper_idxs:torch.Tensor, improper_idxs:torch.Tensor, use_impropers:bool=True) -> dgl.DGLGraph:
+
+    # initialize empty dictionary
+    hg = {}
+
+    if not use_impropers:
+        use_impropers = None
+
+    idxs = {"n2": bond_idxs, "n3": angle_idxs, "n4": proper_idxs, "n4_improper": improper_idxs}
+
+    for k, v in idxs.items():
+        idxs[k] = torch.tensor(v)
+
+    assert g.num_edges() == len(bond_idxs)*2, f"number of edges in graph ({g.num_edges()}) does not match 2*number of bonds ({2*len(bond_idxs)})"
+
+    # define the heterograph structure:
+
+    b = idxs["n2"].transpose(0,1) # transform from (n_bonds, 2) to (2, n_bonds)
+
+    first_idxs = torch.cat((b[0], b[1]), dim=0)
+    second_idxs = torch.cat((b[1], b[0]), dim=0) # shape (2*n_bonds,)
+
+    hg[("n1", "n1_edge", "n1")] = torch.stack((first_idxs, second_idxs), dim=0).int() # shape (2, 2*n_bonds)
+    
+    # ======================================
+    # since we do not need neighborhood for levels other than n1, simply create a graph with only self loops:
+    # ======================================
+    
+    TERMS = ["n2", "n3", "n4", "n4_improper"] if use_impropers else ["n2", "n3", "n4"]
+
+    for t in TERMS:
+        if len(idxs[t]) == 0:
+            TERMS.remove(t)
+
+    for term in TERMS+["g"]:
+        key = (term, f"{term}_edge", term)
+        n_nodes = len(idxs[term]) if term != "g" else 1
+        hg[key] = torch.stack(
+            [
+                torch.arange(n_nodes),
+                torch.arange(n_nodes),
+            ], dim=0).int()
+
+
+    # transform to tuples of tensors:
+    hg = {key: (value[0], value[1]) for key, value in hg.items()}
+
+    for k, (vsrc,vdest) in hg.items():
+        # make sure that the tensors have the correct shape:
+        assert vsrc.shape == vdest.shape, f"shape of {k} is {vsrc.shape} and {vdest.shape}"
+        assert len(vdest.shape) > 0, f"shape of {k} is {vdest.shape} and {vdest.shape}"
+        assert vsrc.shape[0] > 0, f"shape of {k} is {vsrc.shape} and {vdest.shape}"
+
+    # init graph
+    hg = dgl.heterograph(hg)
+
+    for feat in g.ndata.keys():
+        hg.nodes["n1"].data[feat] = g.ndata[feat]
+
+    # write indices in the nodes
+    for term in TERMS:
+        hg.nodes[term].data["idxs"] = idxs[term].int()
+
+    return hg
+
+
+
+
+# inspired from espaloma (outdated):
 
 
 # MIT License
@@ -24,102 +105,23 @@
 # SOFTWARE.
 
 
-""" Build heterogeneous graph from homogeneous ones.
-
-"""
-# =============================================================================
-# IMPORTS
-# =============================================================================
-import numpy as np
-import torch
-from . import offmol_indices
-
-# supress openff warning:
-import logging
-logging.getLogger("openff").setLevel(logging.ERROR)
-from openff.toolkit.topology import Molecule
-
-from typing import Dict
-
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
 
 
-def duplicate_index_ordering(indices: np.ndarray) -> np.ndarray:
-    """For every (a,b,c,d) add a (d,c,b,a)
 
-    TODO: is there a way to avoid this duplication?
-
-    >>> indices = np.array([[0, 1, 2, 3], [1, 2, 3, 4]])
-    >>> duplicate_index_ordering(indices)
-    array([[0, 1, 2, 3],
-           [1, 2, 3, 4],
-           [3, 2, 1, 0],
-           [4, 3, 2, 1]])
-    """
-    return np.concatenate([indices, np.flip(indices, axis=-1)], axis=0)
-
-
-def relationship_indices_from_offmol(
-    offmol: Molecule
+def relationship_indices_from_mol(
+    mol: Mol
 ) -> Dict[str, torch.Tensor]:
-    """Construct a dictionary that maps node names (like "n2") to torch tensors of indices
-
-    Notes
-    -----
-    * introduces 2x redundant indices (including (d,c,b,a) for every (a,b,c,d)) for compatibility with later processing
     """
-    idxs = dict()
-    idxs["n1"] = offmol_indices.atom_indices(offmol)
-    idxs["n2"] = offmol_indices.bond_indices(offmol)
-    idxs["n3"] = offmol_indices.angle_indices(offmol)
-    idxs["n4"] = offmol_indices.proper_torsion_indices(offmol)
-    idxs["n4_improper"] = offmol_indices.improper_torsion_indices(offmol)
+    Get indices for all relationships from an rdkit mol. These are duplicated, which make the processing less efficient. This resembles espaloma behaviour.
+    """
 
-    if len(idxs["n4"]) == 0:
-        idxs["n4"] = np.empty((0, 4))
-
-    if len(idxs["n4_improper"]) == 0:
-        idxs["n4_improper"] = np.empty((0, 4))
-
-    # TODO: enumerate indices for coupling-term nodes also
-    # TODO: big refactor of term names from "n4" to "proper_torsion", "improper_torsion", "angle_angle_coupling", etc.
-
-    # TODO (discuss with YW) : I think "n1" and "n4_improper" shouldn't be 2x redundant in current scheme
-    #   (also, unclear why we need "n2", "n3", "n4" to be 2x redundant, but that's something to consider changing later)
-    for key in ["n2", "n3", "n4"]:
-        idxs[key] = duplicate_index_ordering(idxs[key])
-
-    # make them all torch.Tensors
-    for key in idxs:
-        idxs[key] = torch.from_numpy(idxs[key])
+    idxs = tuple_indices.get_indices(mol, reduce_symmetry=False)
 
     return idxs
 
 
-def from_homogeneous_and_mol(g, offmol):
-    r"""Build heterogeneous graph from homogeneous ones.
+def from_homogeneous_and_mol(g, mol:Mol)->dgl.DGLGraph:
 
-
-    Note
-    ----
-    For now we name single node, two-, three, and four-,
-    hypernodes as `n1`, `n2`, `n3`, and `n4`. These correspond
-    to atom, bond, angle, and torsion nodes in chemical graphs.
-
-
-    Parameters
-    ----------
-    g : `espaloma.HomogeneousGraph` object
-        the homogeneous graph to be translated.
-
-    Returns
-    -------
-    hg : `espaloma.HeterogeneousGraph` object
-        the resulting heterogeneous graph.
-
-    """
 
     # initialize empty dictionary
     hg = {}
@@ -127,87 +129,20 @@ def from_homogeneous_and_mol(g, offmol):
     # get adjacency matrix
     a = g.adjacency_matrix()
 
-    # get all the indices
-    idxs = relationship_indices_from_offmol(offmol)
+    # get indices
+    idxs = tuple_indices.get_indices(mol=mol, reduce_symmetry=False)
 
-    # make them all numpy
-    idxs = {key: value.numpy().astype(np.int64) for key, value in idxs.items()}
+    assert idxs["n1"].shape[0] == mol.GetNumAtoms()
+    assert np.all(idxs["n1"] == np.arange(mol.GetNumAtoms()))
 
-    # also include n1
-    idxs["n1"] = np.arange(g.number_of_nodes())[:, None]
-
-        # =========================
+    # =========================
     # neighboring relationships
     # =========================
     # NOTE:
     # here we only define the neighboring relationship
     # on atom level
-    hg[("n1", "n1_neighbors_n1", "n1")] = idxs["n2"]
+    hg[("n1", "n1_neighbors_n1", "n1")] = tuple_indices.bond_indices(mol=mol, reduce_symmetry=False).T # both directions, transform from (n_bonds, 2) to (2, n_bonds)
 
-    # build a mapping between indices and the ordering
-    idxs_to_ordering = {}
-
-    for term in ["n1", "n2", "n3", "n4", "n4_improper"]:
-        idxs_to_ordering[term] = {
-            tuple(subgraph_idxs): ordering
-            for (ordering, subgraph_idxs) in enumerate(list(idxs[term]))
-        }
-
-    # ===============================================
-    # relationships between nodes of different levels
-    # ===============================================
-    # NOTE:
-    # here we define all the possible
-    # 'has' and 'in' relationships.
-    # TODO:
-    # we'll test later to see if this adds too much overhead
-    #
-
-    for small_idx in range(1, 5):
-        for big_idx in range(small_idx + 1, 5):
-            for pos_idx in range(big_idx - small_idx + 1):
-
-                hg[
-                    (
-                        "n%s" % small_idx,
-                        "n%s_as_%s_in_n%s" % (small_idx, pos_idx, big_idx),
-                        "n%s" % big_idx,
-                    )
-                ] = np.stack(
-                    [
-                        np.array(
-                            [
-                                idxs_to_ordering["n%s" % small_idx][tuple(x)]
-                                for x in idxs["n%s" % big_idx][
-                                    :, pos_idx : pos_idx + small_idx
-                                ]
-                            ]
-                        ),
-                        np.arange(idxs["n%s" % big_idx].shape[0]),
-                    ],
-                    axis=1,
-                )
-
-                hg[
-                    (
-                        "n%s" % big_idx,
-                        "n%s_has_%s_n%s" % (big_idx, pos_idx, small_idx),
-                        "n%s" % small_idx,
-                    )
-                ] = np.stack(
-                    [
-                        np.arange(idxs["n%s" % big_idx].shape[0]),
-                        np.array(
-                            [
-                                idxs_to_ordering["n%s" % small_idx][tuple(x)]
-                                for x in idxs["n%s" % big_idx][
-                                    :, pos_idx : pos_idx + small_idx
-                                ]
-                            ]
-                        ),
-                    ],
-                    axis=1,
-                )
 
     # ======================================
     # nonbonded terms
@@ -242,66 +177,22 @@ def from_homogeneous_and_mol(g, offmol):
         axis=-1,
     )
 
-    # membership
-    for term in ["nonbonded", "onefour"]:
-        for pos_idx in [0, 1]:
-            hg[(term, "%s_has_%s_n1" % (term, pos_idx), "n1")] = np.stack(
-                [np.arange(idxs[term].shape[0]), idxs[term][:, pos_idx]],
-                axis=-1,
-            )
-
-            hg[("n1", "n1_as_%s_in_%s" % (pos_idx, term), term)] = np.stack(
-                [
-                    idxs[term][:, pos_idx],
-                    np.arange(idxs[term].shape[0]),
-                ],
-                axis=-1,
-            )
-
-    # membership of n1 in n4_improper
-    for term in ["n4_improper"]:
-        for pos_idx in [0, 1, 2, 3]:
-            hg[(term, "%s_has_%s_n1" % (term, pos_idx), "n1")] = np.stack(
-                [np.arange(idxs[term].shape[0]), idxs[term][:, pos_idx]],
-                axis=-1,
-            )
-
-            hg[("n1", "n1_as_%s_in_%s" % (pos_idx, term), term)] = np.stack(
-                [
-                    idxs[term][:, pos_idx],
-                    np.arange(idxs[term].shape[0]),
-                ],
-                axis=-1,
-            )
 
     # ======================================
-    # relationships between nodes and graphs
+    # since we do not need neighborhood for levels other than n1, simply create a graph with only self loops:
     # ======================================
-    for term in [
-        "n1",
-        "n2",
-        "n3",
-        "n4",
-        "n4_improper",
-        "nonbonded",
-        "onefour",
-    ]:
-        hg[(term, "%s_in_g" % term, "g",)] = np.stack(
-            [np.arange(len(idxs[term])), np.zeros(len(idxs[term]))],
-            axis=1,
-        )
-
-        hg[("g", "g_has_%s" % term, term)] = np.stack(
+    for term in ["n2", "n3", "n4", "n4_improper", "nonbonded", "onefour"]:
+        key = (term, f"{term}_edge", term)
+        hg[key] = np.stack(
             [
-                np.zeros(len(idxs[term])),
                 np.arange(len(idxs[term])),
-            ],
-            axis=1,
-        )
+                np.arange(len(idxs[term])),
+            ], axis=0)
 
 
-    import dgl
-    hg = dgl.heterograph({key: value.astype(np.int32).tolist() for key, value in hg.items()})
+    # transform to tuples of tensors:
+    hg = {key: (torch.tensor(value[0]).int(), torch.tensor(value[1]).int())  for key, value in hg.items()}
+    hg = dgl.heterograph(hg)
 
     for feat in g.ndata.keys():
         hg.nodes["n1"].data[feat] = g.ndata[feat]

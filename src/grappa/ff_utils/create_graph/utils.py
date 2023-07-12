@@ -1,11 +1,8 @@
 #%%
 
-# supress openff warning:
-import logging
-logging.getLogger("openff").setLevel(logging.ERROR)
-from openff.toolkit.topology import Molecule
 
 import openmm
+import openmm.app.topology
 
 
 import numpy as np
@@ -13,46 +10,91 @@ import tempfile
 import os.path
 import torch
 import dgl
-import openff.toolkit.topology
+from rdkit.Chem.rdchem import Mol
+from rdkit.Chem import rdchem
+from rdkit import Chem
 from typing import Union
 from pathlib import Path
 from typing import List, Tuple, Dict, Union, Callable
 
-from . import offmol_indices, read_heterogeneous_graph, read_homogeneous_graph, deploy_parametrize
+from . import read_heterogeneous_graph, read_homogeneous_graph, deploy_parametrize, tuple_indices
 from ..charge_models import charge_models
-from .. import units as grappa_units
+from ... import units as grappa_units
 
 
-def dgl_from_mol(mol:openff.toolkit.topology.Molecule, max_element:int=26)->dgl.DGLGraph:
+def dgl_from_mol(mol:Mol, max_element:int=26)->dgl.DGLGraph:
     """
-    The molecule must not contain any high-level chemical information, only the graph structure, atom types and formal charges.
+    The molecule must not contain any high-level chemical information, only the graph structure, atom types and formal charges. Returns a homogeneous graph.
     """
-    g = read_homogeneous_graph.from_openff_toolkit_mol(mol, use_fp=True, max_element=max_element)
-    g = read_heterogeneous_graph.from_homogeneous_and_mol(g=g, offmol=mol)
+    g = read_homogeneous_graph.from_rdkit_mol(mol, max_element=max_element)
     return g
 
 
-
-def openmm2openff_graph(openmm_top)->openff.toolkit.topology.Molecule:
+def bonds_to_rdkit_graph(bond_indices: List[Tuple[int, int]], residues: List[str], atomic_numbers: List[int], atom_names: List[str]=None)->Mol:
     """
-    Returns an openff molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
+    Returns an rdkit molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
+    Bond indices should be a list of tuples, where each tuple contains the indices of two bonded atoms.
+    Residues, atom_names, and atomic_numbers are lists that correspond to each atom in the molecule.
+    The indices correspond to the order of the atoms in these lists. The residues must be 3-letter codes, the atom_names PDB-like names and the atomic_numbers the atomic numbers of the atoms.
+    If atom_names is None, the formal charge will always be 0. This is a problem if the model has been trained on formal charges as input features.
+    Bond indices must be zero-based and with indices corresponding to the order of the atoms in the lists.
+    """
+
+    # initialize the molecule
+    mol = Chem.RWMol()
+
+    for atomic_number, atom_name, residue in zip(atomic_numbers, atom_names, residues):
+        charge = assign_standard_charge(atom_name=atom_name, residue=residue)
+
+        # add the atom to the molecule with the given atomic number and charge
+        # atomic number to unsigned int:
+
+        chem_atom = rdchem.Atom(int(atomic_number))
+        chem_atom.SetFormalCharge(charge)
+        mol.AddAtom(chem_atom)
+
+
+    # bond_order 1 used for all bonds, regardless what type they are
+    for a1, a2 in bond_indices:
+        mol.AddBond(a1, a2, rdchem.BondType.SINGLE)
+
+    mol = mol.GetMol()
+
+    return mol
+
+
+
+
+def openmm2rdkit_graph(openmm_top:openmm.app.topology.Topology)->Mol:
+    """
+    Returns an rdkit molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
     To assign formal charges, the topology must contain residues.
     """
-    import openmm.app.topology
-    assert isinstance(openmm_top, openmm.app.topology.Topology), "openmm_top must be an openmm topology object."
 
-    mol = Molecule()
     # zero charge used for all atoms, regardless what charge they actually have
     # NOTE: later, find a way to infer charge from pdb, by now we only have standard versions of AAs
+
+
+    # initialize the molecule
+    mol = Chem.RWMol()
+
     idx_lookup = {} # maps from openmm atom index to openff atom index (usually they agree)
     for i, atom in enumerate(openmm_top.atoms()):
         charge = assign_standard_charge(atom_name=atom.name, residue=atom.residue.name)
-        mol.add_atom(atom.element.atomic_number, formal_charge=charge, is_aromatic=False, stereochemistry=None)
+        atomic_number = atom.element.atomic_number
+
+        # add the atom to the molecule with the given atomic number and charge
+        chem_atom = rdchem.Atom(int(atomic_number))
+        chem_atom.SetFormalCharge(charge)
+        mol.AddAtom(chem_atom)
+
         idx_lookup[atom.index] = i
 
     # bond_order 1 used for all bonds, regardless what type they are
     for bond in openmm_top.bonds():
-        mol.add_bond(idx_lookup[bond.atom1.index], idx_lookup[bond.atom2.index], bond_order=1, is_aromatic=False, stereochemistry=None)
+        mol.AddBond(idx_lookup[bond.atom1.index], idx_lookup[bond.atom2.index], rdchem.BondType.SINGLE)
+
+    mol = mol.GetMol()
 
     return mol
 
@@ -86,7 +128,7 @@ assign_standard_charge.charge_dict = {
     }
 
 
-def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topology.Molecule, suffix:str="", reduce_symmetry:bool=True, units:Dict=None)->Dict:
+def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, suffix:str="", units:Dict=None)->Dict:
     """
     Returns a dictionary with the parameters and atom indices for the given level as numpy arrays. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
     ----------------------
@@ -139,28 +181,6 @@ def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topo
     # indices of the atom tuples in the graph (i.e. index tuples)
     dgl_indices = g.nodes[level].data["idxs"].detach().numpy()
 
-    # level n1 is a special case due to graph creation
-    if level == "n1":
-        dgl_indices = dgl_indices[:, 0]
-
-    if not reduce_symmetry:
-        # positions of the unique atom tuples in the graph, e.g. for bonds only half of the bonds are unique since the other half is just the reverse order of the first half
-        positions = np.arange(len(dgl_indices), dtype=np.int32)
-    else:
-        if "improper" in level:
-            positions = get_improper_positions(g)
-        else:
-            off_idx_methods = [None, offmol_indices.atom_indices, offmol_indices.bond_indices, offmol_indices.angle_indices, offmol_indices.proper_torsion_indices]
-
-            off_indices = off_idx_methods[lvl](mol)
-            # these are the tuple indices inferred from the openff molecule. since dgl_indices are made up by concatenations of permutations of these (except for impropers), we can simply take the first len(off_indices) of dgl_indices
-
-            positions = np.arange(len(off_indices), dtype=np.int32)
-
-            assert np.all(dgl_indices[positions] == off_indices), f"{off_indices}\n!=\n{dgl_indices}, shapes: off {off_indices.shape}, dgl {dgl_indices.shape}"
-
-
-    dgl_indices = dgl_indices[positions]
     
     # if we have atom indices that differ from those in our graph, map back to them:
     if "external_idx" in g.nodes["n1"].data.keys():
@@ -171,10 +191,10 @@ def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topo
 
     if level == "n1":
 
-        q = g.nodes[level].data[f"q{suffix}"][positions].detach().numpy()[:,0]
+        q = g.nodes[level].data[f"q{suffix}"].detach().numpy()
 
-        sigma = g.nodes[level].data[f"sigma{suffix}"][positions].detach().numpy()[:, 0]
-        epsilon = g.nodes[level].data[f"epsilon{suffix}"][positions].detach().numpy()[:, 0]
+        sigma = g.nodes[level].data[f"sigma{suffix}"].detach().numpy()
+        epsilon = g.nodes[level].data[f"epsilon{suffix}"].detach().numpy()
 
         if not units is None:
             q = openmm.unit.Quantity(q, grappa_units.CHARGE_UNIT).value_in_unit(units["charge"])
@@ -185,9 +205,9 @@ def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topo
 
         # mass:
         if "m" in g.nodes[level].data.keys():
-            mass = g.nodes[level].data[f"m"][positions].detach().numpy()[:, 0]
+            mass = g.nodes[level].data[f"m"].detach().numpy()[:, 0]
         elif "mass" in g.nodes[level].data.keys():
-            mass = g.nodes[level].data[f"mass"][positions].detach().numpy()[:, 0]
+            mass = g.nodes[level].data[f"mass"].detach().numpy()[:, 0]
 
         if not units is None:
             mass = openmm.unit.Quantity(mass, grappa_units.MASS_UNIT).value_in_unit(units["mass"])
@@ -197,8 +217,8 @@ def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topo
 
     elif level == "n2":
 
-        k = g.nodes[level].data[f"k{suffix}"][positions].detach().numpy()[:, 0]
-        eq = g.nodes[level].data[f"eq{suffix}"][positions].detach().numpy()[:, 0]
+        k = g.nodes[level].data[f"k{suffix}"].detach().numpy()[:, 0]
+        eq = g.nodes[level].data[f"eq{suffix}"].detach().numpy()[:, 0]
 
         if not units is None:
             k = openmm.unit.Quantity(k, grappa_units.FORCE_CONSTANT_UNIT).value_in_unit(units["energy"]/units["distance"]**2)
@@ -209,8 +229,8 @@ def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topo
 
     elif level == "n3":
 
-        k = g.nodes[level].data[f"k{suffix}"][positions].detach().numpy()[:, 0]
-        eq = g.nodes[level].data[f"eq{suffix}"][positions].detach().numpy()[:, 0]
+        k = g.nodes[level].data[f"k{suffix}"].detach().numpy()[:, 0]
+        eq = g.nodes[level].data[f"eq{suffix}"].detach().numpy()[:, 0]
 
         if not units is None:
             k = openmm.unit.Quantity(k, grappa_units.ANGLE_FORCE_CONSTANT_UNIT).value_in_unit(units["energy"]/units["angle"]**2)
@@ -220,7 +240,7 @@ def hard_coded_get_parameters(level:str, g:dgl.DGLGraph, mol:openff.toolkit.topo
 
         
     elif level in ["n4", "n4_improper"]:
-        ks = g.nodes[level].data[f"k{suffix}"][positions].detach().numpy()
+        ks = g.nodes[level].data[f"k{suffix}"].detach().numpy()
         ns = np.arange(1,ks.shape[1]+1) # one set of periodicities
         ns = np.tile(ns, (ks.shape[0], 1)) # repeat this for all torsions.
 
@@ -254,7 +274,7 @@ def get_improper_positions(g:dgl.DGLGraph)->np.ndarray:
     idx_tuples = []
     for i, idxs in enumerate(dgl_indices):
         # all tuples with cyclic permutations of the non-central atoms:
-        invariant_tuples = get_symmetric_tuples(level="n4_improper", tuple=idxs)
+        invariant_tuples = tuple_indices.get_symmetric_tuples(level="n4_improper", tuple=idxs)
         
         # if there is any tuple that is in the idx_tuples, then we have already seen this improper.
         if any([t in idx_tuples for t in invariant_tuples]):
@@ -325,7 +345,7 @@ def get_parameters_from_graph(g, mol, suffix="", units=None):
     return params
 
 
-def graph_from_pdb(openmm_top, forcefield=openmm.app.ForceField("amber99sbildn.xml"), allow_radicals:bool=True, max_element:int=26, charge_tag:str="amber99sbildn"):
+def graph_from_pdb(openmm_top, forcefield=openmm.app.ForceField("amber99sbildn.xml"), allow_radicals:bool=True, max_element:int=26, charge_tag:str="amber99sbildn")->dgl.DGLGraph:
     """
     openmm_top: openmm topology
     forcefield: openmm forcefield
@@ -341,52 +361,20 @@ def graph_from_pdb(openmm_top, forcefield=openmm.app.ForceField("amber99sbildn.x
     get_charges = charge_models.model_from_dict(tag=charge_tag)
 
     # get the openff molecule
-    openff_mol = openmm2openff_graph(openmm_top)
+    mol = openmm2rdkit_graph(openmm_top)
 
     # get the graph
-    g = dgl_from_mol(openff_mol, max_element=max_element)
+    g = dgl_from_mol(mol, max_element=max_element)
 
     # write nonbonded parameters and is_radical in the graph
     g = deploy_parametrize.write_parameters(g=g, topology=openmm_top, forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals)
 
     # return the graph and the openff molecule
-    return g, openff_mol
-
-
-def bonds_to_openff_graph(bond_indices: List[Tuple[int, int]], residues: List[str], atomic_numbers: List[int], atom_names: List[str]=None)->openff.toolkit.topology.Molecule:
-    """
-    Returns an OpenFF molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
-    Bond indices should be a list of tuples, where each tuple contains the indices of two bonded atoms.
-    Residues, atom_names, and atomic_numbers are lists that correspond to each atom in the molecule.
-    The indices correspond to the order of the atoms in these lists. The residues must be 3-letter codes, the atom_names PDB-like names and the atomic_numbers the atomic numbers of the atoms.
-    If atom_names is None, the formal charge will always be 0. This is a problem if the model has been trained on formal charges as input features.
-    """
-
-    # Initialize an empty molecule
-    mol = Molecule()
-
-    # assert len(residues) == len(atomic_numbers), "Theresidues, and atomic numbers must be the same."
-
-    # if not atom_names is None:
-    #     assert len(bond_indices) == len(atom_names), "The number of bonds and atom names must be the same if not None."
-
-    # Add atoms to the molecule
-    if atom_names is None:
-        atom_names = [""] * len(residue)
-
-    for atom_name, residue, atomic_number in zip(atom_names, residues, atomic_numbers):
-        charge = assign_standard_charge(atom_name=atom_name, residue=residue)
-        mol.add_atom(atomic_number, formal_charge=charge, is_aromatic=False, stereochemistry=None)
-
-    # Add bonds to the molecule
-    for bond in bond_indices:
-        mol.add_bond(bond[0], bond[1], bond_order=1, is_aromatic=False, stereochemistry=None)
-
-    return mol
+    return g
 
 
 
-def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[int]=[], max_element:int=26, charge_tag:str="heavy"):
+def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[int]=[], max_element:int=26, charge_tag:str="heavy")->dgl.DGLGraph:
     """
     atoms: list of tuples of the form (atom_index, residue, atom_name, (sigma, epsilon), atomic_number)
     bonds: list of tuples of the form (atom_index_1, atom_index_2)
@@ -420,10 +408,10 @@ def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[i
     charges = charge_model(atom_names=atom_types, residues=residues, rad_indices=radical_indices, residue_indices=residue_indices)
 
 
-    openff_mol = bonds_to_openff_graph(bond_indices=bonds, residues=residues, atomic_numbers=atomic_numbers, atom_names=atom_types)
+    mol = bonds_to_rdkit_graph(bond_indices=bonds, residues=residues, atomic_numbers=atomic_numbers, atom_names=atom_types)
 
     # create the graph
-    g = dgl_from_mol(openff_mol, max_element=max_element)
+    g = dgl_from_mol(mol=mol, max_element=max_element)
 
 
     # write nonbonded parameters, charges and is_radical in the graph
@@ -432,7 +420,7 @@ def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[i
         g.nodes["n1"].data["is_radical"][radical_indices] = 1.
     
     # one-hot encode the residue:
-    from ..units import RESIDUES
+    from ...units import RESIDUES
     g.nodes["n1"].data["residue"] = torch.zeros(len(atomic_numbers), len(RESIDUES), dtype=torch.float32)
     for idx, resname in zip(range(len(residues)), residues):
         if resname in RESIDUES:
@@ -448,10 +436,10 @@ def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[i
     g.nodes["n1"].data["epsilon"] = torch.tensor(epsilons, dtype=torch.float32).unsqueeze(dim=1)
 
     g.nodes["n1"].data["external_idx"] = torch.tensor(external_idxs, dtype=torch.int64).unsqueeze(dim=1)
-    return g, openff_mol
+    return g
 
 
-def process_input(input_, classical_ff=openmm.app.ForceField("amber99sbildn.xml"))->Tuple[dgl.DGLGraph, openff.toolkit.topology.Molecule]:
+def process_input(input_, classical_ff=openmm.app.ForceField("amber99sbildn.xml"))->dgl.DGLGraph:
 
     import openmm.app.topology
     from openmm.app import PDBFile
@@ -461,6 +449,7 @@ def process_input(input_, classical_ff=openmm.app.ForceField("amber99sbildn.xml"
         return graph_from_pdb(input_.topology, forcefield=classical_ff)
     elif type(input_) == str:
         return graph_from_pdb(PDBFile(input_).topology, forcefield=classical_ff)
+    
     elif type(input_) == dict:
         assert "atoms" in input_.keys(), "input_ dictionary must contain an 'atoms' key"
         assert "bonds" in input_.keys(), "input_ dictionary must contain a 'bonds' key"
@@ -472,7 +461,7 @@ def process_input(input_, classical_ff=openmm.app.ForceField("amber99sbildn.xml"
         raise TypeError(f"input_ must be either a string, a PDBFile or a Topology, but got {type(input_)}")
     
 
-def process_output(g, openff_mol:openff.toolkit.topology.Molecule, input_type, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), topology=None, system_kwargs:Dict=None, units:Dict=None):
+def process_output(g, input_type, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), topology=None, system_kwargs:Dict=None, units:Dict=None)->Union[openmm.System, Dict]:
     """
     If the input type is an openmm topology or an openmm PDBFile the output is an openmm system.
     If the input is a path to a PDB file, the output is a dictionary containing indices describing the interactions. If the input is a path to a gromacs topology file, the output is a topology file with parameters added. This has to be made evident by the file suffix (.gro or .pdb).
@@ -483,7 +472,7 @@ def process_output(g, openff_mol:openff.toolkit.topology.Molecule, input_type, c
         assert not topology is None, "topology must be given if input_type is openmm.app.topology.Topology or openmm.app.PDBFile"
 
         # calculate the param dict with default grappa units since they are converted when creating the openmm system 
-        param_dict = get_parameters_from_graph(g=g, mol=openff_mol, units=None)
+        param_dict = get_parameters_from_graph(g=g, units=None)
 
         openmm_system = deploy_parametrize.openmm_system_from_params(param_dict=param_dict, topology=topology, classical_ff=classical_ff, allow_radicals=True, system_kwargs=system_kwargs)
 
@@ -492,53 +481,11 @@ def process_output(g, openff_mol:openff.toolkit.topology.Molecule, input_type, c
 
     # RETURN PARAMETER DICT
     elif input_type in [str, dict]:
-        param_dict = get_parameters_from_graph(g=g, mol=openff_mol, units=units)
+        param_dict = get_parameters_from_graph(g=g, units=units)
 
         return param_dict
 
     else:
         raise TypeError(f"invalid type argument: {input_type}")
     
-
-def get_symmetric_tuples(level, tuple:Union[Tuple[int], List[int]]):
-    """
-    For improper, assume that the central atom is at position 2, i.e. the third entry!
-    """
-    if level == "n4_improper":
-        assert len(tuple) == 4, "tuple must be of length 4 for n4_improper"
-        invariant_tuples = [(tuple[i], tuple[j], tuple[2], tuple[k]) for i,j,k in [(0,1,3), (1,3,0), (3,0,1)]]
-    elif level == "n4":
-        assert len(tuple) == 4, "tuple must be of length 4 for n4"
-        invariant_tuples = [(tuple[i], tuple[j], tuple[k], tuple[l]) for i,j,k,l in [(0,1,2,3), (3,2,1,0)]]
-    elif level == "n3":
-        assert len(tuple) == 3, "tuple must be of length 3 for n3"
-        invariant_tuples = [(tuple[i], tuple[j], tuple[k]) for i,j,k in [(0,1,2), (2,1,0)]]
-    elif level == "n2":
-        assert len(tuple) == 2, "tuple must be of length 2 for n2"
-        invariant_tuples = [(tuple[i], tuple[j]) for i,j in [(0,1), (1,0)]]
-    else:
-        raise ValueError("Invalid level. Expected one of 'n4_improper', 'n4', 'n3', or 'n2'")
-
-    return invariant_tuples
     
-#%%
-
-if __name__ == "__main__":
-    from PDBData.PDBMolecule import PDBMolecule
-    mol = PDBMolecule.get_example()
-    # %%
-    mol.parametrize(charge_suffix="_amber99sbildn")
-    g = mol.to_dgl()
-    g.nodes["n2"].data.keys()
-
-    # %%
-    p = get_parameters_from_graph(g, mol, suffix="_amber99sbildn")
-    p.keys()
-    # %%
-
-
-    #%%
-    from openmm.app.topology import Topology
-    top = Topology()
-    top.add_atom
-# %%
