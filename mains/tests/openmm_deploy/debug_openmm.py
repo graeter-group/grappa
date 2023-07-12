@@ -53,7 +53,7 @@ simulation.step(100)
 
 
 #%%
-from grappa.ff_utils import units
+from grappa import units
 import numpy as np
 pos = PDBFile(pdb_path).getPositions()
 pos = simulation.context.getState(getPositions=True).getPositions()
