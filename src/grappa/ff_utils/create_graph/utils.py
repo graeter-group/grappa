@@ -3,6 +3,7 @@
 
 import openmm
 import openmm.app.topology
+from openmm.app import Topology, Element
 
 
 import numpy as np
@@ -490,3 +491,50 @@ def process_output(g, input_type, classical_ff:openmm.app.ForceField=openmm.app.
         raise TypeError(f"invalid type argument: {input_type}")
     
     
+
+
+def bonds_to_openmm(bonds:List[Tuple[int, int]], residue_indices:List[int], residues:List[str], atom_types:List[str], atomic_numbers:List[int], ordered_by_res:bool=True)->Topology:
+
+    # create a new, empty topology
+    openmm_topology = Topology()
+
+    # create a new chain (assuming all residues are in the same chain)
+    chain = openmm_topology.addChain()
+
+    if ordered_by_res:
+        # create a new residue every time the residue index changes:
+        last_res_index = None
+    else:
+        # store all residue indices:
+        added_res = []
+
+    for atom_idx, (res_index, res, atom_type, atomic_number) in enumerate(zip(residue_indices, residues, atom_types, atomic_numbers)):
+
+        if ordered_by_res:
+            # check if we need to start a new residue
+            if res_index != last_res_index:
+                residue = openmm_topology.addResidue(res, chain)
+                last_res_index = res_index
+        else:
+            if res_index not in added_res:
+                residue = openmm_topology.addResidue(res, chain)
+                added_res.append(res_index)
+
+        # determine element based on atom type
+        # this is just a basic example; you may need to map atom types to elements differently
+        element = Element.getByAtomicNumber(atomic_number)
+
+        # add the atom to the current residue
+        openmm_topology.addAtom(name=atom_type, element=element, residue=residue, id=atom_idx)
+
+    # add the bonds to the topology:
+    atom_list = list(openmm_topology.atoms())
+
+    # Iterate over bond_list and add each bond to the topology
+    for bond in bonds:
+        atom1 = atom_list[bond[0]]
+        atom2 = atom_list[bond[1]]
+        openmm_topology.addBond(atom1, atom2)
+        
+    return openmm_topology
+

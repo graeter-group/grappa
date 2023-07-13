@@ -8,7 +8,7 @@ import os
 import warnings
 warnings.filterwarnings("ignore") # for esp_charge
 
-DEFAULTBASE = "/hits/fast/mbm/seutelf/data/datasets/PDBDatasets"
+from grappa.constants import DEFAULTBASEPATH
 
 FILTER_REF = True # whether to apply the filtering to the reference energies or the qm energies
 
@@ -33,7 +33,7 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
 
     
     ds.save_npz(storepath, overwrite=overwrite)
-    ds.save_dgl(str(storepath)+"_dgl.bin", overwrite=overwrite, forcefield=ff, collagen=collagen)
+    ds.save_dgl(str(storepath)+"_dgl.bin", overwrite=overwrite, forcefield=ff, collagen=collagen, allow_radicals=allow_radicals)
     #%%
 
     ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
@@ -43,7 +43,7 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
 
     # unfortunately, have to parametrize again to get the right shapes
     ds.save_npz(str(storepath)+"_60", overwrite=overwrite)
-    ds.save_dgl(str(storepath)+"_60_dgl.bin", overwrite=overwrite, forcefield=ff, collagen=collagen)
+    ds.save_dgl(str(storepath)+"_60_dgl.bin", overwrite=overwrite, forcefield=ff, collagen=collagen, allow_radicals=allow_radicals)
 
 
 
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--ds_name", type=str, default=["spice/base"], nargs='+', help="name of the dataset to be loaded. will load from the directory base_path/ds_name default: spice/base")
 
-    parser.add_argument("--ds_base", type=str, default=str(Path(DEFAULTBASE)), help=f"base path to the dataset, default: {DEFAULTBASE}")
+    parser.add_argument("--ds_base", type=str, default=str(Path(DEFAULTBASEPATH)), help=f"base path to the dataset, default: {DEFAULTBASEPATH}")
 
     parser.add_argument("--charge", "-c", type=str, dest="tag", default=[None], nargs="+", help="tag of the charge model to use, see model_from_dict in charge_models.py.\npossible tags: ['bmk', 'avg', 'heavy, 'amber99sbildn'] . If None, call it default and use the charges of the force field.")
 

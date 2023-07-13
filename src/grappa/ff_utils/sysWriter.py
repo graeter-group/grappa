@@ -5,6 +5,8 @@ from openmm.unit import Quantity, radians
 
 import rdkit.Chem.rdchem
 
+from grappa.ff_utils.charge_models import model_from_dict
+
 import torch
 import numpy as np
 
@@ -19,6 +21,7 @@ import copy
 from ..units import RESIDUES
 
 from grappa.constants import MAX_ELEMENT
+
 
 class sysWriter:
     """
@@ -35,7 +38,12 @@ class sysWriter:
     init_graph: use the system to initialize the graph with interaction indices.
 
     """
-    def __init__(self, top:openmm.app.Topology, classical_ff:openmm.app.ForceField, allow_radicals:bool=True, radical_indices:List[int]=None) -> None:
+    def __init__(self,
+                 top:openmm.app.Topology,
+                 classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                 allow_radicals:bool=True,
+                 radical_indices:List[int]=None,
+                 **system_kwargs) -> None:
         """
         If allow radicals is true and no radical indices are provided, uses the classical forcefield to determine the radical indices. For this the force field must fail to match the residues containing radicals. If the radical indices are provided, assume that these are all radicals.
         Only one radical per residue is supported.
@@ -47,6 +55,9 @@ class sysWriter:
         self.radical_indices = None
         self.interaction_indices = None # dictionary that maps from tuple to index. for torsions, the tuple is (atom1, atom2, atom3, atom4, periodicity)
         self.top = None
+
+        self.classical_ff = classical_ff
+
 
         self.top_idxs = None # only parametrize these atoms. is zero-based and corresponds to the order in top.atoms() NOTE: write function that returns sub-topology
 
@@ -61,9 +72,12 @@ class sysWriter:
 
         self.charge_model = None # if None, uses the charges from the forcefield. Otherwise, this should be a callable that takes a topology and returns a list of charges in the order of the topology.
 
+        self.epsilons = None # will be used upon parametrization if not None.
+        self.sigma = None
+
         self.charge_dict = {}
 
-        self.classical_ff = classical_ff
+        self.external_to_internal_idx = None # maps from external to internal indices. Internal indices are the zero-based indices in the graph and of the system. if None, assume that the indices are the same.
 
 
 
@@ -88,13 +102,103 @@ class sysWriter:
         if len(self.radical_indices) > 0:
             # enable the classical ff to match the residues.
             self.classical_ff = copy.deepcopy(classical_ff) # nee a deep copy, otherwise this would change the ff outside the class
-            self.classical_ff = add_radical_residues(forcefield=classical_ff, topology=self.top)
+            self.classical_ff = add_radical_residues(forcefield=self.classical_ff, topology=self.top)
 
 
-        self.sys = self.classical_ff.createSystem(top)
-    
+        self.sys = self.classical_ff.createSystem(top, **system_kwargs)
+
+    @classmethod
+    def from_bonds(cls,
+                   bonds:List[Tuple[int, int]],
+                   residue_indices:List[int],
+                   residues:List[str],
+                   atom_types:List[str],
+                   atomic_numbers:List[int],
+                   classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                   ordered_by_res:bool=True,
+                   atom_indices:List[int]=None,
+                   radicals:List[int]=None,
+                   allow_radicals:bool=True,
+                   **system_kwargs):
+
+        external_to_internal_idx = None
+
+        if atom_indices is not None:
+            external_to_internal_idx = {atom_indices[i]:i for i in range(len(atom_indices))} # i-th entry is the list-position of the atom with index i
+
+            bonds = [(external_to_internal_idx[bond[0]], external_to_internal_idx[bond[1]]) for bond in bonds]
+
+            radical_indices = [external_to_internal_idx[radical] for radical in radicals]
+
+        # get an openmm topology:
+        top = utils.bonds_to_openmm(bonds=bonds, residue_indices=residue_indices, residues=residues, atom_types=atom_types, atomic_numbers=atomic_numbers, ordered_by_res=ordered_by_res)
+
+        self = cls(top=top, classical_ff=classical_ff, allow_radicals=allow_radicals, radical_indices=radical_indices, **system_kwargs)
+
+        self.external_to_internal_idx = external_to_internal_idx
+
+        return self
+
+
+
+    @classmethod
+    def from_dict(cls,
+                  top_dict:Dict,
+                  ordered_by_res=True,
+                  allow_residues:bool=True,
+                  classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                  **system_kwargs):
+
+        atoms = top_dict["atoms"]
+
+        external_idxs = [a_entry[0] for a_entry in atoms]
+        atom_types = [a_entry[1] for a_entry in atoms]
+        residues = [a_entry[2] for a_entry in atoms]
+        atomic_numbers = [a_entry[5] for a_entry in atoms]
+        residue_indices = [a_entry[3] for a_entry in atoms]
+
+        # store these as arrays and write them to the parameter dict later:
+        epsilons = [a_entry[4][1] for a_entry in atoms]
+        sigmas = [a_entry[4][0] for a_entry in atoms]
+        
+
+        bonds = top_dict["bonds"]
+
+        if "radicals" in top_dict.keys():
+            radicals = top_dict["radicals"]
+        else:
+            radicals = None
+
+
+        self = cls.from_bonds(bonds=bonds, residue_indices=residue_indices, residues=residues, atom_types=atom_types, atom_indices=external_idxs, radicals=radicals, allow_radicals=allow_residues, ordered_by_res=ordered_by_res, atomic_numbers=atomic_numbers, classical_ff=classical_ff, **system_kwargs)
+
+        self.set_lj(epsilons=epsilons, sigmas=sigmas)
+        
+        return self
+
+
+    def set_charge_model(self, charge_model:Union[Callable, str])->None:
+        """
+        Sets the charge model to the given callable. May also be a tag.
+        """
+        if isinstance(charge_model, str):
+            self.charge_model = model_from_dict(tag=charge_model)
+        else:
+            self.charge_model = charge_model
+
+
+    def set_lj(self, epsilons, sigmas):
+        """
+        Stores the given epsilons and sigmas internally. Will be used upon parametrization.
+        """
+        self.epsilons = epsilons
+        self.sigmas = sigmas
+
 
     def charges_from_model(self)->List[float]:
+        """
+        Internal helper.
+        """
         if self.charge_model is None:
             return None
         
