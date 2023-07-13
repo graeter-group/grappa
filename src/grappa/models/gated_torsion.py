@@ -40,6 +40,7 @@ class GatedTorsion(torch.nn.Module):
             torch.nn.Linear(between_feats, n_periodicity),
         )
 
+        self.wrong_symmetry = False
 
         self.magnitude = magnitude
         self.turn_on_at_p = turn_on_at_p
@@ -53,6 +54,10 @@ class GatedTorsion(torch.nn.Module):
         level = "n4"
         if self.improper:
             level += "_improper"
+        
+        if not level in g.ntypes:
+            return g
+
         pairs = g.nodes[level].data["idxs"]
         inputs = g.nodes["n1"].data["h"][pairs]
 
@@ -62,7 +67,7 @@ class GatedTorsion(torch.nn.Module):
         feat_3 = inputs[:,2,:]
         feat_4 = inputs[:,3,:]
         
-        if self.improper:
+        if self.improper and self.wrong_symmetry:
             inputs = self.symmetrizer(torch.cat((feat_1, feat_2, feat_3, feat_4), dim=-1)) + self.symmetrizer(torch.cat((feat_4, feat_2, feat_1, feat_3), dim=-1)) + self.symmetrizer(torch.cat((feat_3, feat_2, feat_1, feat_4), dim=-1))
         else:
             inputs = self.symmetrizer(torch.cat((feat_1, feat_2, feat_3, feat_4), dim=-1)) + self.symmetrizer(torch.cat((feat_4, feat_3, feat_2, feat_1), dim=-1))

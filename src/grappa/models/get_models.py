@@ -38,7 +38,7 @@ def get_readout(statistics, rep_feats=500, between_feats=1000, old=False):
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=1024, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "q_ref"], bonus_features=[], bonus_dims=[], old=False, n_heads=6):
+def get_full_model(statistics=None, rep_feats=512, between_feats=1024, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6):
     
     if statistics is None:
         statistics = get_default_statistics()

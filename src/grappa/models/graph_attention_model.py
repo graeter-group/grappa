@@ -4,6 +4,7 @@ import torch
 import dgl
 from typing import List, Tuple, Dict, Union, Callable
 import math
+from grappa.constants import MAX_ELEMENT, RESIDUES
 
 class ResidualAttentionBlock(torch.nn.Module):
     """
@@ -81,7 +82,7 @@ class ResidualAttentionBlock(torch.nn.Module):
         h = self.head_reducer(h) # now has the shape num_nodes, out_feats
 
         if self.in_feats == self.out_feats:
-            h += h_skip
+            h = h + h_skip
 
         if not self.self_interaction is None:
 
@@ -90,7 +91,7 @@ class ResidualAttentionBlock(torch.nn.Module):
             
             h_skip = h
             h = self.self_interaction(h)
-            h += h_skip
+            h = h + h_skip
 
         return h
 
@@ -144,7 +145,7 @@ class ResidualConvBlock(torch.nn.Module):
             
             h_skip = h
             h = self.self_interaction(h)
-            h += h_skip
+            h = h + h_skip
 
         return h
 
@@ -158,7 +159,7 @@ class Representation(torch.nn.Module):
         - a stack of n_att ResidualAttentionBlocks with self interaction, output width h_feats and num_heads attention heads
         - a single linear layer with node-level-shared weights mapping from h_feats to out_feats
     """
-    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "q_ref", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
+    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
         """
         Implementing:
             - a single linear layer with node-level-shared weights mapping from in_feats to h_feats
@@ -177,8 +178,8 @@ class Representation(torch.nn.Module):
         if in_feats is None:
             # infer the input features from the in_feat_name
             default_dims = {
-                "atomic_number": 26,
-                "residue": 27,
+                "atomic_number": MAX_ELEMENT,
+                "residue": len(RESIDUES),
                 "in_ring": 7,
                 "mass": 1,
                 "degree": 7,
@@ -231,7 +232,15 @@ class Representation(torch.nn.Module):
 
     def forward(self, g, in_feature=None):
         if in_feature is None:
-            in_feature = torch.cat([g.nodes["n1"].data[feat]*1. for feat in self.in_feat_name], dim=-1)
+            try:
+                # concatenate all the input features, allow the shape (n_nodes) and (n_nodes,n_feat)
+                in_feature = torch.cat([g.nodes["n1"].data[feat]*1.
+                                        if len(g.nodes["n1"].data[feat].shape) >=2 else g.nodes["n1"].data[feat].unsqueeze(dim=-1)
+                                        for feat in self.in_feat_name], dim=-1)
+                assert len(in_feature.shape) == 2, f"the input features must be of shape (n_nodes, n_features), but got {in_feature.shape}"
+            except:
+                print(*[(feat, g.nodes["n1"].data[feat].shape) for feat in self.in_feat_name], sep="\n")
+                raise
 
         h = self.pre_dense(in_feature)
 
@@ -247,18 +256,4 @@ class Representation(torch.nn.Module):
         g.nodes["n1"].data["h"] = h
         return g
     
-# %%
-# model = Representation(256, out_feats=1, in_feats=1)
-
-
-if __name__ == '__main__':
-    from grappa.run import run_utils
-    [ds], _ = run_utils.get_data(["/hits/fast/mbm/seutelf/data/datasets/PDBDatasets/spice/amber99sbildn_60_dgl.bin"], n_graphs=1)
-    g = ds[0]
-    # transform to homograph:
-
-    model = Representation(h_feats=256, out_feats=1, in_feats=None, in_feat_name=["atomic_number", "in_ring"])
-    #%%
-    g = model(g)
-
 # %%

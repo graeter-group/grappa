@@ -4,9 +4,6 @@ from grappa.models.geometry import GeometryInGraph
 
 def torsion_energy(k, angle, offset=True):
     """
-    implements
-    sum_n k_n cos(n*phi) (+ |k_n| if offset=True)
-
     no factor 1/2 included!
     does not support batching:
     shape of k: tuple x periodicity
@@ -37,9 +34,6 @@ def torsion_energy(k, angle, offset=True):
 
 def harmonic_energy(k, eq, distances):
     """
-    implements
-    1/2 * k * (distances - eq)^2
-
     does not support batching
     1/2 is included!
     shape of k, eq: tuple x 1
@@ -73,13 +67,9 @@ class WriteEnergy(torch.nn.Module):
         
         energy = 0
 
-        TERMS = self.terms
-
         for term in self.terms:
-            if not term in g.ntypes:
-                continue
             contrib = WriteEnergy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion)
-            contrib = contrib.unsqueeze(dim=0) #has to be done because the zeroth dimension is the number of g-nodes.
+            contrib = contrib.unsqueeze(dim=0) #artefact of formulation for batching
             energy += contrib
             with torch.no_grad():
                 g.nodes["g"].data["u_"+term+self.suffix] = contrib
@@ -95,9 +85,14 @@ class WriteEnergy(torch.nn.Module):
         if term in ["n2", "n3"]:
             eq = g.nodes[term].data["eq"+suffix]
             # divide by two to compensate double counting of invariant terms
-            en = harmonic_energy(k=k, eq=eq, distances=dof_data)
-  
-        if term in ["n4", "n4_improper"]:
-            en = torsion_energy(k=k,angle=dof_data, offset=offset_torsion)
+            return harmonic_energy(k=k, eq=eq, distances=dof_data)/2.
+        
 
-        return en
+
+        en = torsion_energy(k=k,angle=dof_data, offset=offset_torsion)
+        if term == "n4":
+            # divide by two to compensate double counting of invariant terms
+            return en/2.
+        if term == "n4_improper":
+            # divide by three to compensate triple counting of invariant terms
+            return en/3.

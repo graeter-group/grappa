@@ -86,7 +86,6 @@ class WriteBondParameters(torch.nn.Module):
 
     def forward(self, g):
         # bonds:
-        # every index pair appears twice, therefore 0.5 factor in energy calculation
         pairs = g.nodes["n2"].data["idxs"]
         try:
             # this has the shape num_pairs, 2, rep_dim
@@ -153,7 +152,6 @@ class WriteAngleParameters(torch.nn.Module):
 
     def forward(self, g):
         # bonds:
-        # every index pair appears twice, with permuted end points therefore 0.5 factor in energy calculation and sum is done automatically
         # however, is it maybe better to do the sum in the arguments directly? or is this not so unique then?
         pairs = g.nodes["n3"].data["idxs"]
         try:

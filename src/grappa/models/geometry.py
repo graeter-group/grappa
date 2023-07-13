@@ -1,3 +1,104 @@
+import dgl
+import torch
+
+class GeometryInGraph(torch.nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(GeometryInGraph, self).__init__()
+        self.args = args
+        self.kwargs = kwargs
+
+    def forward(self, g):
+        return geometry_in_graph(g, *self.args, **self.kwargs)
+    
+
+
+def geometry_in_graph(g):
+    """
+    Assign values to geometric entities in graphs.
+
+    Parameters
+    ----------
+    g : `dgl.DGLHeteroGraph`
+        Input graph.
+
+    Returns
+    -------
+    g : `dgl.DGLHeteroGraph`
+        Output graph.
+
+    Notes
+    -----
+    This function modifies graphs in-place.
+
+    """
+
+    #==========================================================================
+    if not "x" in g.nodes["n2"].data.keys():
+        # bonds:
+        pairs = g.nodes["n2"].data["idxs"]
+        # this has shape num_pairs, 2
+
+        positions = g.nodes["n1"].data["xyz"][pairs]
+        # this has shape num_pairs, 2, num_confs, 3
+
+        # compute bond length
+        x = distance(positions[:, 0, :, :], positions[:, 1, :, :])
+        # this has shape num_pairs, num_confs
+
+        # write this in the graph:
+        g.nodes["n2"].data["x"] = x
+
+
+    #==========================================================================
+    if not "x" in g.nodes["n3"].data.keys():
+
+        # compute bond angle
+        pairs = g.nodes["n3"].data["idxs"]
+        # this has shape num_pairs, 3
+
+        positions = g.nodes["n1"].data["xyz"][pairs]
+        # this has shape num_pairs, 3, num_confs, 3
+
+        x = angle(positions[:, 0, :, :], positions[:, 1, :, :], positions[:, 2, :, :])
+        # this has shape num_pairs, num_confs
+
+        # write this in the graph:
+        g.nodes["n3"].data["x"] = x
+
+
+    #==========================================================================
+    # compute torsion angle
+    improper_needed = "n4_improper" in g.ntypes
+    improper_needed = (not "x" in g.nodes["n4_improper"].data.keys()) if improper_needed else False
+
+
+    if not "x" in g.nodes["n4"].data.keys():
+
+        pairs = g.nodes["n4"].data["idxs"]
+
+        if "n4_improper" in g.ntypes:
+            # we can treat proper and improper the same way:
+            pairs = torch.cat((pairs, g.nodes["n4_improper"].data["idxs"]), dim=0)
+
+        # this has shape num_pairs, 4
+
+        positions = g.nodes["n1"].data["xyz"][pairs]
+        # this has shape num_pairs, 4, num_confs, 3
+
+        x = dihedral(positions[:, 0, :, :], positions[:, 1, :, :], positions[:, 2, :, :], positions[:, 3, :, :])
+        # this has shape num_pairs, num_confs
+
+        # write this in the graph:
+        if "n4_improper" in g.ntypes:
+            num_propers = g.nodes["n4"].data["idxs"].shape[0]
+            g.nodes["n4"].data["x"] = x[:num_propers]
+            g.nodes["n4_improper"].data["x"] = x[num_propers:]
+        else:
+            g.nodes["n4"].data["x"] = x
+    
+
+    return g
+
 # from espaloma:
 
 # MIT License
@@ -25,27 +126,7 @@
 # =============================================================================
 # IMPORTS
 # =============================================================================
-import torch
 
-# =============================================================================
-# UTILITY FUNCTIONS
-# =============================================================================
-def reduce_stack(msg, out):
-    """ Copy message and stack. """
-
-    def _reduce_stack(nodes, msg=msg, out=out):
-        return {out: nodes.mailbox[msg]}
-
-    return _reduce_stack
-
-
-def copy_src(src, out):
-    """ Copy source of an edge. """
-
-    def _copy_src(edges, src=src, out=out):
-        return {out: edges.src[src].clone()}
-
-    return _copy_src
 
 
 # =============================================================================
@@ -82,7 +163,8 @@ def _dihedral(r0, r1):
 def dihedral(
     x0: torch.Tensor, x1: torch.Tensor, x2: torch.Tensor, x3: torch.Tensor
 ) -> torch.Tensor:
-    """Dihedral between four points.
+    """
+    Dihedral between four points, assuming that x1 is the central atom.
 
     Reference
     ---------
@@ -111,165 +193,3 @@ def dihedral(
     theta = torch.atan2(y, x)
 
     return theta
-
-
-# =============================================================================
-# GEOMETRY IN HYPERNODES
-# =============================================================================
-def apply_bond(nodes):
-    """ Bond length in nodes. """
-
-    return {"x": distance(x0=nodes.data["xyz0"], x1=nodes.data["xyz1"])}
-
-
-def apply_angle(nodes):
-    """ Angle values in nodes. """
-    return {
-        "x": angle(
-            x0=nodes.data["xyz0"],
-            x1=nodes.data["xyz1"],
-            x2=nodes.data["xyz2"],
-        ),
-        "x_left": distance(
-            x0=nodes.data["xyz1"],
-            x1=nodes.data["xyz0"],
-        ),
-        "x_right": distance(
-            x0=nodes.data["xyz1"],
-            x1=nodes.data["xyz2"],
-        ),
-        "x_between": distance(
-            x0=nodes.data["xyz0"],
-            x1=nodes.data["xyz2"],
-        ),
-    }
-
-
-def apply_torsion(nodes):
-    """ Torsion dihedrals in nodes. """
-    return {
-        "x": dihedral(
-            x0=nodes.data["xyz0"],
-            x1=nodes.data["xyz1"],
-            x2=nodes.data["xyz2"],
-            x3=nodes.data["xyz3"],
-        ),
-        "x_bond_left": distance(
-            x0=nodes.data["xyz0"],
-            x1=nodes.data["xyz1"],
-        ),
-        "x_bond_center": distance(
-            x0=nodes.data["xyz1"],
-            x1=nodes.data["xyz2"],
-        ),
-        "x_bond_right": distance(
-            x0=nodes.data["xyz2"],
-            x1=nodes.data["xyz3"],
-        ),
-        "x_angle_left": angle(
-            x0=nodes.data["xyz0"],
-            x1=nodes.data["xyz1"],
-            x2=nodes.data["xyz2"],
-        ),
-        "x_angle_right": angle(
-            x0=nodes.data["xyz1"],
-            x1=nodes.data["xyz2"],
-            x2=nodes.data["xyz3"],
-        ),
-    }
-
-
-# =============================================================================
-# GEOMETRY IN GRAPH
-# =============================================================================
-# NOTE:
-# The following functions modify graphs in-place.
-
-
-def geometry_in_graph(g):
-    """Assign values to geometric entities in graphs.
-
-    Parameters
-    ----------
-    g : `dgl.DGLHeteroGraph`
-        Input graph.
-
-    Returns
-    -------
-    g : `dgl.DGLHeteroGraph`
-        Output graph.
-
-    Notes
-    -----
-    This function modifies graphs in-place.
-
-    """
-    import dgl
-    # Copy coordinates to higher-order nodes.
-    g.multi_update_all(
-        {
-            **{
-                "n1_as_%s_in_n%s"
-                % (pos_idx, big_idx): (
-                    dgl.function.copy_u(u="xyz", out="m_xyz%s" % pos_idx),
-                    dgl.function.sum(
-                        msg="m_xyz%s" % pos_idx, out="xyz%s" % pos_idx
-                    ),
-                )
-                for big_idx in range(2, 5)
-                for pos_idx in range(big_idx)
-            },
-            **{
-                "n1_as_%s_in_%s"
-                % (pos_idx, term): (
-                    dgl.function.copy_u(u="xyz", out="m_xyz%s" % pos_idx),
-                    dgl.function.sum(
-                        msg="m_xyz%s" % pos_idx, out="xyz%s" % pos_idx
-                    ),
-                )
-                for term in ["nonbonded", "onefour"]
-                for pos_idx in [0, 1]
-            },
-            **{
-                "n1_as_%s_in_%s"
-                % (pos_idx, term): (
-                    dgl.function.copy_u(u="xyz", out="m_xyz%s" % pos_idx),
-                    dgl.function.sum(
-                        msg="m_xyz%s" % pos_idx, out="xyz%s" % pos_idx
-                    ),
-                )
-                for term in ["n4_improper"]
-                for pos_idx in [0, 1, 2, 3]
-            },
-        },
-        cross_reducer="sum",
-    )
-
-    # apply geometry functions
-    g.apply_nodes(apply_bond, ntype="n2")
-    g.apply_nodes(apply_angle, ntype="n3")
-
-    if g.number_of_nodes("n4") > 0:
-        g.apply_nodes(apply_torsion, ntype="n4")
-
-    # copy coordinates to nonbonded
-    if g.number_of_nodes("nonbonded") > 0:
-        g.apply_nodes(apply_bond, ntype="nonbonded")
-
-    if g.number_of_nodes("onefour") > 0:
-        g.apply_nodes(apply_bond, ntype="onefour")
-
-    if g.number_of_nodes("n4_improper") > 0:
-        g.apply_nodes(apply_torsion, ntype="n4_improper")
-
-    return g
-
-
-class GeometryInGraph(torch.nn.Module):
-    def __init__(self, *args, **kwargs):
-        super(GeometryInGraph, self).__init__()
-        self.args = args
-        self.kwargs = kwargs
-
-    def forward(self, g):
-        return geometry_in_graph(g, *self.args, **self.kwargs)
