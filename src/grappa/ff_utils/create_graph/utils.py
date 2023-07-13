@@ -20,9 +20,10 @@ from typing import List, Tuple, Dict, Union, Callable
 from . import read_heterogeneous_graph, read_homogeneous_graph, deploy_parametrize, tuple_indices
 from ..charge_models import charge_models
 from ... import units as grappa_units
+from ...constants import MAX_ELEMENT
 
 
-def dgl_from_mol(mol:Mol, max_element:int=26)->dgl.DGLGraph:
+def dgl_from_mol(mol:Mol, max_element:int=MAX_ELEMENT)->dgl.DGLGraph:
     """
     The molecule must not contain any high-level chemical information, only the graph structure, atom types and formal charges. Returns a homogeneous graph.
     """

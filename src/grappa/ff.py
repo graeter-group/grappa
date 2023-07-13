@@ -7,8 +7,8 @@ Class wrapping a model and providing methods for translating various input types
 import torch
 import dgl
 from typing import Union, List, Tuple, Dict, Callable
-from grappa.ff_utils.create_graph.utils import process_input, process_output
-from grappa.deploy.deploy import model_from_path
+from .ff_utils.create_graph.utils import process_input, process_output
+from .deploy.deploy import model_from_path
 import openmm.app.topology
 import openmm.app
 from pathlib import Path
@@ -60,11 +60,17 @@ class ForceField:
             "mass": unit.dalton,
         }
 
+        self.use_improper = True # if False, does not use impropers, which allows for the prediction of parameters without the need of a classical forcefield. The reason is that improper ordering is not unique
+
+
     def params_from_topology_dict(self, top_dict:Dict)->Dict:
         """
         Accepts a dictionary with the keys 'atoms', 'bonds' and 'radicals'. The atoms entry must be a list containing lists of the form:
         [atom_idx:int, residue_name:str, atom_name:str, residue_idx:int, [sigma:float, epsilon:float], atomic_number:int]
         e.g. [1, "CH3", "ACE", 1, [0.339967, 0.45773], 6]
+        If the use_improper flag is set and the classical forcefield cannot match the topology, also the atom index tuples of the improper torsions must be provided in the form of:
+        top_dict["impropers"] = [[1,2,3,4], [5,6,7,8], ...]
+
         Returns a parameter dict containing index tuples (corresponding to the atom_idx passed in the atoms list) and np.ndarrays:
         
         {
@@ -200,7 +206,7 @@ class ForceField:
         from openmm.app import Simulation
         from openmm import LangevinIntegrator
         from openmm import unit
-        from .ff_utils import units as grappa_units
+        from . import units as grappa_units
         
         system_kwargs = {"nonbondedMethod":openmm.app.NoCutoff, "removeCMMotion":False}
 

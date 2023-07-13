@@ -74,7 +74,7 @@ def get_default_model_config():
         "n_att":3,
         "n_heads":6,
         "old_model":False,
-        "in_feat_name":["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "is_radical", "q_ref"],
+        "in_feat_name":["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"],
     }
 
     return args

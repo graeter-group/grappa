@@ -2,6 +2,7 @@
 import argparse
 from pathlib import Path
 from grappa.run.run import run_from_config
+from grappa.constants import DEFAULTBASEPATH
 
 def run_client():
 
@@ -13,7 +14,7 @@ def run_client():
     parser.add_argument('--run_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
     parser.add_argument('--model_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
     parser.add_argument('-p', '--ds_path', type=str, nargs='+', default=None, help="path to dataset. setting this overwrites the effect of ds_tag. (default: None)")
-    parser.add_argument('--ds_base', type=str, default="/hits/fast/mbm/seutelf/data/datasets/PDBDatasets", help="if tags are used, this is the base path to the datasets (default: /hits/fast/mbm/seutelf/data/datasets/PDBDatasets)")
+    parser.add_argument('--ds_base', type=str, default=DEFAULTBASEPATH, help=f"if tags are used, this is the base path to the datasets (default: {DEFAULTBASEPATH})")
     parser.add_argument('-t', '--ds_tag', type=str, nargs='+', default=[], help=" (dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'. default: [])")
     parser.add_argument('--force_factor','-f', type=float, default=None, help=" (default: 1.)")
     parser.add_argument('--energy_factor','-e', type=float, default=None, help=" (default: 1.)")
@@ -45,7 +46,7 @@ def run_client():
     parser.add_argument('--n_heads', type=int, default=None, help="Number of attention heads in the graph attention model. (default: 6)")
     parser.add_argument('--width', type=int, default=None, help=" (default: 512)")
     parser.add_argument('--rep_feats', type=int, default=None, help=" (default: 512)")
-    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "residue", "in_ring", "mass", "degree", "formal_charge", "is_radical", "q_ref"])')
+    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"])')
     parser.add_argument('--old_model', '-o', default=False, action="store_true", help="Whether or not to use the old model architecture (default: False)")
 
     args = parser.parse_args()
@@ -60,7 +61,7 @@ def run_client():
         if ds_short == "eric_rad":
             args.ds_tag += [f'AA_scan_rad/heavy{suffix_col}_amber99sbildn{suffix}', f'AA_opt_rad/heavy{suffix_col}_amber99sbildn{suffix}']
         if ds_short == "spice":
-            args.ds_tag += [f'spice/amber99sbildn_amber99sbildn{suffix}']
+            args.ds_tag += [f'spice/charge_default_ff_amber99sbildn{suffix}']
         if ds_short == "eric":
             args.ds_tag += [f'AA_scan_nat/amber99sbildn{suffix_col}_amber99sbildn{suffix}', f'AA_opt_nat/amber99sbildn{suffix_col}_amber99sbildn{suffix}', f'AA_scan_rad/heavy{suffix_col}_amber99sbildn{suffix}', f'AA_opt_rad/heavy{suffix_col}_amber99sbildn{suffix}']
 
@@ -122,8 +123,6 @@ def run_client():
     if args["continue_path"] is None and not tags is None:
         specified_args["test_ds_tags"] = tags
         specified_args["description"] += tags
-
-    print(specified_args)
 
     if len(seeds)==1:
         run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=None, seed=seeds[0], **specified_args)

@@ -4,20 +4,17 @@ Collection of models and utilities for protein force fields with parameters lear
 
 
 ## Installation
-Openmm and openff-toolkit are requirements that will be made optional in the future. Currently they are necessary and cannot be installed succesfully using pip or from source.
-Therefore one has to use conda to install the package. It is advised to use mamba since conda can be very slow in resolving dependencies.
-Even with this speedup, the installation can take up to 1 hour due to openff.
+Openmm is a requirement that will be made optional in the future. Currently they are necessary and cannot be installed using pip.
+Therefore one has to use conda to install the package.
 
-- If not installed already, **install mamba** using conda (has to be in base environment, see https://mamba.readthedocs.io/en/latest/installation.html):
-```
-conda activate base
-conda install -n base --override-channels -c conda-forge mamba 'python_abi=*=*cp*'
-```
-- Create a new conda environment, **install grappas dependecies using mamba**, clone the repository and install grappa from source:
+- Create a new conda environment, **install grappas dependecies using conda**, clone the repository and install grappa from source:
 ```
 conda activate base && mamba create -n grappa && conda activate grappa
-mamba env update --file environment.yml
+conda env update --file environment.yml
 
 git clone git@github.com:hits-mbm-dev/grappa.git; cd grappa;
 pip install -e .
 ```
+
+- For the **grappa.PDBData.matching submodule**, providing the creation of pdbfiles from positions and element alone, one also needs to install ase. In this case use opt_environment.yml or install it via ```conda install -c conda-forge ase```.
+- If you wish to train models yourself, the additional package pytorch-warmup is required. Install it via ```pip install pytorch-warmup``` or use opt_environment.yml.

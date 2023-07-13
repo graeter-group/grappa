@@ -18,6 +18,8 @@ import copy
 
 from ..units import RESIDUES
 
+from grappa.constants import MAX_ELEMENT
+
 class sysWriter:
     """
     Class for initializing a dgl graph along with an openmm system.
@@ -53,7 +55,7 @@ class sysWriter:
         self.proper_periodicity = 6
         self.improper_periodicity = 3
 
-        self.max_element = 26
+        self.max_element = MAX_ELEMENT
 
         self.units_for_dict = None # has to be set if we want to write the parameters as dictionary instead of in the system
 
@@ -363,7 +365,7 @@ class sysWriter:
         # write the radicals in the graph:
         is_radical = torch.zeros(self.graph.num_nodes("n1"))
         is_radical[np.array(self.radical_indices)] = 1
-        self.graph.nodes["n1"].data["is_radical"] = is_radical.float()
+        self.graph.nodes["n1"].data["is_radical"] = is_radical.float().unsqueeze(dim=-1) # add a dimension to be able to concatenate with the other features
 
         
         self.graph.nodes["n1"].data["residue"] = torch.zeros(self.graph.num_nodes("n1"), len(RESIDUES), dtype=torch.float32)

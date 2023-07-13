@@ -62,8 +62,8 @@ class GrappaTrain(training.Train):
             y_pred = batch.nodes["g"].data[energy]
             y_true = batch.nodes["g"].data[reference_energy]
             if average:
-                y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
-                y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
+                y_pred = y_pred - y_pred.mean(dim=-1).unsqueeze(dim=-1)
+                y_true = y_true - y_true.mean(dim=-1).unsqueeze(dim=-1)
         return y_pred, y_true
     
 
@@ -359,8 +359,8 @@ class GrappaTrain(training.Train):
                             y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor + GrappaTrain.get_energy(batch, level="g", energy_name="u_nonbonded", forcefield_name=forcefield_name)*energy_factor
                             AVERAGE = True
                             if AVERAGE:
-                                y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
-                                y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
+                                y_true = y_true - y_true.mean(dim=-1).unsqueeze(dim=-1)
+                                y_pred = y_pred - y_pred.mean(dim=-1).unsqueeze(dim=-1)
 
                         elif contrib=="ref":
                             en_name = "u_ref"
@@ -368,8 +368,8 @@ class GrappaTrain(training.Train):
                             y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor
                             AVERAGE = True
                             if AVERAGE:
-                                y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
-                                y_pred -= y_pred.mean(dim=-1).unsqueeze(dim=-1)
+                                y_true = y_true - y_true.mean(dim=-1).unsqueeze(dim=-1)
+                                y_pred = y_pred - y_pred.mean(dim=-1).unsqueeze(dim=-1)
 
                         elif contrib=="reference_ff":
                             en_name = "u_reference_ff"
@@ -711,6 +711,11 @@ class TrainSequentialParams(GrappaTrain):
     """
 
     def __init__(self, *args, direct_epochs=10, bce_weight=0, classification_epochs=5, energy_factor=1., force_factor=0., param_factor=0., param_statistics=None, **kwargs):
+
+        assert force_factor != 0 or energy_factor != 0 or param_factor != 0, "At least one of force_factor, energy_factor or param_factor must be non-zero."
+
+        assert force_factor != 0 or energy_factor != 0 or direct_epochs > 0
+
         super().__init__(*args, **kwargs)
 
         if param_statistics is None:
@@ -749,7 +754,7 @@ class TrainSequentialParams(GrappaTrain):
                 pred, model, batch = utilities.get_grad(model, batch, self.device, self.energy_writer, retain_graph=True)
                 ref = batch.nodes["n1"].data["grad_ref"]
                 try:
-                    loss += torch.nn.functional.mse_loss(pred, ref) * self.force_factor
+                    loss = loss + torch.nn.functional.mse_loss(pred, ref) * self.force_factor
                 except Exception as err:
                     if hasattr(err, 'message'):
                         err.message += f"\nshapes: {pred.shape}, {ref.shape}"
@@ -764,7 +769,7 @@ class TrainSequentialParams(GrappaTrain):
                 batch = self.energy_writer(batch)
             pred, ref = self.get_en(batch, average=True)
             try:
-                loss += torch.nn.functional.mse_loss(pred, ref) * self.energy_factor
+                loss = loss + torch.nn.functional.mse_loss(pred, ref) * self.energy_factor
             except Exception as err:
                 if hasattr(err, 'message'):
                     err.message += f"\nshapes: {pred.shape}, {ref.shape}"
@@ -779,7 +784,7 @@ class TrainSequentialParams(GrappaTrain):
             # Huber = torch.nn.HuberLoss(delta=3.)
             # loss += Huber(y_pred, y)
 
-            loss += torch.nn.functional.mse_loss(y_pred, y)
+            loss = loss + torch.nn.functional.mse_loss(y_pred, y)
 
         if self.param_factor != 0.:
             if self.energy_factor == 0 and not grad_active():
@@ -789,7 +794,7 @@ class TrainSequentialParams(GrappaTrain):
             # Huber = torch.nn.HuberLoss(delta=3.)
             # loss += Huber(y_pred, y) * self.param_factor
             try:
-                loss += torch.nn.functional.mse_loss(y_pred, y) * self.param_factor
+                loss = loss + torch.nn.functional.mse_loss(y_pred, y) * self.param_factor
             except Exception as err:
                 if hasattr(err, 'message'):
                     err.message += f"\nshapes: {pred.shape}, {ref.shape}"
@@ -800,8 +805,9 @@ class TrainSequentialParams(GrappaTrain):
                 if self.energy_factor == 0 and not grad_active():
                     batch = model(batch)
 
-                loss += self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4"].data["score"], batch.nodes["n4"].data["use_k"])
-                loss += self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4_improper"].data["score"], batch.nodes["n4_improper"].data["use_k"])
+                loss = loss + self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4"].data["score"], batch.nodes["n4"].data["use_k"])
+                if "n4_improper" in batch.ntypes:
+                    loss = loss + self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4_improper"].data["score"], batch.nodes["n4_improper"].data["use_k"])
 
         return loss
     
@@ -823,26 +829,33 @@ class TrainSequentialParams(GrappaTrain):
     #     return loss
 
     # returns the scaled and shifted parameters such that their std deviation is one
-    def get_scaled_params(self, batch, device="cpu"):
+    def get_scaled_params(self, batch:dgl.DGLGraph, device="cpu"):
 
         epsilon = 1e-2
 
-        FF = self.reference_forcefield
+        FF = "ref"
         # transform the parameters such that they are normally distributed
         # we do not have do subtract the mean because this cancels out when taking the difference
         params_true = torch.cat(
             [
                 (batch.nodes[level].data[param+"_"+FF].to(device)/(epsilon+self.param_statistics["std"][level+"_"+param])).flatten()
+                if level in batch.ntypes else torch.tensor([], device=device)
                 for level, param in TrainSequentialParams.bonded_parameter_types()
             ]
         , dim=0)
 
-        params_pred = torch.cat(
-            [
-                (batch.nodes[level].data[param].to(device)/(epsilon+self.param_statistics["std"][level+"_"+param])).flatten()
-                for level, param in TrainSequentialParams.bonded_parameter_types()
-            ]
-        , dim=0)
+        try:
+            params_pred = torch.cat(
+                [
+                    (batch.nodes[level].data[param].to(device)/(epsilon+self.param_statistics["std"][level+"_"+param])).flatten()
+                    if level in batch.ntypes else torch.tensor([], device=device)
+                    for level, param in TrainSequentialParams.bonded_parameter_types()
+                ]
+            , dim=0)
+        except:
+            for level in batch.ntypes:
+                print(level, ":" , batch.nodes[level].data.keys())
+            raise
 
         return params_pred, params_true
 
@@ -852,8 +865,8 @@ class TrainSequentialParams(GrappaTrain):
         ref = batch.nodes["g"].data[self.reference_energy]
 
         if average:
-            energies -= energies.mean(dim=-1).unsqueeze(dim=-1)
-            ref -= ref.mean(dim=-1).unsqueeze(dim=-1)
+            energies = energies - energies.mean(dim=-1).unsqueeze(dim=-1)
+            ref = ref - ref.mean(dim=-1).unsqueeze(dim=-1)
 
         pred = energies.flatten()
         ref = ref.flatten()

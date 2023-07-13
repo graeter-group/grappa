@@ -13,3 +13,7 @@ dependencies:
   - openmm
   - openmmtools
   - matplotlib
+  - ase
+  - pip
+  - pip:
+    - pytorch-warmup

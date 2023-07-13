@@ -11,11 +11,11 @@ dependencies = [
     "dgl",
     "torch",
     "openmm",
-    "openff-toolkit"
+    "matplotlib",
 ]
 
 [project.scripts]
-grappa_run = "grappa.run.client:run_client"
+grappa_train = "grappa.run.client:run_client"
 grappa_eval = "grappa.run.eval:eval_client"
 
 [tool.setuptools]

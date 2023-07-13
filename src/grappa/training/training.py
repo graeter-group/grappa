@@ -411,7 +411,6 @@ class Train:
 
                 b = time.time()
                 loss.backward()
-                print('\n\n\n backward succesful \n\n\n')
                 self.backward_time += time.time() - b
 
                 torch.nn.utils.clip_grad_norm_(model.parameters(), self.clip_value)

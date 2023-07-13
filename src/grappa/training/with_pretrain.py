@@ -131,7 +131,9 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         if direct_eval:
             direct_epochs = 0
 
-        trainer = ScheduledTrainer(energy_factor=0, force_factor=0, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
+        metrics = {"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}
+
+        trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics=metrics, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
@@ -141,9 +143,12 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
 
         print("starting training from pretrained model\nto version", version_name,"\n")
         
+        # torch.autograd.set_detect_anomaly(True)
+
+
         model = trainer.run(model=model, lr=lr_conti, epochs=epochs, version_name=version_name, device=device, log_note="", use_scheduler=True, saving=True,
         forced_optimizer=optimizer,
         final_eval=final_eval,
-        early_stopping_criterion="en_mse_vl",
+        early_stopping_criterion="f_mae_vl",
         use_warmup=use_warmup,
         )

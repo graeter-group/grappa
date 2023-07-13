@@ -3,7 +3,7 @@ from grappa.PDBData.PDBDataset import PDBDataset
 from pathlib import Path
 import shutil
 import os
-spicepath = "/hits/fast/mbm/seutelf/data/datasets/SPICE-1.1.2.hdf5"
+from grappa.constants import SPICEPATH as spicepath
 dipeppath = str(Path(spicepath).parent/Path("dipeptides_spice.hdf5"))
 
 storepath = Path(spicepath).parent/Path("PDBDatasets/spice/base")

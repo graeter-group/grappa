@@ -175,7 +175,7 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     tr_loader, vl_loader = run_utils.get_loaders((ds_tr, ds_vl))
 
     # only use the training set for statistics
-    statistics = get_param_statistics(loader=tr_loader, class_ff=ref_ff)
+    statistics = get_param_statistics(loader=tr_loader)
 
     # initialize the model
     model = model_from_config(config=model_config, stat_dict=statistics)
