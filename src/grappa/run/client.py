@@ -44,8 +44,9 @@ def run_client():
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
     parser.add_argument('--n_att', type=int, default=None, help=" (default: 3)")
     parser.add_argument('--n_heads', type=int, default=None, help="Number of attention heads in the graph attention model. (default: 6)")
-    parser.add_argument('--width', type=int, default=None, help=" (default: 512)")
+    parser.add_argument('--width', type=int, default=None, help="of the representation network (default: 512)")
     parser.add_argument('--rep_feats', type=int, default=None, help=" (default: 512)")
+    parser.add_argument('--readout_width', type=int, default=None, help=" (default: 512)")
     parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"])')
     parser.add_argument('--old_model', '-o', default=False, action="store_true", help="Whether or not to use the old model architecture (default: False)")
 

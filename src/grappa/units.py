@@ -3,6 +3,7 @@ DO NOT CHANGE THESE, RATHER CHANGE THE .units MEMBER OF THE FORCEFIELD CLASS!!
 """
 
 from openmm import unit
+from grappa.constants import RESIDUES
 
 DISTANCE_UNIT = unit.angstrom
 ENERGY_UNIT = unit.kilocalorie_per_mole

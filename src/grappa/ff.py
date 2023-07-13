@@ -15,10 +15,14 @@ from pathlib import Path
 import numpy as np
 import json
 
+from .ff_utils.sysWriter import sysWriter
+
+from .ff_utils.charge_models import model_from_dict
+
 from openmm import unit
 
 class ForceField:
-    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff=openmm.app.ForceField("amber99sbildn.xml")) -> None:
+    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Callable=None) -> None:
         """
         Class wrapping a model and providing methods for translating various input types to dgl graphs whcih can be processed by the model and translate back to various output types.
         model_path: a path to a folder with a single .pt file containing a model-state_dict and a config.yaml file containing model hyperparameters for construction.
@@ -63,6 +67,27 @@ class ForceField:
         self.use_improper = True # if False, does not use impropers, which allows for the prediction of parameters without the need of a classical forcefield. The reason is that improper ordering is not unique
 
 
+
+    def set_charge_model(self, charge_model:Union[Callable, str])->None:
+        """
+        Sets the charge model to the given callable. May also be a tag.
+        """
+        if isinstance(charge_model, str):
+            self.charge_model = model_from_dict(tag=charge_model)
+        else:
+            self.charge_model = charge_model
+
+
+    def createSystem(self, top:openmm.app.topology.Topology, allow_radicals:False, **system_kwargs):
+
+        writer = sysWriter(top, allow_radicals=allow_radicals, **system_kwargs)
+        writer.init_graph(with_parameters=False)
+        writer.forward_pass(model=self.model)
+        writer.update_system()
+    
+        return writer.system
+    
+
     def params_from_topology_dict(self, top_dict:Dict)->Dict:
         """
         Accepts a dictionary with the keys 'atoms', 'bonds' and 'radicals'. The atoms entry must be a list containing lists of the form:
@@ -103,7 +128,7 @@ class ForceField:
 
         }
         """
-        return self(top=top_dict)
+        pass
 
 
     def __call__(self, top, system_kwargs:Dict=None):
