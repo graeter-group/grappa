@@ -58,8 +58,9 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
             if not os.path.exists(model_path):
                 model_path = os.path.join(continue_path,"last_model.pt")
 
-            model.load_state_dict(torch.load(model_path, map_location=device))
-            print("continuing training of model from ", model_path, "\n")
+            if os.path.exists(model_path):
+                model.load_state_dict(torch.load(model_path, map_location=device))
+                print("continuing training of model from ", model_path, "\n")
 
         elif not load_path is None:
 

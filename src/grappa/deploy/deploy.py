@@ -45,7 +45,7 @@ def model_from_version(version:Union[Path,str], device:str="cpu", model_name:str
     """
     Loads a trained model from a version folder.
     """
-    config_path = Path(version)/Path("config.yaml")
+    config_path = Path(version)/Path("model_config.yml")
     model = model_from_config(config_path=config_path)
     model = model.to(device)
 
@@ -56,10 +56,10 @@ def model_from_version(version:Union[Path,str], device:str="cpu", model_name:str
 
 def model_from_path(model_path:Union[Path,str], device:str="cpu"):
     """
-    Loads a trained model from a path to a state_dict. In the parent folder of the state_dict file, there must be a config.yaml file.
+    Loads a trained model from a path to a state_dict. In the parent folder of the state_dict file, there must be a model_config.yml file.
     """
     model_path = Path(model_path)
-    config_path = model_path.parent/"model_config.yaml"
+    config_path = model_path.parent/"model_config.yml"
     model = model_from_config(config_path=config_path)
     model = model.to(device)
 

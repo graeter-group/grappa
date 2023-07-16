@@ -41,6 +41,8 @@ def get_default_run_config():
         "name":"",
         "test_ds_tags":None,
         "recover_optimizer":False,
+        "version_name":None,
+        "pretrain_name":None,
     }
 
     return args

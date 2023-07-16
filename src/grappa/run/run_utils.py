@@ -286,10 +286,10 @@ def write_run_config(run_args, idx=None):
     run_args_.pop("load_path")
     run_args_.pop("continue_path")
 
-    conf_p = Path(run_args["storage_path"])/Path(run_args["version_name"])/Path("run_config.yaml")
+    conf_p = Path(run_args["storage_path"])/Path(run_args["version_name"])/Path("run_config.yml")
 
     if not run_args["continue_path"] is None:
-        for file in conf_p.parent.glob("*.yaml"):
+        for file in conf_p.parent.glob("*.yml"):
             # rename the old config:
             if len(file.name.split("-")) != 1:
                 k = int(file.name.split("-")[0])
@@ -300,11 +300,10 @@ def write_run_config(run_args, idx=None):
 
     store_yaml(run_args_, str(conf_p))
 
+
 def write_model_config(model_args, run_args):
-    conf_p = Path(run_args["storage_path"])/Path(run_args["version_name"])/Path("model_config.yaml")
+    conf_p = Path(run_args["storage_path"])/Path(run_args["version_name"])/Path("model_config.yml")
     store_yaml(model_args, str(conf_p))
-
-
 
 
 

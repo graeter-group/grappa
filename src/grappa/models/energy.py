@@ -38,17 +38,17 @@ def torsion_energy(k, angle, offset=True):
 def harmonic_energy(k, eq, distances):
     """
     implements
-    1/2 * k * (distances - eq)^2
+    k * (distances - eq)^2
 
     does not support batching
-    1/2 is included!
+    1/2 is included!!!
     shape of k, eq: tuple x 1
     shape of distances: tuple x confs
     """
     energy = k*torch.square(distances-eq)
     # sum over all dims except the tuple dim
     energy = energy.sum(dim=0)
-    return 0.5*energy
+    return 0.5 * energy
 
 
 class WriteEnergy(torch.nn.Module):
@@ -73,8 +73,6 @@ class WriteEnergy(torch.nn.Module):
         
         energy = 0
 
-        TERMS = self.terms
-
         for term in self.terms:
             if not term in g.ntypes:
                 continue
@@ -85,6 +83,7 @@ class WriteEnergy(torch.nn.Module):
                 g.nodes["g"].data["u_"+term+self.suffix] = contrib
 
         g.nodes["g"].data["u"+self.suffix] = energy
+        
         return g
     
     @staticmethod

@@ -52,7 +52,7 @@ import pandas as pd
 
 def eval_once(version_path, plot=True, all_loaders=False, ds_base=None, ds_tag:List[str]=None, on_forces=True, test=False, last_model=False, full_loaders=False, ref_ff:str=None):
 
-    config_args = run_utils.load_yaml(Path(version_path)/Path("config.yaml"))
+    config_args = run_utils.load_yaml(Path(version_path)/Path("config.yml"))
     
     device = config_args["device"]
     
@@ -96,7 +96,7 @@ def eval_on_new_set(version_path, model, plot=True, ds_base=None, on_forces=True
     
 def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_forces=True, test=False, last_model=False, full_loaders=False, ref_ff:str=None):
     
-    config_args = run_utils.load_yaml(Path(version_path)/Path("config.yaml"))
+    config_args = run_utils.load_yaml(Path(version_path)/Path("config.yml"))
     
     device = config_args["device"]
     seed = config_args["seed"]

@@ -948,7 +948,7 @@ class PDBMolecule:
         
 
 
-    def get_ff_data(self, forcefield:ForceField=ForceField('amber99sbildn.xml'), collagen:bool=False)->Tuple[np.ndarray, np.ndarray]:
+    def get_ff_data(self, forcefield:Union[ForceField, Callable]=ForceField('amber99sbildn.xml'), collagen:bool=False)->Tuple[np.ndarray, np.ndarray]:
         """
         Returns energies, gradients that are calculated by the forcefield for all states xyz. Tha state axis is the zeroth axis.
         """

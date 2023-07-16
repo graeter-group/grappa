@@ -58,13 +58,14 @@ def run_client():
         if args.collagen:
             suffix_col = "_col"
         if ds_short == "eric_nat":
-            args.ds_tag += [f'AA_scan_nat/amber99sbildn{suffix_col}_amber99sbildn{suffix}', f'AA_opt_nat/amber99sbildn{suffix_col}']
+            args.ds_tag += [f'AA_scan_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}']
         if ds_short == "eric_rad":
-            args.ds_tag += [f'AA_scan_rad/heavy{suffix_col}_amber99sbildn{suffix}', f'AA_opt_rad/heavy{suffix_col}_amber99sbildn{suffix}']
+            args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
         if ds_short == "spice":
             args.ds_tag += [f'spice/charge_default_ff_amber99sbildn{suffix}']
         if ds_short == "eric":
-            args.ds_tag += [f'AA_scan_nat/amber99sbildn{suffix_col}_amber99sbildn{suffix}', f'AA_opt_nat/amber99sbildn{suffix_col}_amber99sbildn{suffix}', f'AA_scan_rad/heavy{suffix_col}_amber99sbildn{suffix}', f'AA_opt_rad/heavy{suffix_col}_amber99sbildn{suffix}']
+            args.ds_short.remove("eric")
+            args.ds_short += ["eric_nat", "eric_rad"]
 
 
     tags = None
@@ -93,13 +94,13 @@ def run_client():
     assert args.continue_path is None or run_config_path is None, "cannot specify both continue_path and run_config_path"
 
     if not args.continue_path is None:
-        run_config_path = f"{args.continue_path}/config.yaml"
+        run_config_path = f"{args.continue_path}/run_config.yml"
 
     if not args.continue_path is None:
-        model_config_path = f"{args.continue_path}/model_config.yaml"
+        model_config_path = f"{args.continue_path}/model_config.yml"
     
     if not args.load_path is None:
-        model_config_path = f"{args.load_path}/model_config.yaml"
+        model_config_path = f"{args.load_path}/model_config.yml"
 
     args = vars(args)
     

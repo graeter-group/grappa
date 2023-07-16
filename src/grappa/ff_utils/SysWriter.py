@@ -5,7 +5,7 @@ from openmm.unit import Quantity, radians
 
 import rdkit.Chem.rdchem
 
-from grappa.ff_utils.charge_models import model_from_dict
+from grappa.ff_utils.charge_models.charge_models import model_from_dict
 
 import torch
 import numpy as np
@@ -20,10 +20,11 @@ import copy
 
 from ..units import RESIDUES
 
-from grappa.constants import MAX_ELEMENT
+from grappa.constants import MAX_ELEMENT, TopologyDict, ParamDict
 
 
-class sysWriter:
+
+class SysWriter:
     """
     Class for initializing a dgl graph along with an openmm system.
     The dgl graph is initialized from the interactions in the openmm system.
@@ -72,12 +73,12 @@ class sysWriter:
 
         self.charge_model = None # if None, uses the charges from the forcefield. Otherwise, this should be a callable that takes a topology and returns a list of charges in the order of the topology.
 
-        self.epsilons = None # will be used upon parametrization if not None.
+        self.epsilons = None # will be used upon parametrization by dict if not None. Only used in a parameter dict, not in createSystem. (due to nonbonded exceptions)
         self.sigma = None
 
-        self.charge_dict = {}
+        self.external_to_internal_idx = None # dict that maps from external to internal indices. Internal indices are the zero-based indices in the graph and of the system. if None, assume that the indices are the same.
 
-        self.external_to_internal_idx = None # maps from external to internal indices. Internal indices are the zero-based indices in the graph and of the system. if None, assume that the indices are the same.
+        self.internal_to_external_idx = None # np.array that maps from internal (array position) to external (array value) indices. Internal indices are the zero-based indices in the graph and of the system. if None, assume that the indices are the same.
 
 
 
@@ -119,7 +120,8 @@ class sysWriter:
                    atom_indices:List[int]=None,
                    radicals:List[int]=None,
                    allow_radicals:bool=True,
-                   **system_kwargs):
+                   **system_kwargs) -> "SysWriter":
+
 
         external_to_internal_idx = None
 
@@ -136,6 +138,8 @@ class sysWriter:
         self = cls(top=top, classical_ff=classical_ff, allow_radicals=allow_radicals, radical_indices=radical_indices, **system_kwargs)
 
         self.external_to_internal_idx = external_to_internal_idx
+        
+        self.internal_to_external_idx = np.array(atom_indices, dtype=np.int64)
 
         return self
 
@@ -143,13 +147,16 @@ class sysWriter:
 
     @classmethod
     def from_dict(cls,
-                  top_dict:Dict,
+                  topology:TopologyDict,
                   ordered_by_res=True,
-                  allow_residues:bool=True,
+                  allow_radicals:bool=True,
                   classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
-                  **system_kwargs):
+                  **system_kwargs) -> "SysWriter":
+        """
+        Sigmas and epsilons must not be given, all are calculated by the classical forcefield if their entry is None for some atom.
+        """
 
-        atoms = top_dict["atoms"]
+        atoms = topology["atoms"]
 
         external_idxs = [a_entry[0] for a_entry in atoms]
         atom_types = [a_entry[1] for a_entry in atoms]
@@ -158,26 +165,30 @@ class sysWriter:
         residue_indices = [a_entry[3] for a_entry in atoms]
 
         # store these as arrays and write them to the parameter dict later:
-        epsilons = [a_entry[4][1] for a_entry in atoms]
-        sigmas = [a_entry[4][0] for a_entry in atoms]
+        try:
+            epsilons = [a_entry[4][1] for a_entry in atoms]
+            sigmas = [a_entry[4][0] for a_entry in atoms]
+        except:
+            epsilons = None
+            sigmas = None
         
 
-        bonds = top_dict["bonds"]
+        bonds = topology["bonds"]
 
-        if "radicals" in top_dict.keys():
-            radicals = top_dict["radicals"]
+        if "radicals" in topology.keys():
+            radicals = topology["radicals"]
         else:
             radicals = None
 
 
-        self = cls.from_bonds(bonds=bonds, residue_indices=residue_indices, residues=residues, atom_types=atom_types, atom_indices=external_idxs, radicals=radicals, allow_radicals=allow_residues, ordered_by_res=ordered_by_res, atomic_numbers=atomic_numbers, classical_ff=classical_ff, **system_kwargs)
+        self = cls.from_bonds(bonds=bonds, residue_indices=residue_indices, residues=residues, atom_types=atom_types, atom_indices=external_idxs, radicals=radicals, allow_radicals=allow_radicals, ordered_by_res=ordered_by_res, atomic_numbers=atomic_numbers, classical_ff=classical_ff, **system_kwargs)
 
-        self.set_lj(epsilons=epsilons, sigmas=sigmas)
+        self.set_lj(epsilons=np.array(epsilons, dtype=np.float32), sigmas=np.array(sigmas, dtype=np.float32))
         
         return self
 
 
-    def set_charge_model(self, charge_model:Union[Callable, str])->None:
+    def set_charge_model(self, charge_model:Union[Callable, str, None])->None:
         """
         Sets the charge model to the given callable. May also be a tag.
         """
@@ -187,7 +198,7 @@ class sysWriter:
             self.charge_model = charge_model
 
 
-    def set_lj(self, epsilons, sigmas):
+    def set_lj(self, epsilons:np.ndarray, sigmas:np.ndarray):
         """
         Stores the given epsilons and sigmas internally. Will be used upon parametrization.
         """
@@ -207,8 +218,34 @@ class sysWriter:
         else:
             charges = self.charge_model(self.top)
         
-        return charges
+        return np.array(charges, dtype=np.float32)
+    
 
+    def charges_from_ff(self, set_lj:bool=False)->List[float]:
+        """
+        Internal helper. If set_lj is True, also stores the LJ parameters internally.
+        """
+        nonbonded_counter = 0
+        for force in self.sys.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                assert force.getNumParticles() == self.sys.getNumParticles()
+                nonbonded_counter += 1
+
+                if set_lj:
+                    charges = np.zeros(self.sys.getNumParticles(), dtype=np.float32)
+                    self.epsilons = np.zeros(self.sys.getNumParticles(), dtype=np.float32)
+                    self.sigmas = np.zeros(self.sys.getNumParticles(), dtype=np.float32)
+                    for i in range(force.getNumParticles()):
+                        charge, sigma, epsilon = force.getParticleParameters(i)
+                        charges[i] = charge.value_in_unit(grappa_units.CHARGE_UNIT)
+                        self.epsilons[i] = epsilon.value_in_unit(grappa_units.ENERGY_UNIT)
+                        self.sigmas[i] = sigma.value_in_unit(grappa_units.DISTANCE_UNIT)
+
+                else:
+                    charges = np.array([force.getParticleParameters(i)[0].value_in_unit(grappa_units.CHARGE_UNIT) for i in range(force.getNumParticles())], dtype=np.float32)
+
+        assert nonbonded_counter == 1, "More or less than one nonbonded force in system."
+        return charges
 
 
     def init_graph(self, with_parameters:bool=False)->None:
@@ -253,23 +290,18 @@ class sysWriter:
         
         self.interaction_indices = {"n2":{}, "n3":{}, "n4":{}, "n4_improper":{}}
         
-        # to differentiate between improper and proper torsions:
-        # this is a set of sets of indices describing a proper torsion
-        torsions = tuple_indices.torsion_indices(mol=rd_mol, only_torsion_sets=True)
 
         bond_idxs = None
         angle_idxs = None
         proper_idxs = None
         improper_idxs = None
 
-        charges = None
-
         # set the interaction indices:
 
 
         # charges:
         if not self.charge_model is None and with_parameters:
-            charges = self.charges_from_model()
+            self.charges = self.charges_from_model()
 
 
         for force in self.sys.getForces():
@@ -302,7 +334,8 @@ class sysWriter:
 
                     k = k.value_in_unit(grappa_units.FORCE_CONSTANT_UNIT)
                     eq = eq.value_in_unit(grappa_units.DISTANCE_UNIT)
-                        
+
+
                     self.interaction_indices["n2"][(p1,p2)] = i
                     bond_idxs[i][0], bond_idxs[i][1] = p1, p2
 
@@ -424,18 +457,6 @@ class sysWriter:
 
 
 
-            # ========= NONBONDED =========
-            elif isinstance(force, openmm.NonbondedForce):
-                if not with_parameters:
-                    continue
-
-                charges = np.zeros(force.getNumParticles(), dtype=np.float32)
-
-                assert force.getNumParticles() == self.sys.getNumParticles()
-                for i in range(force.getNumParticles()):
-                    charge, sigma, epsilon = force.getParticleParameters(i)
-                    q = charge.value_in_unit(grappa_units.CHARGE_UNIT)
-                    charges[i] = q
 
         # use the rd_mol to obtain a homogeneous graph
         self.graph = utils.dgl_from_mol(mol=rd_mol, max_element=self.max_element)
@@ -459,7 +480,7 @@ class sysWriter:
             if self.use_impropers and "n4_improper" in TERMS:
                 self.graph.nodes["n4_improper"].data["k_ref"] = torch.tensor(k_improper, dtype=torch.float32)
 
-            self.graph.nodes["n1"].data["q_ref"] = torch.tensor(charges, dtype=torch.float32)
+            self.graph.nodes["n1"].data["q_ref"] = torch.tensor(self.charges, dtype=torch.float32)
 
         # add residue one-hot and is_radicals:
         self.write_one_hots()
@@ -488,44 +509,247 @@ class sysWriter:
         Writes the parameters predicted by the model into the graph. The model must already be on the given device.
         """
         self.graph = self.graph.to(device)
-        self.graph = model(self.graph)
+        with torch.no_grad():
+            self.graph = model(self.graph)
         self.graph = self.graph.cpu()
 
 
-    def update_system(self)->None:
+    def get_parameter_dict(self, units:Dict=None)->ParamDict:
         """
-        Updates the system parameters from the graph.
+        Returns a dictionary with the parameters of the molecule.
+        Units are given by the unit_dict. By default, the units are openmm units, i.e.
+        {
+            "distance":openmm.unit.nanometer,
+            "angle":openmm.unit.radian,
+            "energy":openmm.unit.kilojoule_per_mole,
+        }
+
+        The charge unit is elementary charge.
+
+        The parameters and index tuples (corresponding to the atom_idx in self.internal_to_external_indices) are stored as np.ndarrays.
+        
+        {
+        "atom_idxs":np.array, the indices of the atoms in the molecule that correspond to the parameters. In rising order and starts at zero.
+
+        "atom_q":np.array, the partial charges of the atoms.
+
+        "atom_sigma":np.array, the sigma parameters of the atoms.
+
+        "atom_epsilon":np.array, the epsilon parameters of the atoms.
+
+        optional (if 'm' or 'mass' in the graph data keys, m has precedence over mass):
+            "atom_mass":np.array, the masses of the atoms in atomic units.
+
+        
+        "{bond/angle}_idxs":np.array of shape (#2/3-body-terms, 2/3), the indices of the atoms in the molecule that correspond to the parameters. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
+
+        "{bond/angle}_k":np.array, the force constant of the interaction.
+
+        "{bond/angle}_eq":np.array, the equilibrium distance of the interaction.   
+
+        
+        "{proper/improper}_idxs":np.array of shape (#4-body-terms, 4), the indices of the atoms in the molecule that correspond to the parameters. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
+
+        "{proper/improper}_ks":np.array of shape (#4-body-terms, n_periodicity), the fourier coefficients for the cos terms of torsion. may be negative instead of the equilibrium dihedral angle (which is always set to zero). n_periodicity is a hyperparemter of the model and defaults to 6.
+
+        "{proper/improper}_ns":np.array of shape (#4-body-terms, n_periodicity), the periodicities of the cos terms of torsion. n_periodicity is a hyperparemter of the model and defaults to 6.
+
+        "{proper/improper}_phases":np.array of shape (#4-body-terms, n_periodicity), the phases of the cos terms of torsion. n_periodicity is a hyperparameter of the model and defaults to 6.
+
+        }
         """
 
-        # ========= SET THE CHARGES =========
-        # change the charges to the ones in the charge_dict
-        if (not self.charge_model is None) and self.charge_dict is None:
-            self.calc_charge_dict()
-            for force in self.sys.getForces():
-                if isinstance(force, openmm.NonbondedForce):
-                    for i in range(force.getNumParticles()):
-                        _, sig, eps = force.getParticleParameters(i)
-                        q = self.charge_dict[i]
-                        force.setParticleParameters(i, q, sigma, epsilon)
-                    for i in range(force.getNumExceptions()):
-                        (
-                            idx0,
-                            idx1,
-                            _,
-                            sigma,
-                            epsilon,
-                        ) = force.getExceptionParameters(i)
-                        force.setExceptionParameters(
-                            i, idx0, idx1, q, sigma, epsilon
-                        )
+        if units is None:
+            units = {
+                     "distance":openmm.unit.nanometer,
+                     "angle":openmm.unit.radian,
+                     "energy":openmm.unit.kilojoule_per_mole,
+                     }
 
 
+        CHARGE_UNIT = openmm.unit.elementary_charge
+        DISTANCE_UNIT = units["distance"]
+        ANGLE_UNIT = units["angle"]
+        ENERGY_UNIT = units["energy"]
+
+        BOND_EQ_UNIT = DISTANCE_UNIT
+        ANGLE_EQ_UNIT = ANGLE_UNIT
+        TORSION_K_UNIT = ENERGY_UNIT
+        TORSION_PHASE_UNIT = ANGLE_UNIT
+        BOND_K_UNIT = ENERGY_UNIT / (DISTANCE_UNIT**2)
+        ANGLE_K_UNIT = ENERGY_UNIT / (ANGLE_UNIT**2)
+
+
+
+        param_dict = {}
+        
         self.graph = self.graph.to("cpu")
 
         if "n4" in self.graph.ntypes:
             assert self.graph.nodes["n4"].data["k"].shape[1] == self.proper_periodicity
         if self.use_impropers and "n4_improper" in self.graph.ntypes:
             assert self.graph.nodes["n4_improper"].data["k"].shape[1] == self.improper_periodicity
+
+
+
+        # ========= CHARGES AND LJ =========
+        if self.charge_model is not None:
+            self.charges = self.charges_from_model()
+        else:
+            if self.epsilons is None or self.sigmas is None:
+                self.charges = self.charges_from_ff(set_lj=True)
+            else:
+                self.charges = self.charges_from_ff(set_lj=False)
+
+        if self.epsilons is None or self.sigmas is None:
+            self.charges_from_ff(set_lj=True)
+        
+        assert self.charges is not None
+        assert self.sigmas is not None
+        assert self.epsilons is not None
+
+        param_dict["atom_q"] = self.charges
+        param_dict["atom_sigma"] = self.sigmas
+        param_dict["atoms_epsilon"] = self.epsilons
+
+        idxs = np.arange(self.graph.num_nodes("n1"))
+
+        # to external:
+        if self.internal_to_external_idx is not None:
+            idxs = self.internal_to_external_idx[idxs]
+        
+        param_dict["atom_idxs"] = idxs
+
+
+        # ========= BONDS =========
+        eqs = self.graph.nodes["n2"].data["eq"].detach().numpy()
+        ks = self.graph.nodes["n2"].data["k"].detach().numpy()
+
+        # convert to openmm units:
+        eqs = Quantity(eqs, unit=grappa_units.DISTANCE_UNIT).value_in_unit(BOND_EQ_UNIT)
+        ks = Quantity(ks, unit=grappa_units.FORCE_CONSTANT_UNIT).value_in_unit(BOND_K_UNIT)
+
+        param_dict["bond_eq"] = eqs
+        param_dict["bond_k"] = ks
+
+        idxs = self.graph.nodes["n2"].data["idxs"].detach().numpy()
+        if self.internal_to_external_idx is not None:
+            idxs = self.internal_to_external_idx[idxs]
+        param_dict["bond_idxs"] = idxs
+
+
+        # ========= ANGLES =========
+        eqs = self.graph.nodes["n3"].data["eq"].detach().numpy()
+        ks = self.graph.nodes["n3"].data["k"].detach().numpy()
+
+        # convert to openmm units:
+        eqs = Quantity(eqs, unit=grappa_units.ANGLE_UNIT).value_in_unit(ANGLE_EQ_UNIT)
+        ks = Quantity(ks, unit=grappa_units.ANGLE_FORCE_CONSTANT_UNIT).value_in_unit(ANGLE_K_UNIT)
+
+        param_dict["angle_eq"] = eqs
+        param_dict["angle_k"] = ks
+
+        idxs = self.graph.nodes["n3"].data["idxs"].detach().numpy()
+        if self.internal_to_external_idx is not None:
+            idxs = self.internal_to_external_idx[idxs]
+        param_dict["angle_idxs"] = idxs
+
+
+        # ========= PROPER DIHEDRALS =========
+        ns, phases, k_vec = SysWriter.get_periodicity_phase_k(ks=self.graph.nodes["n4"].data["k"])
+        
+        # convert to openmm units
+        phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(TORSION_PHASE_UNIT)
+        k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(TORSION_K_UNIT)
+
+        param_dict["proper_periodicity"] = ns
+        param_dict["proper_phase"] = phases
+        param_dict["proper_k"] = k_vec
+
+        idxs = self.graph.nodes["n4"].data["idxs"].detach().numpy()
+        if self.internal_to_external_idx is not None:
+            idxs = self.internal_to_external_idx[idxs]
+
+        param_dict["proper_idxs"] = idxs
+
+        # ========= IMPROPER DIHEDRALS =========
+        if not self.use_impropers:
+            return param_dict
+        
+        if not "n4_improper" in self.graph.ntypes:
+            return param_dict
+        
+        ns, phases, k_vec = SysWriter.get_periodicity_phase_k(ks=self.graph.nodes["n4_improper"].data["k"])
+        
+        # convert to openmm units
+        phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(TORSION_PHASE_UNIT)
+        k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(TORSION_K_UNIT)
+
+        param_dict["improper_periodicity"] = ns
+        param_dict["improper_phase"] = phases
+        param_dict["improper_k"] = k_vec
+
+        idxs = self.graph.nodes["n4_improper"].data["idxs"].detach().numpy()
+        if self.internal_to_external_idx is not None:
+            idxs = self.internal_to_external_idx[idxs]
+        param_dict["improper_idxs"] = idxs
+
+        return param_dict
+
+
+
+
+
+    def update_system(self)->None:
+        """
+        Updates the system with parameters from the graph. The epsilons and sigmas are taken from the classical forcefield.
+        """
+
+        openmm_units = {
+            "distance":openmm.unit.nanometer,
+            "angle":openmm.unit.radian,
+            "energy":openmm.unit.kilojoule_per_mole,
+        }
+
+        param_dict = self.get_parameter_dict(units=openmm_units)
+
+        # ========= SET THE CHARGES =========
+        # change the charges to the ones in the charge_dict
+        if not self.charge_model is None:
+    
+            for force in self.sys.getForces():
+                if isinstance(force, openmm.NonbondedForce):
+                    if force.getNumExceptions() > 0:
+                        original_charges = []
+
+                    for i in range(force.getNumParticles()):
+                        q_orig, sigma, epsilon = force.getParticleParameters(i)
+
+                        original_charges.append(q_orig.value_in_unit(openmm.unit.elementary_charge))
+
+                        q = self.charges[i]
+
+                        force.setParticleParameters(i, q, sigma, epsilon)
+                    for i in range(force.getNumExceptions()):
+                        (
+                            idx0,
+                            idx1,
+                            q_exception,
+                            sigma,
+                            epsilon,
+                        ) = force.getExceptionParameters(i)
+
+                        eps = 1e-20
+
+                        # apply the same scaling:
+                        ratio_q = self.charges[idx0] * (self.charges[idx1] + eps) / (original_charges[idx0] * original_charges[idx1] + eps)
+
+                        q = ratio_q * q_exception
+
+                        force.setExceptionParameters(
+                            i, idx0, idx1, q, sigma, epsilon
+                        )
+
 
         for force in self.sys.getForces():
             # ========= ERRORS =========
@@ -544,21 +768,16 @@ class sysWriter:
                 if force.getNumBonds() != self.graph.num_nodes("n2"):
                     raise ValueError("Number of bonds in the system does not match the number of bonds in the graph.")
                 
-                eqs = self.graph.nodes["n2"].data["eq"].detach.numpy()
-                ks = self.graph.nodes["n2"].data["k"].detach.numpy()
-
-                # convert to openmm units:
-                eqs = Quantity(eqs, unit=grappa_units.DISTANCE_UNIT).value_in_unit_system(grappa_units.OPENMM_BOND_EQ_UNIT)
-                ks = Quantity(ks, unit=grappa_units.FORCE_CONSTANT_UNIT).value_in_unit_system(grappa_units.OPENMM_BOND_K_UNIT)
+                
+                eqs = param_dict["bond_eq"]
+                ks = param_dict["bond_k"]
 
                 # loop through the graph parameters and update the force:
-                for i_graph, (idx_tuple, eq, k) in enumerate(zip(self.graph.nodes["n2"].data["idxs"], eqs, ks)):
-                    eq = self.graph.nodes["n2"].data["eq"][i_graph]
-                    k = self.graph.nodes["n2"].data["k"][i_graph]
-                    particle1, particle2 = idx_tuple
+                for i_graph, ((p1,p2), eq, k) in enumerate(zip(self.graph.nodes["n2"].data["idxs"].tolist(), eqs, ks)):
+
                     # find the index of the bond in the force:
-                    idx = self.interaction_indices["n2"][idx_tuple]
-                    force.setBondParameters(idx, particle1=particle1, particle2=particle2, length=eq, k=k)
+                    idx = self.interaction_indices["n2"][(p1,p2)]
+                    force.setBondParameters(idx, particle1=p1, particle2=p2, length=eq, k=k)
 
             # ========= ANGLES =========
             # assume that each angle only occurs once in the system
@@ -569,19 +788,15 @@ class sysWriter:
                 if force.getNumAngles() != self.graph.num_nodes("n3"):
                     raise ValueError("Number of angles in the system does not match the number of angles in the graph.")
 
-                eqs = self.graph.nodes["n3"].data["eq"].detach.numpy()
-                ks = self.graph.nodes["n3"].data["k"].detach.numpy()
-
-                # convert to openmm units:
-                eqs = Quantity(eqs, unit=grappa_units.ANGLE_UNIT).value_in_unit_system(grappa_units.OPENMM_ANGLE_EQ_UNIT)
-                ks = Quantity(ks, unit=grappa_units.ANGLE_FORCE_CONSTANT_UNIT).value_in_unit_system(grappa_units.OPENMM_ANGLE_K_UNIT)
+                eqs = param_dict["angle_eq"]
+                ks = param_dict["angle_k"]
 
                 # loop through the graph parameters and update the force:
-                for i_graph, (idx_tuple, eq, k) in enumerate(zip(self.graph.nodes["n3"].data["idxs"], eqs, ks)):
-                    particle1, particle2, particle3 = idx_tuple
+                for i_graph, ((p1,p2,p3), eq, k) in enumerate(zip(self.graph.nodes["n3"].data["idxs"].tolist(), eqs, ks)):
+                    particle1, particle2, particle3 = (p1,p2,p3)
                     # find the index of the bond in the force:
-                    idx = self.interaction_indices["n3"][idx_tuple]
-                    force.setAngleParameters(idx, particle1=particle1, particle2=particle2, particle3=particle3, angle=eq, k=k)
+                    idx = self.interaction_indices["n3"][(p1,p2,p3)]
+                    force.setAngleParameters(idx, particle1=p1, particle2=p2, particle3=p3, angle=eq, k=k)
 
             # ========= PROPER AND IMPROPER TORSIONS =========
             elif isinstance(force, openmm.PeriodicTorsionForce):
@@ -596,29 +811,24 @@ class sysWriter:
                         continue
                     
                     if level == "n4":
-                        assert self.graph.nodes["n4"].data["k"].shape[1] == self.proper_periodicity
+                        key = "proper"
                     elif level == "n4_improper":
-                        assert self.graph.nodes["n4_improper"].data["k"].shape[1] == self.improper_periodicity
+                        key = "improper"
 
-                    ns, phases, k_vec = sysWriter.get_periodicity_phase_k(ks=self.graph.nodes[level].data["k"])
-                    idxs = self.graph.nodes[level].data["idxs"]
-                    
-                    # convert to openmm units
-                    phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(grappa_units.OPENMM_TORSION_PHASE_UNIT)
-                    k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(grappa_units.OPENMM_TORSION_K_UNIT)
+                    ns, phases, k_vec = param_dict[f"{key}_periodicity"], param_dict[f"{key}_phase"], param_dict[f"{key}_k"]
 
-                    for i_graph, idx_tuple in enumerate(idxs):
+                    idxs = self.graph.nodes[level].data["idxs"].tolist()
+
+                    for i_graph, (p1,p2,p3,p4) in enumerate(idxs):
 
                         for periodicity, phase, k in zip(ns[i_graph], phases[i_graph], k_vec[i_graph]):
-                            k = Quantity(k, unit=grappa_units.ENERGY_UNIT)
-                            phase = Quantity(phase, unit=grappa_units.ANGLE_UNIT)
-                            key = idx_tuple + (periodicity,)
-                            particle1, particle2, particle3, particle4 = idx_tuple
+                            key = (p1,p2,p3,p4) + (periodicity,)
+                            particle1, particle2, particle3, particle4 = (p1,p2,p3,p4)
 
                             # if this torsion was in the original system, update it
-                            if key in self.interaction_indices:
+                            if key in self.interaction_indices[level].keys():
                                 idx = self.interaction_indices[level][key]
-                                force.setTorsionParameters(idx, particle1=particle1, particle2=particle2, particle3=particle3, particle4=particle4, periodicity=periodicity, phase=eq, k=k)
+                                force.setTorsionParameters(idx, particle1=particle1, particle2=particle2, particle3=particle3, particle4=particle4, periodicity=periodicity, phase=phase, k=k)
                             # otherwise, add it
                             else:
                                 force.addTorsion(particle1=particle1, particle2=particle2, particle3=particle3, particle4=particle4, periodicity=periodicity, phase=phase, k=k)
@@ -695,7 +905,7 @@ class sysWriter:
 
         # ========= TOTAL ENERGIES ==========
     
-        total_energies, total_gradients = sysWriter.get_energies_(simulation, np.array(xyz))
+        total_energies, total_gradients = SysWriter.get_energies_(simulation, np.array(xyz))
         
         
         # ========= SET BONDED PARAMETERS TO ZERO =========
@@ -748,7 +958,7 @@ class sysWriter:
 
 
         # ========= NONBONDED ENERGIES =========
-        nonbonded_energies, nonbonded_gradients = sysWriter.get_energies_(simulation, np.array(xyz))
+        nonbonded_energies, nonbonded_gradients = SysWriter.get_energies_(simulation, np.array(xyz))
 
 
         # write the coordinates to the graph

@@ -1,5 +1,5 @@
 
-from ..sysWriter import sysWriter
+from ..SysWriter import SysWriter
 
 import openmm
 from typing import List, Tuple, Dict, Union, Set, Callable

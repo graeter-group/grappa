@@ -1,8 +1,7 @@
 """
-Class wrapping a model and providing methods for translating various input types to dgl graphs whcih can be processed by the model and translate back to various output types.
+Class wrapping a model and providing methods for translating various input types to dgl graphs which can be processed by the model and translate back to various output types.
 """
 
-# MAKE MAX ELEMENT CLASS MEMBER!
 
 import torch
 import dgl
@@ -15,33 +14,35 @@ from pathlib import Path
 import numpy as np
 import json
 
-from .ff_utils.sysWriter import sysWriter
+from .ff_utils.SysWriter import SysWriter
+from .ff_utils.SysWriter import TopologyDict, ParamDict
 
-from .ff_utils.charge_models import model_from_dict
+from .ff_utils.charge_models.charge_models import model_from_dict
 
 from openmm import unit
 
 class ForceField:
-    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Callable=None) -> None:
+    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Union[str,Callable]=None, allow_radicals:bool=False) -> None:
         """
         Class wrapping a model and providing methods for translating various input types to dgl graphs whcih can be processed by the model and translate back to various output types.
         model_path: a path to a folder with a single .pt file containing a model-state_dict and a config.yaml file containing model hyperparameters for construction.
         model: a callable taking and returning a dgl graph.
         classical_ff: an openmm forcefield object used for nonbonded parameters and system initialization.
-        units: a dictionary containing the openmm.unit used for the output dictionary.
+        units: a dictionary containing the openmm.unit used for the output dictionary. The charge unit is always elementary charges.
+
             The keys and default values are:
             {
                 "distance": unit.nanometer,
-                "energy": unit.kilojoule_per_mole,
                 "angle": unit.radian,
-                "charge": unit.elementary_charge,
-                "mass": unit.dalton,
+                "energy": unit.kilojoule_per_mole,
             }
             Note that the derived parameters then are:
-                FORCE_UNIT = ENERGY_UNIT / DISTANCE_UNIT
-                FORCE_CONSTANT_UNIT = ENERGY_UNIT / (DISTANCE_UNIT ** 2)
-                ANGLE_FORCE_CONSTANT_UNIT = ENERGY_UNIT / (ANGLE_UNIT ** 2)
-                TORSION_FORCE_CONSTANT_UNIT = ENERGY_UNIT
+                BOND_EQ_UNIT = DISTANCE_UNIT
+                ANGLE_EQ_UNIT = ANGLE_UNIT
+                TORSION_K_UNIT = ENERGY_UNIT
+                TORSION_PHASE_UNIT = ANGLE_UNIT
+                BOND_K_UNIT = ENERGY_UNIT / (DISTANCE_UNIT**2)
+                ANGLE_K_UNIT = ENERGY_UNIT / (ANGLE_UNIT**2)
 
         """
         if model is not None and model_path is not None:
@@ -53,24 +54,38 @@ class ForceField:
             self.model = model
         else:
             self.model = model_from_path(model_path)
+            self.model.eval()
+
         
-        self.classical_ff = classical_ff
+        self.classical_ff = classical_ff # used to create the dgl.graph, i.e. to obtain indices of impropers, propers, angles and bonds.
 
         self.units = {
             "distance": unit.nanometer,
-            "energy": unit.kilojoule_per_mole,
             "angle": unit.radian,
-            "charge": unit.elementary_charge,
-            "mass": unit.dalton,
+            "energy": unit.kilojoule_per_mole,
         }
 
-        self.use_improper = True # if False, does not use impropers, which allows for the prediction of parameters without the need of a classical forcefield. The reason is that improper ordering is not unique
+        self.use_improper = True # if False, does not use impropers, which allows for the prediction of parameters without the need of a classical forcefield. The reason is that improper ordering and which ones to use at all are not unique.
+        assert self.use_improper, "Currently, the use_improper flag must be True."
+
+        self.set_charge_model(charge_model)
+
+        self.allow_radicals = allow_radicals
 
 
+    @classmethod
+    def from_tag(cls, tag:str)->"ForceField":
+        pass
 
-    def set_charge_model(self, charge_model:Union[Callable, str])->None:
+
+    def set_charge_model(self, charge_model:Union[Callable, str, None])->None:
         """
         Sets the charge model to the given callable. May also be a tag.
+        The callable must take a openmm.app.Topology and return a list of charges in grappa units.
+        Possible tags are:
+        'bmk' - 'own charges using a scheme to obtain tbulated charges from a QM-calculated electron density
+        'heavy' - 'the charges from aber99sbildn where in case of a radical of type 'H-missing' the heavy atom at which the hydrogen is missing receives the partial charge from the hydrogen.
+        'avg': 'the charges from aber99sbildn where in case of a radical of type 'H-missing' all atoms receive an equal share of the partial charge from the hydrogen.
         """
         if isinstance(charge_model, str):
             self.charge_model = model_from_dict(tag=charge_model)
@@ -78,25 +93,58 @@ class ForceField:
             self.charge_model = charge_model
 
 
-    def createSystem(self, top:openmm.app.topology.Topology, allow_radicals:False, **system_kwargs):
+    def createSystem(self, topology:openmm.app.Topology, **system_kwargs)->openmm.System:
+        """
+        Returns:
+            An openmm.System with the given topology and the parameters predicted by the model.
 
-        writer = sysWriter(top, allow_radicals=allow_radicals, **system_kwargs)
+        Accepts:
+            An openmm.app.Topology describing the system to be parametrised.
+
+        Parametrises the topology using the internal model and returns an openmm.System describing the topology with the predicted parameters.
+        """
+        writer = SysWriter(top=topology, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
+        writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)
         writer.forward_pass(model=self.model)
         writer.update_system()
     
-        return writer.system
+        return writer.sys
+
     
-
-    def params_from_topology_dict(self, top_dict:Dict)->Dict:
+    def system_from_topology_dict(self, topology:TopologyDict, **system_kwargs)->openmm.System:
         """
-        Accepts a dictionary with the keys 'atoms', 'bonds' and 'radicals'. The atoms entry must be a list containing lists of the form:
-        [atom_idx:int, residue_name:str, atom_name:str, residue_idx:int, [sigma:float, epsilon:float], atomic_number:int]
-        e.g. [1, "CH3", "ACE", 1, [0.339967, 0.45773], 6]
-        If the use_improper flag is set and the classical forcefield cannot match the topology, also the atom index tuples of the improper torsions must be provided in the form of:
-        top_dict["impropers"] = [[1,2,3,4], [5,6,7,8], ...]
+        Returns:
+            An openmm.System with the given topology and the parameters predicted by the model.
 
-        Returns a parameter dict containing index tuples (corresponding to the atom_idx passed in the atoms list) and np.ndarrays:
+        Accepts:
+            A :any:`~grappa.constants.TopologyDict`, i.e. a dict with the keys 'atoms', 'bonds' and, optionally, 'radicals'.
+
+            Sigmas and epsilons must not be given, all are calculated by the classical forcefield if their entry is None for some atom.
+
+        Parametrises the topology using the internal model and returns an openmm.System describing the topology with the predicted parameters.
+        """
+        
+        writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
+        writer.set_charge_model(self.charge_model)
+        writer.init_graph(with_parameters=False)
+        writer.forward_pass(model=self.model)
+        writer.update_system()
+    
+        return writer.sys
+        
+
+    def params_from_topology_dict(self, topology:TopologyDict)->ParamDict:
+        """
+        Returns:
+            A dictionary containing the parameters predicted by the model for the given topology.
+
+        Accepts:
+            A :any:`~grappa.constants.TopologyDict`, i.e. a dict with the keys 'atoms', 'bonds' and, optionally, 'radicals'.
+
+            Sigmas and epsilons must not be given, all are calculated by the classical forcefield if their entry is None for some atom.
+
+        Parametrises the topology useing the internal model and returns a parameter dict containing index tuples (corresponding to the atom_idx passed in the atoms list) and np.ndarrays:
         
         {
         "atom_idxs":np.array, the indices of the atoms in the molecule that correspond to the parameters. In rising order and starts at zero.
@@ -128,50 +176,49 @@ class ForceField:
 
         }
         """
-        pass
+        writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff)
+        writer.set_charge_model(self.charge_model)
+        writer.init_graph(with_parameters=False)
+        writer.forward_pass(model=self.model)
+        d = writer.get_parameter_dict(units=self.units)
+        return d
 
 
-    def __call__(self, top, system_kwargs:Dict=None):
+    def __call__(self, topology:Union[TopologyDict, openmm.app.Topology], **system_kwargs)->Union[ParamDict, openmm.System]:
         """
-        Return type is dependent of the input type.
-        Input must be either an openmm topology, an openmm PDBFile, a path to a PDB file or a path to a gromacs topology file.
-        If the input type is an openmm topology or an openmm PDBFile the output is an openmm system.
-        If the input is a path to a PDB file, the output is a dictionary containing indices describing the interactions. If the input is a path to a gromacs topology file, the output is a topology file with parameters added. This has to be made evident by the file suffix (.gro or .pdb).
-
-        The input may also be a dictionary with the keys 'atoms', 'bonds' and 'radicals'. In this case, the workflow of this function is:
-        bonds -> dgl graph
-        atom_properties -> node features
-        write lj parameters in the graph
-        charge model: atom properties (atom_name,residue,radical_indices, residue_indices) -> charges -> write charges in dgl graph
-        model: dgl_graph -> parametrised dgl graph
-        parametrised dgl graph -> parameter dict
+        Depending on the input type, either calls self.params_from_topology_dict or self.createSystem.
         """
-        input_type = type(top)
-        assert input_type in [openmm.app.topology.Topology, openmm.app.PDBFile, str, dict]
+        if isinstance(topology, Dict):
+            assert len(list(system_kwargs.keys())) == 0, "system_kwargs must be empty if topology is a TopologyDict"
 
-        # if input_type == str:
-        #     input_file = Path(top)
-        #     input_file = input_file.suffix
-        #     assert input_file in [".pdb", ".gro"]
-        #     input_type = input_file
+            return self.params_from_topology_dict(topology=topology)
+        
+        elif isinstance(topology, openmm.app.Topology):
+            return self.createSystem(topology=topology, **system_kwargs)
+        
+        else:
+            raise TypeError(f"Expected openmm.app.Topology or TopologyDict, got {type(topology)}")
 
-        g, openff_mol = process_input(top, classical_ff=self.classical_ff)
 
-        g = self.model(g)
-
-        output = process_output(g=g, openff_mol=openff_mol, input_type=input_type, classical_ff=self.classical_ff, topology=top, system_kwargs=system_kwargs, units=self.units)
-
-        return output
     
     def get_unit_strings(self):
         return {k: str(v) for (k,v) in zip(self.units.keys(), self.units.values())}
 
     def __str__(self):
-        return f"grappa.ForceField with units {json.dumps(self.get_unit_strings(), indent=4)}"
+        out = f"grappa.ForceField with"
+        
+        out += f"\nunits:\n{json.dumps(self.get_unit_strings(), indent=4)}"
+
+        out += f"\nallow_radicals: {self.allow_radicals}"
+
+        return out+"\n"
 
     def __repr__(self):
         return self.__str__()
     
+
+
+
 
     ################################
     # UTILITIES FOR TESTING
@@ -184,9 +231,21 @@ class ForceField:
         """
 
         def model(g):
-            from grappa.ff_utils.classical_ff.parametrize import parametrize_amber
-            g = parametrize_amber(g, top, class_ff, suffix="", charge_suffix="", allow_radicals=True)
-            return g
+            writer = SysWriter(top=top, classical_ff=class_ff)
+            writer.init_graph(with_parameters=True)
+
+            # rename the ref features:
+            for level in writer.graph.ntypes:
+                static_feats = [feat for feat in writer.graph.nodes[level].data.keys() if "_ref" == feat[-4:]]
+                for feat in static_feats:
+                    new_feat = feat[:-4]
+                    writer.graph.nodes[level].data[new_feat] = writer.graph.nodes[level].data[feat]
+
+            if "xyz" in g.nodes["n1"].data.keys():
+                xyz = g.nodes["n1"].data["xyz"]
+                writer.graph.nodes["n1"].data["xyz"] = xyz
+                
+            return writer.graph
         
         return model
     
@@ -204,7 +263,9 @@ class ForceField:
             two_d_zeros = torch.zeros(g.number_of_nodes("n2"),1)
             three_d_zeros = torch.zeros(g.number_of_nodes("n3"), 1)
             n4_zeros = torch.zeros(g.number_of_nodes("n4"),n_periodicity)
-            n5_zeros = torch.zeros(g.number_of_nodes("n4_improper"),n_periodicity)
+
+            if "n4_improper" in g.ntypes:
+                n5_zeros = torch.zeros(g.number_of_nodes("n4_improper"),n_periodicity)
 
             g.nodes["n1"].data["q"] = one_d_zeros
             g.nodes["n1"].data["mass"] = one_d_zeros
@@ -215,14 +276,16 @@ class ForceField:
             g.nodes["n3"].data["k"] = three_d_zeros
             g.nodes["n3"].data["eq"] = three_d_zeros
             g.nodes["n4"].data["k"] = n4_zeros
-            g.nodes["n4_improper"].data["k"] = n5_zeros
+            if "n4_improper" in g.ntypes:
+                g.nodes["n4_improper"].data["k"] = n5_zeros
+
 
             return g
         
         return model
     
 
-    def get_energies(self, top:openmm.app.topology.Topology, positions:np.ndarray, class_ff:openmm.app.ForceField=None, delete_force_type=[]):
+    def get_energies(self, topology:openmm.app.topology.Topology, positions:np.ndarray, class_ff:openmm.app.ForceField=None, delete_force_type=[]):
         """
         MAKE THIS A FREE FUNCTION
         Returns the energy and gradients of the topology for the given positions
@@ -236,9 +299,9 @@ class ForceField:
         system_kwargs = {"nonbondedMethod":openmm.app.NoCutoff, "removeCMMotion":False}
 
         if class_ff is None:
-            sys = self(top, system_kwargs=system_kwargs)
+            sys = self.createSystem(topology=topology, **system_kwargs)
         else:
-            sys = class_ff.createSystem(top, **system_kwargs)
+            sys = class_ff.createSystem(topology=topology, **system_kwargs)
 
         if len(delete_force_type) > 0:
             i = 0
@@ -251,10 +314,10 @@ class ForceField:
                         i += 1
 
         integrator = LangevinIntegrator(0*unit.kelvin, 1/unit.picosecond, 0.001*unit.picoseconds)
-        simulation = Simulation(top, sys, integrator)
+        simulation = Simulation(topology, sys, integrator)
 
         assert len(positions.shape) == 3
-        assert positions.shape[1] == top.getNumAtoms()
+        assert positions.shape[1] == topology.getNumAtoms()
         assert positions.shape[2] == 3
 
 
