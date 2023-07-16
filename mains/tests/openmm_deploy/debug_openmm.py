@@ -4,16 +4,13 @@ from grappa.ff import ForceField
 import openmm.app
 import openmm.unit
 
-ff = ForceField(model_path="/hits/fast/mbm/seutelf/grappa/mains/runs/param_search/versions/4_dotted_700_6_6/best_model.pt", classical_ff=openmm.app.ForceField("amber99sbildn.xml"))
+ff = ForceField(model_path="/hits/fast/mbm/seutelf/grappa/mains/runs/reworked_test/versions/6/best_model.pt", classical_ff=openmm.app.ForceField("amber99sbildn.xml"))
 
 ff.units["angle"] = openmm.unit.radian
 
 # %%
 pdb_path = "AG/pep.pdb"
-params = ff(pdb_path)
-params.keys()
-#%%
-params["angle_eq"]
+
 # %%
 from openmm.app import PDBFile
 top = PDBFile(pdb_path).topology
@@ -24,7 +21,7 @@ from openmm.app import ForceField as openmm_ff
 ff = ForceField(model=ForceField.get_classical_model(top, openmm.app.ForceField("amber99sbildn.xml")))
 #%%
 ff.units["angle"] = openmm.unit.degree
-sys = ff(top)
+sys = ff.createSystem(topology=top, allow_radicals=False)
 
 from openmm.app import Simulation
 from openmm import unit
@@ -59,6 +56,7 @@ pos = PDBFile(pdb_path).getPositions()
 pos = simulation.context.getState(getPositions=True).getPositions()
 positions = np.array([openmm.unit.Quantity(pos, unit=unit.nanometer).value_in_unit(units.DISTANCE_UNIT)])
 # %%
+delete_ft = ["NonbondedForce", "HarmonicBondForce", "HarmonicAngleForce", "PeriodicTorsionForce"]
 delete_ft = []
 e_grappa, grad_grappa = ff.get_energies(top, positions, delete_force_type=delete_ft)
 e_amber, grad_amber = ff.get_energies(top, positions, class_ff=openmm.app.ForceField("amber99sbildn.xml"), delete_force_type=delete_ft)
@@ -100,5 +98,38 @@ for force in sys2.getForces():
         print(force.__class__.__name__, force.getNumTorsions())
 # %%
 # %%
+sys1 = ff.createSystem(topology=top, allow_radicals=False)
+# %%
+sys2 = openmm.app.ForceField("amber99sbildn.xml").createSystem(top)
+
+# %%
+import grappa
+t_ff = []
+t_amber = []
+for force in sys1.getForces():
+    if isinstance(force, openmm.PeriodicTorsionForce):
+        for i in range(force.getNumTorsions()):
+            params = force.getTorsionParameters(i)
+            if params[6].value_in_unit(grappa.units.OPENMM_TORSION_K_UNIT) != 0:
+                print(params)
+                t_ff.append(params)
+#%%
+for force in sys2.getForces():
+    if isinstance(force, openmm.PeriodicTorsionForce):
+        for i in range(force.getNumTorsions()):
+            params = force.getTorsionParameters(i)
+            if params[6].value_in_unit(grappa.units.OPENMM_TORSION_K_UNIT) != 0:
+                print(params)
+                t_amber.append(params)
+
+# %%
+t_ff = np.array(t_ff)
+t_amber = np.array(t_amber)
+
+# %%
+t_ff.shape
+#%%
+t_amber.shape
 # %%
 
+# %%

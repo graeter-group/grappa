@@ -102,9 +102,9 @@ inputset = set([tuple(data["bonds"][i]) for i in range(len(data["bonds"]))])
 # %%
 
 
-from grappa.ff_utils.sysWriter import sysWriter
+from grappa.ff_utils.SysWriter import SysWriter
 
-w = sysWriter.from_dict(data)
+w = SysWriter.from_dict(data)
 # %%
 w.init_graph(with_parameters=True)
 
