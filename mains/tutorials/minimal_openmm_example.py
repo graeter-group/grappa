@@ -2,9 +2,8 @@
 
 # imports:
 from grappa.ff import ForceField
-from grappa.ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
 import openmm.unit
-from grappa.constants import TopologyDict, ParamDict
+import openmm.app
 
 
 # path to the grappa force field:
@@ -13,6 +12,7 @@ mpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/tutorial/best_mo
 
 # initialize the force field:
 ff = ForceField(model_path=mpath)
+# ff = openmm.app.ForceField('amber99sbildn.xml', 'tip3p.xml') # uncomment for comparison
 
 #%%
 
@@ -24,25 +24,49 @@ pdb = PDBFile("pep.pdb")
 sys = ff.createSystem(pdb.topology)
 # %%
 
+# run a short simulation with these parameters:
 # set up a simulation:
 from openmm import LangevinIntegrator
 from openmm.app import Simulation
 from openmm import unit
 # %%
+# initialize an integrator with  temperature, heat-bath-coupling and timestep:
 integrator = LangevinIntegrator(300*unit.kelvin, 1/unit.picosecond, 0.001*unit.picoseconds)
-simulation = openmm.app.Simulation(pdb.topology, sys,integrator)
+simulation = Simulation(pdb.topology, sys, integrator)
 # %%
 # set the positions:
 simulation.context.setPositions(pdb.positions)
 # minimize:
 simulation.minimizeEnergy()
 # %%
-# run a short simulation:
+simulation.step(10000)
+# keep track of the trajectory from now on:
+simulation.reporters.append(openmm.app.PDBReporter('trajectory.pdb', 10))
 simulation.step(1000)
 # %%
-# get the gradients:
-import numpy as np
-state = simulation.context.getState(getForces=True)
-forces = state.getForces(asNumpy=True)
-print(np.abs(np.array(forces)).mean())
+# # get the gradients:
+# import numpy as np
+# state = simulation.context.getState(getForces=True)
+# forces = state.getForces(asNumpy=True)
+# print(np.abs(np.array(forces)).mean())
+# # %%
+
+
+import mdtraj as md
+import nglview as nv
+
+# Load the PDB file using MDTraj
+traj = md.load('trajectory.pdb')
+
+# Create a view for the trajectory
+view = nv.show_mdtraj(traj)
+# configure this to the stick model:
+view.add_representation('ball+stick', selection='all')
+# remove the cartoon model:
+view.remove_cartoon()
+
+# Display the view
+view
+# %%
+
 # %%
