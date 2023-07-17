@@ -1,11 +1,29 @@
 
 from typing import Union
-from grappa.models import get_models
-from grappa.run import run_utils
+from . import get_models
+from ..run import run_utils
 from pathlib import Path
 import torch
 
 
+def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
+    """
+    Load a trained model from a tag. Available tags are:
+    
+    - example: An example model, not fine-tuned for good results.
+
+    """
+
+    if tag == "example":
+        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/tutorial/best_model.pt"
+        config = None
+    else:
+        raise ValueError(f"Unknown tag {tag}")
+    
+
+    model = model_from_path(model_path=path, config_path=config, device=device)
+
+    return model
 
 
 
@@ -54,13 +72,15 @@ def model_from_version(version:Union[Path,str], device:str="cpu", model_name:str
     return model
     
 
-def model_from_path(model_path:Union[Path,str], device:str="cpu"):
+def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Union[Path,str]=None):
     """
     Loads a trained model from a path to a state_dict. In the parent folder of the state_dict file, there must be a model_config.yml file.
     """
     model_path = Path(model_path)
-    config_path = model_path.parent/"model_config.yml"
+    if config_path is None:
+        config_path = model_path.parent/"model_config.yml"
     model = model_from_config(config_path=config_path)
+
     model = model.to(device)
 
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -80,3 +100,5 @@ def get_default_model_config():
     }
 
     return args
+
+

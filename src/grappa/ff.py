@@ -7,7 +7,8 @@ import torch
 import dgl
 from typing import Union, List, Tuple, Dict, Callable
 from .ff_utils.create_graph.utils import process_input, process_output
-from .deploy.deploy import model_from_path
+from .ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
+from .models.deploy import model_from_path, model_from_tag
 import openmm.app.topology
 import openmm.app
 from pathlib import Path
@@ -22,9 +23,9 @@ from .ff_utils.charge_models.charge_models import model_from_dict
 from openmm import unit
 
 class ForceField:
-    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Union[str,Callable]=None, allow_radicals:bool=False) -> None:
+    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Union[str,Callable]=None, allow_radicals:bool=False, device:str=None) -> None:
         """
-        Class wrapping a model and providing methods for translating various input types to dgl graphs whcih can be processed by the model and translate back to various output types.
+        Class wrapping a model and providing methods for translating various input types to dgl graphs which can be processed by the model and translate back to various output types.
         model_path: a path to a folder with a single .pt file containing a model-state_dict and a config.yaml file containing model hyperparameters for construction.
         model: a callable taking and returning a dgl graph.
         classical_ff: an openmm forcefield object used for nonbonded parameters and system initialization.
@@ -45,6 +46,13 @@ class ForceField:
                 ANGLE_K_UNIT = ENERGY_UNIT / (ANGLE_UNIT**2)
 
         """
+
+        if device is None:
+            self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        else:
+            self.device = device
+
+
         if model is not None and model_path is not None:
             raise ValueError("Either model or model_path must be given, not both.")
         if model is None and model_path is None:
@@ -53,7 +61,7 @@ class ForceField:
         if model is not None:
             self.model = model
         else:
-            self.model = model_from_path(model_path)
+            self.model = model_from_path(model_path, device=self.device)
             self.model.eval()
 
         
@@ -74,8 +82,34 @@ class ForceField:
 
 
     @classmethod
-    def from_tag(cls, tag:str)->"ForceField":
-        pass
+    def from_tag(cls, tag:str, device:str=None)->"ForceField":
+        """
+        Initializes the ForceField from a tag. Available tags:
+
+        example - An example model, not fine-tuned for good performance. Builds upon an extension of amber99sbildn for DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
+
+        """
+
+        if device is None:
+            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        else:
+            device = device
+
+        if tag == "example":
+            model_tag = "example"
+            model = model_from_tag(model_tag, device=device)
+            classical_ff = get_collagen_forcefield()
+            charge_model = "heavy"
+            allow_radicals = True
+
+            self = cls(model=model, classical_ff=classical_ff, charge_model=charge_model, allow_radicals=allow_radicals, device=device)
+
+            self.units["angle"] = unit.degree
+            
+            return self
+
+        else:
+            raise ValueError(f"Unknown tag {tag}.")
 
 
     def set_charge_model(self, charge_model:Union[Callable, str, None])->None:
@@ -106,7 +140,7 @@ class ForceField:
         writer = SysWriter(top=topology, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
         writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)
-        writer.forward_pass(model=self.model)
+        writer.forward_pass(model=self.model, device=self.device)
         writer.update_system()
     
         return writer.sys
@@ -128,7 +162,7 @@ class ForceField:
         writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
         writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)
-        writer.forward_pass(model=self.model)
+        writer.forward_pass(model=self.model, device=self.device)
         writer.update_system()
     
         return writer.sys
@@ -179,7 +213,7 @@ class ForceField:
         writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff)
         writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)
-        writer.forward_pass(model=self.model)
+        writer.forward_pass(model=self.model, device=self.device)
         d = writer.get_parameter_dict(units=self.units)
         return d
 

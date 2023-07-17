@@ -74,3 +74,5 @@ mains/runs
 
 .venv
 **/nohup.out
+**/trajectory.pdb
+**/traj.pdb

@@ -465,7 +465,7 @@ if __name__=="__main__":
     #%%
     # build a model from a config file:
     
-    from grappa.deploy.deploy import model_from_version
+    from grappa.models.deploy import model_from_version
     version = "/hits/fast/mbm/seutelf/grappa/mains/runs/rad/versions/8_rad_col_eric"
     
     model = model_from_version(version=version, device="cuda")

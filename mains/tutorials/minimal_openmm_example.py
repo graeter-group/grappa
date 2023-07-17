@@ -6,14 +6,11 @@ import openmm.unit
 import openmm.app
 
 
-# path to the grappa force field:
-mpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/tutorial/best_model.pt"
 
+# initialize the force field from a tag:
+ff = ForceField.from_tag("example")
 
-# initialize the force field:
-ff = ForceField(model_path=mpath)
 # ff = openmm.app.ForceField('amber99sbildn.xml', 'tip3p.xml') # uncomment for comparison
-
 #%%
 
 # load example data:
@@ -44,13 +41,6 @@ simulation.step(10000)
 simulation.reporters.append(openmm.app.PDBReporter('trajectory.pdb', 10))
 simulation.step(1000)
 # %%
-# # get the gradients:
-# import numpy as np
-# state = simulation.context.getState(getForces=True)
-# forces = state.getForces(asNumpy=True)
-# print(np.abs(np.array(forces)).mean())
-# # %%
-
 
 import mdtraj as md
 import nglview as nv

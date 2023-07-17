@@ -43,7 +43,7 @@ def eval_client():
 
 from grappa.run.eval_utils import evaluate
 from grappa.run import run_utils
-from grappa.deploy.deploy import model_from_version
+from grappa.models.deploy import model_from_version
 from pathlib import Path
 import torch
 import os

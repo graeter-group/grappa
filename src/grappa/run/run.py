@@ -5,7 +5,7 @@ from grappa.training.with_pretrain import train_with_pretrain
 from grappa.training.utilities import get_param_statistics
 from grappa.run.eval_utils import evaluate
 
-from ..deploy.deploy import get_default_model_config, model_from_config
+from ..models.deploy import get_default_model_config, model_from_config
 
 import torch
 from pathlib import Path
