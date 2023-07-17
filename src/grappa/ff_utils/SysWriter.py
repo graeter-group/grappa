@@ -22,7 +22,11 @@ from ..units import RESIDUES
 
 from grappa.constants import MAX_ELEMENT, TopologyDict, ParamDict
 
-
+# todo:
+# filter topology for residues that are in grappa.constants.RESIDUES -> subtopology
+# write interal->external index things
+# make update system dependent on the existence of these index trafos (in this case, new system has to be created)
+# should be trivial except for nonbonded. there we have to go through all exceptions and replace the for .. in particles by for .. in param_dict 
 
 class SysWriter:
     """
@@ -479,8 +483,6 @@ class SysWriter:
 
             if self.use_impropers and "n4_improper" in TERMS:
                 self.graph.nodes["n4_improper"].data["k_ref"] = torch.tensor(k_improper, dtype=torch.float32)
-
-            self.graph.nodes["n1"].data["q_ref"] = torch.tensor(self.charges, dtype=torch.float32)
 
         # add residue one-hot and is_radicals:
         self.write_one_hots()

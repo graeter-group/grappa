@@ -6,7 +6,7 @@ from grappa.constants import TopologyDict, ParamDict
 
 # load data describing a radical:
 import json
-with open('GrAPPa_input_HAT.json', "r") as f:
+with open('input_data/GrAPPa_input_HAT.json', "r") as f:
     data: TopologyDict = json.load(f)
 
 # initialize the forcefield from a tag:

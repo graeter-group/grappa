@@ -1,7 +1,7 @@
 #%%
 # load data dictionary:
 import json
-with open('GrAPPa_input_HAT.json', "r") as f:
+with open('input_data/GrAPPa_input_HAT.json', "r") as f:
     data = json.load(f)
 
 from grappa.ff import ForceField
@@ -38,7 +38,7 @@ print(ff)
 
 # %%
 # for a triplehelix the parametrization takes longer (~15 seconds):
-with open('GrAPPa_input_tripelhelix.json', "r") as f:
+with open('input_data/GrAPPa_input_tripelhelix.json', "r") as f:
     data = json.load(f)
 
 params = ff.params_from_topology_dict(data)

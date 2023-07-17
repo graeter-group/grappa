@@ -15,7 +15,7 @@ ff = ForceField.from_tag("example")
 
 # load example data:
 from openmm.app import PDBFile
-pdb = PDBFile("pep.pdb")
+pdb = PDBFile("input_data/pep.pdb")
 #%%
 # get a system:
 sys = ff.createSystem(pdb.topology)

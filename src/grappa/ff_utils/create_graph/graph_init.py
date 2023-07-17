@@ -35,7 +35,7 @@ def graph_from_topology(
     qm_gradients: Array of shape (N_conf x N_atoms x 3) containing the gradients in grappa.units.
     """
 
-    writer = sysWriter(top=topology, classical_ff=classical_ff, allow_radicals=allow_radicals, radical_indices=radical_indices)
+    writer = SysWriter(top=topology, classical_ff=classical_ff, allow_radicals=allow_radicals, radical_indices=radical_indices)
     writer.get_charges = get_charges
     if xyz is not None:
         writer.init_graph(with_parameters=True)

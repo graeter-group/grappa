@@ -23,7 +23,7 @@ from .ff_utils.charge_models.charge_models import model_from_dict
 from openmm import unit
 
 class ForceField:
-    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Union[str,Callable]=None, allow_radicals:bool=False, device:str=None) -> None:
+    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Union[str,Callable]=None, allow_radicals:bool=False, device:str="cpu") -> None:
         """
         Class wrapping a model and providing methods for translating various input types to dgl graphs which can be processed by the model and translate back to various output types.
         model_path: a path to a folder with a single .pt file containing a model-state_dict and a config.yaml file containing model hyperparameters for construction.
@@ -82,7 +82,7 @@ class ForceField:
 
 
     @classmethod
-    def from_tag(cls, tag:str, device:str=None)->"ForceField":
+    def from_tag(cls, tag:str, device:str="cpu")->"ForceField":
         """
         Initializes the ForceField from a tag. Available tags:
 

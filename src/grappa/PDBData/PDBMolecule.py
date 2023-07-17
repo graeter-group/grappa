@@ -18,6 +18,7 @@ from ..ff_utils.classical_ff import parametrize, collagen_utility
 
 from ..ff_utils.create_graph import utils as create_graph_utils, graph_init, read_pdb
 
+import matplotlib.pyplot as plt
 
 import math
 from .matching import match_utils
@@ -1139,6 +1140,37 @@ class PDBMolecule:
         else:
             return True
         
+
+    def compare_with_ff(self, ff, fontsize:float=16, ff_title="Forcefield")->plt.axes:
+        """
+        Calculates energies and forces from the forcefield provided for the conformations stored.
+        Returns a plt axes object containing a scatter plot of the energies and forces.
+        """
+        assert not self.gradients is None, "gradients not set"
+
+        energies, forces = self.get_ff_data(ff)
+        energies -= energies.min()
+        self_energies = self.energies - self.energies.min()
+
+        fig, ax = plt.subplots(1,2, figsize=(10,5))
+
+        ax[0].scatter(self_energies, energies)
+        ax[0].plot(self_energies, self_energies, color="black", linestyle="--")
+        ax[0].set_title("Energies [kcal/mol]]", fontsize=fontsize)
+        ax[0].set_xlabel("QM energies", fontsize=fontsize)
+        ax[0].set_ylabel(f"{ff_title} energies", fontsize=fontsize)
+        ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        ax[1].scatter(self.gradients.flatten(), forces.flatten(), s=0.3)
+        ax[1].plot(self.gradients.flatten(), self.gradients.flatten(), color="black", linestyle="--")
+        ax[1].set_xlabel("QM forces", fontsize=fontsize)
+        ax[1].set_ylabel(f"{ff_title} forces", fontsize=fontsize)
+        ax[1].set_title("Forces [kcal/mol/angstrom]", fontsize=fontsize)
+        ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        plt.tight_layout()
+        
+        return fig, ax
 
     @classmethod
     def get_example(cls):

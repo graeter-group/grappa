@@ -410,6 +410,3 @@ class PDBDataset:
             plt.savefig(filename)
         if show:
             plt.show()
-
-
-# %%
