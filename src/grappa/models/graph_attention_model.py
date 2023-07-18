@@ -25,6 +25,12 @@ class ResidualAttentionBlock(torch.nn.Module):
         self.in_feats = in_feats
         self.out_feats = out_feats
 
+        self.out_feat_factor = int(out_feats/in_feats)
+
+        # only do a skip connection if the output features is a multiple of the input features
+        self.do_skip = (out_feats/in_feats).is_integer()
+
+
         assert attention_layer in [dgl.nn.pytorch.conv.DotGatConv, dgl.nn.pytorch.conv.GATConv, dgl.nn.pytorch.conv.GATv2Conv], "Attention layer must be one of the dgl attention layers"
 
         self.do_layer_norm = layer_norm
@@ -81,7 +87,9 @@ class ResidualAttentionBlock(torch.nn.Module):
         h = h.flatten(start_dim=-2, end_dim=-1) # flatten the head dimension to shape (num_nodes, out_feat*num_heads)
         h = self.head_reducer(h) # now has the shape num_nodes, out_feats
 
-        if self.in_feats == self.out_feats:
+        if self.do_skip:
+            # repeat h_skip self.out_feat_factor times and add it to h
+            h_skip = h_skip.repeat_interleave(repeats=self.out_feat_factor, dim=-1)
             h = h + h_skip
 
         if not self.self_interaction is None:
@@ -91,6 +99,8 @@ class ResidualAttentionBlock(torch.nn.Module):
             
             h_skip = h
             h = self.self_interaction(h)
+
+            # the interaction layer does not change the number of features, so we can always do the skip connection
             h = h + h_skip
 
         return h
@@ -102,11 +112,24 @@ class ResidualConvBlock(torch.nn.Module):
     Implements one residual layer consisting of 1 graph convolutional step, and a skip connection. Block has a nonlinearity at the end but not in the beginning.
     Can only be used for homogeneous graphs. If self_interaction is True, a skipped linear layer is put behind the convolution.
     """
-    def __init__(self, in_feats, *message_args, activation=torch.nn.ELU(), message_class=dgl.nn.pytorch.conv.SAGEConv, self_interaction=True, layer_norm=True):
+    def __init__(self, in_feats, out_feats=None, *message_args, activation=torch.nn.ELU(), message_class=dgl.nn.pytorch.conv.SAGEConv, self_interaction=True, layer_norm=True):
         super().__init__()
 
+
+        if out_feats is None:
+            out_feats = in_feats
+            
+        self.in_feats = in_feats
+        self.out_feats = out_feats
+
+        self.out_feat_factor = int(out_feats/in_feats)
+
+        # only do a skip connection if the output features is a multiple of the input features
+        self.do_skip = (out_feats/in_feats).is_integer()
+
+
         if len(message_args) == 0 and message_class == dgl.nn.pytorch.conv.SAGEConv:
-            message_args = (in_feats, in_feats, "mean")
+            message_args = (in_feats, out_feats, "mean")
 
         self.module = message_class(*message_args)
         self.activation = activation
@@ -116,11 +139,11 @@ class ResidualConvBlock(torch.nn.Module):
 
         if self_interaction:
             self.self_interaction = torch.nn.Sequential(
-                torch.nn.Linear(in_feats,in_feats),
+                torch.nn.Linear(out_feats,out_feats),
                 self.activation,
             )
             if layer_norm:
-                self.interaction_norm = torch.nn.LayerNorm(normalized_shape=(in_feats,))
+                self.interaction_norm = torch.nn.LayerNorm(normalized_shape=(out_feats,))
         else:
             self.self_interaction = None
 
@@ -137,7 +160,12 @@ class ResidualConvBlock(torch.nn.Module):
 
         h_skip = h
 
-        h = self.module(g,h) + h_skip
+        h = self.module(g,h)
+        
+        if self.do_skip:
+            # repeat h_skip self.out_feat_factor times and add it to h
+            h_skip = h_skip.repeat_interleave(repeats=self.out_feat_factor, dim=-1)
+            h = h + h_skip
 
         if self.self_interaction is not None:
             if self.do_layer_norm:
@@ -145,6 +173,8 @@ class ResidualConvBlock(torch.nn.Module):
             
             h_skip = h
             h = self.self_interaction(h)
+
+            # the self_interaction can always be skipped since it maps from out_feats to out_feats
             h = h + h_skip
 
         return h
@@ -158,8 +188,10 @@ class Representation(torch.nn.Module):
         - a stack of n_conv ResidualConvBlocks with self interaction and width h_feats
         - a stack of n_att ResidualAttentionBlocks with self interaction, output width h_feats and num_heads attention heads
         - a single linear layer with node-level-shared weights mapping from h_feats to out_feats
+        if increase_width is true, doubles the width of the convolutional layers every step until one is larger than out_feats
+        If attention_last is true, the attention blocks are put after the convolutional blocks, otherwise before.
     """
-    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
+    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, increase_width=True, attention_last=True, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[]):
         """
         Implementing:
             - a single linear layer with node-level-shared weights mapping from in_feats to h_feats
@@ -214,20 +246,44 @@ class Representation(torch.nn.Module):
             torch.nn.ELU(),
         )
 
-        self.post_dense = torch.nn.Sequential(
-            torch.nn.Linear(h_feats, out_feats),
-        )
+        n_in_feats = [h_feats] * (n_conv + n_att)
+        n_out_feats = [h_feats] * (n_conv + n_att)
+
+        if increase_width:
+            for i in range(n_conv + n_att-1):
+                if n_out_feats[i] < out_feats:
+                    n_out_feats[i] *= 2
+                    n_in_feats[i+1] *= 2
+                else:
+                    n_out_feats[i] = n_out_feats[i-1]
+            
+            # now outfeats is increasing by factor 2 or constant until the last entry
+            if len(n_out_feats) > 1:
+                n_out_feats[-1] = n_out_feats[-2]
+            else:
+                n_out_feats[0] = out_feats
+
 
         self.conv_blocks = torch.nn.ModuleList([
-                ResidualConvBlock(in_feats=h_feats, activation=torch.nn.ELU(), self_interaction=True)
+                ResidualConvBlock(in_feats=n_in_feats[i], out_feats=n_out_feats[i], activation=torch.nn.ELU(), self_interaction=True)
                 for i in range(n_conv)
             ])
+
         
         self.att_blocks = torch.nn.ModuleList([
-                ResidualAttentionBlock(in_feats=h_feats, num_heads=n_heads, activation=torch.nn.ELU(), self_interaction=True)
-                for i in range(n_att)
+                ResidualAttentionBlock(in_feats=n_in_feats[i], out_feats=n_out_feats[i], num_heads=n_heads, activation=torch.nn.ELU(), self_interaction=True)
+                for i in range(n_conv, n_conv+n_att)
             ])
+        
+        if attention_last:
+            self.blocks = self.conv_blocks + self.att_blocks
+        else:
+            self.blocks = self.att_blocks + self.conv_blocks
 
+
+        self.post_dense = torch.nn.Sequential(
+            torch.nn.Linear(n_out_feats[-1], out_feats),
+        )
 
 
     def forward(self, g, in_feature=None):
@@ -246,10 +302,7 @@ class Representation(torch.nn.Module):
 
         g_ = dgl.to_homogeneous(g.node_type_subgraph(["n1"]))
 
-        for block in self.conv_blocks:
-            h = block(g_,h)
-
-        for block in self.att_blocks:
+        for block in self.blocks:
             h = block(g_,h)
 
         h = self.post_dense(h)

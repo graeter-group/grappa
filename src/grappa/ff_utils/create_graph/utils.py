@@ -18,7 +18,7 @@ from typing import Union
 from pathlib import Path
 from typing import List, Tuple, Dict, Union, Callable
 
-from . import read_heterogeneous_graph, read_homogeneous_graph, deploy_parametrize, tuple_indices
+from . import read_heterogeneous_graph, read_homogeneous_graph, tuple_indices
 from ..charge_models import charge_models
 from ... import units as grappa_units
 from ...constants import MAX_ELEMENT
@@ -347,33 +347,6 @@ def get_parameters_from_graph(g, mol, suffix="", units=None):
     return params
 
 
-def graph_from_pdb(openmm_top, forcefield=openmm.app.ForceField("amber99sbildn.xml"), allow_radicals:bool=True, max_element:int=26, charge_tag:str="amber99sbildn")->dgl.DGLGraph:
-    """
-    openmm_top: openmm topology
-    forcefield: openmm forcefield
-
-    Returns: dgl graph, openff molecule
-    In future version, will only return the dgl graph since tuple indices are with symmetry divided out already.
-    """
-    import openmm.app
-
-    assert isinstance(openmm_top, openmm.app.topology.Topology), f"openmm_top must be an openmm topology, but got {type(openmm_top)}"
-    assert isinstance(forcefield, openmm.app.ForceField), f"forcefield must be an openmm forcefield, but got {type(forcefield)}"
-
-    get_charges = charge_models.model_from_dict(tag=charge_tag)
-
-    # get the openff molecule
-    mol = openmm2rdkit_graph(openmm_top)
-
-    # get the graph
-    g = dgl_from_mol(mol, max_element=max_element)
-
-    # write nonbonded parameters and is_radical in the graph
-    g = deploy_parametrize.write_parameters(g=g, topology=openmm_top, forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals)
-
-    # return the graph and the openff molecule
-    return g
-
 
 
 def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[int]=[], max_element:int=26, charge_tag:str="heavy")->dgl.DGLGraph:
@@ -440,55 +413,6 @@ def graph_from_topology_dict(atoms:List, bonds:List[Tuple[int]], radicals:List[i
     g.nodes["n1"].data["external_idx"] = torch.tensor(external_idxs, dtype=torch.int64).unsqueeze(dim=1)
     return g
 
-
-def process_input(input_, classical_ff=openmm.app.ForceField("amber99sbildn.xml"))->dgl.DGLGraph:
-
-    import openmm.app.topology
-    from openmm.app import PDBFile
-    if type(input_) == openmm.app.topology.Topology:
-        return graph_from_pdb(input_, forcefield=classical_ff)
-    elif type(input_) == PDBFile:
-        return graph_from_pdb(input_.topology, forcefield=classical_ff)
-    elif type(input_) == str:
-        return graph_from_pdb(PDBFile(input_).topology, forcefield=classical_ff)
-    
-    elif type(input_) == dict:
-        assert "atoms" in input_.keys(), "input_ dictionary must contain an 'atoms' key"
-        assert "bonds" in input_.keys(), "input_ dictionary must contain a 'bonds' key"
-
-        radicals=input_["radicals"] if "radicals" in input_.keys() else []
-
-        return graph_from_topology_dict(atoms=input_["atoms"], bonds=input_["bonds"], radicals=radicals)
-    else:
-        raise TypeError(f"input_ must be either a string, a PDBFile or a Topology, but got {type(input_)}")
-    
-
-def process_output(g, input_type, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), topology=None, system_kwargs:Dict=None, units:Dict=None)->Union[openmm.System, Dict]:
-    """
-    If the input type is an openmm topology or an openmm PDBFile the output is an openmm system.
-    If the input is a path to a PDB file, the output is a dictionary containing indices describing the interactions. If the input is a path to a gromacs topology file, the output is a topology file with parameters added. This has to be made evident by the file suffix (.gro or .pdb).
-    """
-
-    # RETURN OPENMM SYSTEM
-    if input_type in [openmm.app.topology.Topology, openmm.app.PDBFile]:
-        assert not topology is None, "topology must be given if input_type is openmm.app.topology.Topology or openmm.app.PDBFile"
-
-        # calculate the param dict with default grappa units since they are converted when creating the openmm system 
-        param_dict = get_parameters_from_graph(g=g, units=None)
-
-        openmm_system = deploy_parametrize.openmm_system_from_params(param_dict=param_dict, topology=topology, classical_ff=classical_ff, allow_radicals=True, system_kwargs=system_kwargs)
-
-        return openmm_system
-
-
-    # RETURN PARAMETER DICT
-    elif input_type in [str, dict]:
-        param_dict = get_parameters_from_graph(g=g, units=units)
-
-        return param_dict
-
-    else:
-        raise TypeError(f"invalid type argument: {input_type}")
     
     
 

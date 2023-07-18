@@ -6,7 +6,6 @@ Class wrapping a model and providing methods for translating various input types
 import torch
 import dgl
 from typing import Union, List, Tuple, Dict, Callable
-from .ff_utils.create_graph.utils import process_input, process_output
 from .ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
 from .models.deploy import model_from_path, model_from_tag
 import openmm.app.topology

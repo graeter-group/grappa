@@ -1,7 +1,7 @@
 #%%
 import torch
+from .readout import DenseBlock, skippedLinear
 
-from grappa.models.readout import skippedLinear
 
 #NOTE: Include a std deviation parameter here too and decide for the C infty version.
 
@@ -16,23 +16,31 @@ class GatedTorsion(torch.nn.Module):
 
     \phi is a dense neural network and \chi is a classifier network, predicting a gate score of "how nonzero" the torsion parameter should be.
     """
-    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=6, magnitude=0.001, turn_on_at_p=0.1, improper=False, dead=False, hardness=1):
+    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, magnitude=0.001, turn_on_at_p=0.1, improper=False, dead=False, hardness=1, legacy=True, depth=4):
+
+        if n_periodicity is None:
+            n_periodicity = 6
+        if improper:
+            n_periodicity = 3
+
         super().__init__()
         self.suffix = suffix
 
-        self.symmetrizer = torch.nn.Sequential(
-            skippedLinear(4*rep_feats, between_feats),
-            skippedLinear(between_feats, between_feats),
-            skippedLinear(between_feats, between_feats),
-            skippedLinear(between_feats, between_feats),
-        )
-        
+        if legacy:
+            self.symmetrizer = torch.nn.Sequential(
+                skippedLinear(4*rep_feats, between_feats),
+                DenseBlock(feats=between_feats, depth=depth-1)
+            )
+            
 
-        self.torsion_nn = torch.nn.Sequential(
-            skippedLinear(between_feats, between_feats),
-            skippedLinear(between_feats, between_feats),
-            torch.nn.Linear(between_feats, n_periodicity),
-        )
+            self.torsion_nn = torch.nn.Sequential(
+                DenseBlock(feats=between_feats, depth=2),
+                torch.nn.Linear(between_feats, n_periodicity),
+            )
+
+        else:
+
+            pass
 
 
         self.classification_nn = torch.nn.Sequential(
