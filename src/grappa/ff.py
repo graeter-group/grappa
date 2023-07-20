@@ -22,7 +22,13 @@ from .ff_utils.charge_models.charge_models import model_from_dict
 from openmm import unit
 
 class ForceField:
-    def __init__(self, model:Callable=None, model_path:Union[str, Path]=None, classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"), charge_model:Union[str,Callable]=None, allow_radicals:bool=False, device:str="cpu") -> None:
+    def __init__(self,
+                 model:Callable=None,
+                 model_path:Union[str, Path]=None,
+                 classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                 charge_model:Union[str,Callable]=None,
+                 allow_radicals:bool=False, device:str="cpu",
+                 ) -> None:
         """
         Class wrapping a model and providing methods for translating various input types to dgl graphs which can be processed by the model and translate back to various output types.
         model_path: a path to a folder with a single .pt file containing a model-state_dict and a config.yaml file containing model hyperparameters for construction.
@@ -81,7 +87,13 @@ class ForceField:
 
 
     @classmethod
-    def from_tag(cls, tag:str, device:str="cpu")->"ForceField":
+    def from_tag(cls,
+                 tag:str,
+                 device:str="cpu",
+                 classical_ff:openmm.app.ForceField=None,
+                 charge_model:Union[str,Callable]=None,
+                 allow_radicals:bool=None
+                 )->"ForceField":
         """
         Initializes the ForceField from a tag. Available tags:
 
@@ -97,10 +109,14 @@ class ForceField:
         if tag == "example":
             model_tag = "example"
             model = model_from_tag(model_tag, device=device)
-            classical_ff = get_collagen_forcefield()
-            charge_model = "heavy"
-            allow_radicals = True
 
+            classical_ff = get_collagen_forcefield() if classical_ff is None else classical_ff
+
+            allow_radicals = True if allow_radicals is None else allow_radicals
+
+            if charge_model is None and allow_radicals:
+                charge_model = "heavy"
+            
             self = cls(model=model, classical_ff=classical_ff, charge_model=charge_model, allow_radicals=allow_radicals, device=device)
 
             self.units["angle"] = unit.degree
@@ -136,6 +152,9 @@ class ForceField:
 
         Parametrises the topology using the internal model and returns an openmm.System describing the topology with the predicted parameters.
         """
+        if 'constraints' in system_kwargs.keys():
+            assert system_kwargs['constraints']!=openmm.app.HBonds
+
         writer = SysWriter(top=topology, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
         writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)
@@ -157,7 +176,9 @@ class ForceField:
 
         Parametrises the topology using the internal model and returns an openmm.System describing the topology with the predicted parameters.
         """
-        
+        if 'constraints' in system_kwargs.keys():
+            assert system_kwargs['constraints']!=openmm.app.HBonds
+
         writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
         writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)

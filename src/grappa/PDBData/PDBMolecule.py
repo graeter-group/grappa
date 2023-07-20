@@ -1141,7 +1141,7 @@ class PDBMolecule:
             return True
         
 
-    def compare_with_ff(self, ff, fontsize:float=16, ff_title="Forcefield")->plt.axes:
+    def compare_with_ff(self, ff, fontsize:float=16, ff_title:str="Forcefield")->plt.axes:
         """
         Calculates energies and forces from the forcefield provided for the conformations stored.
         Returns a plt axes object containing a scatter plot of the energies and forces.
@@ -1157,16 +1157,26 @@ class PDBMolecule:
         ax[0].scatter(self_energies, energies)
         ax[0].plot(self_energies, self_energies, color="black", linestyle="--")
         ax[0].set_title("Energies [kcal/mol]]", fontsize=fontsize)
-        ax[0].set_xlabel("QM energies", fontsize=fontsize)
-        ax[0].set_ylabel(f"{ff_title} energies", fontsize=fontsize)
+        ax[0].set_xlabel("QM Energies", fontsize=fontsize)
+        ax[0].set_ylabel(f"{ff_title} Energies", fontsize=fontsize)
         ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         ax[1].scatter(self.gradients.flatten(), forces.flatten(), s=0.3)
         ax[1].plot(self.gradients.flatten(), self.gradients.flatten(), color="black", linestyle="--")
         ax[1].set_xlabel("QM forces", fontsize=fontsize)
         ax[1].set_ylabel(f"{ff_title} forces", fontsize=fontsize)
-        ax[1].set_title("Forces [kcal/mol/angstrom]", fontsize=fontsize)
+        ax[1].set_title("Forces [kcal/mol/Å]", fontsize=fontsize)
         ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        rmse_energies = np.sqrt(np.mean((energies - self_energies)**2))
+
+        rmse_forces = np.sqrt(np.mean((forces - self.gradients)**2))
+
+        ax[0].text(0.05, 0.95, f"RMSE: {rmse_energies:.2f} kcal/mol", transform=ax[0].transAxes, fontsize=fontsize-2, verticalalignment='top')
+
+# type the angstrom letter: \AA
+
+        ax[1].text(0.05, 0.95, f"RMSE: {rmse_forces:.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
         plt.tight_layout()
         
