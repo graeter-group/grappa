@@ -1,6 +1,5 @@
 from grappa.run import run_utils
-from grappa.models import get_models
-from grappa.training import utilities
+
 from grappa.training.with_pretrain import train_with_pretrain
 from grappa.training.utilities import get_param_statistics
 from grappa.run.eval_utils import evaluate
@@ -32,7 +31,7 @@ def get_default_run_config():
         "pretrain_steps":500,
         "train_steps":1e5,
         "patience":5e-2,
-        "plots":False,
+        "plots":True,
         "ref_ff":"amber99sbildn",
         "device":None,
         "description":[""],
@@ -147,14 +146,16 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     assert (continue_path is None or load_path is None), "not both continue_path and load_path can be specified."
 
     # NOTE: this is just temporarily. handle split such that the new split is again about the fraction but the test and val set remain clean.
-    # load the split from the pretrained model:
-    if not continue_path is None:
-        with open(os.path.join(continue_path,"split_names.json"), "r") as f:
-            splits = json.load(f)
+    # load the split from the pretrained model if names are available
+    if not datanames is None:
 
-    elif not load_path is None:
-        with open(os.path.join(load_path,"split_names.json"), "r") as f:
-            splits = json.load(f)
+        if not continue_path is None:
+            with open(os.path.join(continue_path,"split_names.json"), "r") as f:
+                splits = json.load(f)
+
+        elif not load_path is None:
+            with open(os.path.join(load_path,"split_names.json"), "r") as f:
+                splits = json.load(f)
     
 
     ds_trs, ds_vls, ds_tes, split_names = run_utils.get_splits(datasets, datanames, seed=seed, fractions=[0.8,0.1,0.1], splits=splits)

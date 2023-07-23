@@ -1,7 +1,13 @@
 #%%
 # from PDBData.xyz2res.constants import RESIDUES
 RESIDUES = ['ACE', 'NME', 'CYS', 'ASP', 'SER', 'GLN', 'LYS', 'ILE', 'PRO', 'THR', 'PHE', 'ASN', 'GLY', 'HIS', 'LEU', 'ARG', 'TRP', 'ALA', 'VAL', 'GLU', 'TYR', 'MET', "HIE", "HID", "HIP", "HYP", "DOP"]
+
+from grappa.constants import ONELETTER
+
 MAX_ELEMENT = 26
+
+# from grappa.constants import MAX_ELEMENT
+
 ELEMENTS = {
     1: "H",
     2: "He",
@@ -28,37 +34,36 @@ ELEMENTS = {
     23: "V",
     24: "Cr",
     25: "Mn",
-    26: "Fe"
+    26: "Fe",
+    27: "Co",
+    28: "Ni",
+    29: "Cu",
+    30: "Zn",
+    31: "Ga",
+    32: "Ge",
+    33: "As",
+    34: "Se",
+    35: "Br",
+    36: "Kr",
+    37: "Rb",
+    38: "Sr",
+    39: "Y",
+    40: "Zr",
+    41: "Nb",
+    42: "Mo",
+    43: "Tc",
+    44: "Ru",
+    45: "Rh",
+    46: "Pd",
+    47: "Ag",
+    48: "Cd",
+    49: "In",
+    50: "Sn",
+    51: "Sb",
+    52: "Te",
+    53: "I"
 }
-ONELETTER = {
-    "ALA": "A",
-    "ARG": "R",
-    "ASN": "N",
-    "ASP": "D",
-    "CYS": "C",
-    "GLN": "Q",
-    "GLU": "E",
-    "GLY": "G",
-    "HIS": "H",
-    "HIE": "H",
-    "HIP": "H",
-    "HID": "H",
-    "ILE": "I",
-    "LEU": "L",
-    "LYS": "K",
-    "MET": "M",
-    "PHE": "F",
-    "PRO": "P",
-    "SER": "S",
-    "THR": "T",
-    "TRP": "W",
-    "TYR": "Y",
-    "VAL": "V",
-    "HYP": "O",
-    "DOP": "J",
-    "ACE": "B",
-    "NME": "Z"
-}
+
 
 
 import torch
@@ -72,7 +77,7 @@ import pandas as pd
 import os
 #%%
 
-def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder=None, metrics=True, on_forces=True, verbose=True, ref_ff=None, rmse_plots=True):
+def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder=None, metrics=True, on_forces=True, verbose=True, ref_ff="ref", rmse_plots=True):
     """
     Evaluates the model on the given loaders.
     """
@@ -108,6 +113,7 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             ff_en_total_ae = 0
             ff_en_total_se = 0
 
+
             res_nums = {res_id:0 for res_id,_ in enumerate(RESIDUES)}
             atom_nums = {el:0 for el in range(MAX_ELEMENT)}
             radical_num = 0
@@ -126,32 +132,33 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             for i, g in enumerate(loader):
 
                 grads, model, g = get_grad(model=model, batch=g, device=device)
-                energies = g.nodes["g"].data["u"].flatten()
-                en_ref = g.nodes["g"].data["u_ref"].flatten()
+                energies = (g.nodes["g"].data["u"] + g.nodes["g"].data["u_nonbonded_ref"]).flatten()
+                en_ref = g.nodes["g"].data["u_qm"].flatten()
                 
                 grad_ff = None
                 if not ref_ff is None:
                     if on_f:
-                        grad_ff = g.nodes["n1"].data[f"grad_total_{ref_ff}"] - g.nodes["n1"].data[f"grad_nonbonded_{ref_ff}"]
+                        grad_ff = g.nodes["n1"].data[f"grad_total_{ref_ff}"]
 
-                    en_ff = g.nodes["g"].data[f"u_total_{ref_ff}"].flatten() - g.nodes["g"].data[f"u_nonbonded_{ref_ff}"].flatten()
+                    en_ff = g.nodes["g"].data[f"u_total_{ref_ff}"].flatten()
 
 
                 if on_f:
                     grad_ref = g.nodes["n1"].data["grad_ref"]
 
                 with torch.no_grad():
-                    # subtract means, only difference is physical
+                    # subtract means, only the difference is physical
                     energies -= energies.mean(dim=-1)
                     en_ref -= en_ref.mean(dim=-1)
                     if not ref_ff is None:
                         en_ref_ff = en_ff - en_ff.mean(dim=-1)
+
                     # add to total error
                     en_total_ae += torch.abs(energies - en_ref).sum()
                     en_total_se += torch.square(energies - en_ref).sum()
                     if not ref_ff is None:
-                        ff_en_total_ae += torch.abs(energies - en_ref_ff).sum()
-                        ff_en_total_se += torch.square(energies - en_ref_ff).sum()
+                        ff_en_total_ae += torch.abs(en_ref_ff-en_ref).sum()
+                        ff_en_total_se += torch.square(en_ref_ff-en_ref).sum()
 
                     if on_f:
 
@@ -205,7 +212,8 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                     num_energies += len(energies)
 
                 # loader loop end
-                
+
+
             with torch.no_grad():
                 if on_f and num_grad_components != 0: # hacky but should work since either all or none are None
 
@@ -213,6 +221,16 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                     
                     rmse_data[name][f"res_grad_rmse"] = {res: torch.sqrt(res_se[res_id]/res_nums[res_id]).item() if res_nums[res_id] > 0 else float("nan") for res_id, res in enumerate(RESIDUES)}
                     rmse_data[name][f"atom_grad_rmse"] = {atom_number: torch.sqrt(atom_se[atom_number]/atom_nums[atom_number]).item() if atom_nums[atom_number] > 0 else float("nan") for atom_number in range(MAX_ELEMENT)}
+
+
+                    eval_data[name]["grad_mae"] = (g_total_ae/num_grad_components).item()
+                    eval_data[name]["grad_rmse"] = torch.sqrt(g_total_se/num_grad_components).item()
+
+
+                if num_energies != 0:
+                    eval_data[name]["energy_mae"] = (en_total_ae/num_energies).item()
+                    eval_data[name]["energy_rmse"] = torch.sqrt(en_total_se/num_energies).item()
+
 
                     if not ref_ff is None:
                         rmse_data[name][f"{ref_ff}_radical_grad_rmse"] = torch.sqrt(ff_radical_se/radical_num).item() if radical_num > 0 else float("nan")
@@ -222,17 +240,9 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                         eval_data[name][f"{ref_ff}_grad_mae"] = (ff_g_total_ae/num_grad_components).item()
                         eval_data[name][f"{ref_ff}_grad_rmse"] = torch.sqrt(ff_g_total_se/num_grad_components).item()
 
-
-                    eval_data[name]["grad_mae"] = (g_total_ae/num_grad_components).item()
-                    eval_data[name]["grad_rmse"] = torch.sqrt(g_total_se/num_grad_components).item()
-
-                if num_energies != 0:
-                    eval_data[name]["energy_mae"] = (en_total_ae/num_energies).item()
-                    eval_data[name]["energy_rmse"] = torch.sqrt(en_total_se/num_energies).item()
-
-                    if not ref_ff is None:
-                        eval_data[name][f"{ref_ff}_energy_mae"] = (ff_en_total_ae/num_energies).item()
-                        eval_data[name][f"{ref_ff}_energy_rmse"] = torch.sqrt(ff_en_total_se/num_energies).item()
+                if num_energies > 0 and not ref_ff is None:
+                    eval_data[name][f"{ref_ff}_energy_mae"] = (ff_en_total_ae/num_energies).item()
+                    eval_data[name][f"{ref_ff}_energy_rmse"] = torch.sqrt(ff_en_total_se/num_energies).item()
 
 
     if rmse_plots and on_forces:
@@ -435,7 +445,7 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
     if plot:
         if verbose:
             print("  Plotting...")
-        GrappaTrain.compare_all(model=model, loaders=loaders, dataset_names=loader_names, device=device, energies=["ref", "reference_ff"], forcefield_name="amber99sbildn", folder_path=plot_folder, grads=on_forces, verbose=verbose)
+        GrappaTrain.compare_all(model=model, loaders=loaders, dataset_names=loader_names, device=device, energies=["ref", "reference_ff"], forcefield_name=ref_ff, folder_path=plot_folder, grads=on_forces, verbose=verbose)
 
 
     return {"eval_data":eval_data, "rmse_data": rmse_data}

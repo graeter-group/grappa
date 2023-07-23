@@ -98,7 +98,7 @@ def reduce_confs(ds_tr:list, confs, seed=0):
     ds_tr[:] = [reduce_confs_(g) for g in ds_tr]
 
 
-def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float, float, float]=[0.8,0.1,0.1], splits:list=None):
+def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float, float, float]=[0.8,0.1,0.1], splits:List[List[str]]=None):
     """
     returns 3 datasets and a list of 3 lists containing sequence names used in the split in the order train, val, test
     make sure that no same molecules are in different splits by using the names.
@@ -114,11 +114,27 @@ def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float,
         loaded_split = False
 
     # split the names not occuring in splits according to fraction:
-    all_names = []
-    for names in datanames:
-        for name in names:
-            if not name in all_names and not any(name in split for split in splits):
+    if not datanames is None:
+        all_names = []
+        for names in datanames:
+            for name in names:
+                if not name in all_names and not any(name in split for split in splits):
+                    all_names.append(name)
+
+    else:
+        splits = [[],[],[]]
+        loaded_split = False
+        
+        datanames = []
+        all_names = []
+        for i, ds in enumerate(datasets):
+            dnames = []
+            for j in range(len(ds)):
+                name = f"{i}_{j}"
                 all_names.append(name)
+                dnames.append(name)
+            datanames.append(dnames)
+
 
     if not loaded_split:
         assert len(all_names)>3, "not enough molecules for splitting"
@@ -189,7 +205,7 @@ def flatten_splits(ds_trs, ds_vls, ds_tes):
     print(f"splitted set of molecular graphs: train {len(ds_tr)}, val {len(ds_vl)}, test {len(ds_te)}\n")
     return ds_tr, ds_vl, ds_te
 
-def get_data(ds_paths:List[Union[str, Path]], n_graphs=None, force_factor=0):
+def get_data(ds_paths:List[Union[str, Path]], n_graphs=None, force_factor=0)->Tuple[List[dgl.graph], List[str]]:
     datasets = []
     datanames = []
     for p in ds_paths:
@@ -221,18 +237,25 @@ def get_data(ds_paths:List[Union[str, Path]], n_graphs=None, force_factor=0):
                 names = json.load(f)
             if not n_graphs is None:
                 names = names[:n_graphs]
+
+            if any([name is None for name in names]):
+                names = None
+                raise ValueError("a name is None")
+
             if len(names) != len(ds):
                 raise ValueError(f"number of names does not match number of graphs: {len(names)} != {len(ds)}")
             print(f"loaded {len(ds)} graphs and their names\n")
         except Exception as e:
             names = None
-            print(f"loaded {len(ds)} graphs. couldnt load their names due to {e}\n")
+            print(f"loaded {len(ds)} graphs. couldn't load their names due to {e}\n")
 
         ############
         shape_test(ds, force_factor=force_factor)
         ############
         datasets.append(ds)
         datanames.append(names)
+        if any([name is None for name in datanames]):
+            datanames = None
 
     if len(datasets) > 1:
         for i in range(len(datasets)):

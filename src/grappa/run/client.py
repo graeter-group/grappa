@@ -47,22 +47,42 @@ def run_client():
     parser.add_argument('--width', type=int, default=None, help="of the representation network (default: 512)")
     parser.add_argument('--rep_feats', type=int, default=None, help=" (default: 512)")
     parser.add_argument('--readout_width', type=int, default=None, help=" (default: 512)")
-    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"])')
-    parser.add_argument('--old_model', '-o', default=False, action="store_true", help="Whether or not to use the old model architecture (default: False)")
+    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "in_ring", "q_ref", "is_radical"])')
+    parser.add_argument('--improper', dest='use_improper', action='store_true')
+    parser.add_argument('--no_improper', dest='use_improper', action='store_false')
+    parser.set_defaults(use_improper=None)
+    parser.add_argument('--old_model', dest='old_model', action='store_true')
+    parser.add_argument('--no_old_model', dest='old_model', action='store_false')
+    parser.set_defaults(old_model=None)
 
     args = parser.parse_args()
+    
+    # loop over args and set to None whenever the argument is the string 'None'
+    for key, value in vars(args).items():
+        if value == "None" or value == ["None"]:
+            setattr(args, key, None)
 
     for ds_short in args.ds_short:
-        suffix = "_60"
+        suffix = "_filtered"
         suffix_col = ""
         if args.collagen:
             suffix_col = "_col"
+
         if ds_short == "eric_nat":
             args.ds_tag += [f'AA_scan_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}']
+
         if ds_short == "eric_rad":
             args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
+
         if ds_short == "spice":
             args.ds_tag += [f'spice/charge_default_ff_amber99sbildn{suffix}']
+
+        if ds_short == "spice_openff":
+            args.ds_tag += [f'spice_openff/charge_default_ff_gaff-2_11{suffix}']
+
+        if ds_short == "spice_monomers":
+            args.ds_tag += [f'monomers/charge_default_ff_gaff-2_11{suffix}']
+
         if ds_short == "eric":
             args.ds_short.remove("eric")
             args.ds_short += ["eric_nat", "eric_rad"]
