@@ -85,6 +85,8 @@ class SysWriter:
         self.internal_to_external_idx = None # np.array that maps from internal (array position) to external (array value) indices. Internal indices are the zero-based indices in the graph and of the system. if None, assume that the indices are the same.
 
 
+        self.use_residues = True # whether to store residues one-hot encoded in the graph
+
 
         # ===============================
         # initialisation:
@@ -109,8 +111,8 @@ class SysWriter:
             self.classical_ff = copy.deepcopy(classical_ff) # nee a deep copy, otherwise this would change the ff outside the class
             self.classical_ff = add_radical_residues(forcefield=self.classical_ff, topology=self.top)
 
-
-        self.sys = self.classical_ff.createSystem(top, **system_kwargs)
+        if not self.classical_ff is None:
+            self.sys = self.classical_ff.createSystem(top, **system_kwargs)
 
     @classmethod
     def from_bonds(cls,
@@ -190,6 +192,42 @@ class SysWriter:
         self.set_lj(epsilons=np.array(epsilons, dtype=np.float32), sigmas=np.array(sigmas, dtype=np.float32))
         
         return self
+    
+
+
+    @classmethod
+    def from_smiles(cls, smiles:str, ff="gaff-2.11"):
+        """
+        Creates a SysWriter from a smiles string and a small-molecule forcefield. This enables compararision with espaloma.
+        """
+
+        # supress warnings from openff imports that are optional:
+        from .create_graph.openff_imports import get_openff_imports
+
+        SystemGenerator, Molecule = get_openff_imports()
+
+
+        mol = Molecule.from_mapped_smiles(smiles, allow_undefined_stereo=True)
+        top = mol.to_topology().to_openmm()
+
+        amber_forcefields = ['amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml']
+
+        forcefield_kwargs = {'removeCMMotion': False}
+
+        system_generator = SystemGenerator(forcefields=amber_forcefields, small_molecule_forcefield=ff, forcefield_kwargs=forcefield_kwargs)
+
+        # initialize an empty object:
+        self = cls(top=top, classical_ff=None, allow_radicals=False)
+
+
+        self.sys = system_generator.create_system(
+            topology=mol.to_topology().to_openmm(),
+            molecules=mol,
+        )
+
+        self.use_residues = False
+
+        return self
 
 
     def set_charge_model(self, charge_model:Union[Callable, str, None])->None:
@@ -258,7 +296,7 @@ class SysWriter:
         The actual graph is initialized from converting the system to an rdkit molecule for obtaining ring-membership features. The interaction indices are read from the system only.
         We assume that the order of the atoms in the topology matches the order of the atoms in the system.
         If with_parameters is true, the classical parameters are read from the system and stored in the graph as {parameter_name}_ref.
-        TODO: flag whether we want to write a system later or not. if not the dictionary is unnecessary.
+        TODO: flag whether we want to write a system later or return a param dict. if not the interaction dictionary is unnecessary.
         """
 
 
@@ -299,6 +337,7 @@ class SysWriter:
         angle_idxs = None
         proper_idxs = None
         improper_idxs = None
+        
 
         # set the interaction indices:
 
@@ -317,6 +356,13 @@ class SysWriter:
             elif isinstance(force, openmm.CustomBondForce):
                 raise NotImplementedError("Functional form of CustomBondForce is not determined, therefore we cannot learn parameters for this type of force in general.")
             
+            elif isinstance(force, openmm.NonbondedForce):
+                # write the charges in the graph
+                if with_parameters:
+                    charges = torch.zeros(self.sys.getNumParticles(), dtype=torch.float32)
+                    for i in range(force.getNumParticles()):
+                        charge, sigma, epsilon = force.getParticleParameters(i)
+                        charges[i] = charge.value_in_unit(grappa_units.CHARGE_UNIT)
 
 
 
@@ -382,10 +428,11 @@ class SysWriter:
             # ========= PROPER AND IMPROPER TORSIONS =========
             elif isinstance(force, openmm.PeriodicTorsionForce):
 
+                n_torsions = force.getNumTorsions()
+
                 proper_idxs = []
                 improper_idxs = []
 
-                n_torsions = force.getNumTorsions()
 
                 if with_parameters:
 
@@ -451,7 +498,7 @@ class SysWriter:
                             k_improper[graph_idx_improper, periodicity-1] = k if phase == 0 else -k
 
 
-                # make the tensors smaller since all torsion are both proper and improper
+                # make the tensors smaller since (all torsions) are (both proper and improper)
                 if len(proper_idxs) < n_torsions:
                     if with_parameters:
                         k_proper = k_proper[:len(proper_idxs)]
@@ -460,6 +507,11 @@ class SysWriter:
                         k_improper = k_improper[:len(improper_idxs)]
 
 
+
+        if not proper_idxs is None:
+            proper_idxs = np.array(proper_idxs, dtype=np.int32)
+        if not improper_idxs is None:
+            improper_idxs = np.array(improper_idxs, dtype=np.int32)
 
 
         # use the rd_mol to obtain a homogeneous graph
@@ -472,6 +524,8 @@ class SysWriter:
 
         # add the parameters:
         if with_parameters:
+            if "n1" in TERMS:
+                self.graph.nodes["n1"].data["q_ref"] = charges.float()
             if "n2" in TERMS:
                 self.graph.nodes["n2"].data["k_ref"] = torch.tensor(bond_ks, dtype=torch.float32)
                 self.graph.nodes["n2"].data["eq_ref"] = torch.tensor(bond_eqs, dtype=torch.float32)
@@ -497,13 +551,14 @@ class SysWriter:
         
         self.graph.nodes["n1"].data["residue"] = torch.zeros(self.graph.num_nodes("n1"), len(RESIDUES), dtype=torch.float32)
 
-        for idx, a in enumerate(self.top.atoms()):
-            resname = a.residue.name
-            if resname in RESIDUES:
-                res_index = RESIDUES.index(resname) # is unique
-                self.graph.nodes["n1"].data["residue"][idx] = torch.nn.functional.one_hot(torch.tensor((res_index)).long(), num_classes=len(RESIDUES)).float()
-            else:
-                raise ValueError(f"Residue {resname} not in {RESIDUES}")
+        if self.use_residues:
+            for idx, a in enumerate(self.top.atoms()):
+                resname = a.residue.name
+                if resname in RESIDUES:
+                    res_index = RESIDUES.index(resname) # is unique
+                    self.graph.nodes["n1"].data["residue"][idx] = torch.nn.functional.one_hot(torch.tensor((res_index)).long(), num_classes=len(RESIDUES)).float()
+                else:
+                    raise ValueError(f"Residue {resname} not in {RESIDUES}")
 
 
     def forward_pass(self, model:Callable, device="cpu")->None:
@@ -641,38 +696,40 @@ class SysWriter:
 
 
         # ========= ANGLES =========
-        eqs = self.graph.nodes["n3"].data["eq"].detach().numpy()
-        ks = self.graph.nodes["n3"].data["k"].detach().numpy()
+        if "n3" in self.graph.ntypes:
+            eqs = self.graph.nodes["n3"].data["eq"].detach().numpy()
+            ks = self.graph.nodes["n3"].data["k"].detach().numpy()
 
-        # convert to openmm units:
-        eqs = Quantity(eqs, unit=grappa_units.ANGLE_UNIT).value_in_unit(ANGLE_EQ_UNIT)
-        ks = Quantity(ks, unit=grappa_units.ANGLE_FORCE_CONSTANT_UNIT).value_in_unit(ANGLE_K_UNIT)
+            # convert to openmm units:
+            eqs = Quantity(eqs, unit=grappa_units.ANGLE_UNIT).value_in_unit(ANGLE_EQ_UNIT)
+            ks = Quantity(ks, unit=grappa_units.ANGLE_FORCE_CONSTANT_UNIT).value_in_unit(ANGLE_K_UNIT)
 
-        param_dict["angle_eq"] = eqs
-        param_dict["angle_k"] = ks
+            param_dict["angle_eq"] = eqs
+            param_dict["angle_k"] = ks
 
-        idxs = self.graph.nodes["n3"].data["idxs"].detach().numpy()
-        if self.internal_to_external_idx is not None:
-            idxs = self.internal_to_external_idx[idxs]
-        param_dict["angle_idxs"] = idxs
+            idxs = self.graph.nodes["n3"].data["idxs"].detach().numpy()
+            if self.internal_to_external_idx is not None:
+                idxs = self.internal_to_external_idx[idxs]
+            param_dict["angle_idxs"] = idxs
 
 
         # ========= PROPER DIHEDRALS =========
-        ns, phases, k_vec = SysWriter.get_periodicity_phase_k(ks=self.graph.nodes["n4"].data["k"])
-        
-        # convert to openmm units
-        phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(TORSION_PHASE_UNIT)
-        k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(TORSION_K_UNIT)
+        if "n4" in self.graph.ntypes:
+            ns, phases, k_vec = SysWriter.get_periodicity_phase_k(ks=self.graph.nodes["n4"].data["k"])
+            
+            # convert to openmm units
+            phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(TORSION_PHASE_UNIT)
+            k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(TORSION_K_UNIT)
 
-        param_dict["proper_periodicity"] = ns
-        param_dict["proper_phase"] = phases
-        param_dict["proper_k"] = k_vec
+            param_dict["proper_periodicity"] = ns
+            param_dict["proper_phase"] = phases
+            param_dict["proper_k"] = k_vec
 
-        idxs = self.graph.nodes["n4"].data["idxs"].detach().numpy()
-        if self.internal_to_external_idx is not None:
-            idxs = self.internal_to_external_idx[idxs]
+            idxs = self.graph.nodes["n4"].data["idxs"].detach().numpy()
+            if self.internal_to_external_idx is not None:
+                idxs = self.internal_to_external_idx[idxs]
 
-        param_dict["proper_idxs"] = idxs
+            param_dict["proper_idxs"] = idxs
 
         # ========= IMPROPER DIHEDRALS =========
         if not self.use_impropers:

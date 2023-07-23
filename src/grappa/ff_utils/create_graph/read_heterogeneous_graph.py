@@ -16,13 +16,12 @@ def from_homogeneous_and_idxs(g:dgl.DGLGraph, bond_idxs:torch.Tensor, angle_idxs
     # initialize empty dictionary
     hg = {}
 
-    if not use_impropers:
-        use_impropers = None
 
     idxs = {"n2": bond_idxs, "n3": angle_idxs, "n4": proper_idxs, "n4_improper": improper_idxs}
 
     for k, v in idxs.items():
-        idxs[k] = torch.tensor(v)
+        if not v is None:
+            idxs[k] = torch.tensor(v)
 
     assert g.num_edges() == len(bond_idxs)*2, f"number of edges in graph ({g.num_edges()}) does not match 2*number of bonds ({2*len(bond_idxs)})"
 
@@ -39,11 +38,13 @@ def from_homogeneous_and_idxs(g:dgl.DGLGraph, bond_idxs:torch.Tensor, angle_idxs
     # since we do not need neighborhood for levels other than n1, simply create a graph with only self loops:
     # ======================================
     
-    TERMS = ["n2", "n3", "n4", "n4_improper"] if use_impropers else ["n2", "n3", "n4"]
+    terms_ = ["n2", "n3", "n4", "n4_improper"] if use_impropers else ["n2", "n3", "n4"]
 
-    for t in TERMS:
-        if len(idxs[t]) == 0:
-            TERMS.remove(t)
+    TERMS = []
+    for t in terms_:
+        if not idxs[t] is None:
+            if len(idxs[t]) > 0:
+                TERMS.append(t)
 
     for term in TERMS+["g"]:
         key = (term, f"{term}_edge", term)

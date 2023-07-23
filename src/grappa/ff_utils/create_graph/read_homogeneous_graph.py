@@ -63,7 +63,7 @@ def degree(atom):
                 dtype=torch.float32,
             )
 
-def from_rdkit_mol(mol:Mol, max_element:int=26):
+def from_rdkit_mol(mol:Mol, max_element:int=53):
     """
     Creates a homogenous dgl graph containing the one-hot encoded elements and rdkit features. Stored in the feature types "atomic_number", "mass", "formal_charge", "degree", "in_ring" at the 'n1' level of the graph.
     """
@@ -98,5 +98,19 @@ def from_rdkit_mol(mol:Mol, max_element:int=26):
     # degrees = torch.nn.functional.one_hot(degrees.long(), num_classes=MAX_NUM_BONDS+1)
     # g.ndata["degree"] = degrees.float()
 
+
+    return g
+
+def from_bonds(bond_idxs:torch.Tensor, max_element:int=53):
+    """
+    Creates an empty homogenous dgl graph describing only connectivity.
+    """
+    import dgl
+
+    # initialize directed graph
+    g = dgl.graph((bond_idxs[:,0].tolist(), bond_idxs[:,1].tolist()))
+
+    # make it undirected
+    g = dgl.add_reverse_edges(g)
 
     return g
