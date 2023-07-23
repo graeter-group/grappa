@@ -13,11 +13,10 @@ from grappa.PDBData.PDBMolecule import PDBMolecule
 mol = PDBMolecule.get_example()
 mol.gradients.shape
 # %%
-from grappa.ff import ForceField
-ff = ForceField.from_tag("example")
+# from grappa.ff import ForceField
+# ff = ForceField.from_tag("example")
 
-fig, ax = mol.compare_with_ff(ff, ff_title="grappa")
-# set the figure title:
+# fig, ax = mol.compare_with_ff(ff, ff_title="grappa")
 
 # %%
 import openmm.app 

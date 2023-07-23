@@ -934,6 +934,8 @@ class Train:
                 raise RuntimeError("This error might be due to an empty diagram, try to cover a larger energy space. name="+name + ", y_pred.shape="+str(y_pred.shape))
         
         else:
+            if len(y_true) > 1000:
+                h = ax.scatter(y_true, y_pred, color = "blue", linewidths=0.1, marker=".", s=1, alpha=1)
             h = ax.scatter(y_true, y_pred, color = "blue", linewidths=0.1, marker=".")
             if not show_all:
                 ax.set_xlim((min_y,max_y))

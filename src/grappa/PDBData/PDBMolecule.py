@@ -1019,10 +1019,6 @@ class PDBMolecule:
                 grad_class = self.graph_data["n1"]["grad_total_ref"].transpose(1,0,2)
             return e_class, grad_class
 
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, 'pep.pdb')
-            self.write_pdb(path)
-            gen_pdb = PDBFile(path)
         
         if collagen:
             forcefield = collagen_utility.get_collagen_forcefield()
@@ -1040,7 +1036,7 @@ class PDBMolecule:
             top = writer.top
 
         else:
-            top = gen_pdb = self.to_openmm(collagen=collagen)
+            top = self.to_openmm(collagen=collagen).topology
             system = forcefield.createSystem(top)
 
 
@@ -1237,7 +1233,7 @@ class PDBMolecule:
         ax[0].set_ylabel(f"{ff_title} Energies", fontsize=fontsize)
         ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
-        ax[1].scatter(self.gradients.flatten(), forces.flatten(), s=0.3)
+        ax[1].scatter(self.gradients.flatten(), forces.flatten(), s=1, alpha=0.4)
         ax[1].plot(self.gradients.flatten(), self.gradients.flatten(), color="black", linestyle="--")
         ax[1].set_xlabel("QM forces", fontsize=fontsize)
         ax[1].set_ylabel(f"{ff_title} forces", fontsize=fontsize)

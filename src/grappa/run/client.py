@@ -34,7 +34,7 @@ def run_client():
     parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 500)")
     parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 100000.0)")
     parser.add_argument('--patience', type=float, default=None, help="ratio of maximum total steps and patience of the learning rate scheduler, i.e. if (default: 0.0001)")
-    parser.add_argument('--plots', action='store_true', default=False, help="create plots during and at the end of training. might take time and memory (default: False)")
+    parser.add_argument('--no-plots', action='store_false', dest="plots", default=True, help="create plots during and at the end of training. might take time and memory (default: False)")
     parser.add_argument('--ref_ff', type=str, default="amber99sbildn", help="suffix of the reference parameters for pretraining and plotting (default: 'amber99sbildn')")
     parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-6')")
     parser.add_argument('--device', type=str, default=None)

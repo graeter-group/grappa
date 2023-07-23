@@ -5,6 +5,7 @@ This class is neither written efficiently, nor well documented or tested. Only t
 from . import training
 from ..models.energy import WriteEnergy
 from . import utilities
+from .utilities import get_param_statistics, get_grad, get_bonded_parameter_types
 
 import dgl
 import os

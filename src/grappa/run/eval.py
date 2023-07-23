@@ -22,18 +22,26 @@ def eval_client():
     args = parser.parse_args()
 
     for ds_short in args.ds_short:
-        suffix = "_60"
+        suffix = "_filtered"
         suffix_col = ""
         if args.collagen:
             suffix_col = "_col"
+
         if ds_short == "eric_nat":
             args.ds_tag += [f'AA_scan_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}']
+
         if ds_short == "eric_rad":
             args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
+
         if ds_short == "spice":
             args.ds_tag += [f'spice/charge_default_ff_amber99sbildn{suffix}']
+
         if ds_short == "spice_openff":
-            args.ds_tag += [f'spice_openff_full/charge_default_ff_gaff-2_11_forcefiltered{suffix}']
+            args.ds_tag += [f'spice_openff/charge_default_ff_gaff-2_11{suffix}']
+
+        if ds_short == "spice_monomers":
+            args.ds_tag += [f'monomers/charge_default_ff_gaff-2_11{suffix}']
+
         if ds_short == "eric":
             args.ds_short.remove("eric")
             args.ds_short += ["eric_nat", "eric_rad"]
