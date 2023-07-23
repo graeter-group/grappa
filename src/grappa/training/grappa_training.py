@@ -88,6 +88,7 @@ class GrappaTrain(training.Train):
         super(GrappaTrain, self).init_metric_data()
         if self.eval_forces:
             self.metric_data["f_mae_vl"] = []
+            self.metric_data["f_rmse_vl"] = []
 
     # returns mae and rmse
     @staticmethod
@@ -105,8 +106,12 @@ class GrappaTrain(training.Train):
             key = "f_mae_vl"
             if key in self.metric_data.keys():
                 self.metric_data[key].append(torch.nn.functional.l1_loss(force_diffs, torch.zeros_like(force_diffs)).detach().clone().to("cpu").item())
+            key = "f_rmse_vl"
+            if key in self.metric_data.keys():
+                self.metric_data[key].append(torch.sqrt(torch.nn.functional.mse_loss(force_diffs, torch.zeros_like(force_diffs))).detach().clone().to("cpu").item())
 
         return super(GrappaTrain, self).evaluation(model)
+
 
     def get_dataset_info(self, loader):
         stat_dic = {}
@@ -207,6 +212,9 @@ class GrappaTrain(training.Train):
 
     @staticmethod
     def get_parameter_dict(model, loaders, param_names=["eq", "k"], levels=["n2", "n3"], forcefield_name="", dataset_names=None, model_device="cuda", out_device="cpu", energies=["bonded", "bond", "angle", "torsion", "ref", "reference_ff"], energy_factor=1., energy_writer=WriteEnergy(), atom_diff=False, grads=True):
+        """
+        Stores qm data in '_ref' entry.
+        """
 
         assert not model_device is None
         model = model.to(model_device)
@@ -305,6 +313,8 @@ class GrappaTrain(training.Train):
                     if atom_diff:
                         batch = GrappaTrain.make_atomic_numbers(batch)
                     for level in levels:
+                        if not level in batch.ntypes:
+                            continue
                         # for angle and bond, diff between atom types
                         if not "n4" in level and atom_diff:
                             atoms = GrappaTrain.get_parameters(batch, level=level, param_name="atoms", forcefield_name="")
@@ -324,13 +334,13 @@ class GrappaTrain(training.Train):
                                 break #only one param type: k
 
                     if do_grad[i]:
-                        grad_true = batch.nodes["n1"].data[f"grad_ref"]
+                        grad_true = batch.nodes["n1"].data[f"grad_qm"]
                         grad_pred = grad
                         out[dataset_names[i]]["grad_ref_pred"] = torch.cat((out[dataset_names[i]]["grad_ref_pred"], (grad_pred.flatten()).to(out_device)))
                         out[dataset_names[i]]["grad_ref_true"] = torch.cat((out[dataset_names[i]]["grad_ref_true"], (grad_true.flatten()).to(out_device)))
 
                         if "reference_ff" in energies:
-                            grad_ff = batch.nodes["n1"].data[f"grad_total_{forcefield_name}"] - batch.nodes["n1"].data[f"grad_nonbonded_{forcefield_name}"]
+                            grad_ff = batch.nodes["n1"].data[f"grad_total_{forcefield_name}"]
 
                             out[dataset_names[i]]["grad_ref_ff_pred"] = torch.cat((out[dataset_names[i]]["grad_ref_ff_pred"], (grad_ff.flatten()).to(out_device)))
                             out[dataset_names[i]]["grad_ref_ff_true"] = torch.cat((out[dataset_names[i]]["grad_ref_ff_true"], (grad_true.flatten()).to(out_device)))
@@ -354,6 +364,7 @@ class GrappaTrain(training.Train):
                         en_name_graph = en_name
 
                         if contrib=="total":
+                            raise RuntimeError("total energy not implemented.")
                             en_name = "u_total"
                             y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u_total", forcefield_name=forcefield_name)*energy_factor
                             y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor + GrappaTrain.get_energy(batch, level="g", energy_name="u_nonbonded", forcefield_name=forcefield_name)*energy_factor
@@ -364,8 +375,12 @@ class GrappaTrain(training.Train):
 
                         elif contrib=="ref":
                             en_name = "u_ref"
-                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="ref")*energy_factor
-                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor
+                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="qm")*energy_factor
+
+                            y_pred = (GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="")*energy_factor
+                            +
+                            GrappaTrain.get_energy(batch, level="g", energy_name="u_nonbonded", forcefield_name="ref")*energy_factor)
+
                             AVERAGE = True
                             if AVERAGE:
                                 y_true = y_true - y_true.mean(dim=-1).unsqueeze(dim=-1)
@@ -373,8 +388,8 @@ class GrappaTrain(training.Train):
 
                         elif contrib=="reference_ff":
                             en_name = "u_reference_ff"
-                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="ref")*energy_factor
-                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u_bonded", forcefield_name=forcefield_name)*energy_factor
+                            y_true = GrappaTrain.get_energy(batch, level="g", energy_name="u", forcefield_name="qm")*energy_factor
+                            y_pred = GrappaTrain.get_energy(batch, level="g", energy_name="u_total", forcefield_name=forcefield_name)*energy_factor
                             AVERAGE = True
                             if AVERAGE:
                                 y_true -= y_true.mean(dim=-1).unsqueeze(dim=-1)
@@ -547,8 +562,14 @@ class GrappaTrain(training.Train):
                     if "n4" in level:
                         param_name = "k"
                         log_scale_accuracy_=True
-                    y_true = parameter_dict[l_name][level + "_" +param_name+"_true"]
-                    y_pred = parameter_dict[l_name][level + "_" +param_name+"_pred"]
+                    try:
+                        y_true = parameter_dict[l_name][level + "_" +param_name+"_true"]
+                        y_pred = parameter_dict[l_name][level + "_" +param_name+"_pred"]
+                    except ValueError:
+                        if level in ["n3", "n4", "n4_improper"]:
+                            continue
+                        else:
+                            raise
 
                     if len(y_pred)==0:
                         continue
@@ -564,7 +585,7 @@ class GrappaTrain(training.Train):
 
                     training.Train.visualize_targets(y_true=y_true, y_pred=y_pred, min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, name=name, ylabel=ylabel, xlabel=xlabel, folder_path=folder_path, title_name=title_name, metric_dict=metric_dict, log_scale_accuracy=log_scale_accuracy_, percentile=percentile, loader_name=l_name, errors=errors)
                     plt.close("all")
-                    # na has only one param name
+                    # n4 has only one param name
                     if "n4" in level:
                         break
 
@@ -613,17 +634,27 @@ class GrappaTrain(training.Train):
                         print(f"    Error in {en_name} metric_dict, keeping it empty...")
                     
 
-                ylabel = en_name+"_pred"
-                xlabel = en_name+"_QM"
+                ylabel = en_name+" pred"
+                xlabel = en_name+" QM"
                 if contrib == "reference_ff":
-                    ylabel = "u_"+forcefield_name
-                    xlabel = "u_ref"
-                    en_name = f"u_ref_{forcefield_name}"
+                    ylabel = "u "+forcefield_name
+                    xlabel = "u QM"
+                    en_name = f"u_{forcefield_name}"
 
                 if contrib == "grad_ref_ff":
-                    ylabel = "grad_"+forcefield_name
-                    xlabel = "grad_ref"
-                    en_name = f"grad_ref_{forcefield_name}"
+                    ylabel = "grad "+forcefield_name
+                    xlabel = "grad QM"
+                    en_name = f"grad_{forcefield_name}"
+
+                if contrib == "grad_ref":
+                    ylabel = "grad model"
+                    xlabel = "grad QM"
+                    en_name = f"grad_model"
+
+                if contrib == "ref":
+                    ylabel = "u model"
+                    xlabel = "u QM"
+                    en_name = f"u_model"
 
 
                 fpath = os.path.join(folder_path, l_name)
@@ -805,7 +836,8 @@ class TrainSequentialParams(GrappaTrain):
                 if self.energy_factor == 0 and not grad_active():
                     batch = model(batch)
 
-                loss = loss + self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4"].data["score"], batch.nodes["n4"].data["use_k"])
+                if "n4" in batch.ntypes:
+                    loss = loss + self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4"].data["score"], batch.nodes["n4"].data["use_k"])
                 if "n4_improper" in batch.ntypes:
                     loss = loss + self.bce_weight*torch.nn.functional.binary_cross_entropy_with_logits(batch.nodes["n4_improper"].data["score"], batch.nodes["n4_improper"].data["use_k"])
 

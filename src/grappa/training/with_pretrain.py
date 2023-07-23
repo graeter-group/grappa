@@ -16,6 +16,7 @@ pd.options.display.float_format = '{:.2E}'.format
 
 import time
 from pathlib import Path
+from .grappa_training import RMSE
 
 #%%
 
@@ -132,7 +133,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         if direct_eval:
             direct_epochs = 0
 
-        metrics = {"en_mse":torch.nn.MSELoss(), "en_mae":torch.nn.L1Loss()}
+        metrics = {"en_rmse":RMSE(), "en_mae":torch.nn.L1Loss()}
 
         trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics=metrics, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,

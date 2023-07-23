@@ -41,7 +41,7 @@ class Train:
         loss = self.loss_fn(y_pred, y)
         return loss
 
-    def __init__(self, train_loader, val_loader, loss_fn=None, test_loader=None, evaluation_metrics={}, log_interval=1, print_interval=50, model_saving_interval=5, overwrite=False, figure_update_interval=50, batch_print_interval=20, storage_path=os.path.join("versions"), store_states=False, dataset_names=None, do_not_show=[], target_factor=1., clip_value=1e5, device="cpu"):
+    def __init__(self, train_loader, val_loader, loss_fn=None, test_loader=None, evaluation_metrics={}, log_interval=1, print_interval=50, model_saving_interval=5, overwrite=False, figure_update_interval=50, batch_print_interval=20, storage_path=os.path.join("versions"), store_states=False, dataset_names=None, do_not_show=["loss_vl"], target_factor=1., clip_value=1e5, device="cpu"):
 
         assert not train_loader is None
         assert not val_loader is None
@@ -533,27 +533,26 @@ class Train:
         total_num_instances = 0
         for mname in metrics.keys():
             out[mname+suffix] = 0
-        with torch.no_grad():
             for batch in loader:
-                y_pred, y = get_targets(model=model, batch=batch, device=device)
+                y_pred, y = (v.detach().clone() for v in get_targets(model=model, batch=batch, device=device))
                 y_pred *= target_factor
                 y *= target_factor
 
                 num_instances = get_num_instances(batch)
                 total_num_instances += num_instances
-                for mname in metrics.keys():
-                    if mname == "loss":
-                        if get_loss is None:
-                            continue
-                        else:
-                            with torch.no_grad():
-                                mfun = get_loss
-                    mfun = metrics[mname]
-                    batchloss = mfun(y_pred, y)
-                    if metrics_are_averaged:
-                        out[mname+suffix] += batchloss * num_instances
+
+                if mname == "loss":
+                    if get_loss is None:
+                        continue
                     else:
-                        out[mname+suffix] += batchloss
+                        mfun = get_loss
+                        
+                mfun = metrics[mname]
+                batchloss = mfun(y_pred, y)
+                if metrics_are_averaged:
+                    out[mname+suffix] += batchloss * num_instances
+                else:
+                    out[mname+suffix] += batchloss
 
         for mname in metrics.keys():
             try:
@@ -574,81 +573,80 @@ class Train:
     @staticmethod
     def calc_metrics(model, metrics:dict, loaders, dataset_names, get_targets, get_num_instances, metrics_are_averaged=True, average=True, device="cpu", target_factor=1., loss_factor=1., get_loss=None):
         assert loss_factor == 1., "this is deprecated"
-        with torch.no_grad():
-            out = {}
-            for idx, loader in enumerate(loaders):
-                l_name = dataset_names[idx]
-                l_out, t_num_inst = Train.get_total_metrics(model=model, metrics=metrics, loader=loader, metrics_are_averaged=metrics_are_averaged, device=device, get_targets=get_targets, get_num_instances=get_num_instances, target_factor=target_factor, get_loss=get_loss)
-                out[l_name] = l_out
-                for key in l_out.keys():
-                    if average:
-                        out[l_name][key] = out[l_name][key] / t_num_inst
-                    else:
-                        out[l_name][key] = [out[l_name][key], t_num_inst]
+
+        out = {}
+        for idx, loader in enumerate(loaders):
+            l_name = dataset_names[idx]
+            l_out, t_num_inst = Train.get_total_metrics(model=model, metrics=metrics, loader=loader, metrics_are_averaged=metrics_are_averaged, device=device, get_targets=get_targets, get_num_instances=get_num_instances, target_factor=target_factor, get_loss=get_loss)
+            out[l_name] = l_out
+            for key in l_out.keys():
+                if average:
+                    out[l_name][key] = out[l_name][key] / t_num_inst
+                else:
+                    out[l_name][key] = [out[l_name][key], t_num_inst]
         
         return out
 
     def get_metrics(self, model, metrics=None, additional_loaders=[], add_dataset_names=[], during_train=False, average=True, target_factor=None):
-        with torch.no_grad():
-            if target_factor is None:
-                target_factor = self.target_factor
-            assert len(additional_loaders) == len(add_dataset_names)
-            if metrics is None:
-                metrics=self.metrics
-            loaders = additional_loaders
-            dataset_names_ = add_dataset_names
-            loaders += self.val_loaders
+        if target_factor is None:
+            target_factor = self.target_factor
+        assert len(additional_loaders) == len(add_dataset_names)
+        if metrics is None:
+            metrics=self.metrics
+        loaders = additional_loaders
+        dataset_names_ = add_dataset_names
+        loaders += self.val_loaders
+        if self.dataset_names is None: # if there is only one loader
+            val_names = ["dummy"]
+        else:
+            val_names = ["vl_" + n for n in self.dataset_names]
+        dataset_names_ += val_names
+
+        out = Train.calc_metrics(model=model, metrics=metrics, loaders=loaders, dataset_names=dataset_names_, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor, get_loss=self.get_loss)
+        out["vl"] = {}
+        for mname in metrics.keys():
+            total_loss = sum([out[l_name][mname][0] for l_name in val_names])
+            total_inst = sum([out[l_name][mname][1] for l_name in val_names])
+            out["vl"][mname] = [total_loss, total_inst]
+        if self.dataset_names is None:
+            out.pop("dummy") # if there is only one loader
+
+        if not during_train:
+            # recalculate
             if self.dataset_names is None: # if there is only one loader
-                val_names = ["dummy"]
+                tr_names = ["dummy"]
             else:
-                val_names = ["vl_" + n for n in self.dataset_names]
-            dataset_names_ += val_names
-
-            out = Train.calc_metrics(model=model, metrics=metrics, loaders=loaders, dataset_names=dataset_names_, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor, get_loss=self.get_loss)
-            out["vl"] = {}
+                tr_names = ["tr_" + n for n in self.dataset_names]
+            out_tr = Train.calc_metrics(model=model, metrics=metrics, loaders=self.train_loaders, dataset_names=tr_names, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor, get_loss=self.get_loss)
+            out_tr["tr"] = {}
             for mname in metrics.keys():
-                total_loss = sum([out[l_name][mname][0] for l_name in val_names])
-                total_inst = sum([out[l_name][mname][1] for l_name in val_names])
-                out["vl"][mname] = [total_loss, total_inst]
+                total_loss = sum([out_tr[l_name][mname][0] for l_name in tr_names])
+                total_inst = sum([out_tr[l_name][mname][1] for l_name in tr_names])
+                out_tr["tr"][mname] = [total_loss, total_inst]
             if self.dataset_names is None:
-                out.pop("dummy") # if there is only one loader
+                out_tr.pop("dummy")
 
-            if not during_train:
-                # recalculate
-                if self.dataset_names is None: # if there is only one loader
-                    tr_names = ["dummy"]
-                else:
-                    tr_names = ["tr_" + n for n in self.dataset_names]
-                out_tr = Train.calc_metrics(model=model, metrics=metrics, loaders=self.train_loaders, dataset_names=tr_names, average=False, get_targets=self.get_targets, get_num_instances=self.get_num_instances, device=self.device, target_factor=target_factor, loss_factor=self.loss_show_factor, get_loss=self.get_loss)
-                out_tr["tr"] = {}
-                for mname in metrics.keys():
-                    total_loss = sum([out_tr[l_name][mname][0] for l_name in tr_names])
-                    total_inst = sum([out_tr[l_name][mname][1] for l_name in tr_names])
-                    out_tr["tr"][mname] = [total_loss, total_inst]
-                if self.dataset_names is None:
-                    out_tr.pop("dummy")
+            out.update(out_tr)
 
-                out.update(out_tr)
+        if during_train:
+            # use the stored values
+            for tr_loader_key in self.current_train_loss.keys():
+                try:
+                    value = self.current_train_loss[tr_loader_key][0].cpu().item()
+                except:
+                    value = self.current_train_loss[tr_loader_key][0]
+                num_inst = self.current_train_loss[tr_loader_key][1]
+                out[tr_loader_key]={self.loss_name: [value, num_inst] }
+        
 
-            if during_train:
-                # use the stored values
-                for tr_loader_key in self.current_train_loss.keys():
-                    try:
-                        value = self.current_train_loss[tr_loader_key][0].cpu().item()
-                    except:
-                        value = self.current_train_loss[tr_loader_key][0]
-                    num_inst = self.current_train_loss[tr_loader_key][1]
-                    out[tr_loader_key]={self.loss_name: [value, num_inst] }
-            
-
-            for l_name in out.keys():
-                for m_name in out[l_name].keys():
-                    if average:
-                        if out[l_name][m_name][1]>0.:
-                            # perform the average
-                            out[l_name][m_name] = out[l_name][m_name][0] / out[l_name][m_name][1]
-                        else:
-                            out[l_name][m_name] = float("nan")
+        for l_name in out.keys():
+            for m_name in out[l_name].keys():
+                if average:
+                    if out[l_name][m_name][1]>0.:
+                        # perform the average
+                        out[l_name][m_name] = out[l_name][m_name][0] / out[l_name][m_name][1]
+                    else:
+                        out[l_name][m_name] = float("nan")
 
         return out
 
@@ -742,16 +740,18 @@ class Train:
         metric_str = ""
         names = self.get_sorted_metric_data_names()
         for name in names:
+            if name in self.do_not_show:
+                continue
             try:
                 # last entry of the respective list
                 val = self.metric_data[name][-1]
                 if np.isnan(val):
-                    metric_str += "---nan--  "
+                    metric_str += "---nan---  "
                 else:
-                    metric_str += "{:<.2E}  ".format(val)
+                    metric_str += "{:<.2E}   ".format(val)
             except IndexError:
                 # if the metric_data is still empty, do not throw an error
-                metric_str += "--wait--  "
+                metric_str += "--wait--   "
         return metric_str
 
     def get_metric_header(self):
@@ -762,7 +762,7 @@ class Train:
             if len(metric_name) > 10:
                 header += metric_name[:9]+" "
             else:
-                header += metric_name + " "*(10-len(metric_name))
+                header += metric_name + " "*(11-len(metric_name))
         return header
 
     def get_sorted_metric_data_names(self):
