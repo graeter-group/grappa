@@ -50,20 +50,21 @@ def geometry_in_graph(g):
 
 
     #==========================================================================
-    if not "x" in g.nodes["n3"].data.keys():
+    if "n3" in g.ntypes:
+        if not "x" in g.nodes["n3"].data.keys():
 
-        # compute bond angle
-        pairs = g.nodes["n3"].data["idxs"]
-        # this has shape num_pairs, 3
+            # compute bond angle
+            pairs = g.nodes["n3"].data["idxs"]
+            # this has shape num_pairs, 3
 
-        positions = g.nodes["n1"].data["xyz"][pairs]
-        # this has shape num_pairs, 3, num_confs, 3
+            positions = g.nodes["n1"].data["xyz"][pairs]
+            # this has shape num_pairs, 3, num_confs, 3
 
-        x = angle(positions[:, 0, :, :], positions[:, 1, :, :], positions[:, 2, :, :])
-        # this has shape num_pairs, num_confs
+            x = angle(positions[:, 0, :, :], positions[:, 1, :, :], positions[:, 2, :, :])
+            # this has shape num_pairs, num_confs
 
-        # write this in the graph:
-        g.nodes["n3"].data["x"] = x
+            # write this in the graph:
+            g.nodes["n3"].data["x"] = x
 
 
     #==========================================================================
@@ -71,22 +72,35 @@ def geometry_in_graph(g):
     improper_needed = "n4_improper" in g.ntypes
     improper_needed = (not "x" in g.nodes["n4_improper"].data.keys()) if improper_needed else False
 
+    pairs = None
+    if "n4" in g.ntypes:
+        if not "x" in g.nodes["n4"].data.keys():
 
-    if not "x" in g.nodes["n4"].data.keys():
+            pairs = g.nodes["n4"].data["idxs"]
 
-        pairs = g.nodes["n4"].data["idxs"]
+            if "n4_improper" in g.ntypes:
+                # we can treat proper and improper the same way:
+                pairs = torch.cat((pairs, g.nodes["n4_improper"].data["idxs"]), dim=0)
 
-        if "n4_improper" in g.ntypes:
-            # we can treat proper and improper the same way:
-            pairs = torch.cat((pairs, g.nodes["n4_improper"].data["idxs"]), dim=0)
+    elif improper_needed:
 
+        pairs = g.nodes["n4_improper"].data["idxs"]
         # this has shape num_pairs, 4
+
+    if not pairs is None:
 
         positions = g.nodes["n1"].data["xyz"][pairs]
         # this has shape num_pairs, 4, num_confs, 3
 
-        x = dihedral(positions[:, 0, :, :], positions[:, 1, :, :], positions[:, 2, :, :], positions[:, 3, :, :])
-        # this has shape num_pairs, num_confs
+        try:
+            x = dihedral(positions[:, 0, :, :], positions[:, 1, :, :], positions[:, 2, :, :], positions[:, 3, :, :])
+            # this has shape num_pairs, num_confs
+        except IndexError:
+            print(pairs.shape)
+            print(g.nodes["n4"].data["idxs"].shape)
+            print(g.nodes["n1"].data["xyz"].shape)
+            raise
+
 
         # write this in the graph:
         if "n4_improper" in g.ntypes:

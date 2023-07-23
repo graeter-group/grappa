@@ -11,7 +11,7 @@ import torch
 from typing import Union, List, Tuple
 
 
-def get_readout(statistics, rep_feats=512, between_feats=512, old=False):
+def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_improper=True):
 
     if old:
         readout_module = old_readout
@@ -27,18 +27,19 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False):
     )
 
     torsion = torsion_module.GatedTorsion(rep_feats=rep_feats, between_feats=between_feats, improper=False)
-    improper = torsion_module.GatedTorsion(rep_feats=rep_feats, between_feats=between_feats, improper=True)
 
     model = bond_angle
-
     model.add_module("torsion", torsion)
-    model.add_module("improper", improper)
+
+    if use_improper:
+        improper = torsion_module.GatedTorsion(rep_feats=rep_feats, between_feats=between_feats, improper=True)
+        model.add_module("improper", improper)
 
     return model
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6):
+def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True):
     
     if statistics is None:
         statistics = get_default_statistics()
@@ -50,7 +51,7 @@ def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_fe
         representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads)
 
 
-    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old)
+    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old, use_improper=use_improper)
 
     model = torch.nn.Sequential(
         representation,

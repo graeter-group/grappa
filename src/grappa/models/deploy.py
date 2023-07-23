@@ -48,13 +48,14 @@ def model_from_config(config_path:Union[Path,str]=None, config:dict=None, stat_d
     old_model = args["old_model"]
     n_heads = args["n_heads"]
     readout_width = args["readout_width"]
+    use_improper = args["use_improper"]
 
 
     REP_FEATS = rep_feats
     BETWEEN_FEATS = width
 
 
-    model = get_models.get_full_model(statistics=stat_dict, rep_feats=REP_FEATS, between_feats=BETWEEN_FEATS, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, old=old_model, n_heads=n_heads, readout_feats=readout_width)
+    model = get_models.get_full_model(statistics=stat_dict, rep_feats=REP_FEATS, between_feats=BETWEEN_FEATS, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, old=old_model, n_heads=n_heads, readout_feats=readout_width, use_improper=use_improper)
 
     return model
 
@@ -91,12 +92,13 @@ def get_default_model_config():
     args = {
         "width":512,
         "rep_feats":512,
+        "readout_width":512,
         "n_conv":3,
         "n_att":3,
         "n_heads":6,
-        "readout_width":512,
         "old_model":False,
-        "in_feat_name":["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"],
+        "use_improper":True,
+        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
     }
 
     return args

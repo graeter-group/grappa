@@ -264,8 +264,10 @@ class WriteAngleParameters(torch.nn.Module):
 
 
     def forward(self, g):
-        # bonds:
-        # however, is it maybe better to do the sum in the arguments directly? or is this not so unique then?
+
+        if not "n3" in g.ntypes:
+            return g
+
         pairs = g.nodes["n3"].data["idxs"]
         try:
             inputs = g.nodes["n1"].data["h"][pairs]
