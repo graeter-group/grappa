@@ -52,9 +52,10 @@ class PDBDataset:
         """
         self.mols.append(mol)
     
-    def to_dgl(self, idxs:List[int]=None, split:List[float]=None, seed:int=0, forcefield:ForceField=ForceField('amber99sbildn.xml'), allow_radicals=False, collagen=False)->List[dgl.DGLGraph]:
+    def to_dgl(self, idxs:List[int]=None, split:List[float]=None, seed:int=0, forcefield:ForceField=None, allow_radicals=False, collagen=False)->List[dgl.DGLGraph]:
         """
         Converts a list of indices to a list of dgl graphs.
+        If the Molecule is already parametrised, forcefield, allow_radicals, collagen and get_charges are ignored.
         """
         if idxs is None:
             idxs = list(range(len(self)))
@@ -65,7 +66,7 @@ class PDBDataset:
         def _get_graph(i, idx):
             if self.info:
                 print(f"converting {i+1}/{len(idxs)}", end="\r")
-            return self.mols[idx].to_dgl(graph_data=True, classical_ff=forcefield, allow_radicals=allow_radicals, collagen=collagen)
+            return self.mols[idx].to_dgl(classical_ff=forcefield, allow_radicals=allow_radicals, collagen=collagen)
         
         if self.info:
             print("\n")
@@ -88,8 +89,10 @@ class PDBDataset:
         """
         Save the dataset to npz files.
         """
+        num_confs = sum(map(len, self.mols))
+
         if self.info:
-            print(f"saving PDBDataset of length {len(self)} to npz files...")
+            print(f"saving PDBDataset of {len(self)} mols and {num_confs} confs to npz files...")
         if os.path.exists(str(path)):
             if not overwrite:
                 raise FileExistsError(f"path {str(path)} already exists, set overwrite=True to overwrite it.")
@@ -132,12 +135,16 @@ class PDBDataset:
 
         return obj
 
-    def save_dgl(self, path:Union[str, Path], idxs:List[int]=None, overwrite:bool=False, forcefield:ForceField=ForceField('amber99sbildn.xml'), allow_radicals=False, collagen=False)->None:
+    def save_dgl(self, path:Union[str, Path], idxs:List[int]=None, overwrite:bool=False, forcefield:ForceField=None, allow_radicals=False, collagen=False, get_charges=None)->None:
         """
         Saves the dgl graphs that belong to the dataset.
+        If the Molecule is already parametrised, forcefield, allow_radicals, collagen and get_charges are ignored.
         """
         if len(self) == 0:
             raise ValueError("cannot save empty dataset")
+
+        if idxs is None:
+            idxs = list(range(len(self)))
 
         if os.path.exists(str(path)):
             if not overwrite:
@@ -147,22 +154,21 @@ class PDBDataset:
 
         dgl.save_graphs(path, self.to_dgl(idxs, forcefield=forcefield, allow_radicals=allow_radicals, collagen=collagen))
 
-        if idxs is None:
-            idxs = list(range(len(self)))
-
         seqpath = str(Path(path).parent/Path(path).stem) + "_seq.json"
         with open (seqpath, "w") as f:
             json.dump([self.mols[i].sequence for i in idxs], f)
 
 
     
-    def parametrize(self, forcefield:ForceField=ForceField('amber99sbildn.xml'), get_charges=None, allow_radicals=False, collagen=False)->None:
+    def parametrize(self, forcefield:Union[ForceField,str]=ForceField('amber99sbildn.xml'), get_charges=None, allow_radicals=False, collagen=False)->None:
         """
         Parametrizes the dataset with a forcefield.
         Writes the following entries to the graph:
         ...
         get_charges: a function that takes a topology and returns a list of charges as openmm Quantities in the order of the atoms in topology.
         if not openffmol is None, get_charge can also take an openffmolecule instead.
+
+        If the forcefield is a string it is interpreted as the name of an openff small molecule forcefield.
         """
 
         if self.info:
@@ -178,7 +184,7 @@ class PDBDataset:
             print()
 
     
-    def filter_validity(self, forcefield:ForceField=ForceField("amber99sbildn.xml"), sigmas:Tuple[float,float]=(1.,1.))->None:
+    def filter_validity(self, forcefield:ForceField=ForceField("amber99sbildn.xml"), sigmas:Tuple[float,float]=(1.,1.), quickload:bool=True)->None:
         """
         Checks if the stored energies and gradients are consistent with the forcefield. Removes the entry from the dataset if the energies and gradients are not within var_param[0] and var_param[1] standard deviations of the stored energies/forces. If sigmas are 1, this corresponds to demanding that the forcefield data is better than simply always guessing the mean.
         """
@@ -188,7 +194,7 @@ class PDBDataset:
         removed = 0
         kept = 0
         for i, mol in enumerate(self.mols):
-            valid = mol.conf_check(forcefield=forcefield, sigmas=sigmas)
+            valid = mol.conf_check(forcefield=forcefield, sigmas=sigmas, quickload=quickload)
             keep.append(valid)
             removed += int(not valid)
             kept += int(valid)
@@ -226,16 +232,31 @@ class PDBDataset:
         energy_key: str = "dft_total_energy",
         xyz_key: str = "conformations",
         grad_key: str = "dft_total_gradient",
-        hdf5_distance: unit = DISTANCE_UNIT,
-        hdf5_energy: unit = ENERGY_UNIT,
-        hdf5_force: unit = FORCE_UNIT,
+        hdf5_distance: unit = None,
+        hdf5_energy: unit = None,
+        hdf5_force: unit = None,
         n_max:int=None,
         skip_errs:bool=True,
         info:bool=True,
-        randomize:bool=False,):
+        randomize:bool=False,
+        with_smiles:bool=False):
         """
         Generates a dataset from an hdf5 file.
         """
+
+        PARTICLE = mole.create_unit(6.02214076e23 ** -1, "particle", "particle")
+        HARTREE_PER_PARTICLE = hartree / PARTICLE
+        SPICE_DISTANCE = bohr
+        SPICE_ENERGY = HARTREE_PER_PARTICLE
+        SPICE_FORCE = SPICE_ENERGY / SPICE_DISTANCE
+
+        if hdf5_distance is None:
+            hdf5_distance = SPICE_DISTANCE
+        if hdf5_energy is None:
+            hdf5_energy = SPICE_ENERGY
+        if hdf5_force is None:
+            hdf5_force = SPICE_FORCE
+
         obj = cls()
         obj.info = info
         counter = 0
@@ -250,7 +271,7 @@ class PDBDataset:
                 random.shuffle(it)
             for name in it:
                 if not n_max is None:
-                    if len(obj) > n_max:
+                    if len(obj) >= n_max:
                         break
                 try:
                     elements = f[name][element_key]
@@ -262,7 +283,11 @@ class PDBDataset:
                     grads = Quantity(np.array(grads), hdf5_force).value_in_unit(FORCE_UNIT)
                     energies = Quantity(np.array(energies) - np.array(energies).mean(axis=-1), hdf5_energy).value_in_unit(ENERGY_UNIT)
 
-                    mol = PDBMolecule.from_xyz(elements=elements, xyz=xyz, energies=energies, gradients=grads)
+                    smiles = None
+                    if with_smiles:
+                        smiles = f[name]["smiles"][0]
+
+                    mol = PDBMolecule.from_xyz(elements=elements, xyz=xyz, energies=energies, gradients=grads, smiles=smiles)
                     mol.name = name.upper()
                     obj.append(mol)
                     counter += 1
@@ -281,7 +306,7 @@ class PDBDataset:
 
 
     @classmethod
-    def from_spice(cls, path: Union[str,Path], info:bool=True, n_max:int=None, randomize:bool=False, skip_errs:bool=True):
+    def from_spice(cls, path: Union[str,Path], info:bool=True, n_max:int=None, randomize:bool=False, skip_errs:bool=True, with_smiles:bool=False):
         """
         Generates a dataset from an hdf5 file with spice unit convention.
         """
@@ -304,9 +329,12 @@ class PDBDataset:
             n_max=n_max,
             randomize=randomize,
             skip_errs=skip_errs,
+            with_smiles=with_smiles,
         )
 
-        obj.remove_names_spice()
+        if not with_smiles:
+            obj.remove_names_spice()
+            
         return obj
 
     

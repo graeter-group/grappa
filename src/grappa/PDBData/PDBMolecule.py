@@ -16,6 +16,7 @@ import torch
 from .utils import utilities, utils, draw_mol
 from ..ff_utils.classical_ff import parametrize, collagen_utility
 
+
 from ..ff_utils.create_graph import utils as create_graph_utils, graph_init, read_pdb
 
 import matplotlib.pyplot as plt
@@ -299,20 +300,35 @@ class PDBMolecule:
         g = self.to_graph()
         draw_mol(g, show=True)
 
-    def to_dgl(self, graph_data:bool=True, classical_ff:ForceField=ForceField('amber99sbildn.xml'), collagen:bool=False, allow_radicals:bool=True)->dgl.DGLGraph:
+    def to_dgl(self, classical_ff:Union[ForceField, str]=None, collagen:bool=False, allow_radicals:bool=True, get_charges=None)->dgl.DGLGraph:
         """
         Returns a heterogeneous dgl graph of n-body tuples for forcefield parameter prediction.
         The data stored in the class is keyed by: ("n1","xyz"), ("g","u_qm") ("n1","grad_qm")
+        Uses self.graph_data for construction.
+        If the Molecule is already parametrised, forcefield, allow_radicals, collagen and get_charges are ignored.
         """
         if collagen:
             classical_ff = collagen_utility.get_collagen_forcefield()
 
-        top = self.to_openmm().topology
-        g = graph_init.graph_from_topology(topology=top, classical_ff=classical_ff, allow_radicals=allow_radicals, radical_indices=None, get_charges=None)
+        if len(self.graph_data.keys()) == 0:
+            g = self.parametrize(forcefield=classical_ff, allow_radicals=allow_radicals, collagen=collagen, get_charges=get_charges)
+        
+        # in this case we assume that the graph data is already stored in the object and we initialize the graph from this:
+        else:
 
+            # initialize graph:
+            n2_idxs, n3_idxs, n4_idxs, n4_improper_idxs = [
+                self.graph_data[level]["idxs"]
+                    if level in self.graph_data.keys()
+                else None
+                for level in ["n2", "n3", "n4", "n4_improper"]
+            ]
+            g = graph_init.get_empty_graph(bond_idxs=n2_idxs, angle_idxs=n3_idxs, proper_idxs=n4_idxs, improper_idxs=n4_improper_idxs, use_impropers=True)
 
-        # write data in the graph:
-        if graph_data:
+            assert g.num_nodes("n1") == len(self.elements), f"Number of nodes in graph ({g.num_nodes()}) does not match number of atoms ({len(self.elements)})"
+            assert g.num_nodes("n2") == len(n2_idxs), f"Number of edges in graph ({g.num_edges()}) does not match number of bonds ({len(n2_idxs)})"
+
+            # write all data stored in self.graph_data in the graph:
             for level in self.graph_data.keys():
                 for feat in self.graph_data[level].keys():
                     try:
@@ -320,22 +336,31 @@ class PDBMolecule:
                     except Exception as e:
                         name = "None" if self.name is None else self.name
                         raise RuntimeError(f"Could not write {level} {feat} to graph of name {name}") from e
+
         return g
     
 
-    def parametrize(self, forcefield:ForceField=ForceField('amber99sbildn.xml'), get_charges=None, allow_radicals=False, collagen=False)->dgl.DGLGraph:
+    def parametrize(self, forcefield:Union[ForceField, str]=ForceField('amber99sbildn.xml'), get_charges=None, allow_radicals=False, collagen=False)->dgl.DGLGraph:
         """
         Stores the forcefield parameters and energies/gradients in the graph_data dictionary.
         get_charges is a function that takes a topology and returns a list of charges as openmm Quantities in the order of the atoms in topology.
         Also writes reference data (such as the energy/gradients minus nonbonded) to the graph.
         If the collagen flag is set to True, the collagen forcefield based on amber99sbildn is used instead of the given forcefield.
+        If forcefield is a string, we assume that a small molecule forcefield such as gaff-2.11 is being used. In this case, no information on residues is needed for parametrization.
         """
 
         if collagen:
             forcefield = collagen_utility.get_collagen_forcefield()
 
-        top = self.to_openmm().topology
-        g = graph_init.graph_from_topology(topology=top, classical_ff=forcefield, allow_radicals=allow_radicals, radical_indices=None, xyz=self.xyz, qm_energies=self.energies, qm_gradients=self.gradients, get_charges=get_charges)
+        if isinstance(forcefield, str):
+            assert len(self.pdb) == 1, "If forcefield is a string, a smiles string must be present in the object."
+            [smiles] = self.pdb
+
+            g = graph_init.graph_from_topology(smiles=smiles, topology=None, classical_ff=forcefield, allow_radicals=allow_radicals, radical_indices=None, xyz=self.xyz, qm_energies=self.energies, qm_gradients=self.gradients, get_charges=get_charges)
+    
+        else:
+            top = self.to_openmm().topology
+            g = graph_init.graph_from_topology(topology=top, classical_ff=forcefield, allow_radicals=allow_radicals, radical_indices=None, xyz=self.xyz, qm_energies=self.energies, qm_gradients=self.gradients, get_charges=get_charges)
 
         # write data in own dict:
         for level in g.ntypes:
@@ -394,11 +419,12 @@ class PDBMolecule:
         return bonds
         
 
-    def validate_confs(self, forcefield=ForceField("amber99sbildn.xml"), collagen:bool=False)->Tuple[Tuple[float, float], Tuple[float, float]]:
+    def validate_confs(self, forcefield=ForceField("amber99sbildn.xml"), collagen:bool=False, quickload:bool=False)->Tuple[Tuple[float, float], Tuple[float, float]]:
         """
         Returns the rmse between the classical force field in angstrom and kcal/mol and the stored data, and the standard deviation of the data itself.
         """
-        e_class, grad_class = self.get_ff_data(forcefield, collagen=collagen)
+
+        e_class, grad_class = self.get_ff_data(forcefield, collagen=collagen, quickload=quickload)
         e_class -= e_class.mean()
         en = self.energies - self.energies.mean(axis=-1)
         diffs_e = en - e_class
@@ -411,12 +437,12 @@ class PDBMolecule:
             return (np.sqrt(np.mean(diffs_e**2)), np.std(en)), (None, None)
         
 
-    def conf_check(self, forcefield=ForceField("amber99sbildn.xml"), sigmas:Tuple[float,float]=(1.,1.), collagen=False)->bool:
+    def conf_check(self, forcefield=ForceField("amber99sbildn.xml"), sigmas:Tuple[float,float]=(1.,1.), collagen=False, quickload:bool=False)->bool:
         """
         Checks if the stored energies and gradients are consistent with the forcefield. Returns True if the energies and gradients are within var_param[0] and var_param[1] standard deviations of the stored energies/forces.
         If sigmas are 1, this corresponds to demanding that the forcefield data is better than simply always guessing the mean.
         """
-        (rmse_e, std_e), (rmse_g, std_g) = self.validate_confs(forcefield, collagen=collagen)
+        (rmse_e, std_e), (rmse_g, std_g) = self.validate_confs(forcefield, collagen=collagen, quickload=quickload)
         if not self.gradients is None:
             return rmse_e < sigmas[0]*std_e and rmse_g < sigmas[1]*std_g
         else:
@@ -434,6 +460,8 @@ class PDBMolecule:
             if not reference:
                 energies = self.energies - self.energies.min()
             else:
+                if len(self.graph_data.keys()) == 0:
+                    raise RuntimeError("No graph data found. Please parametrize first or set reference=False.")
                 # take the reference energies for filtering
                 if not "u_ref" in self.graph_data["g"].keys():
                     raise RuntimeError(f"No reference energies found. Please parametrize first or set reference=False, \ngraph_data keys are {self.graph_data['g'].keys()}")
@@ -441,8 +469,11 @@ class PDBMolecule:
 
             # create a mask for energies below max_energy
             energy_mask = np.abs(energies) < max_energy
+            # append a zero dimension if it is not there
+            if len(energy_mask.shape) == 1:
+                energy_mask = energy_mask[None,:]
         else:
-            energy_mask = np.ones(len(self), dtype=bool)
+            energy_mask = np.ones((1,len(self.energies)), dtype=bool)
 
         if (not max_force is None) and (not self.gradients is None):
             if not reference:
@@ -458,13 +489,17 @@ class PDBMolecule:
             forces = np.max(np.max(np.abs(forces), axis=-1), axis=-1)
 
             force_mask = forces < max_force
+            # append a zero dimension if it is not there
+            if len(force_mask.shape) == 1:
+                force_mask = force_mask[None,:]
         else:   
-            force_mask = np.ones(len(self), dtype=bool)
+            force_mask = np.ones((1,len(self.energies)), dtype=bool)
 
         mask = energy_mask * force_mask
-        if reference:
-            assert mask.shape[0] == 1, f"mask should be of shape (1,n_confs), i.e. batching is disabled, shape is {mask.shape}"
-            mask = mask[0]
+
+        assert mask.shape[0] == 1, f"mask should be of shape (1,n_confs), i.e. batching is disabled, shape is {mask.shape}"
+        mask = mask[0]
+        
         # apply mask
         try:
             if not self.energies is None:
@@ -778,11 +813,13 @@ class PDBMolecule:
         return obj
 
     @classmethod
-    def from_xyz(cls, xyz:np.ndarray, elements:np.ndarray, energies:np.ndarray=None, gradients:np.ndarray=None, rtp_path=None, residues:list=None, res_numbers:list=None, logging:bool=False, debug:bool=False):
+    def from_xyz(cls, xyz:np.ndarray, elements:np.ndarray, energies:np.ndarray=None, gradients:np.ndarray=None, rtp_path=None, residues:list=None, res_numbers:list=None, logging:bool=False, debug:bool=False, smiles:str=None):
         """
         Use an xyz array of shape (N_confsxN_atomsx3) and an element array of shape (N_atoms) for initialization. The atom order in which xyz and element are stored may differ from that of those used for initilization (See description of the xyz member). Units must be those specified for the class (angstrom, kcal/mol, kcal/mol/angstrom)
         Currently only works for the standard amino acids:
         R,K: positive charge, D,E: negative charge, H: neutral - HIE
+
+        If initialised with a smile, no pdb file is created, instead, the smile string is stored in self.pdb.
         """
 
         from ase import Atoms
@@ -801,6 +838,15 @@ class PDBMolecule:
         if not elements.shape[0] == xyz.shape[1]:
             raise RuntimeError(f"Number of atoms in xyz and elements must be the same. Shapes are {xyz.shape} and {elements.shape}.")
         
+        if not smiles is None:
+            obj = cls()
+            obj.pdb = [smiles]
+            obj.elements = elements
+            obj.xyz = xyz
+            obj.energies = energies
+            obj.gradients = gradients
+            obj.permutation = np.arange(len(obj.elements))
+            return obj
 
         if rtp_path is None:
             rtp_path = PDBMolecule.DEFAULT_RTP
@@ -888,7 +934,6 @@ class PDBMolecule:
             obj.sequence += '-'
         obj.sequence = obj.sequence[:-1]
 
-        # NOTE set residue and res numbers in correct order
         
 
         return obj
@@ -949,38 +994,66 @@ class PDBMolecule:
         
 
 
-    def get_ff_data(self, forcefield:Union[ForceField, Callable]=ForceField('amber99sbildn.xml'), collagen:bool=False)->Tuple[np.ndarray, np.ndarray]:
+    def get_ff_data(self, forcefield:Union[ForceField, Callable, str]=None, collagen:bool=False, quickload:bool=False)->Tuple[np.ndarray, np.ndarray]:
         """
         Returns energies, gradients that are calculated by the forcefield for all states xyz. Tha state axis is the zeroth axis.
+        If str, assume that it is a small molecule forcefield.
+        quickload: simply take the reference energies written in the graph upon parametrization.
         """
         from openmm.app import ForceField, PDBFile, topology, Simulation, PDBReporter, PME, HBonds, NoCutoff, CutoffNonPeriodic
         from openmm import LangevinMiddleIntegrator, Vec3
         from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
+        from grappa import units as grappa_units
 
         assert not self.xyz is None
         assert not self.elements is None
         assert not self.pdb is None
+
+        if forcefield is None:
+            # compare with reference ff
+            quickload = True
+
+        if quickload:
+            if "u_total_ref" in self.graph_data["g"].keys() and "grad_total_ref" in self.graph_data["n1"].keys():
+                e_class = self.graph_data["g"]["u_total_ref"]
+                grad_class = self.graph_data["n1"]["grad_total_ref"].transpose(1,0,2)
+            return e_class, grad_class
 
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, 'pep.pdb')
             self.write_pdb(path)
             gen_pdb = PDBFile(path)
         
-        gen_pdb = self.to_openmm(collagen=collagen)
         if collagen:
             forcefield = collagen_utility.get_collagen_forcefield()
 
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
-        system = forcefield.createSystem(gen_pdb.topology)
+
+        if isinstance(forcefield, str):
+            from grappa.ff_utils.SysWriter import SysWriter
+
+            assert len(self.pdb) == 1
+            [smiles] = self.pdb
+
+            writer = SysWriter.from_smiles(smiles)
+            system = writer.sys
+            top = writer.top
+
+        else:
+            top = gen_pdb = self.to_openmm(collagen=collagen)
+            system = forcefield.createSystem(top)
+
+
         simulation = Simulation(
-            gen_pdb.topology, system=system, integrator=integrator
+            top, system=system, integrator=integrator
         )
 
         # compare the datasets that should match
         ff_forces = []
         ff_energies = []
         for pos in self.xyz:
-            simulation.context.setPositions(pos/10) # go to nanometer
+            pos = Quantity(pos, unit=grappa_units.DISTANCE_UNIT).value_in_unit(nanometer)
+            simulation.context.setPositions(pos)
             state = simulation.context.getState(
                     getEnergy=True,
                     getForces=True,
@@ -1141,14 +1214,17 @@ class PDBMolecule:
             return True
         
 
-    def compare_with_ff(self, ff, fontsize:float=16, ff_title:str="Forcefield")->plt.axes:
+    def compare_with_ff(self, ff=None, fontsize:float=16, ff_title:str="Forcefield", compare_ref:bool=False)->plt.axes:
         """
         Calculates energies and forces from the forcefield provided for the conformations stored.
         Returns a plt axes object containing a scatter plot of the energies and forces.
         """
+        if ff is None:
+            compare_ref = True
+
         assert not self.gradients is None, "gradients not set"
 
-        energies, forces = self.get_ff_data(ff)
+        energies, forces = self.get_ff_data(ff, quickload=compare_ref)
         energies -= energies.min()
         self_energies = self.energies - self.energies.min()
 
