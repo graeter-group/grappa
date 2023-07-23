@@ -1,27 +1,31 @@
 # run to generate parametrized spice data
 
-from grappa.PDBData.PDBDataset import PDBDataset
-from pathlib import Path
-from openmm.app import ForceField
-from grappa.ff_utils.charge_models.charge_models import model_from_dict, randomize_model
-import os
-import warnings
-warnings.filterwarnings("ignore") # for esp_charge
 
+from pathlib import Path
+
+import os
+
+
+from grappa.ff_utils.charge_models.charge_models import model_from_dict, randomize_model
 from grappa.constants import DEFAULTBASEPATH
 
 FILTER_REF = True # whether to apply the filtering to the reference energies or the qm energies
 
-def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=False, n_max=None, collagen=False, force_field="amber99sbildn.xml"):
+def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=False, n_max=None, collagen=False, force_field="amber99sbildn.xml", max_energy=None, max_force=None, openff_energies=False):
+
+    from grappa.PDBData.PDBDataset import PDBDataset
+    from openmm.app import ForceField
+
 
     print("starting...")
     print("will write to ", storepath)
 
-    ds = PDBDataset()
-
     ds = PDBDataset.load_npz(dspath, n_max=n_max)
 
-    ff = ForceField(force_field)
+    if not openff_energies:
+        ff = ForceField(force_field)
+    else:
+        ff = force_field
 
     if not collagen:
         ds.remove_names(patterns=["HYP", "DOP"], upper=True)
@@ -31,19 +35,18 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
     # filter out conformations that are way out of equilibrium:
     ds.filter_confs(max_energy=200, max_force=500, reference=FILTER_REF)
 
-    
     ds.save_npz(storepath, overwrite=overwrite)
-    ds.save_dgl(str(storepath)+"_dgl.bin", overwrite=overwrite, forcefield=ff, collagen=collagen, allow_radicals=allow_radicals)
+    ds.save_dgl(str(storepath)+"_dgl.bin", overwrite=overwrite)
     #%%
 
-    ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
     
-    # remove conformations with energy > 60 kcal/mol from min energy in ds[i]
-    ds.filter_confs(max_energy=60, max_force=200, reference=FILTER_REF)
+    # remove conformations with energy > x kcal/mol from min energy in ds[i]
 
-    # unfortunately, have to parametrize again to get the right shapes
-    ds.save_npz(str(storepath)+"_60", overwrite=overwrite)
-    ds.save_dgl(str(storepath)+"_60_dgl.bin", overwrite=overwrite, forcefield=ff, collagen=collagen, allow_radicals=allow_radicals)
+    ds.filter_confs(max_energy=max_energy, max_force=max_force, reference=FILTER_REF)
+
+    ds.save_npz(str(storepath)+"_filtered", overwrite=overwrite)
+    ds.save_dgl(str(storepath)+"_filtered_dgl.bin", overwrite=overwrite)
+
 
 
 
@@ -72,6 +75,12 @@ if __name__ == "__main__":
 
     parser.add_argument("--force_field", "-ff", default="amber99sbildn.xml", help="force field file (xml) to use for parametrization, default: amber99sbildn.xml.")
 
+    parser.add_argument("--openff_energies", "-off", default=False, help="If openff force fields are used (such as gaff-2.11)", action="store_true")
+
+    parser.add_argument("--max_energy", type=float, default=None, help="Maximum energy difference between min and max energy state of a molecule to include in dataset, in grappa units. For the filtered dataset")
+
+    parser.add_argument("--max_force", type=float, default=None, help="Maximum force to include in dataset, in grappa units. For the filtered dataset")
+
     args = parser.parse_args()
     for ds_name in args.ds_name:
         for tag in args.tag:
@@ -96,7 +105,10 @@ if __name__ == "__main__":
                 if not noise_level is None:
                     storepath += f"_{noise_level}"
 
-                storepath += f"_ff_{args.force_field[:-4]}"
+                if args.force_field[-4:] == ".xml":
+                    storepath += f"_ff_{args.force_field[:-4]}"
+                else:
+                    storepath += f"_ff_{args.force_field}"
 
                 if tag is not None:
                     get_charges = model_from_dict(tag=tag)
@@ -108,4 +120,15 @@ if __name__ == "__main__":
                     print()
                     print(f"noise level: {noise_level}")
 
-                make_ds(get_charges=get_charges, storepath=storepath, dspath=dspath, overwrite=args.overwrite, allow_radicals=args.allow_radicals, n_max=args.n_max, collagen=args.collagen, force_field=args.force_field)
+                storepath = storepath.replace(" ", "_")
+                storepath = storepath.replace(".", "_")
+
+                print(f"will write to {storepath}")
+                print(f"starting the parametrization...")
+                
+
+                make_ds(get_charges=get_charges, storepath=storepath, dspath=dspath, overwrite=args.overwrite, allow_radicals=args.allow_radicals, n_max=args.n_max, collagen=args.collagen, force_field=args.force_field, openff_energies=args.openff_energies, max_energy=args.max_energy, max_force=args.max_force)
+
+
+
+# example usage for openff force fields: python make_graphs.py -off --ds_name spice_openff/base -ff gaff-2.11
