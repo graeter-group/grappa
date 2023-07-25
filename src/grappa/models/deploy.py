@@ -90,12 +90,12 @@ def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Un
 
 def get_default_model_config():
     args = {
-        "width":512,
-        "rep_feats":512,
+        "width":128,
+        "rep_feats":1024,
         "readout_width":512,
         "n_conv":3,
-        "n_att":3,
-        "n_heads":6,
+        "n_att":2,
+        "n_heads":8,
         "old_model":False,
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],

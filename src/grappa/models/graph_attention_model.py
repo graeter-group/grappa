@@ -51,6 +51,7 @@ class ResidualAttentionBlock(torch.nn.Module):
 
         if layer_norm:
             self.layer_norm = torch.nn.LayerNorm(normalized_shape=(in_feats,)) # normalize over the feature dimension, not the node dimension (since this is not of constant length)
+            self.end_norm = torch.nn.LayerNorm(normalized_shape=(out_feats,))
 
         self.activation = activation
         self.head_reducer = torch.nn.Linear(num_heads*outfeat_per_head, out_feats)
@@ -102,6 +103,8 @@ class ResidualAttentionBlock(torch.nn.Module):
 
             # the interaction layer does not change the number of features, so we can always do the skip connection
             h = h + h_skip
+
+        h = self.end_norm(h)
 
         return h
 
@@ -218,6 +221,7 @@ class Representation(torch.nn.Module):
                 "formal_charge": 1,
                 "q_ref":1,
                 "is_radical": 1,
+                "additional_features": 5,
             }
             # overwrite/append to these default values:
             for key in in_feat_dims.keys():
