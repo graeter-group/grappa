@@ -121,8 +121,10 @@ def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_force
     # if evaluated on the train set, split the dataset according to the molecule sequences
     with open(os.path.join(version_path,"split_names.json"), "r") as f:
         splits = json.load(f)
+        if splits == {}:
+            splits = None
 
-    ds_trs, ds_vls, ds_tes, split_names = run_utils.get_splits(datasets, datanames, seed=seed, fractions=[0.8,0.1,0.1], splits=splits)
+    ds_trs, ds_vls, ds_tes, _ = run_utils.get_splits(datasets, datanames, seed=seed, fractions=[0.8,0.1,0.1], splits=splits)
 
 
     te_loaders, te_names = run_utils.get_all_loaders(subsets=ds_tes, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="te")

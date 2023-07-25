@@ -12,7 +12,7 @@ import numpy as np
 
 from .. import units as grappa_units
 
-from .create_graph import utils, tuple_indices, read_heterogeneous_graph
+from .create_graph import utils, tuple_indices, read_heterogeneous_graph, chemical_features
 
 from .create_graph.find_radical import add_radical_residues, get_radicals
 
@@ -86,6 +86,8 @@ class SysWriter:
 
 
         self.use_residues = True # whether to store residues one-hot encoded in the graph
+
+        self.additional_features = None # additional features to be stored in the graph. must be a torch tensor of shape (n_atoms, n_features) with dtype torch.float32
 
 
         # ===============================
@@ -196,7 +198,7 @@ class SysWriter:
 
 
     @classmethod
-    def from_smiles(cls, smiles:str, ff="gaff-2.11"):
+    def from_smiles(cls, smiles:str, ff="gaff-2.11", **system_kwargs):
         """
         Creates a SysWriter from a smiles string and a small-molecule forcefield. This enables compararision with espaloma.
         """
@@ -212,7 +214,7 @@ class SysWriter:
 
         amber_forcefields = ['amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml']
 
-        forcefield_kwargs = {'removeCMMotion': False}
+        forcefield_kwargs = system_kwargs
 
         system_generator = SystemGenerator(forcefields=amber_forcefields, small_molecule_forcefield=ff, forcefield_kwargs=forcefield_kwargs)
 
@@ -226,6 +228,9 @@ class SysWriter:
         )
 
         self.use_residues = False
+
+        mol = mol.to_rdkit()
+        self.additional_features = chemical_features.get_chemical_features(mol)
 
         return self
 
@@ -326,7 +331,6 @@ class SysWriter:
             return True
 
 
-            
         # create an rdkit molecule
         rd_mol = utils.openmm2rdkit_graph(openmm_top=self.top)
         
@@ -559,6 +563,9 @@ class SysWriter:
                     self.graph.nodes["n1"].data["residue"][idx] = torch.nn.functional.one_hot(torch.tensor((res_index)).long(), num_classes=len(RESIDUES)).float()
                 else:
                     raise ValueError(f"Residue {resname} not in {RESIDUES}")
+
+        if not self.additional_features is None:
+            self.graph.nodes["n1"].data["additional_features"] = self.additional_features
 
 
     def forward_pass(self, model:Callable, device="cpu")->None:

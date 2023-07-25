@@ -20,7 +20,7 @@ from .grappa_training import RMSE
 
 #%%
 
-def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=2, pretrain_epochs=10, epochs=500, patience=10, ref_ff="amber99sbildn", time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=0.5, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False):
+def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=10, ref_ff="amber99sbildn", time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=0.5, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False):
     """
     This function is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
     load_path: path to the version directory of the model to continue from.
@@ -33,7 +33,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
     load = not (load_path is None and continue_path is None)
 
     if (not load) and (pretrain_epochs > 0):
-        trainer = grappa_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={"mse":torch.nn.MSELoss(), "mae":torch.nn.L1Loss()}, model_saving_interval=5, store_states=True,
+        trainer = grappa_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={}, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
@@ -133,7 +133,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         if direct_eval:
             direct_epochs = 0
 
-        metrics = {"en_rmse":RMSE(), "en_mae":torch.nn.L1Loss()}
+        metrics = {}
 
         trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics=metrics, model_saving_interval=5, store_states=True,
         reference_forcefield=ref_ff,

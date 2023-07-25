@@ -157,9 +157,13 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
             with open(os.path.join(load_path,"split_names.json"), "r") as f:
                 splits = json.load(f)
     
-
+    if splits == {}:
+        splits = None
+        
     ds_trs, ds_vls, ds_tes, split_names = run_utils.get_splits(datasets, datanames, seed=seed, fractions=[0.8,0.1,0.1], splits=splits)
     with open(os.path.join(storage_path,version_name,"split_names.json"), "w") as f:
+        if split_names is None:
+            split_names = {}
         json.dump(split_names, f, indent=4)
 
 
@@ -191,7 +195,7 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     ###################
 
     # do the actual training (this function is a mess, will be cleaned up)
-    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=3, direct_eval=False, final_eval=False, reduce_factor=0.5, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup)
+    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, reduce_factor=0.5, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup)
 
     ###################
 

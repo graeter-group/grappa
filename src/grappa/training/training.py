@@ -573,6 +573,7 @@ class Train:
     @staticmethod
     def calc_metrics(model, metrics:dict, loaders, dataset_names, get_targets, get_num_instances, metrics_are_averaged=True, average=True, device="cpu", target_factor=1., loss_factor=1., get_loss=None):
         assert loss_factor == 1., "this is deprecated"
+        assert target_factor == 1., "this is deprecated"
 
         out = {}
         for idx, loader in enumerate(loaders):
@@ -610,6 +611,7 @@ class Train:
             out["vl"][mname] = [total_loss, total_inst]
         if self.dataset_names is None:
             out.pop("dummy") # if there is only one loader
+
 
         if not during_train:
             # recalculate

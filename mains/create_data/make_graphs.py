@@ -53,7 +53,7 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="parametrize a dataset with a charge model and force field. will create a .bin file at ds_base/ds_name.parent / chargemodel_forcefield(_60)_dgl.bin")
+    parser = argparse.ArgumentParser(description="parametrize a dataset with a charge model and force field. will create a .bin file at ds_base/ds_name.parent / chargemodel_forcefield_filtered_dgl.bin")
 
     parser.add_argument("--ds_name", type=str, default=["spice/base"], nargs='+', help="name of the dataset to be loaded. will load from the directory base_path/ds_name default: spice/base")
 

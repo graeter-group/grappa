@@ -90,8 +90,9 @@ class GrappaTrain(training.Train):
         if self.eval_forces:
             self.metric_data["f_mae_vl"] = []
             self.metric_data["f_rmse_vl"] = []
+        self.metric_data["u_mae_vl"] = []
+        self.metric_data["u_rmse_vl"] = []
 
-    # returns mae and rmse
     @staticmethod
     def get_forces(model, loader, device):
         ref = torch.cat([g.to(device).nodes["n1"].data["grad_ref"].flatten() for g in loader]).float()
@@ -100,18 +101,101 @@ class GrappaTrain(training.Train):
         return pred, ref
     
     def evaluation(self, model):
+        """
+        overwrite the method.
+        """
+        # if self.epoch < self.direct_epochs:
+        #     return super().evaluation(model)
+        metric_values = {}
+
+        energy_diffs = []
         if self.eval_forces:
-            #NOTE: only for one dataset as of now
-            force_diffs = torch.cat([(g.to(self.device).nodes["n1"].data["grad_ref"] - utilities.get_grad(batch=g, model=model, energy_writer=self.energy_writer, device=self.device, retain_graph=False)[0]).flatten() for g in self.val_loaders[0]]).float()
+            force_diffs = []
 
-            key = "f_mae_vl"
-            if key in self.metric_data.keys():
-                self.metric_data[key].append(torch.nn.functional.l1_loss(force_diffs, torch.zeros_like(force_diffs)).detach().clone().to("cpu").item())
-            key = "f_rmse_vl"
-            if key in self.metric_data.keys():
-                self.metric_data[key].append(torch.sqrt(torch.nn.functional.mse_loss(force_diffs, torch.zeros_like(force_diffs))).detach().clone().to("cpu").item())
+        for g in self.val_loaders[0]:
+            
+            # write the energy and forces into the graph
+            ###############################
+            if self.eval_forces:
+                grads, model, g = utilities.get_grad(model=model, batch=g, device=self.device)
 
-        return super(GrappaTrain, self).evaluation(model)
+                with torch.no_grad():
+                    force_diffs.append((g.nodes["n1"].data["grad_ref"] - grads).flatten().detach().clone().float())
+
+            else:
+                with torch.no_grad():
+                    g = g.to(self.device)
+                    g = model(g)
+                    g = self.energy_writer(g)
+            ###############################
+
+            with torch.no_grad():
+                e_ref = g.nodes["g"].data["u_ref"].detach().clone()
+                e_ref -= e_ref.mean(dim=-1)
+
+                e_pred = g.nodes["g"].data["u"].detach().clone()
+                e_pred -= e_pred.mean(dim=-1)
+
+                energy_diffs.append((e_ref-e_pred).flatten().float())
+
+        with torch.no_grad():
+            energy_diffs = torch.cat(energy_diffs).float()
+
+            if self.eval_forces:
+                force_diffs = torch.cat(force_diffs).float()
+
+
+                key = "f_mae_vl"
+                if key in self.metric_data.keys():
+                    metric_values[key] = torch.nn.functional.l1_loss(force_diffs, torch.zeros_like(force_diffs)).detach().clone().to("cpu").item()
+                key = "f_rmse_vl"
+                if key in self.metric_data.keys():
+                    metric_values[key] = torch.sqrt(torch.nn.functional.mse_loss(force_diffs, torch.zeros_like(force_diffs))).detach().clone().to("cpu").item()
+
+            key = "u_mae_vl"
+            if key in self.metric_data.keys():
+                metric_values[key] = torch.nn.functional.l1_loss(energy_diffs, torch.zeros_like(energy_diffs)).detach().clone().to("cpu").item()
+
+            key = "u_rmse_vl"
+            if key in self.metric_data.keys():
+                metric_values[key] = torch.sqrt(torch.nn.functional.mse_loss(energy_diffs, torch.zeros_like(energy_diffs))).detach().clone().to("cpu").item()
+
+            assert len(self.current_train_loss) == 1
+            avg_loss = None
+            for tr_loader_key in self.current_train_loss.keys():
+                try:
+                    value = self.current_train_loss[tr_loader_key][0].detach().clone().cpu().item()
+                except:
+                    value = self.current_train_loss[tr_loader_key][0]
+                num_inst = self.current_train_loss[tr_loader_key][1]
+                avg_loss = value/num_inst
+
+                metric_values["loss_tr"] = avg_loss
+
+
+        for key in metric_values.keys():
+            self.metric_data[key].append(metric_values[key])
+        self.metric_data["epoch"].append(self.epoch)
+        
+        if len(self.metric_data[self.early_stopping_criterion]) > 0:
+            val_loss = self.metric_data[self.early_stopping_criterion][-1]
+        else:
+            val_loss = float("inf")
+
+        # update last and best state:
+        if self.saving and (self.epoch%self.model_saving_interval == 0 and self.epoch != 0):
+
+            # if loss is better than before, update the best state:
+            if self.best_loss is None or self.best_loss > val_loss:
+                with torch.no_grad():
+                    torch.save(model.state_dict(), os.path.join(self.version_path, "best_model.pt"))
+                    torch.save(self.optimizer.state_dict(), os.path.join(self.version_path, "best_opt.pt"))
+                self.best_loss = val_loss
+
+        model = model.to(self.device)
+        model = model.train()
+
+        return model
 
 
     def get_dataset_info(self, loader):
@@ -821,6 +905,10 @@ class TrainSequentialParams(GrappaTrain):
         if self.param_factor != 0.:
             if self.energy_factor == 0 and not grad_active():
                 batch = model(batch)
+            
+            if not "k" in batch.nodes["n2"].data.keys():
+                batch = model(batch)
+
             y_pred, y = self.get_scaled_params(batch)
 
             # Huber = torch.nn.HuberLoss(delta=3.)

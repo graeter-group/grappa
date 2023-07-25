@@ -108,6 +108,8 @@ def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float,
     if the splits argument is specified, creates a new split only containing names that are not in the split already according to the fractions and adds the new split to the existing splits.
     """
 
+    invalid_split = False
+
     loaded_split = True
     if splits is None:
         splits = [[],[],[]]
@@ -122,6 +124,7 @@ def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float,
                     all_names.append(name)
 
     else:
+        invalid_split = True
         splits = [[],[],[]]
         loaded_split = False
         
@@ -134,10 +137,6 @@ def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float,
                 all_names.append(name)
                 dnames.append(name)
             datanames.append(dnames)
-
-
-    if not loaded_split:
-        assert len(all_names)>3, "not enough molecules for splitting"
 
     random.Random(seed).shuffle(all_names)
     
@@ -189,6 +188,9 @@ def get_splits(datasets:list, datanames:list, seed:int=0, fractions:Tuple[float,
         ds_trs.append(ds_tr)
         ds_vls.append(ds_vl)
         ds_tes.append(ds_te)
+
+    if invalid_split:
+        splits = None
 
     return ds_trs, ds_vls, ds_tes, splits
 

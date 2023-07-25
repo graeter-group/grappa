@@ -24,10 +24,11 @@ def get_param_statistics(loader, bonded_parameter_types=get_bonded_parameter_typ
                 # do not write the statistics for this parameter type, we cannot predict it anyways if it is not in the train set.
                 continue
             d["mean"][f"{level}_{name}"] = all_params.mean(dim=0)
-            d["std"][f"{level}_{name}"] = min(all_params.std(dim=0), 1e-6) # minimum std deviation: 1e-6
+            d["std"][f"{level}_{name}"] = all_params.std(dim=0) + 1e-6 # minimum std deviation: 1e-6
     return d
 
 def get_default_statistics():
+    print("Warning: This is old, from the espaloma graphs that were redundant!")
     return get_default_statistics.d
 
 get_default_statistics.d = {

@@ -83,7 +83,7 @@ class PDBDataset:
         """
         Saves the dataset to an hdf5 file.
         """
-        pass
+        raise NotImplementedError
 
     def save_npz(self, path:Union[str, Path], overwrite:bool=False)->None:
         """

@@ -6,10 +6,10 @@ import dgl
 from .xyz2res.deploy import xyz2res
 from pathlib import Path
 import tempfile
-from openmm.app import PDBFile, ForceField
+from openmm.app import PDBFile, ForceField, Simulation
 from typing import List, Union, Tuple, Dict, Callable
 from dgl import graph, add_reverse_edges
-from openmm.unit import angstrom, unit, kilocalorie_per_mole, Quantity, hartrees, bohr
+from openmm.unit import angstrom, unit, kilocalorie_per_mole, Quantity, hartrees, bohr, nanometer
 import numpy as np
 from .matching import matching
 import torch
@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 
 import math
 from .matching import match_utils
+
+from grappa import units as grappa_units
 
 
 # NOTE: FILTER FOR RESIDUES THAT ARE NOT IN RES LIST OF THE XYZ MATCHING
@@ -192,33 +194,33 @@ class PDBMolecule:
         Internal helper function. Creates a PDBMolecule from a dictionary.
         Assumes that the dictionary is created by the to_dict method, i.e. that the graph data is stored by using keys that are of the form f'{level} {feature}'.
         """
-        obj = cls()
-        obj.elements = d["elements"]
-        obj.xyz = d["xyz"]
-        obj.pdb = d["pdb"].tolist()
+        self = cls()
+        self.elements = d["elements"]
+        self.xyz = d["xyz"]
+        self.pdb = d["pdb"].tolist()
         if "energies" in d.keys():
-            obj.energies = d["energies"]
+            self.energies = d["energies"]
         if "gradients" in d.keys():
-            obj.gradients = d["gradients"]
+            self.gradients = d["gradients"]
         if "permutation" in d.keys():
-            obj.permutation = d["permutation"]
+            self.permutation = d["permutation"]
         if "sequence" in d.keys():
-            obj.sequence = str(d["sequence"]) # assume that the entry is given as np array with one element
+            self.sequence = str(d["sequence"]) # assume that the entry is given as np array with one element
         if "name" in d.keys():
-            obj.name = str(d["name"]) # assume that the entry is given as np array with one element
+            self.name = str(d["name"]) # assume that the entry is given as np array with one element
         if "residues" in d.keys():
-            obj.residues = d["residues"]
+            self.residues = d["residues"]
         if "residue_numbers" in d.keys():
-            obj.residue_numbers = d["residue_numbers"]
+            self.residue_numbers = d["residue_numbers"]
 
         for key in d.keys():
             if " " in key:
                 level, feat = key.split(" ")
-                if not level in obj.graph_data.keys():
-                    obj.graph_data[level] = {}
-                obj.graph_data[level][feat] = d[key]
+                if not level in self.graph_data.keys():
+                    self.graph_data[level] = {}
+                self.graph_data[level][feat] = d[key]
 
-        return obj
+        return self
     
 
     def save(self, filename)->None:
@@ -449,13 +451,17 @@ class PDBMolecule:
             return rmse_e < sigmas[0]*std_e
 
 
-    def filter_confs(self, max_energy:float=60., max_force:float=None, reference=False)->bool:
+    def filter_confs(self, max_energy:float=60., max_force:float=None, reference=False, mask=None)->bool:
         """
         Filters out conformations with energies or forces that are over max_energy kcal/mol (or max_force kcal/mol/angstrom) away from the minimum of the dataset (not the actual minimum). Apply this before parametrizing or re-apply the parametrization after filtering. Units are kcal/mol and kcal/mol/angstrom.
         Returns True if more than two conformations remain.
         If reference is true, uses u_ref and grad_ref, i.e. usually the qm value subtracted by the nonbonded contribution instead of the stored energies and gradients. This can only be done after parametrising.
         For filtering the graph data, assume that entries are energies if and only if they are stored in 'g' and have 'u_' in their feature name. For gradients, the same applies with 'n1' and 'grad_'.
+        If a mask is provided, this mask is used additionally.
         """
+        if not mask is None:
+            assert mask.shape[0] == 1, f"mask should be of shape (1,n_confs), i.e. batching is disabled, shape is {mask.shape}"
+
         if (not max_energy is None) and (not self.energies is None):
             if not reference:
                 energies = self.energies - self.energies.min()
@@ -495,7 +501,10 @@ class PDBMolecule:
         else:   
             force_mask = np.ones((1,len(self.energies)), dtype=bool)
 
-        mask = energy_mask * force_mask
+        if mask is None:
+            mask = np.ones((1,len(self.energies)), dtype=bool)
+
+        mask *= energy_mask * force_mask
 
         assert mask.shape[0] == 1, f"mask should be of shape (1,n_confs), i.e. batching is disabled, shape is {mask.shape}"
         mask = mask[0]
@@ -528,7 +537,6 @@ class PDBMolecule:
         
         # return True if there are more than two conformations left
         return self.xyz.shape[0] > 1
-
 
 
     def bond_check(self, idxs:List[int]=None, perm:bool=False, seed:int=0, collagen=True)->None:
@@ -619,25 +627,25 @@ class PDBMolecule:
             if xyz.shape != gradients.shape:
                 raise RuntimeError(f"Gradients and positions must have the same shape. Shapes are {gradients.shape} and {xyz.shape}.")
             
-        obj = cls()
-        obj.sequence = sequence
+        self = cls()
+        self.sequence = sequence
         pdbmol = PDBFile(pdbpath)
-        obj.elements = np.array([a.element.atomic_number for a in pdbmol.topology.atoms()])
+        self.elements = np.array([a.element.atomic_number for a in pdbmol.topology.atoms()])
         if xyz is None:
-            obj.xyz = pdbmol.getPositions(asNumpy=True).value_in_unit(angstrom).reshape(1,-1,3)
+            self.xyz = pdbmol.getPositions(asNumpy=True).value_in_unit(angstrom).reshape(1,-1,3)
         else:
-            obj.xyz = xyz
+            self.xyz = xyz
 
         with open(pdbpath, "r") as f:
-            obj.pdb = f.readlines()
+            self.pdb = f.readlines()
 
-        obj.energies = energies
-        obj.gradients = gradients
-        obj.permutation = np.arange(len(obj.elements))
+        self.energies = energies
+        self.gradients = gradients
+        self.permutation = np.arange(len(self.elements))
         
         # NOTE: implement a way to get the sequence from the pdb file?
 
-        return obj
+        return self
 
     @classmethod
     def from_gaussian_log(cls, logfile:Union[str,Path], cap:bool=True, rtp_path=None, sequence:list=None, logging:bool=False, e_unit:unit=kilocalorie_per_mole*23.0609, dist_unit=angstrom, force_unit=kilocalorie_per_mole*23.0609/angstrom):
@@ -659,7 +667,7 @@ class PDBMolecule:
 
         rtp_path = Path(rtp_path)
 
-        obj = cls()
+        self = cls()
 
         AAs_reference = matching.read_rtp(rtp_path)
 
@@ -668,22 +676,22 @@ class PDBMolecule:
         if sequence is None:
             sequence = matching.seq_from_filename(logfile, AAs_reference, cap)
 
-        obj.sequence = ''
+        self.sequence = ''
         for aa in sequence:
-            obj.sequence += aa
-            obj.sequence += '-'
-        obj.sequence = obj.sequence[:-1]
+            self.sequence += aa
+            self.sequence += '-'
+        self.sequence = self.sequence[:-1]
 
         mol, trajectory = matching.read_g09(logfile, sequence, AAs_reference, log=logging)
 
         atom_order = matching.match_mol(mol, AAs_reference, sequence, log=logging)
-        obj.permutation = np.array(atom_order)
+        self.permutation = np.array(atom_order)
 
         # write single pdb
         conf = trajectory[0]
-        obj.pdb, elements = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
+        self.pdb, elements = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
 
-        obj.elements = np.array(elements)
+        self.elements = np.array(elements)
 
         # write xyz and energies
         energies = []
@@ -712,18 +720,18 @@ class PDBMolecule:
         if not energies is None:
             energies = np.array(energies)
             energies -= energies.min()
-            obj.energies = Quantity(energies, unit=e_unit).value_in_unit(kilocalorie_per_mole)
+            self.energies = Quantity(energies, unit=e_unit).value_in_unit(kilocalorie_per_mole)
 
         if not gradients is None:
             # apply permutation to gradients
             gradients = np.array(gradients)[:,atom_order]
-            obj.gradients = Quantity(gradients, unit=force_unit).value_in_unit(kilocalorie_per_mole/angstrom)
+            self.gradients = Quantity(gradients, unit=force_unit).value_in_unit(kilocalorie_per_mole/angstrom)
 
         # apply permutation to positions
         positions = np.array(positions)[:,atom_order]
-        obj.xyz = Quantity(positions, unit=dist_unit).value_in_unit(angstrom)
+        self.xyz = Quantity(positions, unit=dist_unit).value_in_unit(angstrom)
         
-        return obj
+        return self
     
     @classmethod
     def from_gaussian_log_rad(cls, logfile:Union[str,Path], cap:bool=True, rtp_path=None, logging:bool=False, e_unit:unit=kilocalorie_per_mole*23.0609, dist_unit=angstrom, force_unit=kilocalorie_per_mole*23.0609/angstrom):
@@ -747,26 +755,26 @@ class PDBMolecule:
         rtp_path = Path(rtp_path)
         logfile = Path(logfile)
 
-        obj = cls()
+        self = cls()
 
         AAs_reference, sequence = matching.get_radref(rtp_path=rtp_path, filename=logfile, cap=cap)
         
-        obj.sequence = ''
+        self.sequence = ''
         for aa in sequence:
-            obj.sequence += aa
-            obj.sequence += '-'
-        obj.sequence = obj.sequence[:-1]
+            self.sequence += aa
+            self.sequence += '-'
+        self.sequence = self.sequence[:-1]
 
         mol, trajectory = matching.read_g09(logfile, sequence, AAs_reference, log=logging)
 
         atom_order = matching.match_mol(mol, AAs_reference, sequence, log=logging)
-        obj.permutation = np.array(atom_order)
+        self.permutation = np.array(atom_order)
 
         # write single pdb
         conf = trajectory[0]
-        obj.pdb, elements = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
+        self.pdb, elements = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
 
-        obj.elements = np.array(elements)
+        self.elements = np.array(elements)
 
         # write xyz and energies
         energies = []
@@ -795,22 +803,22 @@ class PDBMolecule:
         if not energies is None:
             energies = np.array(energies)
             energies -= energies.min()
-            obj.energies = Quantity(energies, unit=e_unit).value_in_unit(kilocalorie_per_mole)
+            self.energies = Quantity(energies, unit=e_unit).value_in_unit(kilocalorie_per_mole)
 
         if not gradients is None:
             # apply permutation to gradients
             gradients = np.array(gradients)[:,atom_order]
-            obj.gradients = Quantity(gradients, unit=force_unit).value_in_unit(kilocalorie_per_mole/angstrom)
+            self.gradients = Quantity(gradients, unit=force_unit).value_in_unit(kilocalorie_per_mole/angstrom)
 
         # apply permutation to positions
         positions = np.array(positions)[:,atom_order]
-        obj.xyz = Quantity(positions, unit=dist_unit).value_in_unit(angstrom)
+        self.xyz = Quantity(positions, unit=dist_unit).value_in_unit(angstrom)
 
-        if "ILE_R" in obj.sequence:
-            if any(["HG11" in line for line in obj.pdb]):
+        if "ILE_R" in self.sequence:
+            if any(["HG11" in line for line in self.pdb]):
                 raise RuntimeError("ILE_R has HG11 in the pdb file. This is not allowed. Please check the pdb file. it may occur that the carbon atom types could not be matched to the correct number, e.g. CG1 in ILE has 2Hs and CG2 has 3Hs. In a radical, it can occur that both have 2 Hs. Problem: the nomenclature is different between the two, it is HG21 HG22 HG23 for CG2 and HG12 HG13 for CG1. So the Hs are not matched correctly. In this case, we just take the first H in the reference template. Thus, matching might make problems.")
             
-        return obj
+        return self
 
     @classmethod
     def from_xyz(cls, xyz:np.ndarray, elements:np.ndarray, energies:np.ndarray=None, gradients:np.ndarray=None, rtp_path=None, residues:list=None, res_numbers:list=None, logging:bool=False, debug:bool=False, smiles:str=None):
@@ -839,21 +847,21 @@ class PDBMolecule:
             raise RuntimeError(f"Number of atoms in xyz and elements must be the same. Shapes are {xyz.shape} and {elements.shape}.")
         
         if not smiles is None:
-            obj = cls()
-            obj.pdb = [smiles]
-            obj.elements = elements
-            obj.xyz = xyz
-            obj.energies = energies
-            obj.gradients = gradients
-            obj.permutation = np.arange(len(obj.elements))
-            return obj
+            self = cls()
+            self.pdb = [smiles]
+            self.elements = elements
+            self.xyz = xyz
+            self.energies = energies
+            self.gradients = gradients
+            self.permutation = np.arange(len(self.elements))
+            return self
 
         if rtp_path is None:
             rtp_path = PDBMolecule.DEFAULT_RTP
 
         rtp_path = Path(rtp_path)
 
-        obj = cls()
+        self = cls()
         
         # get the residues:
         if residues is None or res_numbers is None:
@@ -873,15 +881,15 @@ class PDBMolecule:
             gradients = gradients[:,perm]
 
         if not energies is None:
-            obj.energies = energies
+            self.energies = energies
 
         # make the sequence: first order the residues according to the ordering above
         residues = np.array(residues)[perm]
         res_numbers = np.array(res_numbers)[perm]
 
         # match_mol will leave this invariant, therefore we can set it already
-        obj.res_numbers = np.array(res_numbers)
-        obj.residues = residues
+        self.res_numbers = np.array(res_numbers)
+        self.residues = residues
         
         seq = []
         num_before = -1
@@ -917,26 +925,26 @@ class PDBMolecule:
         #     openmm_pdb = PDBFile(f.name)
         #     PDBFile.writeModel(topology=openmm_pdb.getTopology(), positions=xyz[0], file=f)
         #     pdb = f.readlines()
-        obj.pdb = pdb
+        self.pdb = pdb
 
         # after applying the perm from xyz2res, we also apply the permutation from the matching:
 
-        obj.elements = elements[atom_order]
-        obj.permutation = np.array(perm)[atom_order]
-        obj.xyz = xyz[:,atom_order]
+        self.elements = elements[atom_order]
+        self.permutation = np.array(perm)[atom_order]
+        self.xyz = xyz[:,atom_order]
         if not gradients is None:
-            obj.gradients = gradients[:,atom_order]
+            self.gradients = gradients[:,atom_order]
 
 
-        obj.sequence = ''
+        self.sequence = ''
         for aa in seq:
-            obj.sequence += aa
-            obj.sequence += '-'
-        obj.sequence = obj.sequence[:-1]
+            self.sequence += aa
+            self.sequence += '-'
+        self.sequence = self.sequence[:-1]
 
         
 
-        return obj
+        return self
 
 
     @staticmethod
@@ -1044,10 +1052,17 @@ class PDBMolecule:
             top, system=system, integrator=integrator
         )
 
-        # compare the datasets that should match
+        return PDBMolecule.get_data_from_simulation(simulation=simulation, xyz=self.xyz)
+
+    @staticmethod
+    def get_data_from_simulation(simulation:Simulation, xyz:np.ndarray)->Tuple[np.ndarray, np.ndarray]:
+        """
+        Returns energies, gradients that are calculated by the forcefield for all states xyz. The state axis is the zeroth axis.
+        """
+
         ff_forces = []
         ff_energies = []
-        for pos in self.xyz:
+        for pos in xyz:
             pos = Quantity(pos, unit=grappa_units.DISTANCE_UNIT).value_in_unit(nanometer)
             simulation.context.setPositions(pos)
             state = simulation.context.getState(
@@ -1055,9 +1070,9 @@ class PDBMolecule:
                     getForces=True,
                 )
             e = state.getPotentialEnergy()
-            e = e.value_in_unit(kilocalorie_per_mole)
+            e = e.value_in_unit(grappa_units.ENERGY_UNIT)
             f = state.getForces(True)
-            f = f.value_in_unit(kilocalorie_per_mole/angstrom)
+            f = f.value_in_unit(grappa_units.FORCE_UNIT)
             f = np.array(f)
             ff_energies.append(e)
             ff_forces.append(f)
@@ -1246,7 +1261,6 @@ class PDBMolecule:
 
         ax[0].text(0.05, 0.95, f"RMSE: {rmse_energies:.2f} kcal/mol", transform=ax[0].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
-# type the angstrom letter: \AA
 
         ax[1].text(0.05, 0.95, f"RMSE: {rmse_forces:.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
@@ -1261,3 +1275,47 @@ class PDBMolecule:
         """
         return cls.load(Path(__file__).parent/Path("example_PDBMolecule.npz"))
     
+
+    def compare_with_espaloma(self):
+        """
+        Write espaloma energies and gradients in self.graph_data.
+        """
+        smiles = self.pdb[0]
+        assert len(self.pdb) == 1, "This method is only valid for smiles"
+
+        import espaloma as esp
+
+        # define or load a molecule of interest via the Open Force Field toolkit
+        from openff.toolkit.topology import Molecule
+
+        molecule = Molecule.from_smiles(smiles)
+
+        # create an Espaloma Graph object to represent the molecule of interest
+        molecule_graph = esp.Graph(molecule)
+
+        # load pretrained model
+        espaloma_model = esp.get_model("latest")
+
+        # apply a trained espaloma model to assign parameters
+        with torch.no_grad():
+            # go in eval mode:
+            espaloma_model.eval()
+            espaloma_model(molecule_graph.heterograph)
+
+        # create an OpenMM System for the specified molecule
+        openmm_system = esp.graphs.deploy.openmm_system_from_graph(molecule_graph)
+
+        # get energies and gradients at the locations self.xyz from the openmm system:
+        from openmm import LangevinMiddleIntegrator
+        from openmm.app import Simulation
+        from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
+
+        top = molecule.to_topology()
+
+        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
+        simulation = Simulation(topology=top, system=openmm_system, integrator=integrator)
+
+        energies, gradients = PDBMolecule.get_data_from_simulation(simulation=simulation, xyz=self.xyz)
+
+        self.graph_data["g"]["u_esp"] = energies
+        self.graph_data["n1"]["grad_esp"] = gradients.transpose(1,0,2)

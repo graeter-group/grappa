@@ -2,10 +2,10 @@
 import argparse
 from pathlib import Path
 from grappa.run.run import run_from_config
+from grappa.models.deploy import get_default_model_config
 from grappa.constants import DEFAULTBASEPATH
 
 def run_client():
-
 
     parser = argparse.ArgumentParser(
         epilog="If not using the ds_path argument, your dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'.",
@@ -53,10 +53,18 @@ def run_client():
     parser.set_defaults(use_improper=None)
     parser.add_argument('--old_model', dest='old_model', action='store_true')
     parser.add_argument('--no_old_model', dest='old_model', action='store_false')
+    parser.add_argument('--add_feat', '-a', type=str, nargs='+', default=None, help="Features that are added to default features if not in there already (shortcut for if one wishes to add to exsiting defaults). (default: None)")
     parser.set_defaults(old_model=None)
 
     args = parser.parse_args()
-    
+
+    if not args.add_feat is None:
+        if args.in_feat_name is None:
+            args.in_feat_name = get_default_model_config()["in_feat_name"]
+        for f in args.add_feat:
+            if not f in args.in_feat_name:
+                args.in_feat_name.append(f)
+
     # loop over args and set to None whenever the argument is the string 'None'
     for key, value in vars(args).items():
         if value == "None" or value == ["None"]:
@@ -68,24 +76,30 @@ def run_client():
         if args.collagen:
             suffix_col = "_col"
 
-        if ds_short == "eric_nat":
+        elif ds_short == "eric_nat":
             args.ds_tag += [f'AA_scan_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}']
 
-        if ds_short == "eric_rad":
+        elif ds_short == "eric_rad":
             args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
 
-        if ds_short == "spice":
+        elif ds_short == "spice":
             args.ds_tag += [f'spice/charge_default_ff_amber99sbildn{suffix}']
 
-        if ds_short == "spice_openff":
+        elif ds_short == "spice_openff":
             args.ds_tag += [f'spice_openff/charge_default_ff_gaff-2_11{suffix}']
 
-        if ds_short == "spice_monomers":
+        elif ds_short == "spice_qca":
+            args.ds_tag += [f'qca_spice/charge_default_ff_gaff-2_11{suffix}']
+
+        elif ds_short == "spice_monomers":
             args.ds_tag += [f'monomers/charge_default_ff_gaff-2_11{suffix}']
 
-        if ds_short == "eric":
+        elif ds_short == "eric":
             args.ds_short.remove("eric")
             args.ds_short += ["eric_nat", "eric_rad"]
+        
+        else:
+            raise ValueError(f"ds_short {ds_short} not recognized")
 
 
     tags = None
@@ -131,6 +145,7 @@ def run_client():
     args.pop("ds_base")
     args.pop("run_config_path")
     args.pop("model_config_path")
+    args.pop("add_feat")
 
     if not args["continue_path"] is None:
         args["ds_path"] = None
