@@ -30,6 +30,8 @@ class DottedAttentionWithLayerNorm(nn.Module):
 
         self.ff = FeedForwardLayer(n_feats, hidden_feats)
 
+        self.ff_dropout = nn.Dropout(dropout)
+
     def forward(self, x):
         if self.layer_norm:
             x = self.norm1(x)
@@ -41,7 +43,11 @@ class DottedAttentionWithLayerNorm(nn.Module):
             attn_output = self.norm2(attn_output)
         
         x = self.ff(attn_output)
+
+        x = self.ff_dropout(x)
+
         x += attn_output
+
         return x
 
 
@@ -87,7 +93,7 @@ class PermutationEquivariantTransformer(torch.nn.Module):
         ### Permutations:
 
         assert len(permutations.shape) == 2, "permutations must be a 2d array"
-        self.n_seq = permutations.shape[1] 
+        self.n_seq = permutations.shape[1]
 
         self.n_perm = permutations.shape[0]
         assert self.n_perm > 0, "permutations must have at least one row"
@@ -146,6 +152,8 @@ class PermutationEquivariantTransformer(torch.nn.Module):
             reducer_hidden_feats = self.n_feats
         
         assert reducer_layers >= 1, "reducer_layers must be >= 1"
+
+        # use no dropout in the reducer since this will destroy the permutation equivariance
         if reducer_layers == 1:
             self.reducer = nn.Linear(self.n_feats * self.n_seq, out_feats)
         else:
@@ -225,6 +233,48 @@ class PermutationEquivariantTransformer(torch.nn.Module):
         return x_permuted
 
 
+class RepProjector(torch.nn.Module):
+    """
+    This Layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
+    The graph must have node featires stored at g.nodes["n1"].data["h"] and tuple indices at g.nodes[f"n{dim_tupel}"].data["idxs"].
+    """
+    def __init__(self, dim_tupel, in_feats, out_feats, dropout, improper:bool=False) -> None:
+        super().__init__()
+        self.dim_tupel = dim_tupel
+        self.mlp = torch.nn.Sequential(
+            torch.nn.Linear(in_feats, out_feats),
+            torch.nn.ELU(),
+            torch.nn.Dropout(dropout)
+        )
+
+        self.improper = improper
+
+    def forward(self, g):
+        """
+        This Layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
+        The graph must have node featires stored at g.nodes["n1"].data["h"] and tuple indices at g.nodes[f"n{dim_tupel}"].data["idxs"].
+        """
+        atom_feats = g.nodes["n1"].data["h"]
+        atom_feats = self.mlp(atom_feats)
+
+        if not self.improper:
+            pairs = g.nodes[f"n{self.dim_tupel}"].data["idxs"]
+        else:
+            pairs = g.nodes[f"n{self.dim_tupel}_improper"].data["idxs"]
+
+
+        try:
+            # this has the shape num_pairs, 2, rep_dim
+            tuples = atom_feats[pairs]
+        except IndexError as err:
+            err.message += f"\nIt might be that g.nodes['n{self.dim_tupel}'].data['idxs'] has the wrong datatype. It should be a long, byte or bool but is {pairs.dtype}"
+
+        # transform the input to the shape 2, num_pairs, rep_dim
+        tuples = tuples.transpose(0,1).contiguous()
+        
+        return tuples
+
+
 class WriteBondParameters(torch.nn.Module):
     """
     Layer that takes as input the output of the representation layer and writes the bond parameters into the graph enforcing the permutation symmetry.
@@ -242,10 +292,7 @@ class WriteBondParameters(torch.nn.Module):
 
         # single layer dense nn to project the representation to the between_feats dimension
         # each interaction type has its own projector
-        self.rep_projector = torch.nn.Sequential(
-            nn.Linear(rep_feats, between_feats),
-            torch.nn.ELU(),
-        )
+        self.rep_projector = RepProjector(dim_tupel=2, in_feats=rep_feats, out_feats=between_feats, dropout=dropout)
 
         if reducer_feats is None:
             reducer_feats = between_feats
@@ -260,19 +307,10 @@ class WriteBondParameters(torch.nn.Module):
 
 
     def forward(self, g):
-        # bonds:
-        atom_feats = g.nodes["n1"].data["h"]
-        atom_feats = self.rep_projector(atom_feats)
 
-        pairs = g.nodes["n2"].data["idxs"]
-        try:
-            # this has the shape num_pairs, 2, rep_dim
-            inputs = atom_feats[pairs]
-        except IndexError as err:
-            err.message += f"\nIt might be that g.nodes['n2'].data['idxs'] has the wrong datatype. It should be a long, byte or bool but is {pairs.dtype}"
-
-        # transform the input to the shape 2, num_pairs, rep_dim
-        inputs = inputs.transpose(0,1).contiguous()
+        # build a tuple of feature vectors from the representation.
+        # inputs will have shape 2, num_pairs, rep_dim
+        inputs = self.rep_projector(g)
         
         coeffs = self.bond_model(inputs)
 
@@ -308,10 +346,8 @@ class WriteAngleParameters(torch.nn.Module):
 
         # single layer dense nn to project the representation to the between_feats dimension
         # each interaction type has its own projector
-        self.rep_projector = torch.nn.Sequential(
-            nn.Linear(rep_feats, between_feats),
-            torch.nn.ELU(),
-        )
+        self.rep_projector = RepProjector(dim_tupel=3, in_feats=rep_feats, out_feats=between_feats, dropout=dropout)
+
 
         if reducer_feats is None:
             reducer_feats = between_feats
@@ -331,17 +367,8 @@ class WriteAngleParameters(torch.nn.Module):
         if not "n3" in g.ntypes:
             return g
 
-        atom_feats = g.nodes["n1"].data["h"]
-        atom_feats = self.rep_projector(atom_feats)
-
-        pairs = g.nodes["n3"].data["idxs"]
-        try:
-            inputs = atom_feats[pairs]
-        except IndexError as err:
-            err.message += f"\nIt might be that g.nodes['n3'].data['idxs'] has the wrong datatype. It should be a long, byte or bool but is {pairs.dtype}"
-
         # transform the input to the shape 3, num_pairs, rep_dim
-        inputs = inputs.transpose(0,1).contiguous()
+        inputs = self.rep_projector(g)
         
         coeffs = self.angle_model(inputs)
 
@@ -399,10 +426,8 @@ class WriteTorsionParameters(torch.nn.Module):
 
         # single layer dense nn to project the representation to the between_feats dimension
         # each interaction type has its own projector
-        self.rep_projector = torch.nn.Sequential(
-            nn.Linear(rep_feats, between_feats),
-            torch.nn.ELU(),
-        )
+        self.rep_projector = RepProjector(dim_tupel=4, in_feats=rep_feats, out_feats=between_feats, dropout=dropout, improper=improper)
+
 
         if reducer_feats is None:
             reducer_feats = between_feats
@@ -426,14 +451,9 @@ class WriteTorsionParameters(torch.nn.Module):
         if not level in g.ntypes:
             return g
 
-        atom_feats = g.nodes["n1"].data["h"]
-        atom_feats = self.rep_projector(atom_feats)
-
-        pairs = g.nodes[level].data["idxs"]
-        inputs = atom_feats[pairs]
-
+        
         # transform the input to the shape 4, num_pairs, rep_dim
-        inputs = inputs.transpose(0,1).contiguous()
+        inputs = self.rep_projector(g)
 
         coeffs = self.torsion_model(inputs)
 

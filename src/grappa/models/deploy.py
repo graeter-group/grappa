@@ -4,6 +4,7 @@ from . import get_models
 from ..run import run_utils
 from pathlib import Path
 import torch
+from typing import Union, List, Tuple, Dict
 
 
 def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
@@ -27,7 +28,7 @@ def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
 
 
 
-def model_from_config(config_path:Union[Path,str]=None, config:dict=None, stat_dict:dict=None):
+def model_from_config(config_path: Union[Path, str] = None, config: Dict = None, stat_dict: Dict = None):
     """
     Initialize an untrained model from either a path to a config file or a config dict.
     If you intend to train the model, it is recommended to provide a stat_dict, which is a dictionary containing the mean and std of classical ff parameters in a training set.
@@ -40,22 +41,30 @@ def model_from_config(config_path:Union[Path,str]=None, config:dict=None, stat_d
     else:
         args = config
 
-    width = args["width"]
-    rep_feats = args["rep_feats"]
-    n_conv = args["n_conv"]
-    n_att = args["n_att"]
-    in_feat_name = args["in_feat_name"]
-    old_model = args["old_model"]
-    n_heads = args["n_heads"]
-    readout_width = args["readout_width"]
-    use_improper = args["use_improper"]
+    # Extract the required arguments from the config
+    model_args = {
+        "statistics": stat_dict,
+        "rep_feats": args["rep_feats"],
+        "between_feats": args["width"],
+        "n_conv": args["n_conv"],
+        "n_att": args["n_att"],
+        "in_feat_name": args["in_feat_name"],
+        "old": args["old_model"],
+        "n_heads": args["n_heads"],
+        "readout_feats": args["readout_width"],
+        "use_improper": args["use_improper"],
+        "dense_layers": args["dense_layers_readout"],
+        "n_att_readout": args["n_att_readout"],
+        "n_heads_readout": args["n_heads_readout"],
+        "reducer_feats": args["reducer_feats"],
+        "attention_hidden_feats": args["attention_hidden_feats"],
+        "positional_encoding": args["positional_encoding"],
+        "layer_norm": args["layer_norm"],
+        "dropout": args["dropout"],
+        "rep_dropout": args["rep_dropout"],
+    }
 
-
-    REP_FEATS = rep_feats
-    BETWEEN_FEATS = width
-
-
-    model = get_models.get_full_model(statistics=stat_dict, rep_feats=REP_FEATS, between_feats=BETWEEN_FEATS, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, old=old_model, n_heads=n_heads, readout_feats=readout_width, use_improper=use_improper)
+    model = get_models.get_full_model(**model_args)
 
     return model
 
@@ -65,12 +74,8 @@ def model_from_version(version:Union[Path,str], device:str="cpu", model_name:str
     Loads a trained model from a version folder.
     """
     config_path = Path(version)/Path("model_config.yml")
-    model = model_from_config(config_path=config_path)
-    model = model.to(device)
-
-    model.load_state_dict(torch.load(Path(version)/Path(model_name), map_location=device))
-
-    return model
+    model_path = Path(version)/Path(model_name)
+    return model_from_path(model_path=model_path, device=device, config_path=config_path)
     
 
 def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Union[Path,str]=None):
@@ -84,7 +89,17 @@ def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Un
 
     model = model.to(device)
 
-    model.load_state_dict(torch.load(model_path, map_location=device))
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=device))
+    except RuntimeError as R:
+        try:
+            # try to load without improper torsion (frequent error)
+            config_args = run_utils.load_yaml(config_path)
+            config_args["use_improper"] = not config_args["use_improper"]
+            return model_from_config(config=config_args)
+        except:
+            # raise the original error
+            raise R
 
     return model
 
@@ -99,6 +114,15 @@ def get_default_model_config():
         "old_model":False,
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+        "layer_norm":True,
+        "dropout":0.2,
+        "rep_dropout":0.,
+        "n_att_readout":3,
+        "dense_layers_readout":2,
+        "n_heads_readout":32,
+        "reducer_feats":512,
+        "attention_hidden_feats":1024,
+        "positional_encoding":True,
     }
 
     return args

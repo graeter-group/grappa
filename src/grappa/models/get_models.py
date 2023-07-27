@@ -37,22 +37,15 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
         if positional_encoding:
             between_feats -= 1
 
-
-        if "n3_k" in statistics["mean"].keys():
             angle = attention_readout.WriteAngleParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
-        else:
-            angle = attention_readout.Identity()
 
-        if "n4_k" in statistics["mean"].keys():
             torsion = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict = statistics, improper=False, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
-        else:
-            torsion = attention_readout.Identity()
+
 
         if use_improper:
-            if "n4_improper_k" in statistics["mean"].keys():
-                improper = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=True, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
-            else:
-                improper = attention_readout.Identity()
+            improper = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=True, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
+        else:
+            improper = attention_readout.Identity()
 
     else:
 
@@ -84,7 +77,7 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True):
+def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0.2, layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, rep_dropout=0):
     
     if statistics is None:
         statistics = get_default_statistics()
@@ -93,10 +86,10 @@ def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_fe
         assert n_att == 0, "old model does not support attention"
         representation = old_Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims)
     else:
-        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads)
+        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads, dropout=rep_dropout)
 
 
-    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old, use_improper=use_improper)
+    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old, use_improper=use_improper, attentional=attentional, n_att=n_att_readout, n_heads=n_heads_readout, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
 
     model = torch.nn.Sequential(
         representation,
