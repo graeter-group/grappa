@@ -3,6 +3,7 @@ channels:
   - nvidia
   - conda-forge
   - dglteam/label/cu117
+  - psi4
 dependencies:
   - python
   - pytorch-cuda=11.7
@@ -16,6 +17,7 @@ dependencies:
   - ase
   - mdtraj
   - nglview
+  - psi4
   - pip
   - pip:
     - pytorch-warmup

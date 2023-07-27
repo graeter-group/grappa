@@ -31,7 +31,7 @@ def get_default_run_config():
         "pretrain_steps":500,
         "train_steps":1e5,
         "patience":5e-2,
-        "plots":True,
+        "plots":False,
         "ref_ff":"amber99sbildn",
         "device":None,
         "description":[""],
@@ -42,6 +42,7 @@ def get_default_run_config():
         "recover_optimizer":False,
         "version_name":None,
         "pretrain_name":None,
+        "weight_decay":0,
     }
 
     return args
@@ -116,7 +117,7 @@ def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Unio
 # param weight is wrt to the energy mse
 # the zeroth data
 # NOTE: use model_args dict, loaded from a config file
-def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config(), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, ref_ff="amber99sbildn", device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False):
+def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config(), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, ref_ff="amber99sbildn", device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4):
 
 
     if device is None:
@@ -195,7 +196,7 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     ###################
 
     # do the actual training (this function is a mess, will be cleaned up)
-    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, reduce_factor=0.5, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup)
+    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, reduce_factor=0.5, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay)
 
     ###################
 

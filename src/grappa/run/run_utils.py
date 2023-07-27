@@ -255,11 +255,13 @@ def get_data(ds_paths:List[Union[str, Path]], n_graphs=None, force_factor=0)->Tu
         shape_test(ds, force_factor=force_factor)
         ############
         datasets.append(ds)
-        datanames.append(names)
-        if any([name is None for name in datanames]):
-            datanames = None
+        if not datanames is None:
+            datanames.append(names)
+        if not datanames is None:
+            if any([name is None for name in datanames]):
+                datanames = None
 
-    if len(datasets) > 1:
+    if not datanames is None and len(datanames) > 1:
         for i in range(len(datasets)):
             assert len(datasets[i]) == len(datanames[i])
 

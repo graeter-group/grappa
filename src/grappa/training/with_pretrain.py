@@ -20,14 +20,14 @@ from .grappa_training import RMSE
 
 #%%
 
-def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=10, ref_ff="amber99sbildn", time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=0.5, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False):
+def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=10, ref_ff="amber99sbildn", time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=0.5, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False, weight_decay=0):
     """
     This function is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
     load_path: path to the version directory of the model to continue from.
     """
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(lr=lr_pre, params=model.parameters(), weight_decay=1e-4)
+    optimizer = torch.optim.Adam(lr=lr_pre, params=model.parameters(), weight_decay=weight_decay)
 
     # only do load and passed load_pretrained is true
     load = not (load_path is None and continue_path is None)
@@ -94,7 +94,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
             print(str(pd.DataFrame(eval_data["eval_data"])))
             print()
 
-        optimizer = torch.optim.Adam(lr=lr_conti, params=model.parameters(), weight_decay=0)
+        optimizer = torch.optim.Adam(lr=lr_conti, params=model.parameters(), weight_decay=weight_decay)
 
         if not model_path is None and recover_optimizer:
             optimizer.load_state_dict( torch.load( str(Path(model_path).parent/Path("best_opt.pt")), map_location=device ) )

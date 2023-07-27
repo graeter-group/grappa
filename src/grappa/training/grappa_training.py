@@ -757,6 +757,9 @@ class GrappaTrain(training.Train):
     # for all params and energies, the graphs must contain the param+"_"+forcefield_name on all levels specified
     @staticmethod
     def compare_all(model, loaders, dataset_names=None, param_names=["eq", "k"], levels=["n2", "n3", "n4", "n4_improper"], energies=["bonded", "bond", "angle", "torsion", "improper", "ref", "reference_ff"], partition_atoms=[1,7,8], show=False, device=None, min_y=None, max_y=None, err_histogram=None, bins_err=30, bins_2d=100, log_scale_accuracy=False, percentile=100, folder_path="comparision", forcefield_name="gaff-1.81", parameter_dict=None, by_atom=False, errors=False, params=True, grads=True, verbose=False):
+        
+        model.eval()
+
         if device is None:
             if torch.cuda.is_available():
                 device = "cuda"

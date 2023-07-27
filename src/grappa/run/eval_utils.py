@@ -4,6 +4,8 @@ RESIDUES = ['ACE', 'NME', 'CYS', 'ASP', 'SER', 'GLN', 'LYS', 'ILE', 'PRO', 'THR'
 
 from grappa.constants import ONELETTER
 
+from pathlib import Path
+
 MAX_ELEMENT = 26
 
 # from grappa.constants import MAX_ELEMENT
@@ -251,11 +253,13 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             print("  Doing rmse plots...")
         if plot_folder is None:
             plot_folder = os.getcwd()
-        subfolder = os.path.join(plot_folder, "rmse_plots")
+        if plot:
+            subfolder = os.path.join(plot_folder, "rmse_plots")
+        else:
+            subfolder = plot_folder
+
         os.makedirs(subfolder, exist_ok=True)
         # do a histogram plot for the different residues:
-        # create arrays holding the data
-
 
 
         def compare_residue_lvl(loader_name, ref_ff=None):
@@ -295,7 +299,11 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             ax.set_xticklabels(residues)
             ax.legend()
 
-            plt.savefig(os.path.join(subfolder, f"comparision_{loader_name}_{ref_ff}_residue_rmse.png"))
+            plot_loc = os.path.join(subfolder, f"comparision_{loader_name}_{ref_ff}_residue_rmse.png")
+
+            os.makedirs(str(Path(plot_loc).parent), exist_ok=True)
+            plt.savefig(plot_loc)
+
             plt.close()
 
 
@@ -332,10 +340,21 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             if not ref_ff is None:
                 plt.title(f'Gradient RMSE for Different Residues ({ref_ff})')
             # plt.show() # uncomment for debugging
+
+            # os.makedirs(subfolder, exist_ok=True)
+            # if not ref_ff is None:
+            #     plt.savefig(os.path.join(subfolder, f"{loader_name}_{ref_ff}_residue_rmse.png"))
+            # else:
+            #     plt.savefig(os.path.join(subfolder, f"{loader_name}_residue_rmse.png"))
+
             if not ref_ff is None:
-                plt.savefig(os.path.join(subfolder, f"{loader_name}_{ref_ff}_residue_rmse.png"))
+                plot_loc = os.path.join(subfolder, f"{loader_name}_{ref_ff}_residue_rmse.png")
             else:
-                plt.savefig(os.path.join(subfolder, f"{loader_name}_residue_rmse.png"))
+                plot_loc = os.path.join(subfolder, f"{loader_name}_residue_rmse.png")
+
+            os.makedirs(str(Path(plot_loc).parent), exist_ok=True)
+            plt.savefig(plot_loc)
+
             plt.close()
 
             # do the next plot without the ref_ff
@@ -382,7 +401,9 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             ax.set_xticklabels(elements)
             ax.legend()
 
-            plt.savefig(os.path.join(subfolder, f"comparision_{loader_name}_{ref_ff}_element_rmse.png"))
+            plot_loc = os.path.join(subfolder, f"comparision_{loader_name}_{ref_ff}_element_rmse.png")
+            os.makedirs(str(Path(plot_loc).parent), exist_ok=True)
+            plt.savefig(plot_loc)
             plt.close()
 
         
@@ -424,9 +445,11 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                 plt.title('Gradient RMSE for Different Elements')
 
             if ref_ff is not None:
-                plt.savefig(os.path.join(subfolder, f"{loader_name}_{ref_ff}_element_rmse.png"))
+                plot_loc = os.path.join(subfolder, f"{loader_name}_{ref_ff}_element_rmse.png")
             else:
-                plt.savefig(os.path.join(subfolder, f"{loader_name}_element_rmse.png"))
+                plot_loc = os.path.join(subfolder, f"{loader_name}_element_rmse.png")
+            os.makedirs(str(Path(plot_loc).parent), exist_ok=True)
+            plt.savefig(plot_loc)
             plt.close()
 
             if not ref_ff is None:
