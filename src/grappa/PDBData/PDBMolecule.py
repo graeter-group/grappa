@@ -27,7 +27,7 @@ from .matching import match_utils
 from grappa import units as grappa_units
 
 
-# NOTE: FILTER FOR RESIDUES THAT ARE NOT IN RES LIST OF THE XYZ MATCHING
+# NOTE: STORE EVERYTHING IN THE GRAPH_DATA DICT AND MAKE self.energies... A PROPERTY
 #%%
 
 
@@ -121,6 +121,7 @@ class PDBMolecule:
         self.permutation: np.ndarray = None  #: Array of integers describing an atom permutation representing the change of order of the input atom order.
 
         self.graph_data: Dict = {}  # dictionary holding all of the data in the graph, Graph data is stored by chaining dicts like this: graph_data[node_type][feat_type] = data
+        # data is an np.ndarray and forces/positions are of shape (n_atoms, n_confs, 3)
 
 
 
@@ -1276,7 +1277,7 @@ class PDBMolecule:
         return cls.load(Path(__file__).parent/Path("example_PDBMolecule.npz"))
     
 
-    def compare_with_espaloma(self):
+    def compare_with_espaloma(self, tag:str="latest"):
         """
         Write espaloma energies and gradients in self.graph_data.
         """
@@ -1294,28 +1295,79 @@ class PDBMolecule:
         molecule_graph = esp.Graph(molecule)
 
         # load pretrained model
-        espaloma_model = esp.get_model("latest")
+        espaloma_model = esp.get_model(tag)
+        espaloma_model = torch.nn.Sequential(
+            espaloma_model,
+            esp.mm.geometry.GeometryInGraph(),
+            esp.mm.energy.EnergyInGraph(),
+        )
 
         # apply a trained espaloma model to assign parameters
         with torch.no_grad():
             # go in eval mode:
             espaloma_model.eval()
+            molecule_graph.heterograph.nodes["n1"].data["xyz"] = torch.tensor(self.graph_data["n1"]["xyz"], dtype=torch.float32)
             espaloma_model(molecule_graph.heterograph)
 
         # create an OpenMM System for the specified molecule
-        openmm_system = esp.graphs.deploy.openmm_system_from_graph(molecule_graph)
+        openmm_system = esp.graphs.deploy.openmm_system_from_graph(molecule_graph, create_system_kwargs={"removeCMMotion":False})
+
+
+        ### get nonbonded energies and gradients from openff:
+        
+
+        ## DOES ALL NOT WORK BECAUSE OPENFF DOESNT WORK ATM, ENERGIES ARE MUCH TOO HIGH
+
+        from openff.toolkit.typing.engines.smirnoff import ForceField as OFFForceField
+        def load_forcefield(forcefield="openff_unconstrained-2.0.0"):
+            # get a forcefield
+            try:
+                ff = OFFForceField("%s.offxml" % forcefield)
+            except:
+                raise NotImplementedError
+            return ff
+
+        ff = load_forcefield()
+        openmm_system = ff.create_openmm_system(
+            molecule.to_topology(), charge_from_molecules=[molecule]
+        )
+
+        # delete bonded forces because espaloma get system doesnt work:
+        delete_force_type = ["HarmonicBondForce", "HarmonicAngleForce", "PeriodicTorsionForce"]
+        # delete_force_type = ["NonbondedForce"]
+        if len(delete_force_type) > 0:
+            i = 0
+            while(i < openmm_system.getNumForces()):
+                for force in openmm_system.getForces():
+                    if any([d.lower() in force.__class__.__name__.lower() for d in delete_force_type]):
+                        print("Removing force", force.__class__.__name__)
+                        openmm_system.removeForce(i)
+                    else:
+                        i += 1
 
         # get energies and gradients at the locations self.xyz from the openmm system:
         from openmm import LangevinMiddleIntegrator
         from openmm.app import Simulation
         from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
 
-        top = molecule.to_topology()
+        top = molecule.to_topology().to_openmm()
 
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
         simulation = Simulation(topology=top, system=openmm_system, integrator=integrator)
 
         energies, gradients = PDBMolecule.get_data_from_simulation(simulation=simulation, xyz=self.xyz)
 
+
+        # take the bonded energy from the espaloma model energy calculation and the nonbonded energy from openmm:
         self.graph_data["g"]["u_esp"] = energies
+
         self.graph_data["n1"]["grad_esp"] = gradients.transpose(1,0,2)
+
+        # get the parameters from the graph:
+        self.graph_data["n2"]["k_esp"] = molecule_graph.heterograph.nodes['n2'].data['k'].numpy()
+        self.graph_data["n2"]["eq_esp"] = molecule_graph.heterograph.nodes['n2'].data['eq'].numpy()
+        self.graph_data["n3"]["k_esp"] = molecule_graph.heterograph.nodes['n3'].data['k'].numpy()
+        self.graph_data["n3"]["eq_esp"] = molecule_graph.heterograph.nodes['n3'].data['eq'].numpy()
+        self.graph_data["n4"]["k_esp"] = molecule_graph.heterograph.nodes['n4'].data['k'].numpy()
+
+        self.graph_data["g"]["u_pred_esp"] = molecule_graph.heterograph.nodes['g'].data['u'].numpy()
