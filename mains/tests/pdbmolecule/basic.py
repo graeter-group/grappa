@@ -12,10 +12,10 @@ from grappa.PDBData.PDBMolecule import PDBMolecule
 pdb = Path(__file__).parent/"AG/pep.pdb"
 mol = PDBMolecule.from_pdb(pdb)
 # %%
-g = mol.to_dgl()
-# %%
-
 g = mol.parametrize()
+# %%
+g = mol.to_dgl()
+
 # %%
 u_amber = g.nodes["g"].data["u_total_ref"].detach().numpy()
 # %%

@@ -403,13 +403,16 @@ class WriteTorsionParameters(torch.nn.Module):
             if improper:
                 n_periodicity = 3
 
-        assert not stat_dict is None
         if not improper:
             k_mean=stat_dict["mean"]["n4_k"]
             k_std=stat_dict["std"]["n4_k"]
         else:
-            k_mean=stat_dict["mean"]["n4_improper_k"]
-            k_std=stat_dict["std"]["n4_improper_k"]
+            if not "n4_improper_k" in stat_dict["mean"]:
+                k_mean = torch.zeros(n_periodicity)
+                k_std = torch.ones(n_periodicity)
+            else:
+                k_mean=stat_dict["mean"]["n4_improper_k"]
+                k_std=stat_dict["std"]["n4_improper_k"]
 
         k_mean = k_mean.unsqueeze(dim=0)
         k_std = k_std.unsqueeze(dim=0)

@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - psi4
+dependencies:
+  - python
+  - openmm
+  - matplotlib
+  - ase
+  - mdtraj
+  - nglview
+  - h5py
+  - psi4

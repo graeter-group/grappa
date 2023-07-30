@@ -17,6 +17,7 @@ dependencies:
   - ase
   - mdtraj
   - nglview
+  - h5py
   - psi4
   - pip
   - pip:

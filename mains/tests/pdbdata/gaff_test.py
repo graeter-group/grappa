@@ -8,7 +8,7 @@ dipeppath = str(Path(SPICEPATH).parent/Path("dipeptides_spice.hdf5"))
 #%%
 # ds = PDBDataset.from_spice(dipeppath, n_max=1, skip_errs=True)
 # %%
-ds2 = PDBDataset.from_spice(dipeppath, n_max=1, with_smiles=True)
+ds2 = PDBDataset.from_spice(dipeppath, n_max=1, with_smiles=True, skip_errs=False)
 # %%
 ds2.parametrize("gaff-2.11")
 # %%

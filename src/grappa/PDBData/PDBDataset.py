@@ -28,6 +28,7 @@ class PDBDataset:
     def __init__(self, mols:List[PDBMolecule]=[], info=True)->None:
         self.mols:List[PDBMolecule] = copy.deepcopy(mols)
         self.info:str = info # flag whether to print information on certain operations.
+        # self.subsets:Dict[str, np.ndarray] = {"full":np.arange(len(mols))} # dictionary of subsets of the dataset. maps name of the subset to array of indices. does not support nested subsets currently.
 
     def __len__(self)->int:
         return len(self.mols)
@@ -54,6 +55,7 @@ class PDBDataset:
         """
         self.mols.append(mol)
     
+
     def to_dgl(self, idxs:List[int]=None, split:List[float]=None, seed:int=0, forcefield:ForceField=None, allow_radicals=False, collagen=False)->List[dgl.DGLGraph]:
         """
         Converts a list of indices to a list of dgl graphs.
@@ -80,6 +82,57 @@ class PDBDataset:
         else:
             return dgl.data.utils.split_dataset(glist, split, shuffle=True, random_state=seed)
         
+
+    def split(self, split:Tuple[float, float, float]=(0.8, 0.1, 0.1), seed:int=0, existing_split_names:Tuple[List[str], List[str], List[str]]=None)->Tuple[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[List[str], List[str], List[str]]]:
+        """
+        Order: Train, Validation, Test
+        Function that splits the dataset ensuring that no molecules with same name are different splits. Returns three arrays of indices for train, validation and test set. If existing_split_names is given, the split is done such that molecules with name appearing in any split of existing_split_names are in the same split. The returned names contain the names in existing_split_names for the respective split.
+        """
+        if self.info:
+            print("splitting dataset...")
+        names = [mol.name for mol in self.mols]
+
+        assert all([name is not None for name in names]), "not all molecules have a name"
+
+        unique_names = list(set(names))
+        np.random.seed(seed)
+        np.random.shuffle(unique_names)
+        n = len(unique_names)
+        if len(names) == n and existing_split_names is None:
+            # no duplicates, splitting is easy.
+            n_train = int(n * split[0])
+            n_val = int(n * split[1])
+            
+            train_names = unique_names[:n_train]
+            val_names = unique_names[n_train:n_train+n_val]
+            test_names = unique_names[n_train+n_val:]
+        else:
+            if existing_split_names is not None:
+                train_names = list(set(names) & set(existing_split_names[0]))
+                val_names = list(set(names) & set(existing_split_names[1]))
+                test_names = list(set(names) & set(existing_split_names[2]))
+                remaining_names = list(set(unique_names) - set(train_names + val_names + test_names))
+                
+                n_train = int(len(remaining_names) * split[0])
+                n_val = int(len(remaining_names) * split[1])
+                
+                train_names += remaining_names[:n_train]
+                val_names += remaining_names[n_train:n_train+n_val]
+                test_names += remaining_names[n_train+n_val:]
+            else:
+                n_train = int(n * split[0])
+                n_val = int(n * split[1])
+                
+                train_names = unique_names[:n_train]
+                val_names = unique_names[n_train:n_train+n_val]
+                test_names = unique_names[n_train+n_val:]
+                
+        train_indices = [i for i, name in enumerate(names) if name in train_names]
+        val_indices = [i for i, name in enumerate(names) if name in val_names]
+        test_indices = [i for i, name in enumerate(names) if name in test_names]
+        
+        return (np.array(train_indices), np.array(val_indices), np.array(test_indices)), (train_names, val_names, test_names)
+
     
     def save(path:Union[str, Path]):
         """
@@ -694,3 +747,54 @@ class PDBDataset:
 
         return eval_data, rmse_data
     
+
+def create_splitted_datasets(datasets:List[PDBDataset], split:Tuple[float, float, float], seed:int=0)->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+    """
+    Order is: Train, Validation, Test
+    Function that splits the datasets acording to the given split ratio. If name_split is given, the split will be done such that molecules with name appearing in any split of existing_split_names are in the same split.
+    Returns a list of the indices of the split datasets of shape (n_dataset, 3, n_molecules_in_split)
+    To do this, the function first splits dataset with the most molecules, uses the names obtained there for the split of the second most and so on.
+    """
+    # first get the number of molecules in each dataset:
+    n_mols = [len(dataset) for dataset in datasets]
+    # now get the order of the datasets such that len(datasets[i]) >= len(datasets[i+1])
+    order = np.argsort(n_mols)[::-1]
+
+    split_indices = []*len(datasets)
+    split_names = None
+    for i in order:
+        dataset = datasets[i]
+        split_idxs, split_names = dataset.split(split, seed=seed, existing_split_names=split_names)
+        split_indices[i] = split_idxs
+
+    return split_indices, split_names
+
+
+def get_splitted_datasets(datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+    """
+    Order is: Train, Validation, Test
+    Split the dataset according to the given split_names.
+    """
+    split_indices = []*len(datasets)
+    split_names = copy.deepcopy(split_names)
+    for i in range(len(datasets)):
+        dataset = datasets[i]
+        split_idxs, split_names = dataset.split(seed=0, split=[0.8, 0.1, 0.1], existing_split_names=split_names)
+        split_indices[i] = split_idxs
+
+    return split_indices, split_names
+
+
+def get_dgl_splits(datasets:List[PDBDataset], split_indices:List[Tuple[np.ndarray, np.ndarray, np.ndarray]])->List[Tuple[List[dgl.DGLGraph], List[dgl.DGLGraph], List[dgl.DGLGraph]]]:
+    """
+    Order is: Train, Validation, Test
+    """
+    dgl_splits = []*len(datasets)
+    for i in range(len(datasets)):
+        dataset = datasets[i]
+        split_idxs = split_indices[i]
+        dgl_splits[i] = (dataset.to_dgl(split_idxs[loader_type] for loader_type in range(2)))
+
+    return dgl_splits
+
+

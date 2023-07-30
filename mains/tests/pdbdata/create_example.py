@@ -4,10 +4,13 @@ from grappa.PDBData.PDBDataset import PDBDataset
 from pathlib import Path
 #%%
 # uncomment to create example:
-# ds = PDBDataset.from_spice(SPICEPATH, n_max=1, randomize=True)
-# m = ds[0]
-# storepath = Path(__file__).parent.parent.parent.parent/Path("src/grappa/PDBData")
-# m.save(storepath/Path("example_PDBMolecule.npz"))
+spicepath = SPICEPATH
+dipeppath = str(Path(spicepath).parent/Path("dipeptides_spice.hdf5"))
+print(dipeppath)
+ds = PDBDataset.from_spice(dipeppath, n_max=1, randomize=True, skip_errs=True)
+m = ds[0]
+storepath = Path(__file__).parent.parent.parent.parent/Path("src/grappa/PDBData")
+m.save(storepath/Path("example_PDBMolecule.npz"))
 # %%
 from grappa.PDBData.PDBMolecule import PDBMolecule
 mol = PDBMolecule.get_example()

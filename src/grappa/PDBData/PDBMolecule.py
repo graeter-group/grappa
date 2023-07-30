@@ -108,13 +108,17 @@ class PDBMolecule:
         """
         Initializes everything to None. Use the classmethods to construct the object!
         """
-        self.xyz: np.ndarray = None  #: Array of shape (N_conf x N_atoms x 3) containing the atom positions.
-        self.energies: np.ndarray = None  #: Array of shape (N_conf) containing the energies in kcal/mol.
-        self.gradients: np.ndarray = None  #: Array of shape (N_conf x N_atoms x 3) containing the gradient of the energy wrt the positions.
+        ### replaced by property and setter:
+        ########################################
+        # self.xyz: np.ndarray = None  #: Array of shape (N_conf x N_atoms x 3) containing the atom positions.
+        # self.energies: np.ndarray = None  #: Array of shape (N_conf) containing the energies in kcal/mol.
+        # self.gradients: np.ndarray = None  #: Array of shape (N_conf x N_atoms x 3) containing the gradient of the energy wrt the positions.
+        ########################################
+
         self.elements: np.ndarray = None  #: Array of shape (N_atoms) containing the atomic numbers of the elements.
 
         self.pdb: List[str] = None  #: List of strings representing the pdb-file of some conformation.
-        self.sequence: str = None  #: String of threeletter amino acid codes representing the sequence of the molecule.
+        self.sequence: str = None  #: String of threeletter amino acid codes representing the sequence of the molecule. Separated by '-', capitalized and including cap residues.
         self.residues: np.ndarray = None  #: List of strings containing the residues by atom in the order of the element member variable, only set if initialized by xyz.
         self.residue_numbers: np.ndarray = None  #: List of integers starting at zero and ending at len(sequence), grouping atoms to residues, only set if initialized by xyz.
         self.name: str = None  #: Name of the molecule, by default, this is the sequence.
@@ -123,6 +127,84 @@ class PDBMolecule:
         self.graph_data: Dict = {}  # dictionary holding all of the data in the graph, Graph data is stored by chaining dicts like this: graph_data[node_type][feat_type] = data
         # data is an np.ndarray and forces/positions are of shape (n_atoms, n_confs, 3)
 
+    @property
+    def xyz(self):
+        """Array of shape (N_conf x N_atoms x 3) containing the atom positions."""
+        xyz = self.graph_data["n1"]["xyz"]
+        if xyz is None:
+            return None
+        
+        return xyz.transpose(1,0,2)
+
+    @property
+    def energies(self):
+        """Array of shape (N_conf) containing the energies in kcal/mol."""
+        en = self.graph_data["g"]["u_qm"]
+        if en is None:
+            return None
+        return en
+
+    @property
+    def gradients(self):
+        """Array of shape (N_conf x N_atoms x 3) containing the gradient of the energy wrt the positions."""
+        grad = self.graph_data["n1"]["grad_qm"]
+        if grad is None:
+            return None
+        return grad.transpose(1,0,2)
+
+    @property
+    def n_atoms(self):
+        return len(self.elements)
+    
+    @property
+    def n_confs(self):
+        return self.xyz.shape[1]
+    
+
+    @xyz.setter
+    def xyz(self, value:np.ndarray):
+        """Array of shape (N_conf x N_atoms x 3) containing the atom positions."""
+
+        # if not value is None:
+        #     assert value.shape[1:] == (self.n_atoms, 3)
+        if not "n1" in self.graph_data.keys():
+            self.graph_data["n1"] = {}
+        if value is None:
+            self.graph_data["n1"]["xyz"] = None
+        else:
+            try:
+                self.graph_data["n1"]["xyz"] = value.transpose(1,0,2)
+            except:
+                print(value.shape)
+                raise
+
+
+    @energies.setter
+    def energies(self, value:np.ndarray):
+        """Array of shape (N_conf) containing the energies in kcal/mol."""
+
+        # if "n1" in self.graph_data.keys() and not value is None:
+        #     assert len(value) == self.n_confs
+        if not "g" in self.graph_data.keys():
+            self.graph_data["g"] = {}
+        if value is None:
+            self.graph_data["g"]["u_qm"] = None
+        else:
+            self.graph_data["g"]["u_qm"] = value
+
+
+    @gradients.setter
+    def gradients(self, value:np.ndarray):
+        """Array of shape (N_conf x N_atoms x 3) containing the gradient of the energy wrt the positions."""
+
+        # if "n1" in self.graph_data.keys() and not value is None:
+        #     assert value.shape == (self.n_confs, self.n_atoms, 3)
+        if not "n1" in self.graph_data.keys():
+            self.graph_data["n1"] = {}
+        if value is None:
+            self.graph_data["n1"]["grad_qm"] = None
+        else:
+            self.graph_data["n1"]["grad_qm"] = value.transpose(1,0,2)
 
 
     def write_pdb(self, pdb_path:Union[str, Path]="my_pdb.pdb")->None:
@@ -163,12 +245,8 @@ class PDBMolecule:
         """
         arrays = {}
         arrays["elements"] = self.elements
-        arrays["xyz"] = self.xyz
         arrays["pdb"] = np.array(self.pdb)
-        if not self.energies is None:
-            arrays["energies"] = self.energies
-        if not self.gradients is None:
-            arrays["gradients"] = self.gradients
+
         if not self.permutation is None:
             arrays["permutation"] = self.permutation
         if not self.sequence is None:
@@ -197,12 +275,9 @@ class PDBMolecule:
         """
         self = cls()
         self.elements = d["elements"]
-        self.xyz = d["xyz"]
+
         self.pdb = d["pdb"].tolist()
-        if "energies" in d.keys():
-            self.energies = d["energies"]
-        if "gradients" in d.keys():
-            self.gradients = d["gradients"]
+
         if "permutation" in d.keys():
             self.permutation = d["permutation"]
         if "sequence" in d.keys():
@@ -274,6 +349,8 @@ class PDBMolecule:
         """
         if from_pdb:
             openmm_mol = self.to_openmm(collagen=collagen)
+            # seq = [res.name for res in openmm_mol.topology.residues()]
+            # self.sequence = "-".join(seq).upper()
             bonds = [(b[0].index, b[1].index) for b in openmm_mol.topology.bonds()]
             min_bond = np.array(bonds).flatten().min()
             if min_bond != 0:
@@ -313,7 +390,7 @@ class PDBMolecule:
         if collagen:
             classical_ff = collagen_utility.get_collagen_forcefield()
 
-        if len(self.graph_data.keys()) == 0:
+        if not "n2" in self.graph_data.keys():
             g = self.parametrize(forcefield=classical_ff, allow_radicals=allow_radicals, collagen=collagen, get_charges=get_charges)
         
         # in this case we assume that the graph data is already stored in the object and we initialize the graph from this:
@@ -335,7 +412,8 @@ class PDBMolecule:
             for level in self.graph_data.keys():
                 for feat in self.graph_data[level].keys():
                     try:
-                        g.nodes[level].data[feat] = torch.tensor(self.graph_data[level][feat])
+                        if not self.graph_data[level][feat] is None:
+                            g.nodes[level].data[feat] = torch.tensor(self.graph_data[level][feat])
                     except Exception as e:
                         name = "None" if self.name is None else self.name
                         raise RuntimeError(f"Could not write {level} {feat} to graph of name {name}") from e
@@ -610,7 +688,7 @@ class PDBMolecule:
 
 
     @classmethod
-    def from_pdb(cls, pdbpath:Union[str,Path], xyz:np.ndarray=None, energies:np.ndarray=None, gradients:np.ndarray=None, sequence:str=None):
+    def from_pdb(cls, pdbpath:Union[str,Path], xyz:np.ndarray=None, energies:np.ndarray=None, gradients:np.ndarray=None):
         """
         Initializes the object from a pdb file and an xyz array of shape (N_confsxN_atomsx3). Units must be the ones specified for the class. The atom order is the same as in the pdb file.
         """
@@ -629,8 +707,10 @@ class PDBMolecule:
                 raise RuntimeError(f"Gradients and positions must have the same shape. Shapes are {gradients.shape} and {xyz.shape}.")
             
         self = cls()
-        self.sequence = sequence
         pdbmol = PDBFile(pdbpath)
+        sequence = "-".join([res.name for res in pdbmol.topology.residues()]).upper()
+        self.sequence = sequence
+        self.name = self.sequence
         self.elements = np.array([a.element.atomic_number for a in pdbmol.topology.atoms()])
         if xyz is None:
             self.xyz = pdbmol.getPositions(asNumpy=True).value_in_unit(angstrom).reshape(1,-1,3)
@@ -679,9 +759,11 @@ class PDBMolecule:
 
         self.sequence = ''
         for aa in sequence:
-            self.sequence += aa
+            self.sequence += aa.upper()
             self.sequence += '-'
         self.sequence = self.sequence[:-1]
+
+        self.name = self.sequence
 
         mol, trajectory = matching.read_g09(logfile, sequence, AAs_reference, log=logging)
 
@@ -762,9 +844,11 @@ class PDBMolecule:
         
         self.sequence = ''
         for aa in sequence:
-            self.sequence += aa
+            self.sequence += aa.upper()
             self.sequence += '-'
         self.sequence = self.sequence[:-1]
+
+        self.name = self.sequence
 
         mol, trajectory = matching.read_g09(logfile, sequence, AAs_reference, log=logging)
 
@@ -850,6 +934,8 @@ class PDBMolecule:
         if not smiles is None:
             self = cls()
             self.pdb = [smiles]
+            self.name = smiles
+            self.sequence = smiles
             self.elements = elements
             self.xyz = xyz
             self.energies = energies
@@ -939,11 +1025,11 @@ class PDBMolecule:
 
         self.sequence = ''
         for aa in seq:
-            self.sequence += aa
+            self.sequence += aa.upper()
             self.sequence += '-'
         self.sequence = self.sequence[:-1]
 
-        
+        self.name = self.sequence        
 
         return self
 
@@ -972,35 +1058,6 @@ class PDBMolecule:
         return pdb_lines, elements
     
 
-    # def get_min_energy(self, forcefield:ForceField=ForceField('amber99sbildn.xml')):
-    #     from openmm.app import ForceField, PDBFile, topology, Simulation, PDBReporter, PME, HBonds, NoCutoff, CutoffNonPeriodic
-    #     from openmm import LangevinMiddleIntegrator, Vec3
-    #     from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
-
-    #     assert not self.xyz is None
-    #     assert not self.elements is None
-    #     assert not self.pdb is None
-
-    #     pdb_ = self.to_openmm()
-
-    #     integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
-
-    #     system = forcefield.createSystem(pdb_.topology)
-
-    #     simulation = Simulation(
-    #         pdb_.topology, system=system, integrator=integrator
-    #     )
-
-    #     simulation.context.setPositions(pdb_.positions)
-    #     simulation.minimizeEnergy(maxIterations=int(10**3))
-
-    #     state = simulation.context.getState(
-    #                 getEnergy=True,
-    #             )
-    #     e = state.getPotentialEnergy()
-    #     e = e.value_in_unit(kilocalorie_per_mole)
-    #     return e
-        
 
 
     def get_ff_data(self, forcefield:Union[ForceField, Callable, str]=None, collagen:bool=False, quickload:bool=False)->Tuple[np.ndarray, np.ndarray]:
@@ -1032,7 +1089,7 @@ class PDBMolecule:
         if collagen:
             forcefield = collagen_utility.get_collagen_forcefield()
 
-        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
+        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 1*femtoseconds)
 
         if isinstance(forcefield, str):
             from grappa.ff_utils.SysWriter import SysWriter
@@ -1277,97 +1334,99 @@ class PDBMolecule:
         return cls.load(Path(__file__).parent/Path("example_PDBMolecule.npz"))
     
 
-    def compare_with_espaloma(self, tag:str="latest"):
-        """
-        Write espaloma energies and gradients in self.graph_data.
-        """
-        smiles = self.pdb[0]
-        assert len(self.pdb) == 1, "This method is only valid for smiles"
+    ###########################################################################################
+    # def compare_with_espaloma(self, tag:str="latest"):
+    #     """
+    #     Write espaloma energies and gradients in self.graph_data.
+    #     """
+    #     smiles = self.pdb[0]
+    #     assert len(self.pdb) == 1, "This method is only valid for smiles"
 
-        import espaloma as esp
+    #     import espaloma as esp
 
-        # define or load a molecule of interest via the Open Force Field toolkit
-        from openff.toolkit.topology import Molecule
+    #     # define or load a molecule of interest via the Open Force Field toolkit
+    #     from openff.toolkit.topology import Molecule
 
-        molecule = Molecule.from_smiles(smiles)
+    #     molecule = Molecule.from_smiles(smiles)
 
-        # create an Espaloma Graph object to represent the molecule of interest
-        molecule_graph = esp.Graph(molecule)
+    #     # create an Espaloma Graph object to represent the molecule of interest
+    #     molecule_graph = esp.Graph(molecule)
 
-        # load pretrained model
-        espaloma_model = esp.get_model(tag)
-        espaloma_model = torch.nn.Sequential(
-            espaloma_model,
-            esp.mm.geometry.GeometryInGraph(),
-            esp.mm.energy.EnergyInGraph(),
-        )
+    #     # load pretrained model
+    #     espaloma_model = esp.get_model(tag)
+    #     espaloma_model = torch.nn.Sequential(
+    #         espaloma_model,
+    #         esp.mm.geometry.GeometryInGraph(),
+    #         esp.mm.energy.EnergyInGraph(),
+    #     )
 
-        # apply a trained espaloma model to assign parameters
-        with torch.no_grad():
-            # go in eval mode:
-            espaloma_model.eval()
-            molecule_graph.heterograph.nodes["n1"].data["xyz"] = torch.tensor(self.graph_data["n1"]["xyz"], dtype=torch.float32)
-            espaloma_model(molecule_graph.heterograph)
+    #     # apply a trained espaloma model to assign parameters
+    #     with torch.no_grad():
+    #         # go in eval mode:
+    #         espaloma_model.eval()
+    #         molecule_graph.heterograph.nodes["n1"].data["xyz"] = torch.tensor(self.graph_data["n1"]["xyz"], dtype=torch.float32)
+    #         espaloma_model(molecule_graph.heterograph)
 
-        # create an OpenMM System for the specified molecule
-        openmm_system = esp.graphs.deploy.openmm_system_from_graph(molecule_graph, create_system_kwargs={"removeCMMotion":False})
+    #     # create an OpenMM System for the specified molecule
+    #     openmm_system = esp.graphs.deploy.openmm_system_from_graph(molecule_graph, create_system_kwargs={"removeCMMotion":False})
 
 
-        ### get nonbonded energies and gradients from openff:
+    #     ### get nonbonded energies and gradients from openff:
         
 
-        ## DOES ALL NOT WORK BECAUSE OPENFF DOESNT WORK ATM, ENERGIES ARE MUCH TOO HIGH
+    #     ## DOES ALL NOT WORK BECAUSE OPENFF DOESNT WORK ATM, ENERGIES ARE MUCH TOO HIGH
 
-        from openff.toolkit.typing.engines.smirnoff import ForceField as OFFForceField
-        def load_forcefield(forcefield="openff_unconstrained-2.0.0"):
-            # get a forcefield
-            try:
-                ff = OFFForceField("%s.offxml" % forcefield)
-            except:
-                raise NotImplementedError
-            return ff
+    #     from openff.toolkit.typing.engines.smirnoff import ForceField as OFFForceField
+    #     def load_forcefield(forcefield="openff_unconstrained-2.0.0"):
+    #         # get a forcefield
+    #         try:
+    #             ff = OFFForceField("%s.offxml" % forcefield)
+    #         except:
+    #             raise NotImplementedError
+    #         return ff
 
-        ff = load_forcefield()
-        openmm_system = ff.create_openmm_system(
-            molecule.to_topology(), charge_from_molecules=[molecule]
-        )
+    #     ff = load_forcefield()
+    #     openmm_system = ff.create_openmm_system(
+    #         molecule.to_topology(), charge_from_molecules=[molecule]
+    #     )
 
-        # delete bonded forces because espaloma get system doesnt work:
-        delete_force_type = ["HarmonicBondForce", "HarmonicAngleForce", "PeriodicTorsionForce"]
-        # delete_force_type = ["NonbondedForce"]
-        if len(delete_force_type) > 0:
-            i = 0
-            while(i < openmm_system.getNumForces()):
-                for force in openmm_system.getForces():
-                    if any([d.lower() in force.__class__.__name__.lower() for d in delete_force_type]):
-                        print("Removing force", force.__class__.__name__)
-                        openmm_system.removeForce(i)
-                    else:
-                        i += 1
+    #     # delete bonded forces because espaloma get system doesnt work:
+    #     delete_force_type = ["HarmonicBondForce", "HarmonicAngleForce", "PeriodicTorsionForce"]
+    #     # delete_force_type = ["NonbondedForce"]
+    #     if len(delete_force_type) > 0:
+    #         i = 0
+    #         while(i < openmm_system.getNumForces()):
+    #             for force in openmm_system.getForces():
+    #                 if any([d.lower() in force.__class__.__name__.lower() for d in delete_force_type]):
+    #                     print("Removing force", force.__class__.__name__)
+    #                     openmm_system.removeForce(i)
+    #                 else:
+    #                     i += 1
 
-        # get energies and gradients at the locations self.xyz from the openmm system:
-        from openmm import LangevinMiddleIntegrator
-        from openmm.app import Simulation
-        from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
+    #     # get energies and gradients at the locations self.xyz from the openmm system:
+    #     from openmm import LangevinMiddleIntegrator
+    #     from openmm.app import Simulation
+    #     from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
 
-        top = molecule.to_topology().to_openmm()
+    #     top = molecule.to_topology().to_openmm()
 
-        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
-        simulation = Simulation(topology=top, system=openmm_system, integrator=integrator)
+    #     integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.5*femtoseconds)
+    #     simulation = Simulation(topology=top, system=openmm_system, integrator=integrator)
 
-        energies, gradients = PDBMolecule.get_data_from_simulation(simulation=simulation, xyz=self.xyz)
+    #     energies, gradients = PDBMolecule.get_data_from_simulation(simulation=simulation, xyz=self.xyz)
 
 
-        # take the bonded energy from the espaloma model energy calculation and the nonbonded energy from openmm:
-        self.graph_data["g"]["u_esp"] = energies
+    #     # take the bonded energy from the espaloma model energy calculation and the nonbonded energy from openmm:
+    #     self.graph_data["g"]["u_esp"] = energies
 
-        self.graph_data["n1"]["grad_esp"] = gradients.transpose(1,0,2)
+    #     self.graph_data["n1"]["grad_esp"] = gradients.transpose(1,0,2)
 
-        # get the parameters from the graph:
-        self.graph_data["n2"]["k_esp"] = molecule_graph.heterograph.nodes['n2'].data['k'].numpy()
-        self.graph_data["n2"]["eq_esp"] = molecule_graph.heterograph.nodes['n2'].data['eq'].numpy()
-        self.graph_data["n3"]["k_esp"] = molecule_graph.heterograph.nodes['n3'].data['k'].numpy()
-        self.graph_data["n3"]["eq_esp"] = molecule_graph.heterograph.nodes['n3'].data['eq'].numpy()
-        self.graph_data["n4"]["k_esp"] = molecule_graph.heterograph.nodes['n4'].data['k'].numpy()
+    #     # get the parameters from the graph:
+    #     self.graph_data["n2"]["k_esp"] = molecule_graph.heterograph.nodes['n2'].data['k'].numpy()
+    #     self.graph_data["n2"]["eq_esp"] = molecule_graph.heterograph.nodes['n2'].data['eq'].numpy()
+    #     self.graph_data["n3"]["k_esp"] = molecule_graph.heterograph.nodes['n3'].data['k'].numpy()
+    #     self.graph_data["n3"]["eq_esp"] = molecule_graph.heterograph.nodes['n3'].data['eq'].numpy()
+    #     self.graph_data["n4"]["k_esp"] = molecule_graph.heterograph.nodes['n4'].data['k'].numpy()
 
-        self.graph_data["g"]["u_pred_esp"] = molecule_graph.heterograph.nodes['g'].data['u'].numpy()
+    #     self.graph_data["g"]["u_pred_esp"] = molecule_graph.heterograph.nodes['g'].data['u'].numpy()
+    ###########################################################################################

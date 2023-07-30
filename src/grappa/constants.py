@@ -1,6 +1,9 @@
+from pathlib import Path
+
 DEFAULTBASEPATH = "/hits/fast/mbm/seutelf/data/datasets/PDBDatasets"
 
 SPICEPATH = "/hits/fast/mbm/seutelf/data/datasets/SPICE-1.1.2.hdf5"
+DEFAULT_DIPEP_PATH = str(Path(SPICEPATH).parent/Path("dipeptides_spice.hdf5"))
 
 # MAX_ELEMENT = 26 # cover Iron
 

@@ -335,7 +335,7 @@ def write_model_config(model_args, run_args):
 
 
 def get_loaders(datasets:Tuple[List[dgl.graph]])->Tuple[dgl.dataloading.GraphDataLoader]:
-    return tuple([dgl.dataloading.GraphDataLoader(ds) for ds in datasets])
+    return tuple([dgl.dataloading.GraphDataLoader(ds, shuffle=True) for ds in datasets])
 
 
 def get_all_loaders(subsets, ds_paths, ds_tags=None, basename="te"):

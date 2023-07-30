@@ -10,9 +10,9 @@ import time
 
 start = time.time()
 g = mol.parametrize()
-print(time.time() - start)
+print(f"parametrizing takes {time.time() - start} seconds")
 
 start = time.time()
 g = mol.to_dgl()
-print(time.time() - start)
+print(f"to_dgl takes {time.time() - start} seconds")
 # %%
