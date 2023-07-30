@@ -71,8 +71,8 @@ npy_charge_dicts/
 **/model.pth
 
 mains/runs
-mains/tripeptides/pep3
 mains/tests/psi4/compare_spice/1
+mains/tests/*.png
 
 *.clean
 **/psi4-calc.dat

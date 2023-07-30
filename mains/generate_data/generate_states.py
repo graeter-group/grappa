@@ -61,6 +61,6 @@ def generate_all_states(folder):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Generate states for a given folder.')
-    parser.add_argument('--folder', type=str, help='The folder containing the PDB files.', default="pep3")
+    parser.add_argument('--folder', type=str, help='The folder containing the PDB files.', default="data/pep1")
     args = parser.parse_args()
     generate_all_states(args.folder)
