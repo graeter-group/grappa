@@ -135,5 +135,7 @@ def validate_qm_data():
 
     plt.savefig(f'summary.png')
 
-calc_states(n_states=2)
-validate_qm_data()
+if __name__ == "__main__":
+    
+    calc_states(n_states=3)
+    validate_qm_data()

@@ -72,11 +72,15 @@ npy_charge_dicts/
 
 mains/runs
 mains/tests/psi4/compare_spice/1
-mains/tests/*.png
+mains/**.png
+mains/**.npy
 
 *.clean
+*.png
+*.pickle
 **/psi4-calc.dat
 **/timer.dat
+
 
 .venv
 **/nohup.out

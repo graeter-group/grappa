@@ -80,6 +80,6 @@ def validate_qm_data(folder):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Validate QM data for a given folder.')
-    parser.add_argument('--folder', type=str, help='The folder containing the PDB files.', default="data/pep1")
+    parser.add_argument('folder', type=str, help='Folder containing the QM data.')
     args = parser.parse_args()
     validate_qm_data(args.folder)

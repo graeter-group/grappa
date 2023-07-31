@@ -30,6 +30,12 @@ class no_print:
 
 def calc_states(pdb_folder, n_states=None):
 
+    METHOD = 'bmk'
+    BASIS = '6-311+G(2df,p)'
+    MEMORY = '20GB'
+    NUM_THREADS=10
+
+
     pdb_folder = Path(pdb_folder)
 
     if not (pdb_folder/Path("positions.npy")).exists():
@@ -37,6 +43,14 @@ def calc_states(pdb_folder, n_states=None):
 
     positions = np.load(str(pdb_folder/Path("positions.npy")))
     atomic_numbers = np.load(str(pdb_folder/Path("atomic_numbers.npy")))
+    
+    
+    if not total_charge.shape == (1,):
+        raise ValueError(f"total_charge.shape must be (1,), is: {total_charge.shape}")
+    total_charge = int(total_charge[0])
+    if not np.isclose(total_charge, round(total_charge,0), atol=1e-5):
+        raise ValueError(f"total_charge is no integer: {total_charge}")
+
 
   
     # Calculate energies and forces using Psi4
@@ -69,18 +83,15 @@ def calc_states(pdb_folder, n_states=None):
         # Read the configuration
         atoms = Atoms(numbers=atomic_numbers, positions=positions[i])
 
-        atoms.set_calculator(Psi4(atoms = atoms, method = 'bmk', memory = '20GB', basis = '6-311+G(2df,p)', num_threads=10))
-        energy = atoms.get_potential_energy(apply_constraint=False)
-        forces = atoms.get_forces(apply_constraint=False)
+        atoms.set_calculator(Psi4(atoms=atoms, method=METHOD, memory=MEMORY, basis=BASIS, num_threads=NUM_THREADS, charge=total_charge, multiplicity=1))
+
+        energy = atoms.get_potential_energy(apply_constraint=False) # units: eV
+        forces = atoms.get_forces(apply_constraint=False) # units: eV/Angstrom
 
         EV_IN_KCAL = 23.0609
-        # EV = mm.unit.kilocalorie_per_mole * EV_IN_KCAL
-        # energy = mm.unit.Quantity(energy, EV).value_in_unit(mm.unit.kilocalories_per_mole)
-        # forces = mm.unit.Quantity(forces, EV/mm.unit.angstrom).value_in_unit(mm.unit.kilocalories_per_mole/mm.unit.angstrom)
 
         energy = energy * EV_IN_KCAL
         forces = forces * EV_IN_KCAL
-
 
 
         psi4_energies.append(energy)
@@ -93,7 +104,7 @@ def calc_states(pdb_folder, n_states=None):
 
 
 
-def calc_all_states(folder, n_states=None):
+def calc_all_states(folder, n_states=None, skip_errs=False):
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
@@ -105,14 +116,18 @@ def calc_all_states(folder, n_states=None):
             except KeyboardInterrupt:
                 raise
             except Exception as e:
-                print(f"failed to generate states for {i}: {type(e)}: {e}")
+                if not skip_errs:
+                    raise
+
+                print(f"failed to generate states for {i} ({Path(folder).stem}): {type(e)}\n: {e}")
                 # raise
                 pass
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Generate states for a given folder.')
-    parser.add_argument('--folder', '-f', type=str, help='The folder containing the PDB files.', default="data/pep1")
+    parser.add_argument('folder', type=str, help='The folder containing the PDB files.')
     parser.add_argument('--n_states', '-n', type=int, help='The number of states to generate.', default=None)
+    parser.add_argument('--skip_errs', '-s', action='store_true', help='Skip errors.', default=False)
     args = parser.parse_args()
-    calc_all_states(folder=args.folder, n_states=args.n_states)
+    calc_all_states(folder=args.folder, n_states=args.n_states, skip_errs=args.skip_errs)
