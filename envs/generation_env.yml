@@ -2,11 +2,9 @@ channels:
   - conda-forge
   - psi4
 dependencies:
-  - python
+  - python=3.11
   - openmm
   - matplotlib
   - ase
-  - mdtraj
-  - nglview
-  - h5py
   - psi4
+  - pydantic=1.10.8
