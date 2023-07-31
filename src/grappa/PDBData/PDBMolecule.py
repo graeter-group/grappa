@@ -139,7 +139,7 @@ class PDBMolecule:
     @property
     def energies(self):
         """Array of shape (N_conf) containing the energies in kcal/mol."""
-        en = self.graph_data["g"]["u_qm"]
+        en = self.graph_data["g"]["u_qm"][0,:]
         if en is None:
             return None
         return en
@@ -190,7 +190,7 @@ class PDBMolecule:
         if value is None:
             self.graph_data["g"]["u_qm"] = None
         else:
-            self.graph_data["g"]["u_qm"] = value
+            self.graph_data["g"]["u_qm"] = value[None,:]
 
 
     @gradients.setter
@@ -588,31 +588,32 @@ class PDBMolecule:
         assert mask.shape[0] == 1, f"mask should be of shape (1,n_confs), i.e. batching is disabled, shape is {mask.shape}"
         mask = mask[0]
         
-        # apply mask
-        try:
-            if not self.energies is None:
-                self.energies = self.energies[mask]
-            if not self.gradients is None:
-                self.gradients = self.gradients[mask]
-            self.xyz = self.xyz[mask]
+        # apply mask:
 
-            # now also filter the graph data, there we may forget something, in this case one has to re-parametrize after filtering
-            for key in self.graph_data.keys():
-                if key == "g":
-                    # graph data for the whole molecule
-                    for k in self.graph_data[key].keys():
-                        if "u_" in k:
-                            # assume shape of energies is (1,n_confs).
+        for key in self.graph_data.keys():
+            if key == "g":
+                # graph data for the whole molecule
+                for k in self.graph_data[key].keys():
+                    if "u_" in k:
+                        if self.graph_data[key][k] is None:
+                            continue
+                        # assume shape of energies is (1,n_confs).
+                        try:
                             self.graph_data[key][k] = self.graph_data[key][k][:,mask]
-                elif key == "n1":
-                    for k in self.graph_data[key].keys():
-                        if "grad_" in k or "xyz" in k:
-                            # assume shape of grad and xyz is (atoms,n_confs,3).
-                            self.graph_data[key][k] = self.graph_data[key][k][:,mask]
-                    
+                        except Exception as e:
+                            raise RuntimeError(f"Error while filtering energies, key is {k}, shape is {self.graph_data[key][k].shape}, mask shape is {mask.shape}, error is {type(e)}: {e}")
 
-        except IndexError as e:
-            raise RuntimeError(f"Index out of bounds for filter_confs. Max idx is {max(mask)} but there are only {len(self)} conformations.\nThis can be due to removing mols after paraetrizing (i.e. after writing graph data.). Parametrize first.") from e
+            elif key == "n1":
+                for k in self.graph_data[key].keys():
+                    if "grad_" in k or "xyz" in k:
+                        if self.graph_data[key][k] is None:
+                            continue
+                        # assume shape of grad and xyz is (atoms,n_confs,3).
+                        try:
+                            self.graph_data[key][k] = self.graph_data[key][k][:,mask]
+                        except Exception as e:
+                            raise RuntimeError(f"Error while filtering energies, key is {k}, shape is {self.graph_data[key][k].shape}, mask shape is {mask.shape}, error is {type(e)}: {e}")
+
         
         # return True if there are more than two conformations left
         return self.xyz.shape[0] > 1
