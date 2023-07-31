@@ -5627,7 +5627,6 @@
    <Bond from="18" to="21"/>
    <Bond from="22" to="23"/>
    <ExternalBond from="22"/>
-   <ExternalBond from="22"/>
   </Residue>
   <Residue name="NPRO">
    <Atom name="N" type="1742"/>

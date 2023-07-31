@@ -4,23 +4,27 @@ import numpy as np
 
 from pathlib import Path
 
-def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.ForceField('amber99sbildn.xml'), plot=False):
-
+def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.ForceField('amber99sbildn.xml'), plot=False, between_steps=50000):
 
     # Load the PDB file
     pdb = app.PDBFile(str(Path(pdb_folder)/Path('pep.pdb')))
 
     # Setup OpenMM system
     system = forcefield.createSystem(pdb.topology, nonbondedMethod=app.NoCutoff, constraints=None, removeCMMotion=False)
-    integrator = mm.LangevinIntegrator(temperature, 1.0, 0.001)
+    integrator = mm.LangevinIntegrator(500, 1.0, 0.001)
     simulation = app.Simulation(pdb.topology, system, integrator)
     simulation.context.setPositions(pdb.positions)
     
+    # equilibrate a :
+    integrator.setTemperature(500)
+    simulation.step(between_steps)
+
     if plot:
         from utils import CustomReporter
-        simulation.reporters.append(CustomReporter(1000, pdb.topology, pdb.positions))
+        simulation.reporters.append(CustomReporter(100))
         sampling_steps = []
 
+    step = 0
     openmm_energies = []
     openmm_forces = []
     positions = []
@@ -28,13 +32,11 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
 
     # Sampling states with OpenMM and calculating energies and forces
     for _ in range(n_states):
-        # 50000 steps of MD at 500K: get out of a local minimum
-        integrator.setTemperature(500)
-        simulation.step(50000)
 
-        # 50000 steps of MD at the given temperature
+        # between_steps/10 steps of MD to reach the given temperature
         integrator.setTemperature(temperature)
-        simulation.step(50000)
+        simulation.step(between_steps//5)
+        step += between_steps//5
 
         state = simulation.context.getState(getEnergy=True, getForces=True, getPositions=True)
 
@@ -46,7 +48,17 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
         positions.append(pos)
 
         if plot:
-            sampling_steps.append(state.getStep())
+            sampling_steps.append(step)
+
+            # simulate a bit more so that the plot is easier to read (...)
+            integrator.setTemperature(temperature)
+            simulation.step(between_steps//20)
+            step += between_steps//20
+
+        # between steps of MD at 500K: get out of a local minimum
+        integrator.setTemperature(500)
+        simulation.step(between_steps)
+        step += between_steps
 
 
     # store the states:
@@ -80,17 +92,18 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
 
 
 
-def generate_all_states(folder, n_states=10, temperature=300, plot=False):
+def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000):
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
             print(f"generating states for {i}")
             try:
-                generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot)
+                generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot, between_steps=between_steps)
             except Exception as e:
                 print("-----------------------------------")
                 print(f"failed to generate states for {i} in {pdb_folder.stem}:{type(e)}:\n{e}")
-                print("-----------------------------------")
+                print("-----------------------------------\n")
+                raise
                 continue
 
 if __name__ == "__main__":
@@ -100,5 +113,6 @@ if __name__ == "__main__":
     parser.add_argument('--n_states', '-n', type=int, help='The number of states to generate.', default=10)
     parser.add_argument('--temperature', '-t', type=int, help='The temperature to use for the simulation.', default=300)
     parser.add_argument('--plot', '-p', action='store_true', help='Whether to plot the sampling temperatures and potential energies.')
+    parser.add_argument('--between_steps', '-b', type=int, help='The number of steps to take between the sampling steps.', default=50000)
     args = parser.parse_args()
-    generate_all_states(args.folder, n_states=args.n_states, temperature=args.temperature, plot=args.plot)
+    generate_all_states(args.folder, n_states=args.n_states, temperature=args.temperature, plot=args.plot, between_steps=args.between_steps)

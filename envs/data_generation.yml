@@ -1,8 +1,9 @@
+name: data_generation
 channels:
   - conda-forge
   - psi4
 dependencies:
-  - python=3.11
+  - python=3.10
   - openmm
   - matplotlib
   - ase

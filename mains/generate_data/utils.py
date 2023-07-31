@@ -1,11 +1,13 @@
 from openmm import unit
 
 class CustomReporter(object):
-    def __init__(self, step_interval=1):
+    def __init__(self, step_interval):
         self.step_interval = step_interval
         self.potential_energies = []
         self.temperatures = []
         self.steps = []
+        self.step = 0
+
 
     def describeNextReport(self, simulation):
         # We want a report at step intervals specified during initialization
@@ -21,14 +23,21 @@ class CustomReporter(object):
         # Get potential energy and convert it to kcal/mol
         potential_energy = state.getPotentialEnergy().value_in_unit(unit.kilocalories_per_mole)
         self.potential_energies.append(potential_energy)
-        
-        # Get temperature and convert it to Kelvin
-        temperature = state.getTemperature().value_in_unit(unit.kelvin)
-        self.temperatures.append(temperature)
+
+        # Get kinetic energy and convert it to kcal/mol
+        kinetic_energy = state.getKineticEnergy().value_in_unit(unit.kilojoules_per_mole)
+
+        # convert to kilojoules:
+        kinetic_energy = unit.Quantity(kinetic_energy, unit.kilojoules / (6.02214076*1e23))
+
+        # Compute temperature in Kelvin from equipartition theorem
+        ndf = 3 * simulation.system.getNumParticles() - 3
+        temperature = 2 * kinetic_energy / (unit.BOLTZMANN_CONSTANT_kB * ndf)
+        self.temperatures.append(temperature.value_in_unit(unit.kelvin))
 
         # Get simulation step number
-        step = state.getStep()
-        self.steps.append(step)
+        self.step += self.step_interval
+        self.steps.append(self.step)
 
 
     def plot(self, filename, sampling_steps=None, fontsize=16):
@@ -44,34 +53,35 @@ class CustomReporter(object):
 
         fig, ax = plt.subplots(2, 1, figsize=(10,10))
 
-        plt.title("Potential energy and temperature during sampling simulation")
 
         ax1 = ax[0]
-        ax1.plot(steps, potential_energies, color="blue")
-        ax1.set_xlabel("step", fontsize=fontsize)
-        ax1.set_ylabel("potential energy [kcal/mol]", fontsize=fontsize)
+
+        ax1.plot(steps, temperatures, label="Temperature")
+        ax1.set_ylabel("T [K]", fontsize=fontsize)
+        ax1.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
         ax1.tick_params(axis='both', which='major', labelsize=fontsize)
 
-        ax2 = ax1.twinx()
-        ax2.plot(steps, temperatures, color="red")
-        ax2.set_ylabel("temperature [K]", fontsize=fontsize)
-        ax2.tick_params(axis='both', which='major', labelsize=fontsize)
+        # set title for both axes:
+        ax1.set_title("Temperature During Sampling", fontsize=fontsize)
 
         if sampling_steps is not None:
             # draw vertical lines at sampling steps and give them the label "sampled":
-            for sampling_step in sampling_steps:
-                ax1.axvline(sampling_step, color="black", linestyle="--", label="sampled")
-                ax2.axvline(sampling_step, color="black", linestyle="--", label="sampled")
+            for i, sampling_step in enumerate(sampling_steps):
+                if i == 0:
+                    ax1.axvline(sampling_step, color="black", linestyle="--", label="Sampling")
+                else:
+                    ax1.axvline(sampling_step, color="black", linestyle="--")
 
-        ax1.legend(fontsize=fontsize)
+        ax1.legend(fontsize=fontsize, loc="best")
 
         hist_ax = ax[1]
 
         potential_energies -= np.min(potential_energies)
         hist_ax.hist(potential_energies, bins=10, color="blue")
-        hist_ax.set_xlabel("rel. potential energy [kcal/mol]", fontsize=fontsize)
+        hist_ax.set_xlabel("E [kcal/mol]", fontsize=fontsize)
         hist_ax.set_ylabel("count", fontsize=fontsize)
         hist_ax.tick_params(axis='both', which='major', labelsize=fontsize)
+        hist_ax.set_title("Potential Energies of Sampled States", fontsize=fontsize)
 
         plt.tight_layout()
         plt.savefig(filename)

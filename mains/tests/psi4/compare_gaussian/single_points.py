@@ -44,13 +44,6 @@ def calc_states(pdb_folder, n_states=None):
     positions = np.load(str(pdb_folder/Path("positions.npy")))
     atomic_numbers = np.load(str(pdb_folder/Path("atomic_numbers.npy")))
     
-    total_charge = np.load(str(pdb_folder/Path("charge.npy")))
-    
-    if not total_charge.shape == (1,):
-        raise ValueError(f"total_charge.shape must be (1,), is: {total_charge.shape}")
-    total_charge = int(total_charge[0])
-    if not np.isclose(total_charge, round(total_charge,0), atol=1e-5):
-        raise ValueError(f"total_charge is no integer: {total_charge}")
 
 
   
@@ -84,7 +77,7 @@ def calc_states(pdb_folder, n_states=None):
         # Read the configuration
         atoms = Atoms(numbers=atomic_numbers, positions=positions[i])
 
-        atoms.set_calculator(Psi4(atoms=atoms, method=METHOD, memory=MEMORY, basis=BASIS, num_threads=NUM_THREADS, charge=total_charge, multiplicity=1))
+        atoms.set_calculator(Psi4(atoms=atoms, method=METHOD, memory=MEMORY, basis=BASIS, num_threads=NUM_THREADS))
 
         energy = atoms.get_potential_energy(apply_constraint=False) # units: eV
         forces = atoms.get_forces(apply_constraint=False) # units: eV/Angstrom

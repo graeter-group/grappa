@@ -9,7 +9,7 @@ def get_collagen_forcefield():
 
 def add_bonds(top:Topology, allow_radicals=False):
     """
-    top: openmm.app.topology.Topology
+    This function is used in PDBData.PDBMolecule.to_openmm() since openmm cannot read pdbfiles with those residues correctly.
 
     For HYP and DOP, adds bonds to the topology if they are not already present.
     Assumes that external bonds are always from N to C!
