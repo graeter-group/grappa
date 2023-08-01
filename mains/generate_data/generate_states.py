@@ -1,6 +1,7 @@
 import openmm as mm
 from openmm import app
 import numpy as np
+from utils import ProgressReporter
 
 from pathlib import Path
 
@@ -14,6 +15,9 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
     integrator = mm.LangevinIntegrator(500, 1.0, 0.001)
     simulation = app.Simulation(pdb.topology, system, integrator)
     simulation.context.setPositions(pdb.positions)
+
+    total_steps = n_states * between_steps + n_states * (between_steps//5)
+    simulation.reporters.append(ProgressReporter(1000, total_steps))
     
     # equilibrate a :
     integrator.setTemperature(500)
@@ -50,11 +54,6 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
         if plot:
             sampling_steps.append(step)
 
-            # simulate a bit more so that the plot is easier to read (...)
-            integrator.setTemperature(temperature)
-            simulation.step(between_steps//20)
-            step += between_steps//20
-
         # between steps of MD at 500K: get out of a local minimum
         integrator.setTemperature(500)
         simulation.step(between_steps)
@@ -85,10 +84,10 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
     np.save(str(Path(pdb_folder)/Path("charge.npy")), np.array([total_charge]))
 
     if plot:
-        if not len(simulation.reporters) == 1:
-            raise ValueError("There should be exactly one reporter")
-        reporter = simulation.reporters[0]
-        reporter.plot(sampling_steps=sampling_steps, filename=str(Path(pdb_folder)/Path("sampling.png")))
+        for rep in simulation.reporters:
+            if isinstance(rep, CustomReporter):
+                rep.plot(sampling_steps=sampling_steps, filename=str(Path(pdb_folder)/Path("sampling.png")))
+                break
 
 
 

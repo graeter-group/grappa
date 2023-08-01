@@ -1,6 +1,6 @@
 #%%
 def _plot():
-    VERSION = "1"
+    VERSION = "2"
     import numpy as np
     import matplotlib.pyplot as plt
 

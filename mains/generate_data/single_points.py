@@ -28,12 +28,12 @@ class no_print:
 ###################
 
 
-def calc_states(pdb_folder, n_states=None):
+def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
     METHOD = 'bmk'
     BASIS = '6-311+G(2df,p)'
-    MEMORY = '20GB'
-    NUM_THREADS=10
+    MEMORY = f'{int(memory)}GB'
+    NUM_THREADS=num_threads
 
 
     pdb_folder = Path(pdb_folder)
@@ -105,7 +105,7 @@ def calc_states(pdb_folder, n_states=None):
 
 
 
-def calc_all_states(folder, n_states=None, skip_errs=False):
+def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threads=8):
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
@@ -113,7 +113,7 @@ def calc_all_states(folder, n_states=None, skip_errs=False):
             print(f"generating states for {i}")
             # calc_states(pdb_folder)
             try:
-                calc_states(pdb_folder, n_states=n_states)
+                calc_states(pdb_folder, n_states=n_states, memory=memory, num_threads=num_threads)
             except KeyboardInterrupt:
                 raise
             except Exception as e:
@@ -130,5 +130,7 @@ if __name__ == "__main__":
     parser.add_argument('folder', type=str, help='The folder containing the PDB files.')
     parser.add_argument('--n_states', '-n', type=int, help='The number of states to generate.', default=None)
     parser.add_argument('--skip_errs', '-s', action='store_true', help='Skip errors.', default=False)
+    parser.add_argument('--memory', '-m', type=int, help='The amount of memory to use.', default=32)
+    parser.add_argument('--num_threads', '-t', type=int, help='The number of threads to use.', default=8)
     args = parser.parse_args()
-    calc_all_states(folder=args.folder, n_states=args.n_states, skip_errs=args.skip_errs)
+    calc_all_states(folder=args.folder, n_states=args.n_states, skip_errs=args.skip_errs, memory=args.memory, num_threads=args.num_threads)

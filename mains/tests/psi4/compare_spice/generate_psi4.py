@@ -1,4 +1,4 @@
-VERSION = "1"
+VERSION = "2"
 from ase import Atoms
 from ase.calculators.psi4 import Psi4
 from ase.io import read, write
