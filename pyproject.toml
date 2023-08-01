@@ -11,7 +11,9 @@ dependencies = [
     "dgl",
     "torch",
     "openmm",
+    "rdkit",
     "matplotlib",
+    "pyyaml",
 ]
 
 [project.scripts]
