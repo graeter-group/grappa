@@ -21,11 +21,11 @@ suffix=$1
 n_molecules=$2
 n_states_per_molecule=$3
 
-# Append suffix to folder name
-folder="data/pep3_$suffix"
-
 # Original folder
 orig_folder="data/pep3"
+
+# Append suffix to folder name
+folder="$orig_folder"_"$suffix"
 
 
 conda activate pepgen

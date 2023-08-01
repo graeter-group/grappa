@@ -40,11 +40,12 @@ class CustomReporter(object):
         self.steps.append(self.step)
 
 
-    def plot(self, filename, sampling_steps=None, fontsize=16):
+    def plot(self, filename, sampling_steps=None, potential_energies=None, fontsize=16):
         import matplotlib.pyplot as plt
         import numpy as np
 
         steps = np.array(self.steps)
+
         potential_energies = np.array(self.potential_energies)
         temperatures = np.array(self.temperatures)
 
@@ -86,3 +87,20 @@ class CustomReporter(object):
         plt.tight_layout()
         plt.savefig(filename)
         plt.close()
+
+
+
+from tqdm import tqdm
+from openmm import StateDataReporter
+
+class ProgressReporter(StateDataReporter):
+    def __init__(self, file, reportInterval, total_steps, **kwargs):
+        super().__init__(file, reportInterval, **kwargs)
+        self.pbar = tqdm(total=total_steps, ncols=70)
+
+    def report(self, simulation, state):
+        super().report(simulation, state)
+        self.pbar.update(self._reportInterval)
+
+    def __del__(self):
+        self.pbar.close()

@@ -20,5 +20,6 @@ dependencies:
   - h5py
   - psi4
   - pip
+  - tqdm
   - pip:
     - pytorch-warmup
