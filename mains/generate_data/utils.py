@@ -91,16 +91,24 @@ class CustomReporter(object):
 
 
 from tqdm import tqdm
-from openmm import StateDataReporter
+from openmm.app import StateDataReporter
+from sys import stdout
+
+import io
 
 class ProgressReporter(StateDataReporter):
-    def __init__(self, file, reportInterval, total_steps, **kwargs):
-        super().__init__(file, reportInterval, **kwargs)
-        self.pbar = tqdm(total=total_steps, ncols=70)
+    def __init__(self, reportInterval, total_steps, **kwargs):
+        self.rep_buf = io.StringIO()
+        super().__init__(self.rep_buf, reportInterval, **kwargs)  # Redirect output to None
+        self.buffer = io.StringIO()
+        self.pbar = tqdm(total=total_steps, ncols=70, file=self.buffer)
 
     def report(self, simulation, state):
         super().report(simulation, state)
         self.pbar.update(self._reportInterval)
+        print(self.buffer.getvalue(), end="\r")
+        self.buffer.truncate(0)
 
     def __del__(self):
+        print()
         self.pbar.close()

@@ -17,16 +17,17 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
     simulation.context.setPositions(pdb.positions)
 
     total_steps = n_states * between_steps + n_states * (between_steps//5)
+    if plot:
+        total_steps += 100
+        
     simulation.reporters.append(ProgressReporter(1000, total_steps))
-    
-    # equilibrate a :
-    integrator.setTemperature(500)
-    simulation.step(between_steps)
 
     if plot:
+        simulation.step(100) # equilibrate a bit to reach the temperature
         from utils import CustomReporter
         simulation.reporters.append(CustomReporter(100))
         sampling_steps = []
+
 
     step = 0
     openmm_energies = []
@@ -36,6 +37,11 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
 
     # Sampling states with OpenMM and calculating energies and forces
     for _ in range(n_states):
+        
+        # between steps of MD at 500K: get out of a local minimum
+        integrator.setTemperature(500)
+        simulation.step(between_steps)
+        step += between_steps
 
         # between_steps/10 steps of MD to reach the given temperature
         integrator.setTemperature(temperature)
@@ -54,10 +60,6 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
         if plot:
             sampling_steps.append(step)
 
-        # between steps of MD at 500K: get out of a local minimum
-        integrator.setTemperature(500)
-        simulation.step(between_steps)
-        step += between_steps
 
 
     # store the states:

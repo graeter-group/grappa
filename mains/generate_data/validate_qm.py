@@ -2,6 +2,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
+import os
 
 def validate_qm_data(folder):
     # Collect all energies
@@ -74,9 +75,8 @@ def validate_qm_data(folder):
 
     plt.tight_layout()
 
-    name = str(folder).split('/')[-1]
 
-    plt.savefig(f'summary_{name}.png')
+    plt.savefig(os.path.join(str(folder),"summary.png"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Validate QM data for a given folder.')
