@@ -7,7 +7,7 @@ from pathlib import Path
 spicepath = SPICEPATH
 dipeppath = str(Path(spicepath).parent/Path("dipeptides_spice.hdf5"))
 print(dipeppath)
-ds = PDBDataset.from_spice(dipeppath, n_max=1, randomize=True, skip_errs=True)
+ds = PDBDataset.from_spice(dipeppath, n_max=10, randomize=True, skip_errs=True)
 m = ds[0]
 storepath = Path(__file__).parent.parent.parent.parent/Path("src/grappa/PDBData")
 m.save(storepath/Path("example_PDBMolecule.npz"))

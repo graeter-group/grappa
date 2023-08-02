@@ -15,7 +15,9 @@ import time
 import datetime
 import shutil
 import math
-# import main  # for __main__.__file__
+
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 # change the weights stuff to using only a random set of batches from that loader
 # hand over several ds, a partition and a seed directly, make class method that returns the splitted ds and the loaders.
@@ -264,6 +266,15 @@ class Train:
             self.log(str(self.scheduler.state_dict()))
         self.log(" ")
         print(str(df))
+
+        num_params = count_parameters(model)
+
+        self.log(" ")
+        self.log("MODEL:")
+        # sciencific notation:
+        self.log(f"Number of parameters: {num_params:.2e}")
+        self.log(" ")
+        print(f"Number of parameters: {num_params:.2e}")
 
         # print some info on approx gpu memory
         if mem_info and "cuda" in str(self.device):

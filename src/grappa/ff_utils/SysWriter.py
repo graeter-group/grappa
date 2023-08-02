@@ -315,20 +315,19 @@ class SysWriter:
             Helper function to check whether the given tuple of indices describes an improper torsion.
             Checks whether the given tuple of indices describes an improper torsion.
             We can assume that the tuples describe either a proper or improper torsion.
-            We also assume that the idxs correspind to the indices of the rdkit molecule.
+            We also assume that the idxs correspond to the indices of the rdkit molecule.
             """
             # check whether the central atom is the connected to all other atoms in the rdkit molecule.
 
             central_atom = rd_mol.GetAtomWithIdx(idxs[central_atom_idx])
 
             # get the neighbors of the central atom
-            neighbors = set(central_atom.GetNeighbors())
+            neighbor_idxs = set([n.GetIdx() for n in central_atom.GetNeighbors()])
 
             # for each atom in the torsion, check if it's a neighbor of the central atom
             for i, atom_idx in enumerate(idxs):
                 if i != central_atom_idx:  # skip the central atom itself
-                    atom = rd_mol.GetAtomWithIdx(atom_idx)
-                    if atom not in neighbors:
+                    if atom_idx not in neighbor_idxs:
                         # if one of the atoms is not connected to it, return False
                         return False
 
@@ -367,11 +366,10 @@ class SysWriter:
             
             elif isinstance(force, openmm.NonbondedForce):
                 # write the charges in the graph
-                if with_parameters:
-                    charges = torch.zeros(self.sys.getNumParticles(), dtype=torch.float32)
-                    for i in range(force.getNumParticles()):
-                        charge, sigma, epsilon = force.getParticleParameters(i)
-                        charges[i] = charge.value_in_unit(grappa_units.CHARGE_UNIT)
+                charges = torch.zeros(self.sys.getNumParticles(), dtype=torch.float32)
+                for i in range(force.getNumParticles()):
+                    charge, sigma, epsilon = force.getParticleParameters(i)
+                    charges[i] = charge.value_in_unit(grappa_units.CHARGE_UNIT)
 
 
 
@@ -459,7 +457,6 @@ class SysWriter:
                     idxs = (atom1, atom2, atom3, atom4)
                     is_improper = is_improper_(rd_mol=rd_mol, idxs=idxs, central_atom_idx=2)
 
-
                     if not self.use_impropers and is_improper:
                         continue
                    
@@ -514,12 +511,12 @@ class SysWriter:
                             k_improper[graph_idx_improper, periodicity-1] = k if phase == 0 else -k
 
 
-                # make the tensors smaller since (all torsions) are (both proper and improper)
-                if len(proper_idxs) < n_torsions:
-                    if with_parameters:
+                # make the tensors smaller since (all torsions) are (union of proper and improper)
+
+                if with_parameters:
+                    if len(proper_idxs) > 0:
                         k_proper = k_proper[:len(proper_idxs)]
-                if len(improper_idxs) < n_torsions:
-                    if with_parameters:
+                    if len(improper_idxs) > 0:
                         k_improper = k_improper[:len(improper_idxs)]
 
 
@@ -538,10 +535,11 @@ class SysWriter:
 
         TERMS = self.graph.ntypes
 
+        if "n1" in TERMS:
+            self.graph.nodes["n1"].data["q_ref"] = charges.float()
+
         # add the parameters:
         if with_parameters:
-            if "n1" in TERMS:
-                self.graph.nodes["n1"].data["q_ref"] = charges.float()
             if "n2" in TERMS:
                 self.graph.nodes["n2"].data["k_ref"] = torch.tensor(bond_ks, dtype=torch.float32)
                 self.graph.nodes["n2"].data["eq_ref"] = torch.tensor(bond_eqs, dtype=torch.float32)

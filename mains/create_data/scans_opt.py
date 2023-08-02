@@ -26,10 +26,10 @@ MAX_FORCE = 400
 
 
 for pathname in [
-                # "AA_opt_nat",
+                "AA_opt_rad",
+                "AA_scan_rad",
+                "AA_opt_nat",
                 "AA_scan_nat",
-                # "AA_opt_rad",
-                # "AA_scan_rad",
                 ]:
     print(f"Starting {pathname}...")
     counter = 0

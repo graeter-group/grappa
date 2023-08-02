@@ -16,3 +16,5 @@ start = time.time()
 g = mol.to_dgl()
 print(f"to_dgl takes {time.time() - start} seconds")
 # %%
+g.ntypes
+# %%

@@ -219,7 +219,7 @@ class PDBDataset:
 
         seqpath = str(Path(path).parent/Path(path).stem) + "_seq.json"
         with open (seqpath, "w") as f:
-            json.dump([self.mols[i].sequence for i in idxs], f)
+            json.dump([self.mols[i].sequence for i in idxs], f, indent=4)
 
 
     
@@ -749,9 +749,9 @@ class PDBDataset:
 
             # save the dicts with json:
             with open(plotpath / Path("eval_data.json"), "w") as f:
-                json.dump(eval_data, f)
+                json.dump(eval_data, f, indent=4)
             with open(plotpath / Path("rmse_data.json"), "w") as f:
-                json.dump(rmse_data, f)
+                json.dump(rmse_data, f, indent=4)
 
         return eval_data, rmse_data
         
@@ -779,7 +779,7 @@ class PDBDataset:
         return split_indices, split_names
 
     @staticmethod
-    def get_splitted_datasets(datasets:List["PDBDataset"], split_names:Tuple[List[str], List[str], List[str]])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+    def get_splitted_datasets(datasets:List["PDBDataset"], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
         """
         Order is: Train, Validation, Test
         Split the dataset according to the given split_names.
@@ -788,7 +788,7 @@ class PDBDataset:
         split_names = copy.deepcopy(split_names)
         for i in range(len(datasets)):
             dataset = datasets[i]
-            split_idxs, split_names = dataset.split(seed=0, split=[0.8, 0.1, 0.1], existing_split_names=split_names)
+            split_idxs, split_names = dataset.split(seed=0, split=split, existing_split_names=split_names)
             split_indices[i] = split_idxs
 
         return split_indices, split_names
@@ -848,7 +848,7 @@ class SplittedDataset:
         return self
 
 
-    def get_full_loaders(self, shuffle:bool=True)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+    def get_full_loaders(self, shuffle:bool=True, max_train_mols:int=None)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
         """
         Returns the shuffled loaders for the full datasets.
         """
@@ -856,6 +856,14 @@ class SplittedDataset:
             raise ValueError("No dgl splits have been created yet.")
         
         tr_ds = [g for subset in self.dgl_splits for g in subset[0]]
+        if not max_train_mols is None:
+            import random
+            random.seed(0)
+            random.shuffle(tr_ds)
+            tr_ds[:] = tr_ds[:max_train_mols]
+
+        self.train_mols = len(tr_ds)
+
         val_ds = [g for subset in self.dgl_splits for g in subset[1]]
         test_ds = [g for subset in self.dgl_splits for g in subset[2]]
 
@@ -891,7 +899,7 @@ class SplittedDataset:
         Saves the split_indices and split_names for the given datasets in a npz/json file.
         """
         with open(filename + ".json", "w") as f:
-            json.dump(list(self.split_names), f)
+            json.dump(list(self.split_names), f, indent=4)
 
         # save the split indices:
         out = {}
@@ -931,7 +939,7 @@ class SplittedDataset:
 
 
     @classmethod
-    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]]):
+    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1]):
         """
         Generates the split_indices and split_names for the given datasets, contrained by the names in split_names.
         """
@@ -939,7 +947,7 @@ class SplittedDataset:
         self = cls()
 
         # generate the split indices:
-        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names)
+        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names, split=split)
 
         # write the dgl datasets:
         self.make_dgl(datasets)
@@ -947,7 +955,7 @@ class SplittedDataset:
         return self
 
     @classmethod
-    def load_from_names(cls, filename:str, datasets:List[PDBDataset]):
+    def load_from_names(cls, filename:str, datasets:List[PDBDataset], split=[0.8, 0.1, 0.1]):
         """
         Generates the split_indices and split_names for the given datasets, contrained by the names in split_names stored at filename.
         """
@@ -956,7 +964,7 @@ class SplittedDataset:
         with open(filename + ".json", "r") as f:
             split_names = tuple(json.load(f))
         
-        return SplittedDataset.create_with_names(datasets, split_names)
+        return SplittedDataset.create_with_names(datasets, split_names, split=split)
 
 
 

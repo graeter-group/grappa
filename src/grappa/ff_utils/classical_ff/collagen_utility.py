@@ -11,6 +11,7 @@ def append_collagen_templates(forcefield:ForceField):
     """
     Returns a deep copy of the forcefield provided with templates for DOP and HYP appended. These do not contain N-terminal and C-terminal patches for DOP and HYP.
     """
+    raise NotImplementedError("This function is not yet implemented. Please use get_collagen_forcefield() instead.")
     pass
 
 

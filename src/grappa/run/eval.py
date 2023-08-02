@@ -1,14 +1,15 @@
 import argparse
 from typing import Union, List, Tuple
+from grappa.PDBData.PDBDataset import PDBDataset, SplittedDataset
 
 def eval_client():
     parser = argparse.ArgumentParser(description='Evaluate a model')
     
     parser.add_argument('version_path', type=str, help='Path to the version folder')
     parser.add_argument('--plot', dest='plot', action='store_true', default=False, help='Plot the parameters')
-    parser.add_argument('--all_loaders', dest='all_loaders', default=False, action='store_true', help='Do not plot the results')
+    parser.add_argument('--all_loaders', dest='all_loaders', default=False, action='store_true', help='eval on all loaders')
     parser.add_argument('--ds_base', type=str, default="/hits/fast/mbm/seutelf/data/datasets/PDBDatasets", help="if tags are used, this is the base path to the datasets (default: /hits/fast/mbm/seutelf/data/datasets/PDBDatasets)")
-    parser.add_argument('-t', '--ds_tag', type=str, default=[], nargs='+', help=" (dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'. if not None, the model is evaluated on this dataset only, dividing it too into test, train and val set, keeping molecule names separated. default: [])")
+    parser.add_argument('-t', '--ds_tag', type=str, default=[], nargs='+', help=" (dataset must be stored in files named '{ds_base}/{ds_tag}'. if not None, the model is evaluated on this dataset only, dividing it too into test, train and val set, keeping molecule names separated. default: [])")
     parser.add_argument('--no-forces', dest="on_forces", action='store_false', default=True, help='Only relevant if ds_tag is not None. (default: False, evaluate on forces)')
     parser.add_argument('--test', dest="test", action='store_true', default=False, help='Reducing dataset size to 50 graphs for testing functionality. (default: False)')
     parser.add_argument('--last', dest="last_model", action='store_true', default=False, help='Evaluate the last instead of the best model. (default: False)')
@@ -78,10 +79,17 @@ def eval_once(version_path, plot=True, all_loaders=False, ds_base=None, ds_tag:L
 
 def eval_on_new_set(version_path, model, plot=True, ds_base=None, on_forces=True, test=False, ds_tag:List[str]=[], device="cpu", ref_ff:str=None):
 
-    ds_paths = [str(Path(ds_base)/Path(t)) + "_dgl.bin" for t in ds_tag]
+    ds_paths = [str(Path(ds_base)/Path(t)) for t in ds_tag]
 
-    ds_, _ = run_utils.get_data(ds_paths=ds_paths, n_graphs=50 if test else None)
-    loaders = list(run_utils.get_loaders(ds_))
+    n_graphs = 50 if test else None
+
+    # load the datasets
+    print(f"loading: \n{ds_paths}")
+    datasets = [PDBDataset.load_npz(path, n_max=n_graphs) for path in ds_paths]
+
+    ds_splitter = SplittedDataset.load_from_names(str(Path(version_path)/Path("split")), datasets=datasets, split=[0,0,1.])
+
+    loaders = [ds_splitter.get_loaders(i)[2] for i in range(len(ds_tag))]
 
     ds_tags_ = [t.replace("/","-") for t in ds_tag]
 
@@ -114,53 +122,44 @@ def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_force
     force_factor = 0
     test_ds_tags = config_args["test_ds_tags"]
 
+    n_graphs = 50 if test else None
+
+    # load the datasets
+    print(f"loading: \n{ds_paths}")
+    datasets = [PDBDataset.load_npz(path, n_max=n_graphs) for path in ds_paths]
+
+    
+    ds_splitter = SplittedDataset.load(str(Path(version_path)/Path("split")), datasets=datasets)
 
 
-    datasets, datanames = run_utils.get_data(ds_paths, force_factor=force_factor, n_graphs=None if not test else 50)
+    # if not confs is None:
+    #     run_utils.reduce_confs(ds_tr, confs, seed=seed)
 
-    # if evaluated on the train set, split the dataset according to the molecule sequences
-    with open(os.path.join(version_path,"split_names.json"), "r") as f:
-        splits = json.load(f)
-        if splits == {}:
-            splits = None
+    te_loaders = [ds_splitter.get_loaders(i)[2] for i in range(len(datasets))]
 
-    ds_trs, ds_vls, ds_tes, _ = run_utils.get_splits(datasets, datanames, seed=seed, fractions=[0.8,0.1,0.1], splits=splits)
-
-
-    te_loaders, te_names = run_utils.get_all_loaders(subsets=ds_tes, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="te")
 
     if not test_ds_tags is None:
         for i in range(len(test_ds_tags)):
             test_ds_tags[i] = test_ds_tags[i].replace("/","-")
 
-
-    loaders = te_loaders
-    loader_names = te_names
+    te_names = test_ds_tags if not test_ds_tags is None else [f"ds_{i}" for i in range(len(te_loaders))]
 
     assert not (all_loaders and full_loaders), "only one of all_loaders and full_loaders can be true"
 
     if all_loaders:
-        vl_loaders, vl_names = run_utils.get_all_loaders(subsets=ds_vls, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="vl")
-        loaders.extend(vl_loaders)
-        loader_names.extend(vl_names)
+        loaders = []
+        loader_names = []
+        for i in range(len(datasets)):
+            loaders += ds_splitter.get_loaders(i)
+            loader_names += [f"{te_names[i]}_train", f"{te_names[i]}_val", f"{te_names[i]}_test"]
 
-        tr_loaders, tr_names = run_utils.get_all_loaders(subsets=ds_trs, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="tr")
-        loaders.extend(tr_loaders)
-        loader_names.extend(tr_names)
-    
+    elif full_loaders:
+        loaders = ds_splitter.get_full_loaders()
+        loader_names = ["train", "val", "test"]
 
-    if full_loaders:
-        loaders = [loaders[0]]
-        loader_names = [loader_names[0]]
-
-        vl_loaders, vl_names = run_utils.get_all_loaders(subsets=ds_vls, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="vl")
-        loaders.append(vl_loaders[0])
-        loader_names.append(vl_names[0])
-
-        tr_loaders, tr_names = run_utils.get_all_loaders(subsets=ds_trs, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="tr")
-        loaders.append(tr_loaders[0])   
-        loader_names.append(tr_names[0])
-
+    else:
+        loaders = te_loaders
+        loader_names = te_names
 
     for i in range(len(loader_names)):
         loader_names[i] = loader_names[i].replace("/","-")

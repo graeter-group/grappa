@@ -97,7 +97,9 @@ class ForceField:
         """
         Initializes the ForceField from a tag. Available tags:
 
-        example - An example model, not fine-tuned for good performance. Builds upon an extension of amber99sbildn for DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
+        example - An example model, not fine-tuned for good performance. Builds upon amber99sbildn. Does not allow radicals. For ParamDict, uses degrees instead of radians for angles and torsions.
+
+        kimmdy_example - An example model, not fine-tuned for good performance. Builds upon an extension of amber99sbildn with DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
 
         """
 
@@ -108,6 +110,25 @@ class ForceField:
 
         if tag == "example":
             model_tag = "example"
+            model = model_from_tag(model_tag, device=device)
+
+            classical_ff = openmm.app.ForceField("amber99sbildn.xml") if classical_ff is None else classical_ff
+
+            allow_radicals = False if allow_radicals is None else allow_radicals
+
+            if charge_model is None and allow_radicals:
+                charge_model = "heavy"
+            
+            self = cls(model=model, classical_ff=classical_ff, charge_model=charge_model, allow_radicals=allow_radicals, device=device)
+
+            self.units["angle"] = unit.degree
+            
+            return self
+
+            
+
+        elif tag == "kimmdy_example":
+            model_tag = "kimmdy_example"
             model = model_from_tag(model_tag, device=device)
 
             classical_ff = get_collagen_forcefield() if classical_ff is None else classical_ff
@@ -122,6 +143,7 @@ class ForceField:
             self.units["angle"] = unit.degree
             
             return self
+
 
         else:
             raise ValueError(f"Unknown tag {tag}.")

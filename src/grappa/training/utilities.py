@@ -3,6 +3,9 @@ import sys
 
 from ..models.energy import WriteEnergy
 
+from ..models.readout import get_default_statistics
+
+
 import torch
 import numpy as np
 
@@ -26,17 +29,6 @@ def get_param_statistics(loader, bonded_parameter_types=get_bonded_parameter_typ
             d["mean"][f"{level}_{name}"] = all_params.mean(dim=0)
             d["std"][f"{level}_{name}"] = all_params.std(dim=0) + 1e-6 # minimum std deviation: 1e-6
     return d
-
-def get_default_statistics():
-    print("Warning: This is old, from the espaloma graphs that were redundant!")
-    return get_default_statistics.d
-
-get_default_statistics.d = {
-'mean':
-    {'n2_k': torch.Tensor([763.2819]), 'n2_eq': torch.Tensor([1.2353]), 'n3_k': torch.Tensor([105.6576]), 'n3_eq': torch.Tensor([1.9750]), 'n4_k': torch.Tensor([ 1.5617e-01, -5.8312e-01,  7.0820e-02, -6.3840e-04,  4.7139e-04, -4.1655e-04]), 'n4_improper_k': torch.Tensor([ 0.0000, -2.3933,  0.0000,  0.0000,  0.0000,  0.0000])},
-'std':
-    {'n2_k': torch.Tensor([161.2278]), 'n2_eq': torch.Tensor([0.1953]), 'n3_k': torch.Tensor([26.5965]), 'n3_eq': torch.Tensor([0.0917]), 'n4_k': torch.Tensor([0.4977, 1.2465, 0.1466, 0.0192, 0.0075, 0.0066]), 'n4_improper_k': torch.Tensor([0.0000, 4.0571, 0.0000, 0.0000, 0.0000, 0.0000])}
-}
 
 
 

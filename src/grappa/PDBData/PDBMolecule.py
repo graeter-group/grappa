@@ -139,14 +139,22 @@ class PDBMolecule:
     @property
     def energies(self):
         """Array of shape (N_conf) containing the energies in kcal/mol."""
-        en = self.graph_data["g"]["u_qm"][0,:]
+        if not "g" in self.graph_data.keys():
+            return None
+        if not "u_qm" in self.graph_data["g"].keys():
+            return None
+        en = self.graph_data["g"]["u_qm"]
         if en is None:
             return None
-        return en
+        return en[0,:]
 
     @property
     def gradients(self):
         """Array of shape (N_conf x N_atoms x 3) containing the gradient of the energy wrt the positions."""
+        if not "n1" in self.graph_data.keys():
+            return None
+        if not "grad_qm" in self.graph_data["n1"].keys():
+            return None
         grad = self.graph_data["n1"]["grad_qm"]
         if grad is None:
             return None
@@ -433,7 +441,9 @@ class PDBMolecule:
         """
 
         if collagen:
-            forcefield = collagen_utility.append_collagen_templates(forcefield)
+            # forcefield = collagen_utility.append_collagen_templates(forcefield)
+            # NOTE
+            forcefield = collagen_utility.get_collagen_forcefield()
 
         if isinstance(forcefield, str):
             assert len(self.pdb) == 1, "If forcefield is a string, a smiles string must be present in the object."
@@ -560,7 +570,7 @@ class PDBMolecule:
             if len(energy_mask.shape) == 1:
                 energy_mask = energy_mask[None,:]
         else:
-            energy_mask = np.ones((1,len(self.energies)), dtype=bool)
+            energy_mask = np.ones((1,len(self.xyz)), dtype=bool)
 
         if (not max_force is None) and (not self.gradients is None):
             if not reference:
@@ -580,10 +590,10 @@ class PDBMolecule:
             if len(force_mask.shape) == 1:
                 force_mask = force_mask[None,:]
         else:   
-            force_mask = np.ones((1,len(self.energies)), dtype=bool)
+            force_mask = np.ones((1,len(self.xyz)), dtype=bool)
 
         if mask is None:
-            mask = np.ones((1,len(self.energies)), dtype=bool)
+            mask = np.ones((1,len(self.xyz)), dtype=bool)
 
         mask *= energy_mask * force_mask
 
@@ -807,11 +817,15 @@ class PDBMolecule:
             energies = np.array(energies)
             energies -= energies.min()
             self.energies = Quantity(energies, unit=e_unit).value_in_unit(kilocalorie_per_mole)
+        else:
+            self.energies = None
 
         if not gradients is None:
             # apply permutation to gradients
             gradients = np.array(gradients)[:,atom_order]
             self.gradients = Quantity(gradients, unit=force_unit).value_in_unit(kilocalorie_per_mole/angstrom)
+        else:
+            self.gradients = None
 
         # apply permutation to positions
         positions = np.array(positions)[:,atom_order]

@@ -6,6 +6,8 @@ from grappa.run.eval_utils import evaluate
 
 from ..models.deploy import get_default_model_config, model_from_config
 
+from grappa.PDBData.PDBDataset import PDBDataset, SplittedDataset
+
 import torch
 from pathlib import Path
 from typing import Union, List, Tuple
@@ -30,7 +32,7 @@ def get_default_run_config():
         "test":False,
         "pretrain_steps":500,
         "train_steps":1e5,
-        "patience":5e-2,
+        "patience":5e3, # in steps
         "plots":False,
         "ref_ff":"amber99sbildn",
         "device":None,
@@ -140,47 +142,34 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     n_graphs = None
     if test:
         n_graphs = 50
-    datasets, datanames = run_utils.get_data(ds_paths, n_graphs=n_graphs, force_factor=force_factor)
 
-    # the split in datanames:
-    splits = None
     assert (continue_path is None or load_path is None), "not both continue_path and load_path can be specified."
 
-    # NOTE: this is just temporarily. handle split such that the new split is again about the fraction but the test and val set remain clean.
-    # load the split from the pretrained model if names are available
-    if not datanames is None:
+    # load the datasets
+    print(f"loading: \n{ds_paths}")
+    datasets = [PDBDataset.load_npz(path, n_max=n_graphs) for path in ds_paths]
 
-        if not continue_path is None:
-            with open(os.path.join(continue_path,"split_names.json"), "r") as f:
-                splits = json.load(f)
+    # initialize splitter object:
+    if continue_path is None and load_path is None:
+        ds_splitter = SplittedDataset.create(datasets, [0.8, 0.1, 0.1], seed=seed)
 
-        elif not load_path is None:
-            with open(os.path.join(load_path,"split_names.json"), "r") as f:
-                splits = json.load(f)
-    
-    if splits == {}:
-        splits = None
-        
-    ds_trs, ds_vls, ds_tes, split_names = run_utils.get_splits(datasets, datanames, seed=seed, fractions=[0.8,0.1,0.1], splits=splits)
-    with open(os.path.join(storage_path,version_name,"split_names.json"), "w") as f:
-        if split_names is None:
-            split_names = {}
-        json.dump(split_names, f, indent=4)
+    # load such that the molecules of the former train set remain in the train set
+    elif not continue_path is None:
+        ds_splitter = SplittedDataset.load_from_names(str(Path(continue_path)/Path("split")), datasets=datasets)
+
+    elif not load_path is None:
+        ds_splitter = SplittedDataset.load_from_names(str(Path(load_path)/Path("split")), datasets=datasets)
+
+    ds_splitter.save(str(Path(storage_path)/Path(version_name)/Path("split")))
 
 
-    ds_tr, ds_vl, ds_te = run_utils.flatten_splits(ds_trs, ds_vls, ds_tes)
+    # if not confs is None:
+    #     run_utils.reduce_confs(ds_tr, confs, seed=seed)
 
-    # make the number of molecules smaller if it is None or larger than the train set
-    if not mols is None:
-        run_utils.reduce_mols(ds_tr, mols, seed=seed)
+    tr_loader, vl_loader, te_loader = ds_splitter.get_full_loaders(shuffle=True)
 
-    if not confs is None:
-        run_utils.reduce_confs(ds_tr, confs, seed=seed)
+    mols = ds_splitter.train_mols
 
-    if not mols is None and mols > len(ds_tr):
-        mols = len(ds_tr)
-
-    tr_loader, vl_loader = run_utils.get_loaders((ds_tr, ds_vl))
 
     # only use the training set for statistics
     statistics = get_param_statistics(loader=tr_loader)
@@ -189,14 +178,14 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     model = model_from_config(config=model_config, stat_dict=statistics)
 
     ###################
-    pretrain_epochs = math.ceil(pretrain_steps/len(ds_tr))
-    epochs = int(train_steps/len(ds_tr))
-    patience_ = int(patience*epochs)
+    pretrain_epochs = math.ceil(pretrain_steps/mols)
+    epochs = int(train_steps/mols)
+    patience_ = int(patience/mols)
 
     ###################
 
     # do the actual training (this function is a mess, will be cleaned up)
-    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, reduce_factor=0.5, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay)
+    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay)
 
     ###################
 
@@ -211,7 +200,9 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     model = model.to(device)
     model.eval()
 
-    te_loaders, te_names = run_utils.get_all_loaders(subsets=ds_tes, ds_paths=ds_paths, ds_tags=test_ds_tags, basename="te")
+    te_loaders = [ds_splitter.get_loaders(i)[2] for i in range(len(ds_paths))]
+
+    te_names = test_ds_tags if not test_ds_tags is None else [f"test_{i}" for i in range(len(te_loaders))]
 
     on_forces = False if force_factor == 0 else True
 

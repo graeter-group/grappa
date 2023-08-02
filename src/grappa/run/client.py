@@ -4,18 +4,19 @@ from pathlib import Path
 from grappa.run.run import run_from_config
 from grappa.models.deploy import get_default_model_config
 from grappa.constants import DEFAULTBASEPATH
+import copy
 
-def run_client():
+def get_args():
 
     parser = argparse.ArgumentParser(
-        epilog="If not using the ds_path argument, your dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'.",
+        epilog="If not using the ds_path argument, your dataset must be stored as PDBDataset in a folder named '{ds_base}/{ds_tag}'.",
         description="Run a model from a config file. If no config file is specified, a default config file is created.")
 
     parser.add_argument('--run_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
     parser.add_argument('--model_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
     parser.add_argument('--ds_path', type=str, nargs='+', default=None, help="path to dataset. setting this overwrites the effect of ds_tag. (default: None)")
     parser.add_argument('--ds_base', type=str, default=DEFAULTBASEPATH, help=f"if tags are used, this is the base path to the datasets (default: {DEFAULTBASEPATH})")
-    parser.add_argument('-t', '--ds_tag', type=str, nargs='+', default=[], help=" (dataset must be stored as dgl graphs in files named '{ds_base}/{ds_tag}_dgl.bin'. default: [])")
+    parser.add_argument('-t', '--ds_tag', type=str, nargs='+', default=[], help=" (dataset must be stored as in files named '{ds_base}/{ds_tag}'. default: [])")
     parser.add_argument('--force_factor','-f', type=float, default=None, help=" (default: 1.)")
     parser.add_argument('--energy_factor','-e', type=float, default=None, help=" (default: 1.)")
     parser.add_argument('--recover_optimizer', action='store_true', default=False, help=" (if true, instead of a warm restart, we use the optimizer from the version specified by --load_path. default: False)")
@@ -69,9 +70,17 @@ def run_client():
     parser.add_argument('--dropout', type=float, default=None, help=" (default: 0.2)")
     parser.add_argument('--rep_dropout', type=float, default=None, help=" (default: 0)")
     parser.add_argument('--weight_decay', type=float, default=None, help=" (default: 1e-4)")
-
+    parser.add_argument('--attentional', dest='attentional', action='store_true')
+    parser.add_argument('--no_attentional', dest='attentional', action='store_false')
+    parser.set_defaults(attentional=None)
 
     args = parser.parse_args()
+    return args
+
+
+def run_(args):
+
+    args = copy.deepcopy(args)
 
     if not args.add_feat is None:
         if args.in_feat_name is None:
@@ -92,7 +101,7 @@ def run_client():
             suffix_col = "_col"
 
         elif ds_short == "eric_nat":
-            args.ds_tag += [f'AA_scan_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}']
+            args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
 
         elif ds_short == "eric_rad":
             args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
@@ -117,14 +126,19 @@ def run_client():
             raise ValueError(f"ds_short {ds_short} not recognized")
 
 
-    tags = None
-    if args.ds_path is None:
-        if args.ds_tag is None and args.run_config_path is None:
-            raise ValueError("either ds_path or ds_tag or a config path must be specified")
     if len(args.ds_tag)>0:
         if args.ds_path is None:
             args.ds_path = []
-        args.ds_path += [str(Path(f"{args.ds_base}/{tag}_dgl.bin")) for tag in args.ds_tag]
+        args.ds_path += [str(Path(f"{args.ds_base}/{tag}")) for tag in args.ds_tag]
+
+
+    tags = None
+    if args.ds_path is None:
+        if args.run_config_path is None and args.continue_path is None:
+            raise ValueError("either ds_path or ds_tag or a config path must be specified")
+
+
+    
 
     if args.ds_tag == []:
         args.ds_tag = None
@@ -165,6 +179,7 @@ def run_client():
     if not args["continue_path"] is None:
         args["ds_path"] = None
 
+
     specified_args = {}
     # overwrite default args with args that are explicitly specified (default of flags must be False)
     for key in args.keys():
@@ -181,6 +196,37 @@ def run_client():
     else:
         for idx, seed in enumerate(seeds):
             run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=idx, seed=seed, **specified_args)
+
+
+def run_client():
+    args = get_args()
+    run_(args)
+
+
+def full_run():
+    args = get_args()
+    run_(args)
+    
+    continue_path = args.continue_path
+    warmup = True
+    lr = 1e-6
+    
+    # loop over all arguments and set them to None if they are not a bool:
+    for key, value in vars(args).items():
+        if type(value) == list:
+            setattr(args, key, [])
+        elif not type(value) == bool:
+            setattr(args, key, None)
+        elif type(value) == str:
+            setattr(args, key, "")
+        
+    
+    args.continue_path = continue_path
+    args.warmup = warmup
+    args.lr = lr
+
+    run_(args)
+
 
 if __name__ == "__main__":
     run_client()

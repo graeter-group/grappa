@@ -9,7 +9,7 @@ from grappa.ff_utils.classical_ff.collagen_utility import get_collagen_forcefiel
 import openmm.unit
 
 # path to the grappa model the forcefield is supposed to use:
-mpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/tutorial/best_model.pt"
+mpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
 
 classical_ff = get_collagen_forcefield()
 ff = ForceField(model_path=mpath, classical_ff=classical_ff)
