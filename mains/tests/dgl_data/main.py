@@ -34,3 +34,18 @@ _,_,loader1 = data.get_loaders(1)
 for g in loader1:
     print(g.nodes["n1"].data["xyz"].shape)
 # %%
+data.save("test")
+
+data2 = SplittedDataset.load("test", [ds, ds2])
+# %%
+full_loader,_,_ = data2.get_full_loaders()
+for g in full_loader:
+    print(g.nodes["n1"].data["xyz"].shape)
+
+# %%
+data3 = SplittedDataset.load_from_names("test", [ds, ds2])
+# %%
+full_loader,_,_ = data3.get_full_loaders()
+for g in full_loader:
+    print(g.nodes["n1"].data["xyz"].shape)
+# %%

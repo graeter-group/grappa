@@ -891,7 +891,7 @@ class SplittedDataset:
         Saves the split_indices and split_names for the given datasets in a npz/json file.
         """
         with open(filename + ".json", "w") as f:
-            json.dump(list(self.split_indices), f)
+            json.dump(list(self.split_names), f)
 
         # save the split indices:
         out = {}
@@ -919,6 +919,8 @@ class SplittedDataset:
 
         assert len(split_idxs.keys()) == 3*len(datasets), f"The number of datasets does not match the number of split indices: {len(split_idxs.keys())} != {3*len(datasets)}"
 
+        self.split_indices = [tuple([])]*len(datasets)
+
         for i in range(len(datasets)):
             self.split_indices[i] = (split_idxs["train_idxs_" + str(i)], split_idxs["val_idxs_" + str(i)], split_idxs["test_idxs_" + str(i)])
 
@@ -945,7 +947,7 @@ class SplittedDataset:
         return self
 
     @classmethod
-    def load_from_names(cls, datasets:List[PDBDataset], filename):
+    def load_from_names(cls, filename:str, datasets:List[PDBDataset]):
         """
         Generates the split_indices and split_names for the given datasets, contrained by the names in split_names stored at filename.
         """
