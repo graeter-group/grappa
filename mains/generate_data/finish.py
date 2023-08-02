@@ -23,4 +23,9 @@ if __name__ == "__main__":
     parser.add_argument('--memory', '-m', type=int, help='The amount of memory to use.', default=32)
     parser.add_argument('--num_threads', '-t', type=int, help='The number of threads to use.', default=8)
     args = parser.parse_args()
+
+    if args.memory < 0:
+        args.memory = None
+    if args.num_threads < 0:
+        args.num_threads = None
     finish_run(folder=args.folder, memory=args.memory, num_threads=args.num_threads)

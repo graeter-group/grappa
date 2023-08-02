@@ -32,7 +32,10 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
     METHOD = 'bmk'
     BASIS = '6-311+G(2df,p)'
-    MEMORY = f'{int(memory)}GB'
+    if not memory is None:
+        MEMORY = f'{int(memory)}GB'
+    else:
+        MEMORY = None
     NUM_THREADS=num_threads
 
 
@@ -77,14 +80,24 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
     for num_calculated, i in enumerate(missing_indices):
         
         msg = f"calculating state number {i}/{len(positions)-1}... Progress: {num_calculated}/{len(missing_indices)-1}, time elapsed: {round((time() - start)/60., 2)} min"
-        if i > 0:
-            msg += f", avg time per state: {round((time() - start)/(i) / 60.,2)} min"
+        if num_calculated > 0:
+            msg += f", avg time per state: {round((time() - start)/(num_calculated) / 60.,2)} min"
         print(msg)
 
         # Read the configuration
         atoms = Atoms(numbers=atomic_numbers, positions=positions[i])
 
+        ###################
+        # set up the calculator:
+        kwargs = {"atoms":atoms, "method":METHOD, "basis":BASIS, "charge":total_charge, "multiplicity":1}
+
+        if not MEMORY is None:
+            kwargs["memory"] = MEMORY
+        if not NUM_THREADS is None:
+            kwargs["num_threads"] = NUM_THREADS
+
         atoms.set_calculator(Psi4(atoms=atoms, method=METHOD, memory=MEMORY, basis=BASIS, num_threads=NUM_THREADS, charge=total_charge, multiplicity=1))
+        ###################
 
         energy = atoms.get_potential_energy(apply_constraint=False) # units: eV
         forces = atoms.get_forces(apply_constraint=False) # units: eV/Angstrom

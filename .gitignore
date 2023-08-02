@@ -86,3 +86,5 @@ mains/**.npy
 **/nohup.out
 **/trajectory.pdb
 **/traj.pdb
+
+*basement*
