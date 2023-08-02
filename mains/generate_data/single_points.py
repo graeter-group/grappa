@@ -32,11 +32,16 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
     METHOD = 'bmk'
     BASIS = '6-311+G(2df,p)'
-    if not memory is None:
+
+    if not memory is None and memory > 0:
         MEMORY = f'{int(memory)}GB'
     else:
         MEMORY = None
-    NUM_THREADS=num_threads
+        
+    if not num_threads is None and num_threads > 0:
+        NUM_THREADS=num_threads
+    else:
+        NUM_THREADS = None
 
 
     pdb_folder = Path(pdb_folder)
@@ -123,7 +128,7 @@ def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threa
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
             print()
-            print(f"generating states for {i}")
+            print(f"calculating states for {i}")
             # calc_states(pdb_folder)
             try:
                 calc_states(pdb_folder, n_states=n_states, memory=memory, num_threads=num_threads)
@@ -133,15 +138,15 @@ def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threa
                 if not skip_errs:
                     raise
 
-                print(f"failed to generate states for {i} ({Path(folder).stem}): {type(e)}\n: {e}")
+                print(f"failed to calculate states for {i} ({Path(folder).stem}): {type(e)}\n: {e}")
                 # raise
                 pass
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Generate states for a given folder.')
+    parser = argparse.ArgumentParser(description='Calculates states for a given folder.')
     parser.add_argument('folder', type=str, help='The folder containing the PDB files.')
-    parser.add_argument('--n_states', '-n', type=int, help='The number of states to generate.', default=None)
+    parser.add_argument('--n_states', '-n', type=int, help='The number of states to calculate.', default=None)
     parser.add_argument('--skip_errs', '-s', action='store_true', help='Skip errors.', default=False)
     parser.add_argument('--memory', '-m', type=int, help='The amount of memory to use.', default=32)
     parser.add_argument('--num_threads', '-t', type=int, help='The number of threads to use.', default=8)
