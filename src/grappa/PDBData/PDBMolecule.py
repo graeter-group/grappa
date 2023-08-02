@@ -388,9 +388,11 @@ class PDBMolecule:
         If the Molecule is already parametrised, forcefield, allow_radicals, collagen and get_charges are ignored.
         """
         if collagen:
-            classical_ff = collagen_utility.get_collagen_forcefield()
+            classical_ff = collagen_utility.append_collagen_templates(classical_ff)
 
         if not "n2" in self.graph_data.keys():
+            assert classical_ff is not None, "Please provide a forcefield for the parametrization."
+            
             g = self.parametrize(forcefield=classical_ff, allow_radicals=allow_radicals, collagen=collagen, get_charges=get_charges)
         
         # in this case we assume that the graph data is already stored in the object and we initialize the graph from this:
@@ -431,7 +433,7 @@ class PDBMolecule:
         """
 
         if collagen:
-            forcefield = collagen_utility.get_collagen_forcefield()
+            forcefield = collagen_utility.append_collagen_templates(forcefield)
 
         if isinstance(forcefield, str):
             assert len(self.pdb) == 1, "If forcefield is a string, a smiles string must be present in the object."
@@ -1088,7 +1090,7 @@ class PDBMolecule:
 
         
         if collagen:
-            forcefield = collagen_utility.get_collagen_forcefield()
+            forcefield = collagen_utility.append_collagen_templates(forcefield)
 
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 1*femtoseconds)
 
@@ -1216,7 +1218,7 @@ class PDBMolecule:
         from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
 
         if collagen:
-            forcefield = collagen_utility.get_collagen_forcefield()
+            forcefield = collagen_utility.append_collagen_templates(forcefield)
 
         # generate a dataset
 

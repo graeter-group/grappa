@@ -46,7 +46,7 @@ class CustomReporter(object):
 
         steps = np.array(self.steps)
 
-        potential_energies = np.array(self.potential_energies)
+        potential_energies = np.array(potential_energies)
         temperatures = np.array(self.temperatures)
 
         if sampling_steps is not None:

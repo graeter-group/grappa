@@ -48,6 +48,7 @@ class SysWriter:
                  classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
                  allow_radicals:bool=True,
                  radical_indices:List[int]=None,
+                 smiles_flag:bool=False,
                  **system_kwargs) -> None:
         """
         If allow radicals is true and no radical indices are provided, uses the classical forcefield to determine the radical indices. For this the force field must fail to match the residues containing radicals. If the radical indices are provided, assume that these are all radicals.
@@ -89,6 +90,7 @@ class SysWriter:
 
         self.additional_features = None # additional features to be stored in the graph. must be a torch tensor of shape (n_atoms, n_features) with dtype torch.float32
 
+        self.cyclic_impropers = True # whether to store 3 impropers in the graph or only one. if True, stores not only (1,2,3,4) but also (2,4,3,1) and (4,1,3,2). if False, only stores (1,2,3,4).
 
         # ===============================
         # initialisation:
@@ -115,6 +117,9 @@ class SysWriter:
 
         if not self.classical_ff is None:
             self.sys = self.classical_ff.createSystem(top, **system_kwargs)
+
+        if self.classical_ff is None and not smiles_flag:
+            raise ValueError("No forcefield provided.")
 
     @classmethod
     def from_bonds(cls,
@@ -219,7 +224,7 @@ class SysWriter:
         system_generator = SystemGenerator(forcefields=amber_forcefields, small_molecule_forcefield=ff, forcefield_kwargs=forcefield_kwargs)
 
         # initialize an empty object:
-        self = cls(top=top, classical_ff=None, allow_radicals=False)
+        self = cls(top=top, classical_ff=None, allow_radicals=False, smiles_flag=True)
 
 
         self.sys = system_generator.create_system(
@@ -441,7 +446,7 @@ class SysWriter:
                 if with_parameters:
 
                     k_proper = np.zeros((n_torsions, self.proper_periodicity), dtype=np.float32)
-                    k_improper = np.zeros((n_torsions, self.improper_periodicity), dtype=np.float32)
+                    k_improper = np.zeros((n_torsions*3, self.improper_periodicity), dtype=np.float32)
 
 
                 for i in range(force.getNumTorsions()):
@@ -487,6 +492,13 @@ class SysWriter:
                         self.interaction_indices["n4_improper"][(atom1, atom2, atom3, atom4, periodicity)] = i
                         if not (atom1, atom2, atom3, atom4) in improper_idxs:
                             improper_idxs.append((atom1, atom2, atom3, atom4))
+                            if self.cyclic_impropers:
+                                # also append permuted versions of this. we wish to enforce invariance of the enrgy under permutations of the outer atoms. we assume that the central atom is atom3 as usual in amber forcefields: http://archive.ambermd.org/201305/0131.html
+                                # we can reduce the permutations necessary from 6 to 3 since the dihedrals are not independent but are antisymmetric under permutation of atoms in positions 1 and 4. therefore we can express the outer-atom-permutation-symmetric energy as an antisymmetric k and 3 different orderings of the outer atoms. 
+                                improper_idxs.append((atom2, atom4, atom3, atom1))
+                                improper_idxs.append((atom4, atom1, atom3, atom2))
+
+                                # their parameters are kept to zero. a model will not be able to learn to fit these parameters directly, because it is arbitrary which of the 3 permutations is the one that is present in amber.
 
                             if with_parameters:
                                 # we just appended to tuple to the indices, so the length of the improper indices -1 is the position in the graph

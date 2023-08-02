@@ -88,7 +88,7 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
     if plot:
         for rep in simulation.reporters:
             if isinstance(rep, CustomReporter):
-                rep.plot(sampling_steps=sampling_steps, filename=str(Path(pdb_folder)/Path("sampling.png")))
+                rep.plot(sampling_steps=sampling_steps, filename=str(Path(pdb_folder)/Path("sampling.png")), potential_energies=openmm_energies)
                 break
 
 
@@ -105,7 +105,6 @@ def generate_all_states(folder, n_states=10, temperature=300, plot=False, betwee
                 print(f"failed to generate states for {i} in {pdb_folder.stem}:{type(e)}:\n{e}")
                 print("-----------------------------------\n")
                 raise
-                continue
 
 if __name__ == "__main__":
     import argparse

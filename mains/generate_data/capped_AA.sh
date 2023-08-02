@@ -13,3 +13,5 @@ python generate_states.py data/pep1/ -n 10 --temperature 400
 python single_points.py data/pep1/ --skip_errs
 
 python validate_qm.py data/pep1/
+
+rm *.clean

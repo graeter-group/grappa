@@ -36,7 +36,7 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
     ds.filter_confs(max_energy=200, max_force=500, reference=FILTER_REF)
 
     ds.save_npz(storepath, overwrite=overwrite)
-    ds.save_dgl(str(storepath)+"_dgl.bin", overwrite=overwrite)
+    # ds.save_dgl(str(storepath)+"_dgl.bin", overwrite=overwrite)
     #%%
 
     
@@ -45,7 +45,7 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
     ds.filter_confs(max_energy=max_energy, max_force=max_force, reference=FILTER_REF)
 
     ds.save_npz(str(storepath)+"_filtered", overwrite=overwrite)
-    ds.save_dgl(str(storepath)+"_filtered_dgl.bin", overwrite=overwrite)
+    # ds.save_dgl(str(storepath)+"_filtered_dgl.bin", overwrite=overwrite)
 
 
 

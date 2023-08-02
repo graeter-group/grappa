@@ -65,7 +65,8 @@ class PDBDataset:
             idxs = list(range(len(self)))
 
         if self.info:
-            print(f"converting PDBDataset to {len(idxs)} dgl graphs...")
+            n_idxs = len(idxs) if isinstance(idxs, list) else ""
+            print(f"converting PDBDataset to {n_idxs} dgl graphs...")
 
         def _get_graph(i, idx):
             if self.info:
@@ -108,9 +109,9 @@ class PDBDataset:
             test_names = unique_names[n_train+n_val:]
         else:
             if existing_split_names is not None:
-                train_names = list(set(names) & set(existing_split_names[0]))
-                val_names = list(set(names) & set(existing_split_names[1]))
-                test_names = list(set(names) & set(existing_split_names[2]))
+                train_names = list(set(names).intersection(set(existing_split_names[0])))
+                val_names = list(set(names).intersection(set(existing_split_names[1])))
+                test_names = list(set(names).intersection(set(existing_split_names[2])))
                 remaining_names = list(set(unique_names) - set(train_names + val_names + test_names))
                 
                 n_train = int(len(remaining_names) * split[0])
@@ -130,6 +131,13 @@ class PDBDataset:
         train_indices = [i for i, name in enumerate(names) if name in train_names]
         val_indices = [i for i, name in enumerate(names) if name in val_names]
         test_indices = [i for i, name in enumerate(names) if name in test_names]
+
+        # add existing split names to the names obtained from this split
+        if existing_split_names is not None:
+            train_names = list(set(train_names).union(set(existing_split_names[0])))
+            val_names = list(set(val_names).union(set(existing_split_names[1])))
+            test_names = list(set(test_names).union(set(existing_split_names[2])))
+        
         
         return (np.array(train_indices), np.array(val_indices), np.array(test_indices)), (train_names, val_names, test_names)
 
@@ -746,55 +754,215 @@ class PDBDataset:
                 json.dump(rmse_data, f)
 
         return eval_data, rmse_data
-    
+        
+    @staticmethod
+    def create_splitted_datasets(datasets:List["PDBDataset"], split:Tuple[float, float, float], seed:int=0)->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+        """
+        Order is: Train, Validation, Test
+        Function that splits the datasets acording to the given split ratio. If name_split is given, the split will be done such that molecules with name appearing in any split of existing_split_names are in the same split.
+        Returns a list of the indices of the split datasets of shape (n_dataset, 3, n_molecules_in_split)
+        To do this, the function first splits dataset with the most molecules, uses the names obtained there for the split of the second most and so on.
+        """
+        # first get the number of molecules in each dataset:
+        n_mols = [len(dataset) for dataset in datasets]
+        # now get the order of the datasets such that len(datasets[i]) <= len(datasets[i+1])
+        # this is because we want to split the smaller datasets first. Otherwise, small datasets might end up entirely in the train set.
+        order = np.argsort(n_mols)[::-1]
 
-def create_splitted_datasets(datasets:List[PDBDataset], split:Tuple[float, float, float], seed:int=0)->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+        split_indices = [[]]*len(datasets)
+        split_names = None
+        for i in order:
+            dataset = datasets[i]
+            split_idxs, split_names = dataset.split(split, seed=seed, existing_split_names=split_names)
+            split_indices[i] = split_idxs
+
+        return split_indices, split_names
+
+    @staticmethod
+    def get_splitted_datasets(datasets:List["PDBDataset"], split_names:Tuple[List[str], List[str], List[str]])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+        """
+        Order is: Train, Validation, Test
+        Split the dataset according to the given split_names.
+        """
+        split_indices = [tuple([])]*len(datasets)
+        split_names = copy.deepcopy(split_names)
+        for i in range(len(datasets)):
+            dataset = datasets[i]
+            split_idxs, split_names = dataset.split(seed=0, split=[0.8, 0.1, 0.1], existing_split_names=split_names)
+            split_indices[i] = split_idxs
+
+        return split_indices, split_names
+
+    @staticmethod
+    def get_dgl_splits(datasets:List["PDBDataset"], split_indices:List[Tuple[np.ndarray, np.ndarray, np.ndarray]])->List[Tuple[List[dgl.DGLGraph], List[dgl.DGLGraph], List[dgl.DGLGraph]]]:
+        """
+        Order is: Train, Validation, Test
+        Returns [(train_dgl_list, val_dgl_list, test_dgl_list) for ds in datasets]
+        """
+        dgl_splits = [tuple([])]*len(datasets)
+        for i in range(len(datasets)):
+            dataset = datasets[i]
+            split_idxs = split_indices[i]
+
+            dgl_splits[i] = tuple(dataset.to_dgl(split_idxs[loader_type]) for loader_type in range(3))
+
+        return dgl_splits
+
+
+
+
+
+from dgl.dataloading import GraphDataLoader
+import json
+
+
+class SplittedDataset:
     """
-    Order is: Train, Validation, Test
-    Function that splits the datasets acording to the given split ratio. If name_split is given, the split will be done such that molecules with name appearing in any split of existing_split_names are in the same split.
-    Returns a list of the indices of the split datasets of shape (n_dataset, 3, n_molecules_in_split)
-    To do this, the function first splits dataset with the most molecules, uses the names obtained there for the split of the second most and so on.
+    Class that holds train, val and test sets for several sub-datasets to be able to differentiate between them.
     """
-    # first get the number of molecules in each dataset:
-    n_mols = [len(dataset) for dataset in datasets]
-    # now get the order of the datasets such that len(datasets[i]) >= len(datasets[i+1])
-    order = np.argsort(n_mols)[::-1]
+    def __init__(self) -> None:
 
-    split_indices = []*len(datasets)
-    split_names = None
-    for i in order:
-        dataset = datasets[i]
-        split_idxs, split_names = dataset.split(split, seed=seed, existing_split_names=split_names)
-        split_indices[i] = split_idxs
+        split_indices:List[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None
 
-    return split_indices, split_names
+        split_names:Tuple[List[str], List[str], List[str]] = None
+
+        dgl_splits:List[Tuple[List[dgl.DGLGraph], List[dgl.DGLGraph], List[dgl.DGLGraph]]] = None
 
 
-def get_splitted_datasets(datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
-    """
-    Order is: Train, Validation, Test
-    Split the dataset according to the given split_names.
-    """
-    split_indices = []*len(datasets)
-    split_names = copy.deepcopy(split_names)
-    for i in range(len(datasets)):
-        dataset = datasets[i]
-        split_idxs, split_names = dataset.split(seed=0, split=[0.8, 0.1, 0.1], existing_split_names=split_names)
-        split_indices[i] = split_idxs
-
-    return split_indices, split_names
 
 
-def get_dgl_splits(datasets:List[PDBDataset], split_indices:List[Tuple[np.ndarray, np.ndarray, np.ndarray]])->List[Tuple[List[dgl.DGLGraph], List[dgl.DGLGraph], List[dgl.DGLGraph]]]:
-    """
-    Order is: Train, Validation, Test
-    """
-    dgl_splits = []*len(datasets)
-    for i in range(len(datasets)):
-        dataset = datasets[i]
-        split_idxs = split_indices[i]
-        dgl_splits[i] = (dataset.to_dgl(split_idxs[loader_type] for loader_type in range(2)))
+    @classmethod
+    def create(cls, datasets:List[PDBDataset], split:Tuple[float, float, float]=(0.8,0.1,0.1), seed:int=0):
+        """
+        Generates the split_indices and split_names for the given datasets.
+        """
 
-    return dgl_splits
+        self = cls()
+
+        # generate the split indices:
+        self.split_indices, self.split_names = PDBDataset.create_splitted_datasets(datasets, split, seed)
+
+        # write the dgl datasets:
+        self.make_dgl(datasets=datasets)
+
+        return self
 
 
+    def get_full_loaders(self, shuffle:bool=True)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+        """
+        Returns the shuffled loaders for the full datasets.
+        """
+        if self.dgl_splits is None:
+            raise ValueError("No dgl splits have been created yet.")
+        
+        tr_ds = [g for subset in self.dgl_splits for g in subset[0]]
+        val_ds = [g for subset in self.dgl_splits for g in subset[1]]
+        test_ds = [g for subset in self.dgl_splits for g in subset[2]]
+
+        tr_loader = GraphDataLoader(tr_ds, shuffle=shuffle)
+        val_loader = GraphDataLoader(val_ds, shuffle=shuffle)
+        test_loader = GraphDataLoader(test_ds, shuffle=shuffle)
+
+        return tr_loader, val_loader, test_loader
+
+
+
+    def get_loaders(self, index:int)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+        """
+        Returns the shuffled loaders for the given subdataset.
+        """
+        if self.dgl_splits is None:
+            raise ValueError("No dgl splits have been created yet.")
+        
+        tr_ds = self.dgl_splits[index][0]
+        val_ds = self.dgl_splits[index][1]
+        test_ds = self.dgl_splits[index][2]
+
+        tr_loader = GraphDataLoader(tr_ds, shuffle=True)
+        val_loader = GraphDataLoader(val_ds, shuffle=True)
+        test_loader = GraphDataLoader(test_ds, shuffle=True)
+
+        return tr_loader, val_loader, test_loader
+
+
+
+    def save(self, filename):
+        """
+        Saves the split_indices and split_names for the given datasets in a npz/json file.
+        """
+        with open(filename + ".json", "w") as f:
+            json.dump(list(self.split_indices), f)
+
+        # save the split indices:
+        out = {}
+        for i in range(len(self.split_indices)):
+            out["train_idxs_" + str(i)] = self.split_indices[i][0]
+            out["val_idxs_" + str(i)] = self.split_indices[i][1]
+            out["test_idxs_" + str(i)] = self.split_indices[i][2]
+
+        np.savez(filename + ".npz", **out)
+
+
+
+    @classmethod
+    def load(cls, filename, datasets:List[PDBDataset]):
+        """
+        Loads the split_indices and split_names for the given datasets from a npz file.
+        """
+        self = cls()
+        # load the split indices and split names:
+        with open(filename + ".json", "r") as f:
+            self.split_names = tuple(json.load(f))
+
+        # load the split indices:
+        split_idxs = np.load(filename + ".npz")
+
+        assert len(split_idxs.keys()) == 3*len(datasets), f"The number of datasets does not match the number of split indices: {len(split_idxs.keys())} != {3*len(datasets)}"
+
+        for i in range(len(datasets)):
+            self.split_indices[i] = (split_idxs["train_idxs_" + str(i)], split_idxs["val_idxs_" + str(i)], split_idxs["test_idxs_" + str(i)])
+
+        # write the dgl datasets:
+        self.make_dgl(datasets)
+
+        return self
+
+
+    @classmethod
+    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]]):
+        """
+        Generates the split_indices and split_names for the given datasets, contrained by the names in split_names.
+        """
+
+        self = cls()
+
+        # generate the split indices:
+        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names)
+
+        # write the dgl datasets:
+        self.make_dgl(datasets)
+
+        return self
+
+    @classmethod
+    def load_from_names(cls, datasets:List[PDBDataset], filename):
+        """
+        Generates the split_indices and split_names for the given datasets, contrained by the names in split_names stored at filename.
+        """
+
+        # load the split indices and split names:
+        with open(filename + ".json", "r") as f:
+            split_names = tuple(json.load(f))
+        
+        return SplittedDataset.create_with_names(datasets, split_names)
+
+
+
+    def make_dgl(self, datasets:List[PDBDataset]):
+        """
+        Creates the dgl splits from the split_indices.
+        """
+        if self.split_indices is None:
+            raise ValueError("No split indices have been created yet.")
+        
+        self.dgl_splits = PDBDataset.get_dgl_splits(datasets, self.split_indices)

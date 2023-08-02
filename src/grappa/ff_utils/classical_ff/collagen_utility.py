@@ -1,10 +1,17 @@
 from openmm.app.topology import Topology
 from openmm.app import ForceField
 from pathlib import Path
+from copy import deepcopy
 
 def get_collagen_forcefield():
     ff_path = Path(__file__).parent / Path("collagen_ff.xml")
     return ForceField(str(ff_path))
+
+def append_collagen_templates(forcefield:ForceField):
+    """
+    Returns a deep copy of the forcefield provided with templates for DOP and HYP appended. These do not contain N-terminal and C-terminal patches for DOP and HYP.
+    """
+    pass
 
 
 def add_bonds(top:Topology, allow_radicals=False):
