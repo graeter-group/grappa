@@ -104,8 +104,11 @@ def geometry_in_graph(g):
 
         # write this in the graph:
         if "n4_improper" in g.ntypes:
-            num_propers = g.nodes["n4"].data["idxs"].shape[0]
-            g.nodes["n4"].data["x"] = x[:num_propers]
+            if not "n4" in g.ntypes:
+                num_propers = 0
+            else:
+                num_propers = g.nodes["n4"].data["idxs"].shape[0]
+                g.nodes["n4"].data["x"] = x[:num_propers]
             g.nodes["n4_improper"].data["x"] = x[num_propers:]
         else:
             g.nodes["n4"].data["x"] = x

@@ -417,8 +417,14 @@ class WriteTorsionParameters(torch.nn.Module):
                 k_mean = torch.zeros(n_periodicity)
                 k_std = torch.ones(n_periodicity)
             else:
-                k_mean=stat_dict["mean"]["n4_improper_k"]
-                k_std=stat_dict["std"]["n4_improper_k"]
+                k_mean = stat_dict["mean"]["n4_improper_k"]
+                k_std = stat_dict["std"]["n4_improper_k"]
+                
+                if len(k_mean) != n_periodicity:
+                    raise ValueError(f"n_periodicity is {n_periodicity} but the stat_dict contains {len(k_mean)} values for the mean of the improper torsion parameters.")
+                
+                if len(k_std) != n_periodicity:
+                    raise ValueError(f"n_periodicity is {n_periodicity} but the stat_dict contains {len(k_std)} values for the std of the improper torsion parameters.")
 
         k_mean = k_mean.unsqueeze(dim=0)
         k_std = k_std.unsqueeze(dim=0)

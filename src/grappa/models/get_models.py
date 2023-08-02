@@ -14,7 +14,7 @@ from typing import Union, List, Tuple
 
 
 # decide for each interaction type its own readout module in the future
-def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_improper=True, attentional=True, n_att=2, n_heads=8, dense_layers=2, dropout=0.2, layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True):
+def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_improper=True, attentional=True, n_att=2, n_heads=8, dense_layers=2, dropout=0.2, layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, n_periodicity_proper=6, n_periodicity_improper=3):
     """
 
     Attention readout hyperparameters (only have an effect if attentional=True):
@@ -39,11 +39,11 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
 
             angle = attention_readout.WriteAngleParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
 
-            torsion = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict = statistics, improper=False, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
+            torsion = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=False, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity=n_periodicity_proper)
 
 
         if use_improper:
-            improper = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=True, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
+            improper = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=True, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity=n_periodicity_improper)
         else:
             improper = attention_readout.Identity()
 
@@ -77,7 +77,7 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0.2, layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, rep_dropout=0):
+def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0., layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, rep_dropout=0, n_periodicity_proper=6, n_periodicity_improper=3):
     
     if statistics is None:
         statistics = get_default_statistics()

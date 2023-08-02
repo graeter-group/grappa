@@ -16,8 +16,11 @@ def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
     """
 
     if tag == "example":
-        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/tutorial/best_model.pt"
+        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
         config = None
+
+    elif tag == "kimmdy_example":
+        raise NotImplementedError("This model is not yet available.")
     else:
         raise ValueError(f"Unknown tag {tag}")
     
@@ -62,6 +65,9 @@ def model_from_config(config_path: Union[Path, str] = None, config: Dict = None,
         "layer_norm": args["layer_norm"],
         "dropout": args["dropout"],
         "rep_dropout": args["rep_dropout"],
+        "attentional": args["attentional"],
+        "n_periodicity_proper": args["n_periodicity_proper"],
+        "n_periodicity_improper": args["n_periodicity_improper"],
     }
 
     model = get_models.get_full_model(**model_args)
@@ -89,21 +95,12 @@ def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Un
 
     model = model.to(device)
 
-    try:
-        model.load_state_dict(torch.load(model_path, map_location=device))
-    except RuntimeError as R:
-        try:
-            # try to load without improper torsion (frequent error)
-            config_args = run_utils.load_yaml(config_path)
-            config_args["use_improper"] = not config_args["use_improper"]
-            return model_from_config(config=config_args)
-        except:
-            # raise the original error
-            raise R
+    model.load_state_dict(torch.load(model_path, map_location=device))
+
 
     return model
 
-def get_default_model_config():
+def get_large_model_config():
     args = {
         "width":128,
         "rep_feats":1024,
@@ -115,7 +112,7 @@ def get_default_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
-        "dropout":0.2,
+        "dropout":0,
         "rep_dropout":0.,
         "n_att_readout":3,
         "dense_layers_readout":2,
@@ -123,8 +120,37 @@ def get_default_model_config():
         "reducer_feats":512,
         "attention_hidden_feats":1024,
         "positional_encoding":True,
+        "attentional":True,
+        "n_periodicity_proper":6,
+        "n_periodicity_improper":3,
     }
 
     return args
 
 
+def get_default_model_config():
+    args = {
+        "width":64,
+        "rep_feats":512,
+        "readout_width":256,
+        "n_conv":2,
+        "n_att":2,
+        "n_heads":8,
+        "old_model":False,
+        "use_improper":True,
+        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+        "layer_norm":True,
+        "dropout":0,
+        "rep_dropout":0.,
+        "n_att_readout":2,
+        "dense_layers_readout":2,
+        "n_heads_readout":16,
+        "reducer_feats":256,
+        "attention_hidden_feats":512,
+        "positional_encoding":True,
+        "attentional":True,
+        "n_periodicity_proper":6,
+        "n_periodicity_improper":3,
+    }
+
+    return args
