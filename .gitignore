@@ -88,3 +88,4 @@ mains/**.npy
 **/traj.pdb
 
 *basement*
+*scratch*

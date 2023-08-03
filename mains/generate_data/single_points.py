@@ -1,8 +1,10 @@
 from ase import Atoms
 from ase.calculators.psi4 import Psi4
-from ase.io import read, write
-from ase import units as ase_units
 import numpy as np
+
+import os
+from pathlib import Path
+
 
 # import openmm as mm
 from pathlib import Path
@@ -32,6 +34,13 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
     METHOD = 'bmk'
     BASIS = '6-311+G(2df,p)'
+
+    scratch = Path(__file__).parent/"psi_scratch"
+    if not scratch.exists():
+        os.makedirs(str(scratch), exist_ok=True)
+    os.environ['PSI_SCRATCH'] = str(scratch)
+
+
 
     if not memory is None and memory > 0:
         MEMORY = f'{int(memory)}GB'
