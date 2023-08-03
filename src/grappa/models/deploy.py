@@ -19,8 +19,9 @@ def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
         path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
         config = None
 
-    elif tag == "kimmdy_example":
-        raise NotImplementedError("This model is not yet available.")
+    elif tag == "radical_example":
+        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/radical_example/best_model.pt"
+        config = None
     else:
         raise ValueError(f"Unknown tag {tag}")
     

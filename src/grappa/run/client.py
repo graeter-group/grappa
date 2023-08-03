@@ -42,7 +42,7 @@ def get_args():
     parser.add_argument('--ds_short', default=None, type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
     parser.add_argument('--collagen', default=False, action="store_true", help="Whether or not to use the collagen forcefield and dataset, i.e. including hyp and dop. (default: False)")
     parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
-    parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {'n4_k':1., 'n4_improper_k': 10.})")
+    parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
@@ -131,8 +131,8 @@ def run_(args, vpath=[]):
 
         elif ds_short == "eric":
             args.ds_short.remove("eric")
-            args.ds_short += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
-            args.ds_short += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
+            args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
+            args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
         
         else:
             raise ValueError(f"ds_short {ds_short} not recognized")

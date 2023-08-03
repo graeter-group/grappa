@@ -1012,11 +1012,11 @@ class TrainSequentialParams(GrappaTrain):
                 print(level, ":" , batch.nodes[level].data.keys())
             raise
 
+
         if l2_dict is None:
             params_l2 = torch.tensor([], device=device)
-        elif len(list(l2_dict.keys()))==0:
-            params_l2 = torch.tensor([], device=device)
         else:
+            # restructure the dict:
             l2_dict_new = {}
             for k, v in l2_dict.items():
                 if not "n4_improper" in k:
@@ -1026,13 +1026,18 @@ class TrainSequentialParams(GrappaTrain):
                     param = k.split("_")[-1]
                 if (level, param) in param_types:
                     l2_dict_new[(level, param)] = v
-            params_l2 = torch.cat(
-                [
-                    (batch.nodes[level].data[param].to(device)*l2_dict_new[(level, param)]).flatten()
-                    if level in batch.ntypes else torch.tensor([], device=device)
-                    for level, param in l2_dict_new.keys()
-                ]
-            , dim=0)
+
+            # create the params:
+            if len(list(l2_dict_new.keys()))==0:
+                params_l2 = torch.tensor([], device=device)
+            else:
+                params_l2 = torch.cat(
+                    [
+                        (batch.nodes[level].data[param].to(device)*l2_dict_new[(level, param)]).flatten()
+                        if level in batch.ntypes else torch.tensor([], device=device)
+                        for level, param in l2_dict_new.keys()
+                    ]
+                , dim=0)
 
                 
 

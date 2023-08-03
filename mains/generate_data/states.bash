@@ -44,17 +44,3 @@ python generate_pdbs.py --n_max "$n_molecules" -l 3 --folder "$folder"
 
 conda activate psi4
 python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot
-
-python single_points.py "$folder"/ --skip_errs
-
-python validate_qm.py "$folder"/
-
-# Check if original folder exists, if not create it
-if [ ! -d "$orig_folder" ]; then
-  mkdir -p "$orig_folder"
-fi
-
-# Copy all subfolders from the folder with _arg to the original folder
-rsync -a "$folder"/ "$orig_folder"/
-
-rm *.clean

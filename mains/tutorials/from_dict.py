@@ -8,10 +8,12 @@ from grappa.ff import ForceField
 from grappa.ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
 import openmm.unit
 
-# path to the grappa model the forcefield is supposed to use:
+# path to the grappa model the forcefield is supposed to use (this can also be done by tag):
 mpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
 
+# classical forcefield that grapp auses for the nonbonded interactions:
 classical_ff = get_collagen_forcefield()
+
 ff = ForceField(model_path=mpath, classical_ff=classical_ff)
 
 # set angle to degrees:

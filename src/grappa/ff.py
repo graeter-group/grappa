@@ -99,7 +99,7 @@ class ForceField:
 
         example - An example model, not fine-tuned for good performance. Builds upon amber99sbildn. Does not allow radicals. For ParamDict, uses degrees instead of radians for angles and torsions.
 
-        kimmdy_example - An example model, not fine-tuned for good performance. Builds upon an extension of amber99sbildn with DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
+        radical_example - An example model, not fine-tuned for good performance. Builds upon an extension of amber99sbildn with DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
 
         """
 
@@ -127,8 +127,8 @@ class ForceField:
 
             
 
-        elif tag == "kimmdy_example":
-            model_tag = "kimmdy_example"
+        elif tag == "radical_example":
+            model_tag = "radical_example"
             model = model_from_tag(model_tag, device=device)
 
             classical_ff = get_collagen_forcefield() if classical_ff is None else classical_ff

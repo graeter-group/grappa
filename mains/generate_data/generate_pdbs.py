@@ -24,9 +24,12 @@ if __name__ == "__main__":
     # Generate dataset
     if args.n_max > 0:
         assert args.length is not None, "Length must be specified when generating a fixed number of samples."
-        generate(n_max=args.n_max, length=args.length, outpath=str(Path(__file__).parent/args.folder), exclude=exclude)
+        outpath = str(Path(__file__).parent/args.folder)
+        print(outpath)
+        generate(n_max=args.n_max, length=args.length, outpath=outpath, exclude=exclude)
 
     for s in args.sequence:
         path = str(Path(__file__).parent/args.folder/s) if not args.folder is None else str(Path(__file__).parent/'data'/str(len(s)))
+        
         os.makedirs(path, exist_ok=True)
         generate_peptide(code=s, dir=path, e=False, silent=True, overwrite=True, openmm_standard=True)

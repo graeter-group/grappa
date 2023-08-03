@@ -41,6 +41,8 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
     os.environ['PSI_SCRATCH'] = str(scratch)
 
 
+    ACCURACY = 0.1 #in kcal/mol
+
 
     if not memory is None and memory > 0:
         MEMORY = f'{int(memory)}GB'
@@ -66,15 +68,25 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
     if not total_charge.shape == (1,):
         raise ValueError(f"total_charge.shape must be (1,), is: {total_charge.shape}")
     total_charge = int(total_charge[0])
+
     if not np.isclose(total_charge, round(total_charge,0), atol=1e-5):
         raise ValueError(f"total_charge is no integer: {total_charge}")
+    
+
+    multiplicity = 1
+
+    if (pdb_folder/Path("multiplicity.npy")).exists():
+        multiplicity = np.load(str(pdb_folder/Path("multiplicity.npy")))
+        if not multiplicity.shape == (1,):
+            raise ValueError(f"multiplicity.shape must be (1,), is: {multiplicity.shape}")
+        multiplicity = int(multiplicity[0])
 
 
   
     # Calculate energies and forces using Psi4
     psi4_energies = []
     psi4_forces = []
-    
+
     # load if present:
     if (pdb_folder/Path("psi4_energies.npy")).exists() and (pdb_folder/Path("psi4_forces.npy")).exists():
         psi4_energies = [e for e in np.load(str(pdb_folder/Path("psi4_energies.npy")))]
@@ -91,6 +103,15 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
         if len(missing_indices) > n_states:
             missing_indices = missing_indices[:n_states]
 
+    print(f"calculating {len(missing_indices)} states using the config\n")
+    print(f"\tMETHOD: {METHOD}")
+    print(f"\tBASIS: {BASIS}")
+    print(f"\tMEMORY: {MEMORY}")
+    print(f"\tNUM_THREADS: {NUM_THREADS}")
+    print(f"\ttotal_charge: {total_charge}")
+    print(f"\tmultiplicity: {multiplicity}")
+
+
     for num_calculated, i in enumerate(missing_indices):
         
         msg = f"calculating state number {i}/{len(positions)-1}... Progress: {num_calculated}/{len(missing_indices)-1}, time elapsed: {round((time() - start)/60., 2)} min"
@@ -103,14 +124,14 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
         ###################
         # set up the calculator:
-        kwargs = {"atoms":atoms, "method":METHOD, "basis":BASIS, "charge":total_charge, "multiplicity":1}
+        kwargs = {"atoms":atoms, "method":METHOD, "basis":BASIS, "charge":total_charge, "multiplicity":1, "d_convergence":ACCURACY*23.06}
 
         if not MEMORY is None:
             kwargs["memory"] = MEMORY
         if not NUM_THREADS is None:
             kwargs["num_threads"] = NUM_THREADS
 
-        atoms.set_calculator(Psi4(atoms=atoms, method=METHOD, memory=MEMORY, basis=BASIS, num_threads=NUM_THREADS, charge=total_charge, multiplicity=1))
+        atoms.set_calculator(Psi4(atoms=atoms, method=METHOD, memory=MEMORY, basis=BASIS, num_threads=NUM_THREADS, charge=total_charge, multiplicity=multiplicity))
         ###################
 
         energy = atoms.get_potential_energy(apply_constraint=False) # units: eV

@@ -27,10 +27,6 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
     """
     model = model.to(device)
 
-    print(l2_dict)
-    print()
-    print(scale_dict)
-
     if not reduce_factor is None:
         raise NotImplementedError("reduce_factor is deprecated.")
 
