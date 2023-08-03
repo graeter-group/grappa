@@ -271,7 +271,7 @@ class PDBDataset:
         
 
         
-    def filter_confs(self, max_energy:float=60., max_force:float=200, reference=False)->None:
+    def filter_confs(self, max_energy:float=65., max_force:float=200, reference=False)->None:
         """
         Filters out conformations with energies or forces that are over 60 kcal/mol away from the minimum of the dataset (not the actual minimum). Remove molecules is less than 2 conformations are left. Apply this before parametrizing or re-apply the parametrization after filtering. Units are kcal/mol and kcal/mol/angstrom.
         """
@@ -518,25 +518,31 @@ class PDBDataset:
         self.mols[:] = [lambd(i, mol) for i, mol in enumerate(self.mols) ]
 
 
-    def calc_ff_data(self, forcefield):
+    def calc_ff_data(self, forcefield, suffix="", collagen:bool=False):
         """
         Calculates the energies and forces for the given forcefield and stores them in the molecules.
         """
 
-        # determine whether smiles or not:
-        pass
+        def _write_data(mol, idx):
+            # determine whether smiles or not:
+            if len(mol.pdb) == 1:
+                raise ValueError(f"Cannot calculate energies and forces for molecules given by a smiles string: Will have to use openff, this takes too long. Smiles is {mol.pdb[0]}")
+            
+            if self.info:
+                print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
+
+            energies, grads = mol.get_ff_data(forcefield, collagen=collagen)
+
+            mol.graph_data["g"][f"u{suffix}"] = energies
+            mol.graph_data["n1"][f"grad{suffix}"] = grads.transpose(1,0,2)
+            return mol
+        
+        self.mols[:] = [_write_data(mol, idx) for idx, mol in enumerate(self.mols)]
 
 
 
-    def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, plot_args:Dict[str, Any]={}, by_element=True, by_residue=True, scatter=True)->Tuple[Dict[str, float], Dict[str, float]]:
-        """
-        Calculates the RMSE and MAE of the data stored with suffix and returns a dictionary containing these. If a plotpath is given, also creates a scatterplot of the energies and forces, a histogram for the grad rmse per molecule and a histogram for the rmse per element/residue.
-        """
+    def get_eval_data(self, suffix, by_element, by_residue):
 
-        default_plot_args = {"fontsize":20, "ff_title":"Force Field"}
-        for key, value in default_plot_args.items():
-            if not key in plot_args.keys():
-                plot_args[key] = value
 
         def se(a, b):
             return np.sum((a-b)**2)
@@ -553,7 +559,8 @@ class PDBDataset:
         qm_grads = []
         ff_grads = []
 
-        rmse_per_mol = []
+        e_rmse_per_mol = []
+        grad_rmse_per_mol = []
 
         se_per_element = {}
         se_per_residue = {}
@@ -575,13 +582,16 @@ class PDBDataset:
                     ff_energies.append(en_ff-en_ff.mean())
                     qm_energies.append(en_mol-en_mol.mean())
                     
-                    rmse_per_mol.append(rmse(en_ff-en_ff.mean(), en_mol-en_mol.mean()))
+                    e_rmse_per_mol.append(rmse(en_ff-en_ff.mean(), en_mol-en_mol.mean()))
 
             if "n1" in mol.graph_data.keys():
                 if f_key in mol.graph_data["n1"].keys():
 
-                    grad_qm = mol.graph_data["n1"]["grad_qm"]
+                    # shape: atoms*confs*3
+                    grad_qm = mol.gradients.transpose(1,0,2)
                     grad_ff = mol.graph_data["n1"][f_key]
+
+                    grad_rmse_per_mol.append(rmse(grad_ff, grad_qm))
 
                     ff_grads.append(grad_ff.flatten())
                     qm_grads.append(grad_qm.flatten())
@@ -600,7 +610,7 @@ class PDBDataset:
                             for i, res in enumerate(mol.residues):
                                 if not res in se_per_residue.keys():
                                     se_per_residue[res] = 0
-                                se_per_residue[res] += se(mol.graph_data["n1"][f_key][i], mol.gradients[i])
+                                se_per_residue[res] += se(grad_ff[i], grad_qm[i])
                     if by_element or by_residue:
                         n_forces += np.prod(list(mol.gradients.shape))
 
@@ -649,6 +659,23 @@ class PDBDataset:
                 rmse_data[key][key2] = float(value2)
 
 
+        return eval_data, rmse_data, e_rmse_per_mol, grad_rmse_per_mol, ff_energies, qm_energies, ff_grads, qm_grads, rmse_per_element, rmse_per_residue
+
+
+
+
+    def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, by_element=True, by_residue=True, scatter=True, name="Forcefield", compare_suffix=None, fontsize=16, compare_name="reference")->Tuple[Dict[str, float], Dict[str, float]]:
+        """
+        Calculates the RMSE and MAE of the data stored with suffix and returns a dictionary containing these. If a plotpath is given, also creates a scatterplot of the energies and forces, a histogram for the grad rmse per molecule and a histogram for the rmse per element/residue.
+        """
+
+        def rmse(a,b):
+            return np.sqrt(np.mean((a-b)**2))
+
+        eval_data, rmse_data, e_rmse_per_mol, grad_rmse_per_mol, ff_energies, qm_energies, ff_grads, qm_grads, rmse_per_element, rmse_per_residue = self.get_eval_data(suffix=suffix, by_element=by_element, by_residue=by_residue)
+
+        if not compare_suffix is None:
+            _,_ , e_rmse_per_mol_compare, grad_rmse_per_mol_compare, _,_,_,_, rmse_per_element_compare, rmse_per_residue_compare = self.get_eval_data(suffix=compare_suffix, by_element=by_element, by_residue=by_residue)
 
         if not plotpath is None:
             plotpath = Path(plotpath)
@@ -657,12 +684,14 @@ class PDBDataset:
             if scatter:
 
                 # now create the plots:
-                fontsize = plot_args["fontsize"]
-                ff_title = plot_args["ff_title"]
+                ff_title = name
 
                 fig, ax = plt.subplots(1,2, figsize=(10,5))
 
-                ax[0].scatter(qm_energies, ff_energies)
+                if len(qm_energies)>1e4:
+                    ax[0].scatter(qm_energies, ff_energies, s=1, alpha=0.4)
+                else:
+                    ax[0].scatter(qm_energies, ff_energies)
                 ax[0].plot(qm_energies, qm_energies, color="black", linestyle="--")
                 ax[0].set_title("Energies [kcal/mol]]", fontsize=fontsize)
                 ax[0].set_xlabel("QM Energies", fontsize=fontsize)
@@ -670,10 +699,13 @@ class PDBDataset:
                 ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
                 # now the gradients:
-                ax[1].scatter(qm_grads, ff_grads, s=1, alpha=0.4)
+                if len(qm_grads)>1e5:
+                    ax[1].scatter(qm_grads, ff_grads, s=0.5, alpha=0.2)
+                else:
+                    ax[1].scatter(qm_grads, ff_grads, s=1, alpha=0.4)
                 ax[1].plot(qm_grads, qm_grads, color="black", linestyle="--")
-                ax[1].set_title("Gradients [kcal/mol/Å]", fontsize=fontsize)
-                ax[1].set_xlabel("QM Gradients", fontsize=fontsize)
+                ax[1].set_title("Forces [kcal/mol/Å]", fontsize=fontsize)
+                ax[1].set_xlabel("QM Forces", fontsize=fontsize)
                 ax[1].set_ylabel(f"{ff_title} Gradients", fontsize=fontsize)
                 ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
@@ -690,72 +722,113 @@ class PDBDataset:
                 plt.close()
 
             # now plot the rmse per molecule histogram:
-            fig, ax = plt.subplots(1,1, figsize=(5,5))
-            ax.hist(rmse_per_mol, bins=10)
-            ax.set_xlabel("RMSE [kcal/mol]", fontsize=fontsize)
-            ax.set_ylabel("Count", fontsize=fontsize)
-            ax.set_title("RMSE per molecule", fontsize=fontsize)
-            ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+            fig, ax = plt.subplots(1,2, figsize=(10,5))
+            ax[0].hist(e_rmse_per_mol, bins=10)
+            ax[0].set_xlabel("RMSE [kcal/mol]", fontsize=fontsize)
+            ax[0].set_ylabel("Count", fontsize=fontsize)
+            ax[0].set_title("Energy RMSE per Molecule", fontsize=fontsize)
+            ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+            
+            ax[1].hist(grad_rmse_per_mol, bins=10)
+            ax[1].set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+            ax[1].set_ylabel("Count", fontsize=fontsize)
+            ax[1].set_title("Force RMSE per Molecule", fontsize=fontsize)
+            ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
             plt.tight_layout()
             plt.savefig(plotpath / Path("rmse_per_mol.png"), dpi=300)
             plt.close()
 
-            # # now plot the rmse per element barplot:
-            # if by_element:
-            #     fig, ax = plt.subplots(1,1, figsize=(5,5))
-            #     ax.hist(list(rmse_per_element.values()), bins=10)
-            #     ax.set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
-            #     ax.set_ylabel("Count", fontsize=fontsize)
-            #     ax.set_title("Gradient RMSE per element", fontsize=fontsize)
-            #     ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
-            #     plt.tight_layout()
-            #     plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
-
-            # # now plot the rmse per residue barplot:
-            # if by_residue:
-            #     fig, ax = plt.subplots(1,1, figsize=(5,5))
-            #     ax.hist(list(rmse_per_residue.values()), bins=10)
-            #     ax.set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
-            #     ax.set_ylabel("Count", fontsize=fontsize)
-            #     ax.set_title("Gradient RMSE per residue", fontsize=fontsize)
-            #     ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
-            #     plt.tight_layout()
-            #     plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=300) 
 
             if by_element or by_residue:
+                if compare_suffix is None:
+                    def make_elem_plot(ax):
+                        # create a barplot:
+                        ax.bar(rmse_per_element.keys(), rmse_per_element.values())
+                        ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+                        ax.set_xlabel("Element", fontsize=fontsize)
+                        ax.set_title("Force RMSE per Element", fontsize=fontsize)
+                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+                        return ax
+                    
+                    def make_res_plot(ax):
+                        # create a barplot:
+                        ax.bar(rmse_per_residue.keys(), rmse_per_residue.values())
+                        ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+                        ax.set_xlabel("Residue", fontsize=fontsize)
+                        ax.set_title("Force RMSE per Residue", fontsize=fontsize)
+                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+                        return ax
 
-                def make_elem_plot(ax):
-                    # create a barplot:
-                    ax.bar(rmse_per_element.keys(), rmse_per_element.values())
-                    ax.set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
-                    ax.set_ylabel("Count", fontsize=fontsize)
-                    ax.set_title("Gradient RMSE per element", fontsize=fontsize)
-                    ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
-                    return ax
-                
-                def make_res_plot(ax):
-                    # create a barplot:
-                    ax.bar(rmse_per_residue.keys(), rmse_per_residue.values())
-                    ax.set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
-                    ax.set_ylabel("Count", fontsize=fontsize)
-                    ax.set_title("Gradient RMSE per residue", fontsize=fontsize)
-                    ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
-                    return ax
+                    if by_element and by_residue:
+                        fig, ax = plt.subplots(1,2, figsize=(10,5))
+                    
+                    else:
+                        fig, ax = plt.subplots(1,1, figsize=(5,5))
+                        ax = [ax]
+                    
+                    if by_element:
+                        ax[0] = make_elem_plot(ax[0])
+                    if by_residue:
+                        ax[-1] = make_res_plot(ax[-1])
 
-                if by_element and by_residue:
-                    fig, ax = plt.subplots(1,2, figsize=(10,5))
-                
+                    plt.tight_layout()
+                    plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
+                    plt.close()
+
                 else:
-                    fig, ax = plt.subplots(1,1, figsize=(5,5))
-                
-                if by_element:
-                    ax[0] = make_elem_plot(ax[0])
-                if by_residue:
-                    ax[-1] = make_res_plot(ax[-1])
+                    assert not compare_name is None
+                    def make_elem_plot(ax):
+                        # create a grouped barplot:
+                        barWidth = 0.35  # the width of the bars
+                        r1 = np.arange(len(rmse_per_element))
+                        r2 = [x + barWidth for x in r1]
+                        
+                        ax.bar(r1, rmse_per_element.values(), width=barWidth, label=name)
+                        ax.bar(r2, rmse_per_element_compare.values(), width=barWidth, label=compare_name)
+                        
 
-                plt.tight_layout()
-                plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
-                plt.close()
+                        ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+                        ax.set_xlabel("Element", fontsize=fontsize)
+                        ax.set_title("Force RMSE per Element", fontsize=fontsize)
+                        ax.set_xticks([r + barWidth / 2 for r in range(len(rmse_per_element))], rmse_per_element.keys())
+                        ax.legend()
+                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+                        return ax
+
+                    def make_res_plot(ax):
+                        # create a grouped barplot:
+                        barWidth = 0.35  # the width of the bars
+                        r1 = np.arange(len(rmse_per_residue))
+                        r2 = [x + barWidth for x in r1]
+                        
+                        ax.bar(r1, rmse_per_residue.values(), width=barWidth, label=name)
+                        ax.bar(r2, rmse_per_residue_compare.values(), width=barWidth, label=compare_name)
+                        
+                        ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+                        ax.set_xlabel("Residue", fontsize=fontsize)
+                        ax.set_title("Force RMSE per Residue", fontsize=fontsize)
+                        ax.set_xticks([r + barWidth / 2 for r in range(len(rmse_per_residue))], rmse_per_residue.keys())
+                        ax.legend()
+                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+                        return ax
+
+                    if by_element and by_residue:
+                        fig, ax = plt.subplots(1,2, figsize=(10,5))
+                    else:
+                        fig, ax = plt.subplots(1,1, figsize=(5,5))
+                        ax = [ax]
+
+                    if by_element:
+                        ax[0] = make_elem_plot(ax[0])
+                    if by_residue:
+                        ax[-1] = make_res_plot(ax[-1])
+
+                    plt.tight_layout()
+                    plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
+                    plt.close()
+
+
 
             # save the dicts with json:
             with open(plotpath / Path("eval_data.json"), "w") as f:

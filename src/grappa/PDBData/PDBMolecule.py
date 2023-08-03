@@ -1077,6 +1077,7 @@ class PDBMolecule:
 
 
 
+
     def get_ff_data(self, forcefield:Union[ForceField, Callable, str]=None, collagen:bool=False, quickload:bool=False)->Tuple[np.ndarray, np.ndarray]:
         """
         Returns energies, gradients that are calculated by the forcefield for all states xyz. Tha state axis is the zeroth axis.
@@ -1128,6 +1129,8 @@ class PDBMolecule:
         )
 
         return PDBMolecule.get_data_from_simulation(simulation=simulation, xyz=self.xyz)
+    
+
 
     @staticmethod
     def get_data_from_simulation(simulation:Simulation, xyz:np.ndarray)->Tuple[np.ndarray, np.ndarray]:
