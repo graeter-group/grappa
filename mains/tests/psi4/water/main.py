@@ -14,7 +14,7 @@ water = Atoms('H2O', positions=[(0, 0, 0), (0, 0.9572, 0), (0.9261, -0.2399, 0)]
 
 # Set calculator
 memory="16GB"
-num_threads=8
+num_threads=1
 calc = Psi4(atoms=water, method='HF', basis='6-31G', memory=memory, num_threads=num_threads)
 
 water.set_calculator(calc)

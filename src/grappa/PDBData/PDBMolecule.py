@@ -1311,7 +1311,7 @@ class PDBMolecule:
         assert not self.gradients is None, "gradients not set"
 
         energies, forces = self.get_ff_data(ff, quickload=compare_ref)
-        energies -= energies.min()
+        energies -= energies.mean()
         self_energies = self.energies - self.energies.min()
 
         fig, ax = plt.subplots(1,2, figsize=(10,5))

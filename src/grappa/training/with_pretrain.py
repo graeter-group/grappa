@@ -20,12 +20,16 @@ from .grappa_training import RMSE
 
 #%%
 
-def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=10, ref_ff="amber99sbildn", time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=None, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False, weight_decay=0):
+def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=10, time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=None, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False, weight_decay=0, scale_dict={}, l2_dict={}):
     """
     This function is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
     load_path: path to the version directory of the model to continue from.
     """
     model = model.to(device)
+
+    print(l2_dict)
+    print()
+    print(scale_dict)
 
     if not reduce_factor is None:
         raise NotImplementedError("reduce_factor is deprecated.")
@@ -37,10 +41,9 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
 
     if (not load) and (pretrain_epochs > 0):
         trainer = grappa_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={}, model_saving_interval=5, store_states=True,
-        reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
-        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=classification_epochs, bce_weight=bce_weight, storage_path=os.path.join(storage_path,version_name), eval_forces=True, param_statistics=param_statistics, param_factor=param_factor)
+        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=classification_epochs, bce_weight=bce_weight, storage_path=os.path.join(storage_path,version_name), eval_forces=True, param_statistics=param_statistics, param_factor=param_factor, scale_dict=scale_dict, l2_dict=l2_dict)
 
         #%%
         print("starting pretraining for version", pretrain_name, "\n")
@@ -129,7 +132,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
                     print("\ntime limit reached, stopping training\n")
                     self.more_training = False
 
-                if self.params["lr"] < 1e-8:
+                if self.params["lr"] < 1e-10 and self.epochs > 10:
                     self.log("\nminimum lr reached, stopping training\n")
                     print("\nminimum lr reached, stopping training\n")
                     self.more_training = False
@@ -144,10 +147,9 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         metrics = {}
 
         trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics=metrics, model_saving_interval=5, store_states=True,
-        reference_forcefield=ref_ff,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
-        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=-1, bce_weight=0., storage_path=storage_path, eval_forces=True, param_statistics=param_statistics, param_factor=param_factor)
+        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=-1, bce_weight=0., storage_path=storage_path, eval_forces=True, param_statistics=param_statistics, param_factor=param_factor, scale_dict=scale_dict, l2_dict=l2_dict)
 
         trainer.start = time.time()
 

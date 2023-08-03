@@ -77,10 +77,11 @@ class WriteEnergy(torch.nn.Module):
             if not term in g.ntypes:
                 continue
             contrib = WriteEnergy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion)
-            contrib = contrib.unsqueeze(dim=0) #has to be done because the zeroth dimension is the number of g-nodes.
-            energy += contrib
-            with torch.no_grad():
-                g.nodes["g"].data["u_"+term+self.suffix] = contrib
+            if not contrib is None:
+                contrib = contrib.unsqueeze(dim=0) # has to be done because the zeroth dimension is the number of g-nodes.
+                energy += contrib
+                with torch.no_grad():
+                    g.nodes["g"].data["u_"+term+self.suffix] = contrib
 
         g.nodes["g"].data["u"+self.suffix] = energy
         
@@ -88,6 +89,8 @@ class WriteEnergy(torch.nn.Module):
     
     @staticmethod
     def get_energy_contribution(g, term, suffix, offset_torsion=True):
+        if "k"+suffix not in g.nodes[term].data.keys():
+            return None
         k = g.nodes[term].data["k"+suffix]
         dof_data = g.nodes[term].data["x"]
 

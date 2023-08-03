@@ -34,7 +34,6 @@ def get_default_run_config():
         "train_steps":1e5,
         "patience":5e3, # in steps
         "plots":False,
-        "ref_ff":"amber99sbildn",
         "device":None,
         "description":[""],
         "lr":1e-5,
@@ -45,19 +44,21 @@ def get_default_run_config():
         "version_name":None,
         "pretrain_name":None,
         "weight_decay":0,
+        "scale_dict":{"n4_improper_k":0., "n3_eq":10., "n3_k":10.},
+        "l2_dict":{"n4_improper_k":0.1, "n4_k":0.1},
     }
 
     return args
 
 
-def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Union[Path,str]=None, idx=None, **kwargs):
+def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Union[Path,str]=None, idx=None, vpath=[], **kwargs):
     """
     Load default parameters from a config file and overwrite them with kwargs passed by the user.
     """
 
     # load the default args
     run_args = get_default_run_config()
-    model_args = get_default_model_config()
+    model_args = get_default_model_config(tag=kwargs.get("default_tag", 'small'), scale=kwargs.get("default_scale", 1.))
 
     # overwrite the default args with those occuring in the config file or those passed by kwargs with priority for kawrgs:
     for path in (run_config_path, model_config_path):
@@ -83,6 +84,8 @@ def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Unio
                 run_args[key] = config_args[key]
             elif key in model_args.keys():
                 model_args[key] = config_args[key]
+            elif key in ["default_tag", "default_scale"]:
+                pass
             else:
                 raise ValueError(f"key {key} not recognized")
 
@@ -111,7 +114,7 @@ def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Unio
         run_args.pop("name")
 
 
-    run_once(model_config=model_args, **run_args)
+    run_once(model_config=model_args, vpath=vpath, **run_args)
 
 
 
@@ -119,8 +122,9 @@ def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Unio
 # param weight is wrt to the energy mse
 # the zeroth data
 # NOTE: use model_args dict, loaded from a config file
-def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config(), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, ref_ff="amber99sbildn", device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4):
-
+def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config('small'), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4, vpath=[], scale_dict:dict={}, l2_dict:dict={}):
+    # vpath: gets modified in-place, acts like a C++ reference here
+    assert vpath == []
 
     if device is None:
         device = str(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
@@ -130,7 +134,9 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
         storage_path = str(Path(continue_path).parent)
         version_name = str(Path(continue_path).name)
 
-    start_info = f"\nstarting run, will write to:\n\t{str(Path(storage_path)/Path(version_name))}\n"
+    vpath.append(str(Path(storage_path)/Path(version_name)))
+
+    start_info = f"\nstarting run, will write to:\n\t{vpath[0]}\n"
     print(start_info)
 
     ds_paths = ds_path
@@ -185,7 +191,7 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     ###################
 
     # do the actual training (this function is a mess, will be cleaned up)
-    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, ref_ff=ref_ff, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay)
+    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay, scale_dict=scale_dict, l2_dict=l2_dict)
 
     ###################
 

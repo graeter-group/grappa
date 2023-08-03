@@ -13,6 +13,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+from typing import List, Dict, Tuple, Union
+
 
 
 class GrappaTrain(training.Train):
@@ -829,7 +831,7 @@ class TrainSequentialParams(GrappaTrain):
     This class is neither written efficiently, nor well documented or tested. Only to be used for internal testing. 
     """
 
-    def __init__(self, *args, direct_epochs=10, bce_weight=0, classification_epochs=5, energy_factor=1., force_factor=0., param_factor=0., param_statistics=None, **kwargs):
+    def __init__(self, *args, direct_epochs=10, bce_weight=0, classification_epochs=5, energy_factor=1., force_factor=0., param_factor=0., param_statistics=None, scale_dict={}, l2_dict={}, **kwargs):
 
         assert force_factor != 0 or energy_factor != 0 or param_factor != 0, "At least one of force_factor, energy_factor or param_factor must be non-zero."
 
@@ -852,6 +854,10 @@ class TrainSequentialParams(GrappaTrain):
         self.energy_factor = energy_factor
         self.param_factor = param_factor
         self.eval_forces = (force_factor != 0.)
+
+        self.scale_dict = scale_dict
+        self.l2_dict = l2_dict
+
 
     def get_loss(self, model, batch):
         loss = torch.tensor((0.), device=self.device).float()
@@ -897,27 +903,34 @@ class TrainSequentialParams(GrappaTrain):
 
         if self.epoch < self.direct_epochs:
             batch = model(batch)
-            y_pred, y = self.get_scaled_params(batch)
+            y_pred, y, y_l2 = self.get_scaled_params(batch, scale_dict=self.scale_dict, l2_dict=self.l2_dict)
 
             # use a huber loss of delta == 3 sigma for the parameters (since they are scaled by their standard deviation such that their std is 1)
             # Huber = torch.nn.HuberLoss(delta=3.)
             # loss += Huber(y_pred, y)
 
+            if len(y_l2) > 0:
+                loss += torch.nn.functional.mse_loss(y_l2, torch.zeros_like(y_l2))
+
             loss = loss + torch.nn.functional.mse_loss(y_pred, y)
 
-        if self.param_factor != 0.:
+        if self.param_factor != 0. or len(self.l2_dict) > 0:
             if self.energy_factor == 0 and not grad_active():
                 batch = model(batch)
             
             if not "k" in batch.nodes["n2"].data.keys():
                 batch = model(batch)
 
-            y_pred, y = self.get_scaled_params(batch)
+            y_pred, y, y_l2 = self.get_scaled_params(batch, scale_dict=self.scale_dict, l2_dict=self.l2_dict)
 
             # Huber = torch.nn.HuberLoss(delta=3.)
             # loss += Huber(y_pred, y) * self.param_factor
             try:
-                loss = loss + torch.nn.functional.mse_loss(y_pred, y) * self.param_factor
+                if len(y_l2) > 0:
+                    loss += torch.nn.functional.mse_loss(y_l2, torch.zeros_like(y_l2))
+
+                if self.param_factor != 0.:
+                    loss = loss + torch.nn.functional.mse_loss(y_pred, y) * self.param_factor
             except Exception as err:
                 if hasattr(err, 'message'):
                     err.message += f"\nshapes: {pred.shape}, {ref.shape}"
@@ -953,27 +966,45 @@ class TrainSequentialParams(GrappaTrain):
     #     return loss
 
     # returns the scaled and shifted parameters such that their std deviation is one
-    def get_scaled_params(self, batch:dgl.DGLGraph, device="cpu"):
-
+    def get_scaled_params(self, batch:dgl.DGLGraph, device="cpu", scale_dict:Dict={}, l2_dict:Dict={}):
+        """
+        Returns the ff parameters divided by the standard deviation of the classical parameter in the training set.
+        scale_dict: scales the parameters that are in the kes of scale_dict by the value in the dict.
+        l2_dict: applies an l2 loss to the parameters that are in the keys of l2_dict, where the parameters are scaled by the entry.
+        """
+        
         epsilon = 1e-2
+
+        def get_scale_factor(level, param):
+            x = 1./(epsilon+self.param_statistics["std"][level+"_"+param])
+            x *= scale_dict[level+"_"+param] if scale_dict is not None and level+"_"+param in scale_dict.keys() else 1.
+            return x
+
 
         FF = "ref"
         # transform the parameters such that they are normally distributed
         # we do not have do subtract the mean because this cancels out when taking the difference
+
+        param_types = TrainSequentialParams.bonded_parameter_types()
+        if not "n4_improper" in batch.ntypes:
+            param_types = [p for p in param_types if p[0] != "n4_improper"]
+        elif not "k" in batch.nodes["n4_improper"].data.keys():
+            param_types = [p for p in param_types if p[0] != "n4_improper"]
+
         params_true = torch.cat(
             [
-                (batch.nodes[level].data[param+"_"+FF].to(device)/(epsilon+self.param_statistics["std"][level+"_"+param])).flatten()
+                (batch.nodes[level].data[param+"_"+FF].to(device)*get_scale_factor(level=level, param=param)).flatten()
                 if level in batch.ntypes else torch.tensor([], device=device)
-                for level, param in TrainSequentialParams.bonded_parameter_types()
+                for level, param in param_types
             ]
         , dim=0)
 
         try:
             params_pred = torch.cat(
                 [
-                    (batch.nodes[level].data[param].to(device)/(epsilon+self.param_statistics["std"][level+"_"+param])).flatten()
+                    (batch.nodes[level].data[param].to(device)*get_scale_factor(level=level, param=param)).flatten()
                     if level in batch.ntypes else torch.tensor([], device=device)
-                    for level, param in TrainSequentialParams.bonded_parameter_types()
+                    for level, param in param_types
                 ]
             , dim=0)
         except:
@@ -981,7 +1012,31 @@ class TrainSequentialParams(GrappaTrain):
                 print(level, ":" , batch.nodes[level].data.keys())
             raise
 
-        return params_pred, params_true
+        if l2_dict is None:
+            params_l2 = torch.tensor([], device=device)
+        elif len(list(l2_dict.keys()))==0:
+            params_l2 = torch.tensor([], device=device)
+        else:
+            l2_dict_new = {}
+            for k, v in l2_dict.items():
+                if not "n4_improper" in k:
+                    level, param = k.split("_")
+                else:
+                    level = "n4_improper"
+                    param = k.split("_")[-1]
+                if (level, param) in param_types:
+                    l2_dict_new[(level, param)] = v
+            params_l2 = torch.cat(
+                [
+                    (batch.nodes[level].data[param].to(device)*l2_dict_new[(level, param)]).flatten()
+                    if level in batch.ntypes else torch.tensor([], device=device)
+                    for level, param in l2_dict_new.keys()
+                ]
+            , dim=0)
+
+                
+
+        return params_pred, params_true, params_l2
 
     def get_en(self, batch, average=True):
         batch = self.energy_writer(batch)

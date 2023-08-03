@@ -100,7 +100,21 @@ def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Un
 
     return model
 
-def get_large_model_config():
+
+def get_default_model_config(tag:str, scale:float=1.0):
+
+    if tag == "small":
+        args = get_small_model_config()
+    elif tag == "med":
+        args = get_med_model_config()
+    elif tag == "large":
+        args = get_large_model_config()
+
+    return scale_model_config(args, scale=scale)
+
+
+
+def get_med_model_config():
     args = {
         "width":128,
         "rep_feats":1024,
@@ -128,7 +142,7 @@ def get_large_model_config():
     return args
 
 
-def get_default_model_config():
+def get_small_model_config():
     args = {
         "width":64,
         "rep_feats":512,
@@ -152,5 +166,49 @@ def get_default_model_config():
         "n_periodicity_proper":6,
         "n_periodicity_improper":3,
     }
+
+    return args
+
+
+def get_large_model_config():
+    args = {
+        "width":128,
+        "rep_feats":2048,
+        "readout_width":512,
+        "n_conv":3,
+        "n_att":2,
+        "n_heads":16,
+        "old_model":False,
+        "use_improper":True,
+        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+        "layer_norm":True,
+        "dropout":0,
+        "rep_dropout":0.,
+        "n_att_readout":3,
+        "dense_layers_readout":2,
+        "n_heads_readout":64,
+        "reducer_feats":512,
+        "attention_hidden_feats":2048,
+        "positional_encoding":True,
+        "attentional":True,
+        "n_periodicity_proper":6,
+        "n_periodicity_improper":3,
+    }
+
+    return args
+
+
+def scale_model_config(args, scale=1):
+    """
+    Scales a model by a factor. Only affects the widths.
+    """
+    for key in ["width", "rep_feats", "reducer_feats", "attention_hidden_feats", "n_heads"]:
+        args[key] = int(args[key]*scale)
+    
+    # if scale is integer, also scale multihead attention parameters:
+    if scale == float(int(scale)):
+        args["readout_width"] = int(args["readout_width"]*scale)
+        args["n_heads_readout"] = int(args["n_heads_readout"]*scale)
+
 
     return args

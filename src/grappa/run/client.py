@@ -5,6 +5,7 @@ from grappa.run.run import run_from_config
 from grappa.models.deploy import get_default_model_config
 from grappa.constants import DEFAULTBASEPATH
 import copy
+import json
 
 def get_args():
 
@@ -16,7 +17,7 @@ def get_args():
     parser.add_argument('--model_config_path', type=str, default=None, help="path to a config file, used for default arguments. if not specified or no config file is found, creates a default config file. (default: None)")
     parser.add_argument('--ds_path', type=str, nargs='+', default=None, help="path to dataset. setting this overwrites the effect of ds_tag. (default: None)")
     parser.add_argument('--ds_base', type=str, default=DEFAULTBASEPATH, help=f"if tags are used, this is the base path to the datasets (default: {DEFAULTBASEPATH})")
-    parser.add_argument('-t', '--ds_tag', type=str, nargs='+', default=[], help=" (dataset must be stored as in files named '{ds_base}/{ds_tag}'. default: [])")
+    parser.add_argument('-t', '--ds_tag', type=str, nargs='+', default=None, help=" (dataset must be stored as in files named '{ds_base}/{ds_tag}'. default: [])")
     parser.add_argument('--force_factor','-f', type=float, default=None, help=" (default: 1.)")
     parser.add_argument('--energy_factor','-e', type=float, default=None, help=" (default: 1.)")
     parser.add_argument('--recover_optimizer', action='store_true', default=False, help=" (if true, instead of a warm restart, we use the optimizer from the version specified by --load_path. default: False)")
@@ -35,12 +36,14 @@ def get_args():
     parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 500)")
     parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 100000.0)")
     parser.add_argument('--patience', type=float, default=None, help="ratio of maximum total steps and patience of the learning rate scheduler, i.e. if (default: 0.0001)")
-    parser.add_argument('--no-plots', action='store_false', dest="plots", default=True, help="create plots during and at the end of training. might take time and memory (default: False)")
-    parser.add_argument('--ref_ff', type=str, default="amber99sbildn", help="suffix of the reference parameters for pretraining and plotting (default: 'amber99sbildn')")
+    parser.add_argument('--plots', action='store_true', dest="plots", default=False, help="create plots during and at the end of training. might take time and memory (default: False)")
     parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-6')")
     parser.add_argument('--device', type=str, default=None)
-    parser.add_argument('--ds_short', default=[], type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
+    parser.add_argument('--ds_short', default=None, type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
     parser.add_argument('--collagen', default=False, action="store_true", help="Whether or not to use the collagen forcefield and dataset, i.e. including hyp and dop. (default: False)")
+    parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
+    parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {'n4_k':1., 'n4_improper_k': 10.})")
+
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
     parser.add_argument('--n_att', type=int, default=None, help=" (default: 3)")
@@ -48,14 +51,14 @@ def get_args():
     parser.add_argument('--width', type=int, default=None, help="of the representation network (default: 512)")
     parser.add_argument('--rep_feats', type=int, default=None, help=" (default: 512)")
     parser.add_argument('--readout_width', type=int, default=None, help=" (default: 512)")
-    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. (default: ["atomic_number", "in_ring", "q_ref", "is_radical"])')
+    parser.add_argument('--in_feat_name', type=str, nargs='+', default=None, help='which input features the model should use. Can be ["atomic_number", "in_ring", "q_ref", "is_radical", "degree", "residue", "mass", "additional_features"] (default: ["atomic_number", "in_ring", "q_ref", "is_radical"])')
     parser.add_argument('--improper', dest='use_improper', action='store_true')
     parser.add_argument('--no_improper', dest='use_improper', action='store_false')
     parser.set_defaults(use_improper=None)
     parser.add_argument('--old_model', dest='old_model', action='store_true')
     parser.add_argument('--no_old_model', dest='old_model', action='store_false')
     parser.set_defaults(old_model=None)
-    parser.add_argument('--add_feat', '-a', type=str, nargs='+', default=None, help="Features that are added to default features if not in there already (shortcut for if one wishes to add to exsiting defaults). (default: None)")
+    parser.add_argument('--add_feat', '-a', type=str, nargs='+', default=None, help='Features that are added to default features if not in there already (shortcut for if one wishes to add to exsiting defaults) Can be ["atomic_number", "in_ring", "q_ref", "is_radical", "degree", "residue", "mass", "additional_features"]. (default: None)')
     parser.add_argument('--dense_layers', type=int, default=None, help=" (default: 2)")
     parser.add_argument('--n_att_readout', type=int, default=None, help=" (default: 2)")
     parser.add_argument('--n_heads_readout', type=int, default=None, help=" (default: 8)")
@@ -74,17 +77,20 @@ def get_args():
     parser.add_argument('--no_attentional', dest='attentional', action='store_false')
     parser.set_defaults(attentional=None)
 
+    parser.add_argument('--default_tag', type=str, default="small", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large'] (default: 'small')")
+    parser.add_argument('--default_scale', type=float, default=1, help="A scale factor for the default parameters for the model.  Only affects widths.")
+
     args = parser.parse_args()
     return args
 
 
-def run_(args):
+def run_(args, vpath=[]):
 
     args = copy.deepcopy(args)
 
     if not args.add_feat is None:
         if args.in_feat_name is None:
-            args.in_feat_name = get_default_model_config()["in_feat_name"]
+            args.in_feat_name = get_default_model_config(args.default_tag, scale=args.default_scale)["in_feat_name"]
         for f in args.add_feat:
             if not f in args.in_feat_name:
                 args.in_feat_name.append(f)
@@ -94,13 +100,18 @@ def run_(args):
         if value == "None" or value == ["None"]:
             setattr(args, key, None)
 
+    if args.ds_short is None:
+        args.ds_short = []
+    if args.ds_tag is None:
+        args.ds_tag = []
+
     for ds_short in args.ds_short:
         suffix = "_filtered"
         suffix_col = ""
         if args.collagen:
             suffix_col = "_col"
 
-        elif ds_short == "eric_nat":
+        if ds_short == "eric_nat":
             args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
 
         elif ds_short == "eric_rad":
@@ -120,7 +131,8 @@ def run_(args):
 
         elif ds_short == "eric":
             args.ds_short.remove("eric")
-            args.ds_short += ["eric_nat", "eric_rad"]
+            args.ds_short += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
+            args.ds_short += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
         
         else:
             raise ValueError(f"ds_short {ds_short} not recognized")
@@ -192,10 +204,10 @@ def run_(args):
         specified_args["description"] += tags
 
     if len(seeds)==1:
-        run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=None, seed=seeds[0], **specified_args)
+        run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=None, seed=seeds[0], vpath=vpath, **specified_args)
     else:
         for idx, seed in enumerate(seeds):
-            run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=idx, seed=seed, **specified_args)
+            run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=idx, seed=seed, vpath=vpath, **specified_args)
 
 
 def run_client():
@@ -205,20 +217,21 @@ def run_client():
 
 def full_run():
     args = get_args()
-    run_(args)
+    vpath = []
+    run_(args, vpath=vpath)
     
-    continue_path = args.continue_path
+    continue_path = vpath[0]
+    assert not continue_path is None
+
     warmup = True
     lr = 1e-6
     
     # loop over all arguments and set them to None if they are not a bool:
     for key, value in vars(args).items():
-        if type(value) == list:
-            setattr(args, key, [])
+        if key in ["default_tag", "default_scale", "name", "ds_base"]:
+            continue
         elif not type(value) == bool:
             setattr(args, key, None)
-        elif type(value) == str:
-            setattr(args, key, "")
         
     
     args.continue_path = continue_path

@@ -518,6 +518,16 @@ class PDBDataset:
         self.mols[:] = [lambd(i, mol) for i, mol in enumerate(self.mols) ]
 
 
+    def calc_ff_data(self, forcefield):
+        """
+        Calculates the energies and forces for the given forcefield and stores them in the molecules.
+        """
+
+        # determine whether smiles or not:
+        pass
+
+
+
     def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, plot_args:Dict[str, Any]={}, by_element=True, by_residue=True, scatter=True)->Tuple[Dict[str, float], Dict[str, float]]:
         """
         Calculates the RMSE and MAE of the data stored with suffix and returns a dictionary containing these. If a plotpath is given, also creates a scatterplot of the energies and forces, a histogram for the grad rmse per molecule and a histogram for the rmse per element/residue.
@@ -553,9 +563,9 @@ class PDBDataset:
 
         n_forces = 0
 
+        e_key = f"u{suffix}"
+        f_key = f"grad{suffix}"
         for mol in self.mols:
-            e_key = f"u{suffix}"
-            f_key = f"grad{suffix}"
             if "g" in mol.graph_data.keys():
                 if e_key in mol.graph_data["g"].keys():
 
