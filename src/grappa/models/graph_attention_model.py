@@ -51,7 +51,8 @@ class ResidualAttentionBlock(torch.nn.Module):
             )
         ############################
         
-        self.attention_dropout = torch.nn.Dropout(p=dropout)
+        # use no attention dropout
+        self.attention_dropout = torch.nn.Dropout(p=0)
         self.ff_dropout = torch.nn.Dropout(p=dropout)
 
         if layer_norm:
@@ -280,20 +281,22 @@ class Representation(torch.nn.Module):
             elif len(n_out_feats) == 1:
                 n_out_feats[0] = out_feats
 
+        # use dropout every second layer:
 
-
+        dropout_layers = [dropout if i%2==0 else 0. for i in range(n_conv+n_att)]
+        
         if len(n_out_feats) > 0:
 
             self.no_convs = False
 
             self.conv_blocks = torch.nn.ModuleList([
-                    ResidualConvBlock(in_feats=n_in_feats[i], out_feats=n_out_feats[i], activation=torch.nn.ELU(), self_interaction=True, dropout=dropout)
+                    ResidualConvBlock(in_feats=n_in_feats[i], out_feats=n_out_feats[i], activation=torch.nn.ELU(), self_interaction=True, dropout=dropout_layers[i])
                     for i in range(n_conv)
                 ])
 
             
             self.att_blocks = torch.nn.ModuleList([
-                    ResidualAttentionBlock(in_feats=n_in_feats[i], out_feats=n_out_feats[i], num_heads=n_heads, activation=torch.nn.ELU(), self_interaction=True, dropout=dropout)
+                    ResidualAttentionBlock(in_feats=n_in_feats[i], out_feats=n_out_feats[i], num_heads=n_heads, activation=torch.nn.ELU(), self_interaction=True, dropout=dropout_layers[i])
                     for i in range(n_conv, n_conv+n_att)
                 ])
 

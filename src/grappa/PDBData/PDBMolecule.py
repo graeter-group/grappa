@@ -725,6 +725,7 @@ class PDBMolecule:
         self.sequence = sequence
         self.name = self.sequence
         self.elements = np.array([a.element.atomic_number for a in pdbmol.topology.atoms()])
+        self.residues = np.array([a.residue.name for a in pdbmol.topology.atoms()])
         if xyz is None:
             self.xyz = pdbmol.getPositions(asNumpy=True).value_in_unit(angstrom).reshape(1,-1,3)
         else:
@@ -1105,7 +1106,9 @@ class PDBMolecule:
 
         
         if collagen:
-            forcefield = collagen_utility.append_collagen_templates(forcefield)
+            forcefield = collagen_utility.get_collagen_forcefield()
+            # NOTE:
+            # forcefield = collagen_utility.append_collagen_templates(forcefield)
 
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 1*femtoseconds)
 

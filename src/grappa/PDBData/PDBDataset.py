@@ -5,6 +5,7 @@ import torch
 import tempfile
 import os.path
 from .PDBMolecule import PDBMolecule
+from ..ff_utils.create_graph import find_radical
 from pathlib import Path
 from typing import Union, List, Tuple, Dict, Any, Optional
 import h5py
@@ -468,6 +469,43 @@ class PDBDataset:
                 print(f"WARNING: found double names {doubles}")
 
 
+    @classmethod
+    def from_pdbs(cls, path: Union[str,Path], energy_name="energies.npy", force_name="forces.npy", xyz_name="positions.npy", is_force:bool=True, info:bool=True, n_max:int=None, skip_errs:bool=False):
+        """
+        Generates a dataset from a folder with pdb files and .npy files containing energies and forces.
+        """
+
+        mols = []
+
+        # loop over all pdb files (also nested in subfolders):
+        for pdbpath in Path(path).rglob('*.pdb'):
+            # get the parent of the pdb folder. if it contains only the one pdbfile and a file named energy_name, we assume it is a valid folder:
+            if len(list(pdbpath.parent.glob('*.pdb'))) == 1 and (pdbpath.parent / energy_name).is_file():
+                try:
+                    energies = np.load(pdbpath.parent / energy_name) # load the energies.npy file
+                    gradients = np.load(pdbpath.parent / force_name) # load the forces.npy file
+                    xyz = np.load(pdbpath.parent / xyz_name) # load the positions.npy file
+
+                    if is_force:
+                        gradients = -gradients
+                    
+                    mol = PDBMolecule.from_pdb(pdbpath=pdbpath, xyz=xyz, gradients=gradients, energies=energies)
+                    mols.append(mol)
+                    
+                    if not n_max is None:
+                        if len(mols) >= n_max:
+                            break
+                
+                except:
+                    if not skip_errs:
+                        raise
+                    
+        if info:
+            print(f"loaded {len(mols)} molecules from {path}")
+
+        return cls(mols, info=info)
+        
+
 
     def energy_hist(self, filename=None, show=True):
         energies = np.array([])
@@ -518,12 +556,12 @@ class PDBDataset:
         self.mols[:] = [lambd(i, mol) for i, mol in enumerate(self.mols) ]
 
 
-    def calc_ff_data(self, forcefield, suffix="", collagen:bool=False):
+    def calc_ff_data(self, forcefield, suffix="", collagen:bool=False, allow_radicals:bool=False):
         """
         Calculates the energies and forces for the given forcefield and stores them in the molecules.
         """
 
-        def _write_data(mol, idx):
+        def _write_data(mol, idx, forcefield, collagen, suffix):
             # determine whether smiles or not:
             if len(mol.pdb) == 1:
                 raise ValueError(f"Cannot calculate energies and forces for molecules given by a smiles string: Will have to use openff, this takes too long. Smiles is {mol.pdb[0]}")
@@ -531,17 +569,20 @@ class PDBDataset:
             if self.info:
                 print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
 
-            energies, grads = mol.get_ff_data(forcefield, collagen=collagen)
+            if allow_radicals:
+                forcefield = find_radical.add_radical_residues(forcefield, topology=mol.to_openmm(collagen=collagen).topology)
+
+            energies, grads = mol.get_ff_data(forcefield, collagen=False)
 
             mol.graph_data["g"][f"u{suffix}"] = energies
             mol.graph_data["n1"][f"grad{suffix}"] = grads.transpose(1,0,2)
             return mol
         
-        self.mols[:] = [_write_data(mol, idx) for idx, mol in enumerate(self.mols)]
+        self.mols[:] = [_write_data(mol, idx, forcefield, collagen, suffix) for idx, mol in enumerate(self.mols)]
 
 
 
-    def get_eval_data(self, suffix, by_element, by_residue):
+    def get_eval_data(self, suffix, by_element, by_residue, radicals:bool=False):
 
 
         def se(a, b):
@@ -597,8 +638,14 @@ class PDBDataset:
                     qm_grads.append(grad_qm.flatten())
 
                     # now per element:
+                    radical_indices = []
+                    if radicals:
+                        _,_,radical_indices = find_radical.get_radicals(topology=mol.to_openmm(collagen=True).topology)
                     if by_element:
                         for i, element in enumerate(mol.elements):
+                            if i in radical_indices:
+                                element = -1
+
                             if not element in se_per_element.keys():
                                 se_per_element[element] = 0
                             se_per_element[element] += se(grad_ff[i], grad_qm[i])
@@ -664,7 +711,7 @@ class PDBDataset:
 
 
 
-    def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, by_element=True, by_residue=True, scatter=True, name="Forcefield", compare_suffix=None, fontsize=16, compare_name="reference")->Tuple[Dict[str, float], Dict[str, float]]:
+    def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, by_element=True, by_residue=True, scatter=True, name="Forcefield", compare_suffix=None, fontsize=16, compare_name="reference", radicals:bool=False, refname="QM")->Tuple[Dict[str, float], Dict[str, float]]:
         """
         Calculates the RMSE and MAE of the data stored with suffix and returns a dictionary containing these. If a plotpath is given, also creates a scatterplot of the energies and forces, a histogram for the grad rmse per molecule and a histogram for the rmse per element/residue.
         """
@@ -672,10 +719,10 @@ class PDBDataset:
         def rmse(a,b):
             return np.sqrt(np.mean((a-b)**2))
 
-        eval_data, rmse_data, e_rmse_per_mol, grad_rmse_per_mol, ff_energies, qm_energies, ff_grads, qm_grads, rmse_per_element, rmse_per_residue = self.get_eval_data(suffix=suffix, by_element=by_element, by_residue=by_residue)
+        eval_data, rmse_data, e_rmse_per_mol, grad_rmse_per_mol, ff_energies, qm_energies, ff_grads, qm_grads, rmse_per_element, rmse_per_residue = self.get_eval_data(suffix=suffix, by_element=by_element, by_residue=by_residue, radicals=radicals)
 
         if not compare_suffix is None:
-            _,_ , e_rmse_per_mol_compare, grad_rmse_per_mol_compare, _,_,_,_, rmse_per_element_compare, rmse_per_residue_compare = self.get_eval_data(suffix=compare_suffix, by_element=by_element, by_residue=by_residue)
+            _,_ , e_rmse_per_mol_compare, grad_rmse_per_mol_compare, _,_,_,_, rmse_per_element_compare, rmse_per_residue_compare = self.get_eval_data(suffix=compare_suffix, by_element=by_element, by_residue=by_residue, radicals=radicals)
 
         if not plotpath is None:
             plotpath = Path(plotpath)
@@ -692,9 +739,9 @@ class PDBDataset:
                     ax[0].scatter(qm_energies, ff_energies, s=1, alpha=0.4)
                 else:
                     ax[0].scatter(qm_energies, ff_energies)
-                ax[0].plot(qm_energies, qm_energies, color="black", linestyle="--")
+                ax[0].plot(qm_energies, qm_energies, color="black", linewidth=0.8)
                 ax[0].set_title("Energies [kcal/mol]]", fontsize=fontsize)
-                ax[0].set_xlabel("QM Energies", fontsize=fontsize)
+                ax[0].set_xlabel(f"{refname} Energies", fontsize=fontsize)
                 ax[0].set_ylabel(f"{ff_title} Energies", fontsize=fontsize)
                 ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
@@ -703,9 +750,9 @@ class PDBDataset:
                     ax[1].scatter(qm_grads, ff_grads, s=0.5, alpha=0.2)
                 else:
                     ax[1].scatter(qm_grads, ff_grads, s=1, alpha=0.4)
-                ax[1].plot(qm_grads, qm_grads, color="black", linestyle="--")
+                ax[1].plot(qm_grads, qm_grads, color="black", linewidth=0.8)
                 ax[1].set_title("Forces [kcal/mol/Å]", fontsize=fontsize)
-                ax[1].set_xlabel("QM Forces", fontsize=fontsize)
+                ax[1].set_xlabel(f"{refname} Forces", fontsize=fontsize)
                 ax[1].set_ylabel(f"{ff_title} Gradients", fontsize=fontsize)
                 ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
@@ -838,6 +885,9 @@ class PDBDataset:
 
         return eval_data, rmse_data
         
+
+
+
     @staticmethod
     def create_splitted_datasets(datasets:List["PDBDataset"], split:Tuple[float, float, float], seed:int=0)->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
         """

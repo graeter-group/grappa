@@ -44,8 +44,10 @@ def get_default_run_config():
         "version_name":None,
         "pretrain_name":None,
         "weight_decay":0,
-        "scale_dict":{"n4_improper_k":0., "n3_eq":10., "n3_k":10.},
-        "l2_dict":{"n4_improper_k":0.0},
+        # "scale_dict":{"n4_improper_k":0., "n3_eq":10., "n3_k":10.},
+        # "l2_dict":{"n4_improper_k":0.01},
+        "scale_dict":{"n4_improper": 0.1},
+        "l2_dict":{},
     }
 
     return args

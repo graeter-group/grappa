@@ -19,7 +19,7 @@ source /hits/fast/mbm/seutelf/.bashrc_user
 # Get arguments
 n_molecules=${1:-1}
 n_states_per_molecule=${2:-10}
-memory=${3:-8}
+memory=${3:-32}
 num_threads=${4:-1}
 
 # Original folder
@@ -30,22 +30,23 @@ mkdir -p data
 mkdir -p "$orig_folder"
 
 # Find smallest non-occurring positive integer suffix
-suffix=$(python find_suffix.py data)
+suffix=$(python find_suffix.py data/pep3)
 
 # Append suffix to folder name
-folder="$orig_folder"_"$suffix"
+folder="$orig_folder"/"$suffix"
 
 mkdir -p "$folder"
 
 echo "Folder: $folder"
 
-conda activate pepgen
+conda activate pepgen_cascade
+echo "Generating PDBs using pepgen..."
 python generate_pdbs.py --n_max "$n_molecules" -l 3 --folder "$folder"
 
-conda activate psi4
+conda activate psi4_cascade
 python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot
 
-python single_points.py "$folder"/ --skip_errs
+python single_points.py "$folder"/ --skip_errs --memory "$memory" --num_threads "$num_threads"
 
 python validate_qm.py "$folder"/
 

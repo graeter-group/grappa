@@ -26,7 +26,8 @@ class DottedAttentionWithLayerNorm(nn.Module):
             self.norm1 = nn.LayerNorm(n_feats)
             self.norm2 = nn.LayerNorm(n_feats)
 
-        self.attn = nn.MultiheadAttention(n_feats, num_heads, dropout=dropout)
+        # no dropout in the attention layer:
+        self.attn = nn.MultiheadAttention(n_feats, num_heads, dropout=0)
 
         self.ff = FeedForwardLayer(n_feats, hidden_feats)
 
@@ -142,10 +143,13 @@ class PermutationEquivariantTransformer(torch.nn.Module):
         else:
             self.positional_encoding = None
 
+        # use dropout every second layer:
+        dropout_layers = [dropout if i%2==0 else 0. for i in range(n_layers)]
+        
 
         self.transformer = nn.Sequential(*[
-            DottedAttentionWithLayerNorm(self.n_feats, n_heads, hidden_feats, layer_norm=layer_norm, dropout=dropout)
-            for _ in range(n_layers)
+            DottedAttentionWithLayerNorm(self.n_feats, n_heads, hidden_feats, layer_norm=layer_norm, dropout=dropout_layers[i])
+            for i in range(n_layers)
         ])
 
         if reducer_hidden_feats is None:
@@ -244,7 +248,7 @@ class RepProjector(torch.nn.Module):
         self.mlp = torch.nn.Sequential(
             torch.nn.Linear(in_feats, out_feats),
             torch.nn.ELU(),
-            torch.nn.Dropout(dropout)
+            #torch.nn.Dropout(dropout)
         )
 
         self.improper = improper

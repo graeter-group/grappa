@@ -11,6 +11,7 @@ MAX_ELEMENT = 26
 # from grappa.constants import MAX_ELEMENT
 
 ELEMENTS = {
+    -1: "Radical",
     1: "H",
     2: "He",
     3: "Li",

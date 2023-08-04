@@ -14,10 +14,12 @@ subdirs = [item for item in parent_dir.iterdir() if item.is_dir()]
 suffixes = set()
 for subdir in subdirs:
     subdir_name = subdir.name
-    if "_" in subdir_name:
-        suffix = subdir_name.split("_")[-1]
-        if suffix.isdigit():
-            suffixes.add(int(suffix))
+    try:
+        suffix = int(subdir_name)
+        suffixes.add(suffix)
+    except:
+        continue
+    
 
 # Find the smallest non-occurring positive integer
 for i in range(1, len(suffixes) + 2):

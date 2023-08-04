@@ -59,7 +59,7 @@ def get_args():
     parser.add_argument('--no_old_model', dest='old_model', action='store_false')
     parser.set_defaults(old_model=None)
     parser.add_argument('--add_feat', '-a', type=str, nargs='+', default=None, help='Features that are added to default features if not in there already (shortcut for if one wishes to add to exsiting defaults) Can be ["atomic_number", "in_ring", "q_ref", "is_radical", "degree", "residue", "mass", "additional_features"]. (default: None)')
-    parser.add_argument('--dense_layers', type=int, default=None, help=" (default: 2)")
+    parser.add_argument('--dense_layers_readout', type=int, default=None, help=" (default: 2)")
     parser.add_argument('--n_att_readout', type=int, default=None, help=" (default: 2)")
     parser.add_argument('--n_heads_readout', type=int, default=None, help=" (default: 8)")
     parser.add_argument('--reducer_feats', type=int, default=None, help=" (default: None)")
