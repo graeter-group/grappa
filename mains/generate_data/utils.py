@@ -1,5 +1,23 @@
 from openmm import unit
 
+
+import os
+import datetime
+
+class Logger:
+    def __init__(self, folder, print_to_screen=True):
+        self.folder = str(folder)
+        os.makedirs(self.folder, exist_ok=True)
+        self.logfile = os.path.join(self.folder, 'log.txt')
+
+    def __call__(self, message:str):
+        print(message)
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with open(self.logfile, 'a') as f:
+            f.write(f'[{timestamp}] {message}\n')
+
+
+
 class CustomReporter(object):
     def __init__(self, step_interval):
         self.step_interval = step_interval

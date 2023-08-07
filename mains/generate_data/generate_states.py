@@ -1,11 +1,13 @@
 import openmm as mm
 from openmm import app
 import numpy as np
-from utils import ProgressReporter
+from utils import ProgressReporter, Logger
 
 from pathlib import Path
 
 def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.ForceField('amber99sbildn.xml'), plot=False, between_steps=50000, allow_collagen=False):
+
+    log = Logger(Path(pdb_folder), log_to_screen=True)
 
     # Load the PDB file
     pdb = app.PDBFile(str(Path(pdb_folder)/Path('pep.pdb')))
@@ -98,18 +100,21 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
 
 
 def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000, forcefield=None, allow_collagen=False):
+
+    log = Logger(Path(folder), log_to_screen=True)
+
     if forcefield is None:
         forcefield = mm.app.ForceField('amber99sbildn.xml')
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
-            print(f"generating states for {i}")
+            log(f"generating states for {i}")
             try:
                 generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot, between_steps=between_steps, forcefield=forcefield, allow_collagen=allow_collagen)
             except Exception as e:
-                print("-----------------------------------")
-                print(f"failed to generate states for {i} in {pdb_folder.stem}:{type(e)}:\n{e}")
-                print("-----------------------------------\n")
+                log("-----------------------------------")
+                log(f"failed to generate states for {i} in {pdb_folder.stem}:{type(e)}:\n{e}")
+                log("-----------------------------------\n")
                 raise
 
 if __name__ == "__main__":

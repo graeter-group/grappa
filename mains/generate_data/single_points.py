@@ -9,28 +9,17 @@ from pathlib import Path
 # import openmm as mm
 from pathlib import Path
 
-
+from utils import Logger
 ###################
 import sys
 import os
 
-class no_print:
-    """
-    Context manager to suppress stdout.
-    """
-    def __enter__(self):
-        # Save the original stdout
-        self.original_stdout = sys.stdout 
-        # Set stdout to null device
-        sys.stdout = open(os.devnull, 'w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # Reset stdout to original
-        sys.stdout = self.original_stdout
 ###################
 
 
 def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
+
+    log = Logger(Path(pdb_folder), log_to_screen=True)
 
     METHOD = 'bmk'
     BASIS = '6-311+G(2df,p)'
@@ -103,13 +92,13 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
         if len(missing_indices) > n_states:
             missing_indices = missing_indices[:n_states]
 
-    print(f"calculating {len(missing_indices)} states using the config\n")
-    print(f"\tMETHOD: {METHOD}")
-    print(f"\tBASIS: {BASIS}")
-    print(f"\tMEMORY: {MEMORY}")
-    print(f"\tNUM_THREADS: {NUM_THREADS}")
-    print(f"\ttotal_charge: {total_charge}")
-    print(f"\tmultiplicity: {multiplicity}")
+    log(f"calculating {len(missing_indices)} states using the config\n")
+    log(f"\tMETHOD: {METHOD}")
+    log(f"\tBASIS: {BASIS}")
+    log(f"\tMEMORY: {MEMORY}")
+    log(f"\tNUM_THREADS: {NUM_THREADS}")
+    log(f"\ttotal_charge: {total_charge}")
+    log(f"\tmultiplicity: {multiplicity}")
 
 
     for num_calculated, i in enumerate(missing_indices):
@@ -117,7 +106,7 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
         msg = f"calculating state number {i}/{len(positions)-1}... Progress: {num_calculated}/{len(missing_indices)-1}, time elapsed: {round((time() - start)/60., 2)} min"
         if num_calculated > 0:
             msg += f", avg time per state: {round((time() - start)/(num_calculated) / 60.,2)} min"
-        print(msg)
+        log(msg)
 
         # Read the configuration
         atoms = Atoms(numbers=atomic_numbers, positions=positions[i])
@@ -154,11 +143,14 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
 
 def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threads=8):
+
+    log = Logger(Path(folder), log_to_screen=True)
+
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
-            print()
-            print(f"calculating states for {i}")
+            log()
+            log(f"calculating states for {i}")
             # calc_states(pdb_folder)
             try:
                 calc_states(pdb_folder, n_states=n_states, memory=memory, num_threads=num_threads)
@@ -168,7 +160,7 @@ def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threa
                 if not skip_errs:
                     raise
 
-                print(f"failed to calculate states for {i} ({Path(folder).stem}): {type(e)}\n: {e}")
+                log(f"failed to calculate states for {i} ({Path(folder).stem}): {type(e)}\n: {e}")
                 # raise
                 pass
 
