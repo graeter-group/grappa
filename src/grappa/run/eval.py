@@ -15,7 +15,6 @@ def eval_client():
     parser.add_argument('--last', dest="last_model", action='store_true', default=False, help='Evaluate the last instead of the best model. (default: False)')
     parser.add_argument('--full', dest="full_loaders", action='store_true', default=False, help='Evaluate on the full loader only, without differentiating in subsets. (default: False)')
     parser.add_argument('--ds_short', default=[], type=str, nargs='+', help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
-    parser.add_argument('--collagen', dest="collagen", action='store_true', default=False, help='Evaluate on the dataset where hyp and dop are allowed. (default: False)')
     parser.add_argument('--ref_ff', '-r', type=str, default="ref", help='Reference force field for the dataset. If None and amber99sbildn or amber14-all are in the ds_tag, takes this as reference forcefield. (default: ref)')
     parser.add_argument('--device', type=str, default='cuda', help='Device to use. (default: cuda)')
 
@@ -24,9 +23,8 @@ def eval_client():
 
     for ds_short in args.ds_short:
         suffix = "_filtered"
-        suffix_col = ""
-        if args.collagen:
-            suffix_col = "_col"
+
+        suffix_col = "_col"
 
         if ds_short == "eric_nat":
             args.ds_tag += [f'AA_scan_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_amber99sbildn{suffix_col}_ff_amber99sbildn{suffix}']

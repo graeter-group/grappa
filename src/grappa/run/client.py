@@ -34,15 +34,15 @@ def get_args():
     parser.add_argument('--test', action='store_true', default=False, help="Reducing dataset size to 50 graphs for testing functionality. (default: False)'")
     parser.add_argument('--seed','-s', type=int, nargs='+', default=None, help="random seed for the split of the dataset into train, val, test (default: 0)")
     parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 500)")
-    parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 100000.0)")
-    parser.add_argument('--patience', type=float, default=None, help="ratio of maximum total steps and patience of the learning rate scheduler, i.e. if (default: 0.0001)")
+    parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 1e5)")
+    parser.add_argument('--patience', type=float, default=None, help="patience of the learning rate scheduler in optimization steps (default: 2e3)")
     parser.add_argument('--plots', action='store_true', dest="plots", default=False, help="create plots during and at the end of training. might take time and memory (default: False)")
-    parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-6')")
+    parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '2e-5')")
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--ds_short', default=None, type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
-    parser.add_argument('--collagen', default=False, action="store_true", help="Whether or not to use the collagen forcefield and dataset, i.e. including hyp and dop. (default: False)")
     parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
     parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
+    parser.add_argument('--ds_split_names', default=None, type=str, help='Path to a file containing the names of the splits of the dataset. If None, the split is done according to the random seed. (default: None)')
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
@@ -72,12 +72,15 @@ def get_args():
     parser.set_defaults(layer_norm=None)
     parser.add_argument('--dropout', type=float, default=None, help=" (default: 0.2)")
     parser.add_argument('--rep_dropout', type=float, default=None, help=" (default: 0)")
+    parser.add_argument('--final_dropout', dest='final_dropout', action='store_true', help='Whether to only apply one dropout layer for the representation, which is then located at the very end. The probability will be set to rep_droput. (default: False)')
+    parser.add_argument('--no_final_dropout', dest='final_dropout', action='store_false')
+    parser.set_defaults(final_dropout=None)
     parser.add_argument('--weight_decay', type=float, default=None, help=" (default: 1e-4)")
     parser.add_argument('--attentional', dest='attentional', action='store_true')
     parser.add_argument('--no_attentional', dest='attentional', action='store_false')
     parser.set_defaults(attentional=None)
 
-    parser.add_argument('--default_tag', type=str, default="small", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large'] (default: 'small')")
+    parser.add_argument('--default_tag', type=str, default="small", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large', 'deep'] (default: 'small')")
     parser.add_argument('--default_scale', type=float, default=1, help="A scale factor for the default parameters for the model.  Only affects widths.")
 
     args = parser.parse_args()
@@ -107,9 +110,8 @@ def run_(args, vpath=[]):
 
     for ds_short in args.ds_short:
         suffix = "_filtered"
-        suffix_col = ""
-        if args.collagen:
-            suffix_col = "_col"
+
+        suffix_col = "_col"
 
         if ds_short == "eric_nat":
             args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
@@ -130,7 +132,6 @@ def run_(args, vpath=[]):
             args.ds_tag += [f'monomers/charge_default_ff_gaff-2_11{suffix}']
 
         elif ds_short == "eric":
-            args.ds_short.remove("eric")
             args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
             args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
         
@@ -180,7 +181,6 @@ def run_(args, vpath=[]):
     args = vars(args)
     
     args.pop("ds_short")
-    args.pop("collagen")
     args.pop("seed")
     args.pop("ds_tag")
     args.pop("ds_base")
@@ -218,6 +218,9 @@ def run_client():
 def full_run():
     args = get_args()
     vpath = []
+    # run with small patience:
+    if args.patience is None:
+        args.patience = 5e3
     run_(args, vpath=vpath)
     
     continue_path = vpath[0]
@@ -237,6 +240,7 @@ def full_run():
     args.continue_path = continue_path
     args.warmup = warmup
     args.lr = lr
+    args.patience = 1e4
 
     run_(args)
 

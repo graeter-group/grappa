@@ -77,7 +77,7 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0., layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, rep_dropout=0, n_periodicity_proper=6, n_periodicity_improper=3):
+def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0., layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, rep_dropout=0, n_periodicity_proper=6, n_periodicity_improper=3, final_dropout=True):
     
     if statistics is None:
         statistics = get_default_statistics()
@@ -86,10 +86,10 @@ def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_fe
         assert n_att == 0, "old model does not support attention"
         representation = old_Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims)
     else:
-        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads, dropout=rep_dropout)
+        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads, dropout=rep_dropout, final_dropout=final_dropout)
 
 
-    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old, use_improper=use_improper, attentional=attentional, n_att=n_att_readout, n_heads=n_heads_readout, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
+    readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old, use_improper=use_improper, attentional=attentional, n_att=n_att_readout, n_heads=n_heads_readout, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity_proper=n_periodicity_proper, n_periodicity_improper=n_periodicity_improper)
 
     model = torch.nn.Sequential(
         representation,

@@ -1,21 +1,14 @@
 import openmm as mm
 from openmm import app
 import numpy as np
-from utils import ProgressReporter, Logger
-from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
+from utils import ProgressReporter
 
 from pathlib import Path
 
-def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod_amber99sbildn(), plot=False, between_steps=50000, allow_collagen=False):
-
-    log = Logger(Path(pdb_folder), log_to_screen=True)
+def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.ForceField('amber99sbildn.xml'), plot=False, between_steps=50000):
 
     # Load the PDB file
     pdb = app.PDBFile(str(Path(pdb_folder)/Path('pep.pdb')))
-
-    if allow_collagen:
-        from grappa.ff_utils.classical_ff.collagen_utility import add_bonds
-        pdb.topology = add_bonds(pdb.topology)
 
     # Setup OpenMM system
     system = forcefield.createSystem(pdb.topology, nonbondedMethod=app.NoCutoff, constraints=None, removeCMMotion=False)
@@ -100,19 +93,17 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod
 
 
 
-def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000, forcefield=None, allow_collagen=False):
-    if forcefield is None:
-        forcefield = mm.app.ForceField('amber99sbildn.xml')
+def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000):
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
-            log(f"generating states for {i}")
+            print(f"generating states for {i}")
             try:
-                generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot, between_steps=between_steps, forcefield=forcefield, allow_collagen=allow_collagen)
+                generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot, between_steps=between_steps)
             except Exception as e:
-                log("-----------------------------------")
-                log(f"failed to generate states for {i} in {pdb_folder.stem}:{type(e)}:\n{e}")
-                log("-----------------------------------\n")
+                print("-----------------------------------")
+                print(f"failed to generate states for {i} in {pdb_folder.stem}:{type(e)}:\n{e}")
+                print("-----------------------------------\n")
                 raise
 
 if __name__ == "__main__":
@@ -123,7 +114,5 @@ if __name__ == "__main__":
     parser.add_argument('--temperature', '-t', type=int, help='The temperature to use for the simulation.', default=300)
     parser.add_argument('--plot', '-p', action='store_true', help='Whether to plot the sampling temperatures and potential energies.')
     parser.add_argument('--between_steps', '-b', type=int, help='The number of steps to take between the sampling steps.', default=50000)
-    parser.add_argument('--allow_collagen', '-c', action='store_true', help='Whether to use the collagen forcefield containing HYP and DOP.')
     args = parser.parse_args()
-
     generate_all_states(args.folder, n_states=args.n_states, temperature=args.temperature, plot=args.plot, between_steps=args.between_steps)

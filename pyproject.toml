@@ -20,6 +20,7 @@ dependencies = [
 grappa_train = "grappa.run.client:run_client"
 grappa_full_run = "grappa.run.client:full_run"
 grappa_eval = "grappa.run.eval:eval_client"
+grappa_compare = "grappa.run.compare:client"
 
 [tool.setuptools]
 include-package-data = true

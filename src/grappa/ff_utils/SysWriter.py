@@ -14,6 +14,9 @@ from .. import units as grappa_units
 
 from .create_graph import utils, tuple_indices, read_heterogeneous_graph, chemical_features
 
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
+
+
 from .create_graph.find_radical import add_radical_residues, get_radicals
 
 import copy
@@ -45,7 +48,7 @@ class SysWriter:
     """
     def __init__(self,
                  top:openmm.app.Topology,
-                 classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                 classical_ff:openmm.app.ForceField=get_mod_amber99sbildn(),
                  allow_radicals:bool=True,
                  radical_indices:List[int]=None,
                  smiles_flag:bool=False,
@@ -128,7 +131,7 @@ class SysWriter:
                    residues:List[str],
                    atom_types:List[str],
                    atomic_numbers:List[int],
-                   classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                   classical_ff:openmm.app.ForceField=get_mod_amber99sbildn(),
                    ordered_by_res:bool=True,
                    atom_indices:List[int]=None,
                    radicals:List[int]=None,
@@ -163,7 +166,7 @@ class SysWriter:
                   topology:TopologyDict,
                   ordered_by_res=True,
                   allow_radicals:bool=True,
-                  classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                  classical_ff:openmm.app.ForceField=get_mod_amber99sbildn(),
                   **system_kwargs) -> "SysWriter":
         """
         Sigmas and epsilons must not be given, all are calculated by the classical forcefield if their entry is None for some atom.

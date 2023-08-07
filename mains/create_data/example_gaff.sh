@@ -3,4 +3,4 @@
 set -e
 # load dataset
 python spice.py --smiles --name spice_openff_addf
-python make_graphs.py -off --ds_name spice_openff_addf/base -ff gaff-2.11 -o
+python make_graphs.py -off --ds_name spice_openff_addf/base -ff gaff-2.11 -o --max_energy 65 --max_force 200

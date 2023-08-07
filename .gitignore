@@ -50,7 +50,11 @@ docs/_build/
 
 # Temporary files:
 tmp/
+
 *.npz
+*.png
+*.out
+*.json
 
 
 *.code-workspace
@@ -74,6 +78,7 @@ npy_charge_dicts/
 **/model.pth
 
 mains/runs
+mains/tests/load_splits
 mains/tests/psi4/compare_spice/1
 mains/**.png
 mains/**.npy

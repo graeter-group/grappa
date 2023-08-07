@@ -32,11 +32,11 @@ def get_default_run_config():
         "test":False,
         "pretrain_steps":500,
         "train_steps":1e5,
-        "patience":5e3, # in steps
+        "patience":2e3, # in steps
         "plots":False,
         "device":None,
         "description":[""],
-        "lr":1e-5,
+        "lr":2e-5,
         "warmup":False,
         "name":"",
         "test_ds_tags":None,
@@ -48,6 +48,7 @@ def get_default_run_config():
         # "l2_dict":{"n4_improper_k":0.01},
         "scale_dict":{"n4_improper": 0.1},
         "l2_dict":{},
+        "ds_split_names":None,
     }
 
     return args
@@ -124,7 +125,7 @@ def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Unio
 # param weight is wrt to the energy mse
 # the zeroth data
 # NOTE: use model_args dict, loaded from a config file
-def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config('small'), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4, vpath=[], scale_dict:dict={}, l2_dict:dict={}):
+def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config('small'), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4, vpath=[], scale_dict:dict={}, l2_dict:dict={}, ds_split_names:Union[Path,str]=None):
     # vpath: gets modified in-place, acts like a C++ reference here
     assert vpath == []
 
@@ -174,7 +175,8 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     # if not confs is None:
     #     run_utils.reduce_confs(ds_tr, confs, seed=seed)
 
-    tr_loader, vl_loader, te_loader = ds_splitter.get_full_loaders(shuffle=True)
+    tr_loader, vl_loader, te_loader = ds_splitter.get_full_loaders(shuffle=True, max_train_mols=mols)
+
 
     mols = ds_splitter.train_mols
 

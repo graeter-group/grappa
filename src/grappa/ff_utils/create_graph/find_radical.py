@@ -12,6 +12,8 @@ from typing import List, Tuple, Dict, Union, Callable
 from pathlib import Path
 import copy
 
+from ..classical_ff.collagen_utility import get_mod_amber99sbildn
+
 #%%
 
 def add_radical_residues(forcefield, topology):
@@ -77,7 +79,7 @@ def add_radical_residues(forcefield, topology):
     return forcefield
 
 
-def generate_unmatched_templates(topology:topology, forcefield:ForceField=ForceField("amber99sbildn.xml")):
+def generate_unmatched_templates(topology:topology, forcefield:ForceField=get_mod_amber99sbildn()):
     """
     Removes the entries LYN and CYM from the forcefield.
     This function extends generateTemplatesForUnmatchedResidues from openmm:
@@ -117,12 +119,13 @@ def generate_unmatched_templates(topology:topology, forcefield:ForceField=ForceF
 generate_unmatched_templates.corrections = {"LYN":"LYS", "CYM":"CYS"}
 
 
-def get_radicals(topology:topology, forcefield:ForceField=ForceField("amber99sbildn.xml")):
+def get_radicals(topology:topology, forcefield:ForceField=get_mod_amber99sbildn()):
     """
-    Returns the indices of the residues in which radicals occur and  as radical_indices, radical_names, residue_indices: List[int], List[str], List[int]
+    Returns the indices of radicals (the heavy atoms with missing hydrogen) and the residues where they occur as radical_indices, radical_names, residue_indices: List[int], List[str], List[int]
 
-    Find the radicals in a topology. Do this using the generate_missing... method from openmm forcefields. then collect all atoms names to find the missing name. then figure out to which atom this H is connected. this way we might not be able to differentiate between charge and radical, but for standard cases it should work.
+    These indices are zero-based.
     NOTE: currently only works for one radical per residue, i.e. one missing hydrogen per residue.
+    Find the radicals in a topology. Do this using the generate_missing... method from openmm forcefields. then collect all atoms names to find the missing name. then figure out to which atom this H is connected. this way we might not be able to differentiate between charge and radical, but for standard cases it should work.
     """
     # get the missing hydrogens assuming that the ff cannot assign residues containing a radical
     

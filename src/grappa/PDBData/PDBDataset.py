@@ -12,12 +12,16 @@ import h5py
 from grappa.units import DISTANCE_UNIT, ENERGY_UNIT, FORCE_UNIT
 from openmm.unit import bohr, Quantity, hartree, mole
 from openmm.unit import unit
+import random
+
+from grappa.ff import ForceField as GrappaFF
 from openmm.app import ForceField
+
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
+
 import json
 import copy
 import matplotlib.pyplot as plt
-
-# NOTE: THE NEW TO_DGL IS SO FAST THAT WE CAN JUST USE THIS CLASS AND DO NOT NEED TO STORE THE GRAPHS ANYMORE.
 
 #%%
 
@@ -34,8 +38,17 @@ class PDBDataset:
     def __len__(self)->int:
         return len(self.mols)
 
-    def __getitem__(self, idx:int)->dgl.graph:
-        return self.mols[idx]
+    def __getitem__(self, idx:Union[int, list, np.ndarray, slice]):
+        if isinstance(idx, int):
+            return self.mols[idx]
+
+        if isinstance(idx, slice):
+            start, stop, step = idx.indices(len(self.mols))
+            return PDBDataset(self.mols[start:stop:step], info=self.info)
+
+        if isinstance(idx, list) or isinstance(idx, np.ndarray):
+            return PDBDataset([self.mols[i] for i in idx], info=self.info)
+
     
     def __setitem__(self, idx:int, mol:PDBMolecule)->None:
         self.mols[idx] = mol
@@ -96,9 +109,13 @@ class PDBDataset:
 
         assert all([name is not None for name in names]), "not all molecules have a name"
 
-        unique_names = list(set(names))
+
+        # remove duplicates with numpy:
+        unique_names = np.unique(names)
+
         np.random.seed(seed)
         np.random.shuffle(unique_names)
+        
         n = len(unique_names)
         if len(names) == n and existing_split_names is None:
             # no duplicates, splitting is easy.
@@ -129,6 +146,10 @@ class PDBDataset:
                 val_names = unique_names[n_train:n_train+n_val]
                 test_names = unique_names[n_train+n_val:]
                 
+        train_names = train_names.tolist()
+        val_names = val_names.tolist()
+        test_names = test_names.tolist()
+
         train_indices = [i for i, name in enumerate(names) if name in train_names]
         val_indices = [i for i, name in enumerate(names) if name in val_names]
         test_indices = [i for i, name in enumerate(names) if name in test_names]
@@ -176,7 +197,7 @@ class PDBDataset:
         pass
 
     @classmethod
-    def load_npz(cls, path:Union[str, Path], keep_order=False, n_max=None):
+    def load_npz(cls, path:Union[str, Path], keep_order=True, n_max=None):
         """
         Loads a dataset from npz files.
         """
@@ -224,7 +245,7 @@ class PDBDataset:
 
 
     
-    def parametrize(self, forcefield:Union[ForceField,str]=ForceField('amber99sbildn.xml'), get_charges=None, allow_radicals=False, collagen=False)->None:
+    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False)->None:
         """
         Parametrizes the dataset with a forcefield.
         Writes the following entries to the graph:
@@ -248,7 +269,7 @@ class PDBDataset:
             print()
 
     
-    def filter_validity(self, forcefield:ForceField=ForceField("amber99sbildn.xml"), sigmas:Tuple[float,float]=(1.,1.), quickload:bool=True)->None:
+    def filter_validity(self, forcefield:ForceField=get_mod_amber99sbildn(), sigmas:Tuple[float,float]=(1.,1.), quickload:bool=True)->None:
         """
         Checks if the stored energies and gradients are consistent with the forcefield. Removes the entry from the dataset if the energies and gradients are not within var_param[0] and var_param[1] standard deviations of the stored energies/forces. If sigmas are 1, this corresponds to demanding that the forcefield data is better than simply always guessing the mean.
         """
@@ -277,15 +298,23 @@ class PDBDataset:
         Filters out conformations with energies or forces that are over 60 kcal/mol away from the minimum of the dataset (not the actual minimum). Remove molecules is less than 2 conformations are left. Apply this before parametrizing or re-apply the parametrization after filtering. Units are kcal/mol and kcal/mol/angstrom.
         """
 
+        removed_confs = 0
+        total_confs = 0
         keep = []
         for i, mol in enumerate(self.mols):
+            before = len(mol)
             more_than2left = mol.filter_confs(max_energy=max_energy, max_force=max_force, reference=reference)
             keep.append(more_than2left)
+            after = len(mol)
+            removed_confs += before - after
+            total_confs += after
 
         # use slicing to modify the list inplace:
         self.mols[:] = [mol for i, mol in enumerate(self.mols) if keep[i]]
         if self.info:
-            print(f"removed {len(keep)-sum(keep)} mols after filtering out high energy confs")
+            print(f"Removed {removed_confs} confs due to filtering high energy confs. {total_confs} are left.")
+            if len(keep)-sum(keep) > 0:
+                print("Removed {len(keep)-sum(keep)} mols")
 
 
     @classmethod
@@ -556,7 +585,7 @@ class PDBDataset:
         self.mols[:] = [lambd(i, mol) for i, mol in enumerate(self.mols) ]
 
 
-    def calc_ff_data(self, forcefield, suffix="", collagen:bool=False, allow_radicals:bool=False):
+    def calc_ff_data(self, forcefield, suffix="", collagen:bool=False, allow_radicals:bool=False, remove_errs=False):
         """
         Calculates the energies and forces for the given forcefield and stores them in the molecules.
         """
@@ -565,20 +594,25 @@ class PDBDataset:
             # determine whether smiles or not:
             if len(mol.pdb) == 1:
                 raise ValueError(f"Cannot calculate energies and forces for molecules given by a smiles string: Will have to use openff, this takes too long. Smiles is {mol.pdb[0]}")
+            try:
+                if self.info:
+                    print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
+
+                if allow_radicals and not isinstance(forcefield, GrappaFF):
+                    forcefield = find_radical.add_radical_residues(forcefield, topology=mol.to_openmm(collagen=collagen).topology)
+
+                energies, grads = mol.get_ff_data(forcefield, collagen=collagen)
+
+                mol.graph_data["g"][f"u{suffix}"] = energies
+                mol.graph_data["n1"][f"grad{suffix}"] = grads.transpose(1,0,2)
+            except:
+                if remove_errs:
+                    return None
             
-            if self.info:
-                print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
-
-            if allow_radicals:
-                forcefield = find_radical.add_radical_residues(forcefield, topology=mol.to_openmm(collagen=collagen).topology)
-
-            energies, grads = mol.get_ff_data(forcefield, collagen=False)
-
-            mol.graph_data["g"][f"u{suffix}"] = energies
-            mol.graph_data["n1"][f"grad{suffix}"] = grads.transpose(1,0,2)
             return mol
         
-        self.mols[:] = [_write_data(mol, idx, forcefield, collagen, suffix) for idx, mol in enumerate(self.mols)]
+
+        self.mols[:] = [_write_data(mol, idx, forcefield, collagen, suffix) for idx, mol in enumerate(self.mols) if not _write_data(mol, idx, forcefield, collagen, suffix) is None]
 
 
 
@@ -609,7 +643,8 @@ class PDBDataset:
         rmse_per_element = {}
         rmse_per_residue = {}
 
-        n_forces = 0
+        n_forces_res = {}
+        n_forces_elem = {}
 
         e_key = f"u{suffix}"
         f_key = f"grad{suffix}"
@@ -640,7 +675,7 @@ class PDBDataset:
                     # now per element:
                     radical_indices = []
                     if radicals:
-                        _,_,radical_indices = find_radical.get_radicals(topology=mol.to_openmm(collagen=True).topology)
+                        radical_indices,_,_ = find_radical.get_radicals(topology=mol.to_openmm(collagen=True).topology)
                     if by_element:
                         for i, element in enumerate(mol.elements):
                             if i in radical_indices:
@@ -648,7 +683,9 @@ class PDBDataset:
 
                             if not element in se_per_element.keys():
                                 se_per_element[element] = 0
+                                n_forces_elem[element] = 0
                             se_per_element[element] += se(grad_ff[i], grad_qm[i])
+                            n_forces_elem[element] += np.prod(grad_ff[i].shape)
                         
 
                     # now per residue:
@@ -657,9 +694,9 @@ class PDBDataset:
                             for i, res in enumerate(mol.residues):
                                 if not res in se_per_residue.keys():
                                     se_per_residue[res] = 0
+                                    n_forces_res[res] = 0
                                 se_per_residue[res] += se(grad_ff[i], grad_qm[i])
-                    if by_element or by_residue:
-                        n_forces += np.prod(list(mol.gradients.shape))
+                                n_forces_res[res] += np.prod(grad_ff[i].shape)
 
 
         # done with the loop, now process:
@@ -670,14 +707,12 @@ class PDBDataset:
             # sort the elements by their number:
             for element in sorted(se_per_element.keys()):
                 elem_str = ELEMENTS[element]
-                rmse_per_element[elem_str] = np.sqrt(se_per_element[element]/n_forces)
+                rmse_per_element[elem_str] = np.sqrt(se_per_element[element]/n_forces_elem[element])
 
         if by_residue:
 
-            from grappa.constants import ONELETTER
-
             for res in se_per_residue.keys():
-                rmse_per_residue[ONELETTER[res]] = np.sqrt(se_per_residue[res]/n_forces)
+                rmse_per_residue[res] = np.sqrt(se_per_residue[res]/n_forces_res[res])
 
         del se_per_element
         del se_per_residue
@@ -735,7 +770,7 @@ class PDBDataset:
 
                 fig, ax = plt.subplots(1,2, figsize=(10,5))
 
-                if len(qm_energies)>1e4:
+                if len(qm_energies)>1e3:
                     ax[0].scatter(qm_energies, ff_energies, s=1, alpha=0.4)
                 else:
                     ax[0].scatter(qm_energies, ff_energies)
@@ -746,7 +781,7 @@ class PDBDataset:
                 ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
                 # now the gradients:
-                if len(qm_grads)>1e5:
+                if len(qm_grads)>1e3:
                     ax[1].scatter(qm_grads, ff_grads, s=0.5, alpha=0.2)
                 else:
                     ax[1].scatter(qm_grads, ff_grads, s=1, alpha=0.4)
@@ -799,33 +834,36 @@ class PDBDataset:
                         return ax
                     
                     def make_res_plot(ax):
+                        # sort residues to ensure 'b' and 'z' appear at the very right side
+                        residues = sorted(rmse_per_residue.keys(), key=lambda k: (k.lower() in ['b', 'z'], k))
+                        values = [rmse_per_residue[res] for res in residues]
+                        
                         # create a barplot:
-                        ax.bar(rmse_per_residue.keys(), rmse_per_residue.values())
+                        ax.bar(residues, values)
                         ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
                         ax.set_xlabel("Residue", fontsize=fontsize)
                         ax.set_title("Force RMSE per Residue", fontsize=fontsize)
                         ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
                         return ax
-
-                    if by_element and by_residue:
-                        fig, ax = plt.subplots(1,2, figsize=(10,5))
-                    
-                    else:
-                        fig, ax = plt.subplots(1,1, figsize=(5,5))
-                        ax = [ax]
                     
                     if by_element:
-                        ax[0] = make_elem_plot(ax[0])
-                    if by_residue:
-                        ax[-1] = make_res_plot(ax[-1])
+                        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+                        ax = make_elem_plot(ax)
+                        plt.tight_layout()
+                        plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
+                        plt.close()
 
-                    plt.tight_layout()
-                    plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
-                    plt.close()
+                    if by_residue:
+                        fig, ax = plt.subplots(1, 1, figsize=(10, 5))  # Adjusted width for residue plot
+                        ax = make_res_plot(ax)
+                        plt.tight_layout()
+                        plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=300)
+                        plt.close()
 
                 else:
                     assert not compare_name is None
-                    def make_elem_plot(ax):
+
+                    def make_elem_compare_plot(ax):
                         # create a grouped barplot:
                         barWidth = 0.35  # the width of the bars
                         r1 = np.arange(len(rmse_per_element))
@@ -834,7 +872,6 @@ class PDBDataset:
                         ax.bar(r1, rmse_per_element.values(), width=barWidth, label=name)
                         ax.bar(r2, rmse_per_element_compare.values(), width=barWidth, label=compare_name)
                         
-
                         ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
                         ax.set_xlabel("Element", fontsize=fontsize)
                         ax.set_title("Force RMSE per Element", fontsize=fontsize)
@@ -843,37 +880,41 @@ class PDBDataset:
                         ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
                         return ax
 
-                    def make_res_plot(ax):
+                    def make_res_compare_plot(ax):
+                        # sort residues to ensure 'b' and 'z' appear at the very right side
+                        residues = sorted(rmse_per_residue.keys(), key=lambda k: (k.lower() in ['ase', 'nme'], k))
+                        values = [rmse_per_residue[res] for res in residues]
+                        values_compare = [rmse_per_residue_compare[res] for res in residues]
+
                         # create a grouped barplot:
                         barWidth = 0.35  # the width of the bars
-                        r1 = np.arange(len(rmse_per_residue))
+                        r1 = np.arange(len(residues))
                         r2 = [x + barWidth for x in r1]
                         
-                        ax.bar(r1, rmse_per_residue.values(), width=barWidth, label=name)
-                        ax.bar(r2, rmse_per_residue_compare.values(), width=barWidth, label=compare_name)
+                        ax.bar(r1, values, width=barWidth, label=name)
+                        ax.bar(r2, values_compare, width=barWidth, label=compare_name)
                         
                         ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
                         ax.set_xlabel("Residue", fontsize=fontsize)
                         ax.set_title("Force RMSE per Residue", fontsize=fontsize)
-                        ax.set_xticks([r + barWidth / 2 for r in range(len(rmse_per_residue))], rmse_per_residue.keys())
+                        ax.set_xticks([r + barWidth / 2 for r in range(len(residues))], residues)
                         ax.legend()
                         ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
                         return ax
-
-                    if by_element and by_residue:
-                        fig, ax = plt.subplots(1,2, figsize=(10,5))
-                    else:
-                        fig, ax = plt.subplots(1,1, figsize=(5,5))
-                        ax = [ax]
-
+                    
                     if by_element:
-                        ax[0] = make_elem_plot(ax[0])
-                    if by_residue:
-                        ax[-1] = make_res_plot(ax[-1])
+                        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+                        ax = make_elem_compare_plot(ax)
+                        plt.tight_layout()
+                        plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
+                        plt.close()
 
-                    plt.tight_layout()
-                    plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
-                    plt.close()
+                    if by_residue:
+                        fig, ax = plt.subplots(1, 1, figsize=(10, 5))  # Adjusted width for residue plot
+                        ax = make_res_compare_plot(ax)
+                        plt.tight_layout()
+                        plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=300)
+                        plt.close()
 
 
 
@@ -903,16 +944,22 @@ class PDBDataset:
         order = np.argsort(n_mols)[::-1]
 
         split_indices = [[]]*len(datasets)
+        
+        assert len(split_indices) == len(datasets)
+
         split_names = None
         for i in order:
             dataset = datasets[i]
             split_idxs, split_names = dataset.split(split, seed=seed, existing_split_names=split_names)
             split_indices[i] = split_idxs
 
+        assert type(split_names[0]==list)
+        assert type(split_names[0][0]) == str, f"Split names should be a tuple of lists of strings, but are {type(split_names)}[{type(split_names[0])}][{type(split_names[0][0])}]"
+
         return split_indices, split_names
 
     @staticmethod
-    def get_splitted_datasets(datasets:List["PDBDataset"], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+    def get_splitted_datasets(datasets:List["PDBDataset"], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1], seed=0)->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
         """
         Order is: Train, Validation, Test
         Split the dataset according to the given split_names.
@@ -921,7 +968,7 @@ class PDBDataset:
         split_names = copy.deepcopy(split_names)
         for i in range(len(datasets)):
             dataset = datasets[i]
-            split_idxs, split_names = dataset.split(seed=0, split=split, existing_split_names=split_names)
+            split_idxs, split_names = dataset.split(seed=seed, split=split, existing_split_names=split_names)
             split_indices[i] = split_idxs
 
         return split_indices, split_names
@@ -942,6 +989,19 @@ class PDBDataset:
         return dgl_splits
 
 
+    def split_by_names(self, split_names:Union[str, Path, Tuple[List[str], List[str], List[str]]])->Tuple[List[Tuple[np.ndarray, np.ndarray, np.ndarray]], Tuple[List[str], List[str], List[str]]]:
+        """
+        Order is: Train, Validation, Test
+        Split the dataset according to the given split_names. All names that are not occuring at all are put in the test set.
+        """
+        if isinstance(split_names, (str, Path)):
+            with open(split_names, "r") as f:
+                split_names = json.load(f)
+
+        splitter = SplittedDataset.create_with_names(datasets=[self], split_names=split_names, nographs=True)
+        ds_tr, ds_vl, ds_te = (splitter.get_splitted_datasets(datasets=[self], ds_type=ds_type)[0] for ds_type in ["tr", "vl", "te"])
+
+        return ds_tr, ds_vl, ds_te
 
 
 
@@ -1026,6 +1086,52 @@ class SplittedDataset:
         return tr_loader, val_loader, test_loader
 
 
+    def get_splitted_datasets(self, datasets:List[PDBDataset], ds_type:str="te")->List[PDBDataset]:
+        """
+        Returns the train datasets obtained from the internally stored split_indices.
+        ds_type must be string in tr,vl,te
+        """
+        if self.split_indices is None:
+            raise ValueError("No split indices have been created yet.")
+        
+        if len(self.split_indices) != len(datasets):
+            raise ValueError("The number of datasets does not match the number of split indices.")
+
+        if ds_type == "tr":
+            j = 0
+        elif ds_type == "vl":
+            j = 1
+        elif ds_type == "te":
+            j = 2
+        else:
+            raise ValueError("ds_type must be string in tr,vl,te")
+
+        return [datasets[i][self.split_indices[i][j]] for i in range(len(datasets))]
+
+
+
+    def get_splitted_datasets_from_indices(self, datasets:List[PDBDataset], ds_type:str="te")->List[PDBDataset]:
+        """
+        Returns the train datasets obtained from the internally stored split_indices.
+        ds_type must be string in tr,vl,te
+        """
+        if self.split_indices is None:
+            raise ValueError("No split indices have been created yet.")
+        
+        if len(self.split_indices) != len(datasets):
+            raise ValueError("The number of datasets does not match the number of split indices.")
+
+        if ds_type == "tr":
+            j = 0
+        elif ds_type == "vl":
+            j = 1
+        elif ds_type == "te":
+            j = 2
+        else:
+            raise ValueError("ds_type must be string in tr,vl,te")
+
+        return [datasets[i][self.split_indices[i][j]] for i in range(len(datasets))]
+
 
     def save(self, filename):
         """
@@ -1072,7 +1178,7 @@ class SplittedDataset:
 
 
     @classmethod
-    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1]):
+    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1], seed=0, nographs=False):
         """
         Generates the split_indices and split_names for the given datasets, contrained by the names in split_names.
         """
@@ -1080,15 +1186,17 @@ class SplittedDataset:
         self = cls()
 
         # generate the split indices:
-        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names, split=split)
+        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names, split=split, seed=seed)
 
         # write the dgl datasets:
-        self.make_dgl(datasets)
+        if not nographs:
+            self.make_dgl(datasets)
 
         return self
 
+
     @classmethod
-    def load_from_names(cls, filename:str, datasets:List[PDBDataset], split=[0.8, 0.1, 0.1]):
+    def load_from_names(cls, filename:str, datasets:List[PDBDataset], split=[0.8, 0.1, 0.1], seed=0, nographs=False):
         """
         Generates the split_indices and split_names for the given datasets, contrained by the names in split_names stored at filename.
         """
@@ -1097,7 +1205,7 @@ class SplittedDataset:
         with open(filename + ".json", "r") as f:
             split_names = tuple(json.load(f))
         
-        return SplittedDataset.create_with_names(datasets, split_names, split=split)
+        return SplittedDataset.create_with_names(datasets, split_names, split=split, seed=seed, nographs=nographs)
 
 
 

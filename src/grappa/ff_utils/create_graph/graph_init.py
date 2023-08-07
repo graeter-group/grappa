@@ -6,6 +6,8 @@ from typing import List, Tuple, Dict, Union, Set, Callable
 from .read_homogeneous_graph import from_bonds
 from .read_heterogeneous_graph import from_homogeneous_and_idxs
 
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
+
 from openmm.unit import Quantity, radians
 
 import torch
@@ -17,7 +19,7 @@ import dgl
 
 def graph_from_topology(
         topology: openmm.app.Topology,
-        classical_ff: Union[openmm.app.ForceField, str]=openmm.app.ForceField("amber99sbildn.xml"), 
+        classical_ff: Union[openmm.app.ForceField, str]=get_mod_amber99sbildn(), 
         xyz: np.ndarray=None,
         qm_energies: np.ndarray=None,
         qm_gradients: np.ndarray=None,

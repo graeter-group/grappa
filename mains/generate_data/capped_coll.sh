@@ -23,24 +23,41 @@ memory=${3:-8}
 num_threads=${4:-1}
 
 # Original folder
-orig_folder="data/pep3"
+orig_folder="data/pep1_coll"
 
 # create the folder if it does not exist:
 mkdir -p data
 mkdir -p "$orig_folder"
 
 # Find smallest non-occurring positive integer suffix
-suffix=$(python find_suffix.py data)
+suffix=$(python find_suffix.py data/pep1_coll)
+
 
 # Append suffix to folder name
-folder="$orig_folder"_"$suffix"
+folder="$orig_folder"/"$suffix"
 
 mkdir -p "$folder"
 
 echo "Folder: $folder"
 
-conda activate pepgen
-python generate_pdbs.py --n_max "$n_molecules" -l 3 --folder "$folder"
 
-conda activate psi4
-python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot
+conda activate pepgen_cascade
+python generate_pdbs.py --folder "$folder" --allow_collagen -s O J
+
+conda activate grappa_cascade
+python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot --allow_collagen
+
+conda activate psi4_cascade
+python single_points.py "$folder"/ --skip_errs --memory "$memory" --num_threads "$num_threads"
+
+python validate_qm.py "$folder"/
+
+# Check if original folder exists, if not create it
+if [ ! -d "$orig_folder" ]; then
+  mkdir -p "$orig_folder"
+fi
+
+# # Copy all subfolders from the folder with _arg to the original folder
+# rsync -a "$folder"/ "$orig_folder"/
+
+rm *.clean

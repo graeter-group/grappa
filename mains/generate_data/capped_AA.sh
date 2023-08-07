@@ -30,24 +30,25 @@ mkdir -p data
 mkdir -p "$orig_folder"
 
 # Find smallest non-occurring positive integer suffix
-suffix=$(python find_suffix.py data)
+suffix=$(python find_suffix.py data/pep1)
 
 
 # Append suffix to folder name
-folder="$orig_folder"_"$suffix"
+folder="$orig_folder"/"$suffix"
 
 mkdir -p "$folder"
 
 echo "Folder: $folder"
 
 
-conda activate pepgen
+conda activate pepgen_cascade
 python generate_pdbs.py --n_max "$n_molecules" -l 1 --folder "$folder"
 
-conda activate psi4
+conda activate grappa_cascade
 python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot
 
-python single_points.py "$folder"/ --skip_errs
+conda activate psi4_cascade
+python single_points.py "$folder"/ --skip_errs --memory "$memory" --num_threads "$num_threads"
 
 python validate_qm.py "$folder"/
 
@@ -56,7 +57,7 @@ if [ ! -d "$orig_folder" ]; then
   mkdir -p "$orig_folder"
 fi
 
-# Copy all subfolders from the folder with _arg to the original folder
-rsync -a "$folder"/ "$orig_folder"/
+# # Copy all subfolders from the folder with _arg to the original folder
+# rsync -a "$folder"/ "$orig_folder"/
 
 rm *.clean
