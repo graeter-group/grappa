@@ -19,7 +19,8 @@ memory=${3:-8}
 num_threads=${4:-1}
 
 basefolder="/hits/basement/mbm/seutelf/grappa/mains/generate_data/make_collagen_ds"
-folder="$basefolder"/data/"$sequence"
+pdb_folder="$basefolder"/data_test
+folder="$pdb_folder"/"$sequence"
 
 # create the folder if it does not exist:
 mkdir -p "$basefolder"/data
@@ -33,7 +34,7 @@ cd /hits/basement/mbm/seutelf/grappa/mains/generate_data
 conda activate pepgen
 python generate_pdbs.py --folder "$folder" --allow_collagen -s "$sequence"
 
-conda activate grappa
+conda activate grappa_haswell
 python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot --allow_collagen
 
 conda activate psi4

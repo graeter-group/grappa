@@ -115,6 +115,8 @@ def get_default_model_config(tag:str, scale:float=1.0):
         args = get_large_model_config()
     elif tag == "deep":
         args = get_deep_model_config()
+    elif tag == "best":
+        args = get_best_model_config()
     else:
         raise ValueError(f"Unknown tag {tag}")
 
@@ -236,6 +238,33 @@ def get_large_model_config():
 
     return args
 
+def get_best_model_config():
+    args = {
+        "width":256,
+        "rep_feats":1024,
+        "readout_width":256,
+        "n_conv":2,
+        "n_att":3,
+        "n_heads":16,
+        "old_model":False,
+        "use_improper":True,
+        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+        "layer_norm":True,
+        "final_dropout":True,
+        "dropout":0.0,
+        "rep_dropout":0.3,
+        "n_att_readout":4,
+        "dense_layers_readout":2,
+        "n_heads_readout":16,
+        "reducer_feats":256,
+        "attention_hidden_feats":1024,
+        "positional_encoding":True,
+        "attentional":True,
+        "n_periodicity_proper":6,
+        "n_periodicity_improper":3,
+    }
+
+    return args
 
 def scale_model_config(args, scale=1):
     """
