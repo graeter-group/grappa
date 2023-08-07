@@ -3,16 +3,16 @@ from openmm.app import ForceField
 from pathlib import Path
 from copy import deepcopy
 
-def get_collagen_forcefield():
+def get_mod_amber99sbildn():
+    ff_path = Path(__file__).parent / Path("amber99sbildn_modified.xml")
+    return ForceField(str(ff_path))
+
+def get_old_collagen_ff():
     ff_path = Path(__file__).parent / Path("collagen_ff.xml")
     return ForceField(str(ff_path))
 
-def append_collagen_templates(forcefield:ForceField):
-    """
-    Returns a deep copy of the forcefield provided with templates for DOP and HYP appended. These do not contain N-terminal and C-terminal patches for DOP and HYP.
-    """
-    raise NotImplementedError("This function is not yet implemented. Please use get_collagen_forcefield() instead.")
-    pass
+def get_amber99sbildn():
+    return ForceField("amber99sbildn.xml")
 
 
 def add_bonds(top:Topology, allow_radicals=False):

@@ -10,7 +10,7 @@ from typing import List, Tuple, Dict, Union, Callable
 from pathlib import Path
 from ..create_graph.find_radical import get_radicals
 from ..create_graph.read_pdb import replace_h23_to_h12, one_atom_replace_h23_to_h12
-from ..classical_ff.collagen_utility import get_collagen_forcefield
+from ..classical_ff.collagen_utility import get_mod_amber99sbildn
 from ... import units as grappa_units
 
 CHARGE_DICT_UNIT = unit.elementary_charge
@@ -34,6 +34,8 @@ def get_path_from_tag(tag:str):
         else:
             raise ValueError(f"tag {tag} not recognized")
     return d_path, drad_path
+
+
 
 def model_from_dict(tag:str=None, d_path:Union[str, Path]=None, d_rad_path:Union[str, Path]=None):
     """
@@ -165,7 +167,7 @@ def from_dict(d:dict, top:topology, d_rad:dict=None, radical_indices:List[int]=[
     charges = []
     # replace _radical_indices in-place
 
-    radical_indices[:], rad_names, res_radical_indices = get_radicals(topology=top, forcefield=get_collagen_forcefield())
+    radical_indices[:], rad_names, res_radical_indices = get_radicals(topology=top, forcefield=get_mod_amber99sbildn())
 
     assert len(set(res_radical_indices)) == len(res_radical_indices), f"radical indices are not unique: {res_radical_indices}. this might be due to a residue in which two radicals occur."
 
