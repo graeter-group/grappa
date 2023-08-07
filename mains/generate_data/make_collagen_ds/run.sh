@@ -20,7 +20,9 @@ memory=${3:-15}
 num_threads=${4:-4}
 
 basefolder="/hits/basement/mbm/seutelf/grappa/mains/generate_data/make_collagen_ds"
+
 pdb_folder="$basefolder"/data
+
 folder="$pdb_folder"/"$sequence"
 
 # create the folder if it does not exist:
@@ -32,7 +34,15 @@ echo "Folder: $folder"
 cd /hits/basement/mbm/seutelf/grappa/mains/generate_data
 
 
+
 echo "Calculating single points for sequence $sequence"
+
+conda activate pepgen
+python generate_pdbs.py --folder "$folder" --allow_collagen -s "$sequence"
+
+conda activate grappa_haswell
+python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot --allow_collagen
+
 conda activate psi4
 python single_points.py "$folder" --skip_errs --memory "$memory" --num_threads "$num_threads"
 

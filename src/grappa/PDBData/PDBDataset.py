@@ -146,9 +146,10 @@ class PDBDataset:
                 val_names = unique_names[n_train:n_train+n_val]
                 test_names = unique_names[n_train+n_val:]
                 
-        train_names = train_names.tolist()
-        val_names = val_names.tolist()
-        test_names = test_names.tolist()
+                
+        train_names = [str(n) for n in train_names]
+        val_names = [str(n) for n in val_names]
+        test_names = [str(n) for n in test_names]
 
         train_indices = [i for i, name in enumerate(names) if name in train_names]
         val_indices = [i for i, name in enumerate(names) if name in val_names]

@@ -218,7 +218,6 @@ def run_client():
 def full_run():
     args = get_args()
     vpath = []
-    # run with small patience:
     if args.patience is None:
         args.patience = 5e3
     run_(args, vpath=vpath)
@@ -227,7 +226,7 @@ def full_run():
     assert not continue_path is None
 
     warmup = True
-    lr = 1e-6
+    lr = 2e-6
     
     # loop over all arguments and set them to None if they are not a bool:
     for key, value in vars(args).items():
@@ -240,7 +239,7 @@ def full_run():
     args.continue_path = continue_path
     args.warmup = warmup
     args.lr = lr
-    args.patience = 1e4
+    args.patience = 5e3
 
     run_(args)
 
