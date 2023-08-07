@@ -13,8 +13,10 @@ from openmm.unit import angstrom, unit, kilocalorie_per_mole, Quantity, hartrees
 import numpy as np
 from .matching import matching
 import torch
-from .utils import utilities, utils, draw_mol
-from ..ff_utils.classical_ff import parametrize, collagen_utility
+from .utils import utils, draw_mol
+from ..ff_utils.classical_ff import collagen_utility
+
+from ..ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
 
 from ..ff_utils.create_graph import utils as create_graph_utils, graph_init, read_pdb
@@ -395,8 +397,6 @@ class PDBMolecule:
         Uses self.graph_data for construction.
         If the Molecule is already parametrised, forcefield, allow_radicals, collagen and get_charges are ignored.
         """
-        if collagen:
-            classical_ff = collagen_utility.append_collagen_templates(classical_ff)
 
         if not "n2" in self.graph_data.keys():
             assert classical_ff is not None, "Please provide a forcefield for the parametrization."
@@ -431,7 +431,7 @@ class PDBMolecule:
         return g
     
 
-    def parametrize(self, forcefield:Union[ForceField, str]=ForceField('amber99sbildn.xml'), get_charges=None, allow_radicals=False, collagen=False)->dgl.DGLGraph:
+    def parametrize(self, forcefield:Union[ForceField, str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False)->dgl.DGLGraph:
         """
         Stores the forcefield parameters and energies/gradients in the graph_data dictionary.
         get_charges is a function that takes a topology and returns a list of charges as openmm Quantities in the order of the atoms in topology.
@@ -440,11 +440,6 @@ class PDBMolecule:
         If forcefield is a string, we assume that a small molecule forcefield such as gaff-2.11 is being used. In this case, no information on residues is needed for parametrization.
         """
 
-        if collagen:
-            # forcefield = collagen_utility.append_collagen_templates(forcefield)
-            # NOTE
-            forcefield = collagen_utility.get_collagen_forcefield()
-
         if isinstance(forcefield, str):
             assert len(self.pdb) == 1, "If forcefield is a string, a smiles string must be present in the object."
             [smiles] = self.pdb
@@ -452,7 +447,7 @@ class PDBMolecule:
             g = graph_init.graph_from_topology(smiles=smiles, topology=None, classical_ff=forcefield, allow_radicals=allow_radicals, radical_indices=None, xyz=self.xyz, qm_energies=self.energies, qm_gradients=self.gradients, get_charges=get_charges)
     
         else:
-            top = self.to_openmm().topology
+            top = self.to_openmm(collagen=collagen).topology
             g = graph_init.graph_from_topology(topology=top, classical_ff=forcefield, allow_radicals=allow_radicals, radical_indices=None, xyz=self.xyz, qm_energies=self.energies, qm_gradients=self.gradients, get_charges=get_charges)
 
         # write data in own dict:
@@ -512,7 +507,7 @@ class PDBMolecule:
         return bonds
         
 
-    def validate_confs(self, forcefield=ForceField("amber99sbildn.xml"), collagen:bool=False, quickload:bool=False)->Tuple[Tuple[float, float], Tuple[float, float]]:
+    def validate_confs(self, forcefield=get_mod_amber99sbildn(), collagen:bool=False, quickload:bool=False)->Tuple[Tuple[float, float], Tuple[float, float]]:
         """
         Returns the rmse between the classical force field in angstrom and kcal/mol and the stored data, and the standard deviation of the data itself.
         """
@@ -530,7 +525,7 @@ class PDBMolecule:
             return (np.sqrt(np.mean(diffs_e**2)), np.std(en)), (None, None)
         
 
-    def conf_check(self, forcefield=ForceField("amber99sbildn.xml"), sigmas:Tuple[float,float]=(1.,1.), collagen=False, quickload:bool=False)->bool:
+    def conf_check(self, forcefield=get_mod_amber99sbildn(), sigmas:Tuple[float,float]=(1.,1.), collagen=False, quickload:bool=False)->bool:
         """
         Checks if the stored energies and gradients are consistent with the forcefield. Returns True if the energies and gradients are within var_param[0] and var_param[1] standard deviations of the stored energies/forces.
         If sigmas are 1, this corresponds to demanding that the forcefield data is better than simply always guessing the mean.
@@ -786,9 +781,10 @@ class PDBMolecule:
 
         # write single pdb
         conf = trajectory[0]
-        self.pdb, elements = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
+        self.pdb, elements, residues = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
 
         self.elements = np.array(elements)
+        self.residues = np.array(residues)
 
         # write xyz and energies
         energies = []
@@ -875,9 +871,10 @@ class PDBMolecule:
 
         # write single pdb
         conf = trajectory[0]
-        self.pdb, elements = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference,atom_order=atom_order)
+        self.pdb, elements, residues = PDBMolecule.pdb_from_ase(ase_conformation=conf, sequence=sequence, AAs_reference=AAs_reference, atom_order=atom_order)
 
         self.elements = np.array(elements)
+        self.residues = np.array(residues)
 
         # write xyz and energies
         energies = []
@@ -1021,7 +1018,7 @@ class PDBMolecule:
 
         # concatenate the permutations:
 
-        pdb, _ = PDBMolecule.pdb_from_ase(ase_conformation=ase_mol, sequence=seq, AAs_reference=AAs_reference, atom_order=atom_order)
+        pdb, _, _ = PDBMolecule.pdb_from_ase(ase_conformation=ase_mol, sequence=seq, AAs_reference=AAs_reference, atom_order=atom_order)
 
         # NOTE convert to openmm standard:
         # with tempfile.NamedTemporaryFile(mode='r+') as f:
@@ -1059,6 +1056,7 @@ class PDBMolecule:
         """
         pdb_lines = []
         elements = []
+        residues = []
 
         # copied from PDBMolecule.write_trjtopdb
         AA_pos = 0
@@ -1072,8 +1070,10 @@ class PDBMolecule:
 
             pdb_lines.append('{0}  {1:>5d} {2:^4s} {3:<3s} {4:1s}{5:>4d}    {6:8.3f}{7:8.3f}{8:8.3f}{9:6.2f}{10:6.2f}          {11:>2s}\n'.format('ATOM',j,atomname ,sequence[AA_pos].split(sep="_")[0],'A',AA_pos+1,*ase_conformation.positions[k],1.00,0.00,atomname[0]))
 
+            residues.append(sequence[AA_pos].split(sep="_")[0])
+
         pdb_lines.append("END")
-        return pdb_lines, elements
+        return pdb_lines, elements, residues
     
 
 
@@ -1084,6 +1084,7 @@ class PDBMolecule:
         Returns energies, gradients that are calculated by the forcefield for all states xyz. Tha state axis is the zeroth axis.
         If str, assume that it is a small molecule forcefield.
         quickload: simply take the reference energies written in the graph upon parametrization.
+        If collagen, load the openmm topology with adding the collagen specific bonds.
         """
         from openmm.app import ForceField, PDBFile, topology, Simulation, PDBReporter, PME, HBonds, NoCutoff, CutoffNonPeriodic
         from openmm import LangevinMiddleIntegrator, Vec3
@@ -1103,12 +1104,6 @@ class PDBMolecule:
                 e_class = self.graph_data["g"]["u_total_ref"]
                 grad_class = self.graph_data["n1"]["grad_total_ref"].transpose(1,0,2)
             return e_class, grad_class
-
-        
-        if collagen:
-            forcefield = collagen_utility.get_collagen_forcefield()
-            # NOTE:
-            # forcefield = collagen_utility.append_collagen_templates(forcefield)
 
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 1*femtoseconds)
 
@@ -1225,7 +1220,7 @@ class PDBMolecule:
 
                 
 
-    def energy_check(self, pdb:PDBFile=None, seed:int=0, permute:bool=True, n_conf:int=5, forcefield:ForceField=ForceField('amber99sbildn.xml'), accuracy:List[float]=[0.1, 1.], store_energies_ptr:list=None, collagen=False)->bool:
+    def energy_check(self, pdb:PDBFile=None, seed:int=0, permute:bool=True, n_conf:int=5, forcefield:ForceField=get_mod_amber99sbildn(), accuracy:List[float]=[0.1, 1.], store_energies_ptr:list=None, collagen=False)->bool:
         """
         Create a set of configurations using openmm, then shuffle positions, elements and forces, create a PDBMolecule from the xyz and elements alone and use openmm to calculate the energies and forces belonging to the (re-ordered) positions of the mol, and compare these elementwise. Returns false if the energies deviate strongly.
         This can be used as static method applied to an uninitialised class object by specifying the pdb file, or as a method of a PDBMolecule object.
@@ -1237,8 +1232,6 @@ class PDBMolecule:
         from openmm import LangevinMiddleIntegrator, Vec3
         from openmm.unit import Quantity, picosecond, kelvin, kilocalorie_per_mole, picoseconds, angstrom, nanometer, femtoseconds, newton
 
-        if collagen:
-            forcefield = collagen_utility.append_collagen_templates(forcefield)
 
         # generate a dataset
 
