@@ -42,6 +42,7 @@ def get_args():
     parser.add_argument('--ds_short', default=None, type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
     parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
     parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
+    parser.add_argument('--ds_split_names', default=None, type=str, help='Path to a file containing the names of the splits of the dataset. If None, the split is done according to the random seed. (default: None)')
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
@@ -71,7 +72,7 @@ def get_args():
     parser.set_defaults(layer_norm=None)
     parser.add_argument('--dropout', type=float, default=None, help=" (default: 0.2)")
     parser.add_argument('--rep_dropout', type=float, default=None, help=" (default: 0)")
-    parser.add_argument('--final_dropout', dest='final_dropout', action='store_true', help='Whether to only apply one dropout layer for the representation, which is then located at the very end. The probability will be set to rep_droput. (default: True)')
+    parser.add_argument('--final_dropout', dest='final_dropout', action='store_true', help='Whether to only apply one dropout layer for the representation, which is then located at the very end. The probability will be set to rep_droput. (default: False)')
     parser.add_argument('--no_final_dropout', dest='final_dropout', action='store_false')
     parser.set_defaults(final_dropout=None)
     parser.add_argument('--weight_decay', type=float, default=None, help=" (default: 1e-4)")

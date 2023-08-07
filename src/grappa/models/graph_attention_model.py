@@ -357,7 +357,7 @@ class Representation(torch.nn.Module):
 
         h = self.post_dense(h)
 
-        h = self.end_dropout(h)
+        h = self.final_dropout(h)
 
         g.nodes["n1"].data["h"] = h
         return g

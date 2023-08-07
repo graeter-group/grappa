@@ -146,6 +146,10 @@ class PDBDataset:
                 val_names = unique_names[n_train:n_train+n_val]
                 test_names = unique_names[n_train+n_val:]
                 
+        train_names = train_names.tolist()
+        val_names = val_names.tolist()
+        test_names = test_names.tolist()
+
         train_indices = [i for i, name in enumerate(names) if name in train_names]
         val_indices = [i for i, name in enumerate(names) if name in val_names]
         test_indices = [i for i, name in enumerate(names) if name in test_names]
@@ -940,11 +944,17 @@ class PDBDataset:
         order = np.argsort(n_mols)[::-1]
 
         split_indices = [[]]*len(datasets)
+        
+        assert len(split_indices) == len(datasets)
+
         split_names = None
         for i in order:
             dataset = datasets[i]
             split_idxs, split_names = dataset.split(split, seed=seed, existing_split_names=split_names)
             split_indices[i] = split_idxs
+
+        assert type(split_names[0]==list)
+        assert type(split_names[0][0]) == str, f"Split names should be a tuple of lists of strings, but are {type(split_names)}[{type(split_names[0])}][{type(split_names[0][0])}]"
 
         return split_indices, split_names
 

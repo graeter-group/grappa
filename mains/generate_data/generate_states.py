@@ -2,10 +2,11 @@ import openmm as mm
 from openmm import app
 import numpy as np
 from utils import ProgressReporter
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
 from pathlib import Path
 
-def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.ForceField('amber99sbildn.xml'), plot=False, between_steps=50000, allow_collagen=False):
+def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod_amber99sbildn(), plot=False, between_steps=50000, allow_collagen=False):
 
     # Load the PDB file
     pdb = app.PDBFile(str(Path(pdb_folder)/Path('pep.pdb')))
@@ -97,9 +98,7 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=mm.app.
 
 
 
-def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000, forcefield=None, allow_collagen=False):
-    if forcefield is None:
-        forcefield = mm.app.ForceField('amber99sbildn.xml')
+def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000, forcefield=get_mod_amber99sbildn(), allow_collagen=False):
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
@@ -123,10 +122,4 @@ if __name__ == "__main__":
     parser.add_argument('--allow_collagen', '-c', action='store_true', help='Whether to use the collagen forcefield containing HYP and DOP.')
     args = parser.parse_args()
 
-    forcefield = None
-
-    if args.allow_collagen:
-        from grappa.ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
-        forcefield = get_collagen_forcefield()
-
-    generate_all_states(args.folder, n_states=args.n_states, temperature=args.temperature, plot=args.plot, between_steps=args.between_steps, forcefield=forcefield)
+    generate_all_states(args.folder, n_states=args.n_states, temperature=args.temperature, plot=args.plot, between_steps=args.between_steps)
