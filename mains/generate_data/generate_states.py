@@ -106,6 +106,7 @@ def generate_all_states(folder, n_states=10, temperature=300, plot=False, betwee
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
+            log = Logger(Path(pdb_folder), log_to_screen=True)
             log(f"generating states for {i}")
             try:
                 generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot, between_steps=between_steps, forcefield=forcefield, allow_collagen=allow_collagen)
