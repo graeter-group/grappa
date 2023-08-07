@@ -164,6 +164,8 @@ class ResidualConvBlock(torch.nn.Module):
 
         self.do_layer_norm = layer_norm
 
+        self.end_dropout = torch.nn.Dropout(p=0.3)
+
 
 
     def forward(self, g, h):
@@ -192,7 +194,7 @@ class ResidualConvBlock(torch.nn.Module):
 
             # the self_interaction can always be skipped since it maps from out_feats to out_feats
             h = h + h_skip
-
+        
         return h
 
 
@@ -207,7 +209,7 @@ class Representation(torch.nn.Module):
         if increase_width is true, doubles the width of the convolutional layers every step until one is larger than out_feats
         If attention_last is true, the attention blocks are put after the convolutional blocks, otherwise before.
     """
-    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, increase_width=True, attention_last=True, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[], dropout=0.2):
+    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, increase_width=True, attention_last=True, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[], dropout=0.2, final_dropout=True):
         """
         Implementing:
             - a single linear layer with node-level-shared weights mapping from in_feats to h_feats
@@ -281,9 +283,15 @@ class Representation(torch.nn.Module):
             elif len(n_out_feats) == 1:
                 n_out_feats[0] = out_feats
 
-        # use dropout every second layer:
+        self.final_dropout = torch.nn.Dropout(dropout)
 
+
+        # use dropout every second layer:
         dropout_layers = [dropout if i%2==0 else 0. for i in range(n_conv+n_att)]
+        
+        # in this case, use dropout only in the final layer:
+        if final_dropout:
+            dropout_layers = [0]*len(dropout_layers)
         
         if len(n_out_feats) > 0:
 
@@ -349,7 +357,7 @@ class Representation(torch.nn.Module):
 
         h = self.post_dense(h)
 
-        # h = self.layer_norm(h)
+        h = self.end_dropout(h)
 
         g.nodes["n1"].data["h"] = h
         return g

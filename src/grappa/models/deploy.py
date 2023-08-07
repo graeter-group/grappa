@@ -7,7 +7,7 @@ import torch
 from typing import Union, List, Tuple, Dict
 
 
-def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
+def model_from_tag(tag:str, device:str="cpu", split_path:List=[])->torch.nn.Module:
     """
     Load a trained model from a tag. Available tags are:
     
@@ -17,10 +17,12 @@ def model_from_tag(tag:str, device:str="cpu")->torch.nn.Module:
 
     if tag == "example":
         path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
+        split_path.append("/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/split.json")
         config = None
 
     elif tag == "radical_example":
         path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/radical_example/best_model.pt"
+        split_path.append("/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/radical_example/split.json")
         config = None
     else:
         raise ValueError(f"Unknown tag {tag}")
@@ -65,6 +67,7 @@ def model_from_config(config_path: Union[Path, str] = None, config: Dict = None,
         "positional_encoding": args["positional_encoding"],
         "layer_norm": args["layer_norm"],
         "dropout": args["dropout"],
+        "final_dropout": args["final_dropout"],
         "rep_dropout": args["rep_dropout"],
         "attentional": args["attentional"],
         "n_periodicity_proper": args["n_periodicity_proper"],
@@ -110,6 +113,10 @@ def get_default_model_config(tag:str, scale:float=1.0):
         args = get_med_model_config()
     elif tag == "large":
         args = get_large_model_config()
+    elif tag == "deep":
+        args = get_deep_model_config()
+    else:
+        raise ValueError(f"Unknown tag {tag}")
 
     return scale_model_config(args, scale=scale)
 
@@ -120,19 +127,48 @@ def get_med_model_config():
         "width":128,
         "rep_feats":1024,
         "readout_width":512,
-        "n_conv":3,
+        "n_conv":2,
         "n_att":2,
         "n_heads":8,
         "old_model":False,
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
+        "final_dropout":True,
+        "dropout":0,
+        "rep_dropout":0.,
+        "n_att_readout":2,
+        "dense_layers_readout":2,
+        "n_heads_readout":16,
+        "reducer_feats":512,
+        "attention_hidden_feats":1024,
+        "positional_encoding":True,
+        "attentional":True,
+        "n_periodicity_proper":6,
+        "n_periodicity_improper":3,
+    }
+
+    return args
+
+def get_deep_model_config():
+    args = {
+        "width":128,
+        "rep_feats":512,
+        "readout_width":256,
+        "n_conv":2,
+        "n_att":4,
+        "n_heads":8,
+        "old_model":False,
+        "use_improper":True,
+        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+        "layer_norm":True,
+        "final_dropout":True,
         "dropout":0,
         "rep_dropout":0.,
         "n_att_readout":3,
         "dense_layers_readout":2,
-        "n_heads_readout":32,
-        "reducer_feats":512,
+        "n_heads_readout":16,
+        "reducer_feats":256,
         "attention_hidden_feats":1024,
         "positional_encoding":True,
         "attentional":True,
@@ -155,6 +191,7 @@ def get_small_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
+        "final_dropout":False,
         "dropout":0,
         "rep_dropout":0.,
         "n_att_readout":2,
@@ -183,6 +220,7 @@ def get_large_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
+        "final_dropout":True,
         "dropout":0.2,
         "rep_dropout":0.2,
         "n_att_readout":4,

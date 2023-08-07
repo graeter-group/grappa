@@ -32,11 +32,11 @@ def get_default_run_config():
         "test":False,
         "pretrain_steps":500,
         "train_steps":1e5,
-        "patience":5e3, # in steps
+        "patience":2e3, # in steps
         "plots":False,
         "device":None,
         "description":[""],
-        "lr":1e-5,
+        "lr":2e-5,
         "warmup":False,
         "name":"",
         "test_ds_tags":None,
@@ -175,6 +175,7 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     #     run_utils.reduce_confs(ds_tr, confs, seed=seed)
 
     tr_loader, vl_loader, te_loader = ds_splitter.get_full_loaders(shuffle=True)
+
 
     mols = ds_splitter.train_mols
 
