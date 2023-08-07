@@ -32,6 +32,14 @@ echo "Folder: $folder"
 cd /hits/basement/mbm/seutelf/grappa/mains/generate_data
 
 
+echo "Generating data for sequence $sequence"
+conda activate pepgen
+python generate_pdbs2.py --folder "$folder"/"$sequence" --allow_collagen -s "$sequence"
+
+echo "Generating states for sequence $sequence"
+conda activate grappa_haswell
+python generate_states.py "$folder" -n "$n_states_per_molecule" --temperature 300 --allow_collagen
+
 echo "Calculating single points for sequence $sequence"
 conda activate psi4
 python single_points.py "$folder" --skip_errs --memory "$memory" --num_threads "$num_threads"

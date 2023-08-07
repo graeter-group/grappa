@@ -19,7 +19,7 @@ import os
 
 def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
-    log = Logger(Path(pdb_folder), log_to_screen=True)
+    log = Logger(Path(pdb_folder).parent, print_to_screen=True)
 
     METHOD = 'bmk'
     BASIS = '6-311+G(2df,p)'
@@ -143,13 +143,13 @@ def calc_states(pdb_folder, n_states=None, memory=32, num_threads=8):
 
 
 def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threads=8):
-
-    log = Logger(Path(folder), log_to_screen=True)
-
     from pathlib import Path
+
+    log = Logger(Path(folder), print_to_screen=True)
+
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
-            log()
+            log("")
             log(f"calculating states for {i}")
             # calc_states(pdb_folder)
             try:
@@ -163,6 +163,7 @@ def calc_all_states(folder, n_states=None, skip_errs=False, memory=32, num_threa
                 log(f"failed to calculate states for {i} ({Path(folder).stem}): {type(e)}\n: {e}")
                 # raise
                 pass
+    log("finished!")
 
 if __name__ == "__main__":
     import argparse

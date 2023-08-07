@@ -6,9 +6,10 @@ from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
 from pathlib import Path
 
-def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod_amber99sbildn(), plot=False, between_steps=50000, allow_collagen=False):
+def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod_amber99sbildn(), plot=False, between_steps=50000, allow_collagen=True):
 
-    log = Logger(Path(pdb_folder), log_to_screen=True)
+    log = Logger(Path(pdb_folder).parent, print_to_screen=True)
+    log(f"Generating states in {pdb_folder}")
 
     # Load the PDB file
     pdb = app.PDBFile(str(Path(pdb_folder)/Path('pep.pdb')))
@@ -27,7 +28,7 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod
     if plot:
         total_steps += 100
         
-    simulation.reporters.append(ProgressReporter(1000, total_steps))
+    simulation.reporters.append(ProgressReporter(int(total_steps/20), total_steps))
 
     if plot:
         simulation.step(100) # equilibrate a bit to reach the temperature
@@ -100,13 +101,12 @@ def generate_states(pdb_folder, n_states=10, temperature=300, forcefield=get_mod
 
 
 
-def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000, forcefield=None, allow_collagen=False):
-    if forcefield is None:
-        forcefield = mm.app.ForceField('amber99sbildn.xml')
+def generate_all_states(folder, n_states=10, temperature=300, plot=False, between_steps=25000, forcefield=get_mod_amber99sbildn(), allow_collagen=True):
+
     from pathlib import Path
     for i, pdb_folder in enumerate(Path(folder).iterdir()):
         if pdb_folder.is_dir():
-            log = Logger(Path(pdb_folder), log_to_screen=True)
+            log = Logger(Path(folder), print_to_screen=True)
             log(f"generating states for {i}")
             try:
                 generate_states(pdb_folder, n_states=n_states, temperature=temperature, plot=plot, between_steps=between_steps, forcefield=forcefield, allow_collagen=allow_collagen)
@@ -119,7 +119,7 @@ def generate_all_states(folder, n_states=10, temperature=300, plot=False, betwee
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Generate states for a given folder.')
-    parser.add_argument('folder', type=str, help='The folder containing the PDB files.', default="data/pep1")
+    parser.add_argument('folder', type=str, help='The folder containing the subfolders with PDB files.', default="data/pep1")
     parser.add_argument('--n_states', '-n', type=int, help='The number of states to generate.', default=10)
     parser.add_argument('--temperature', '-t', type=int, help='The temperature to use for the simulation.', default=300)
     parser.add_argument('--plot', '-p', action='store_true', help='Whether to plot the sampling temperatures and potential energies.')

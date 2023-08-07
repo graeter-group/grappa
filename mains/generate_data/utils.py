@@ -9,9 +9,11 @@ class Logger:
         self.folder = str(folder)
         os.makedirs(self.folder, exist_ok=True)
         self.logfile = os.path.join(self.folder, 'log.txt')
+        self.print_to_screen = print_to_screen
 
-    def __call__(self, message:str):
-        print(message)
+    def __call__(self, message:str=""):
+        if self.print_to_screen:
+            print(message)
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with open(self.logfile, 'a') as f:
             f.write(f'[{timestamp}] {message}\n')

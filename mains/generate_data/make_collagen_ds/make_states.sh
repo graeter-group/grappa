@@ -8,7 +8,7 @@
 set -e
 
 #conda path:
-CONDA_PREFIX="/hits/basement/mbm/seutelf/software/conda"
+CONDA_PREFIX="/hits/fast/mbm/seutelf/software/conda"
 
 eval "$($CONDA_PREFIX/bin/conda shell.bash hook)"
 
@@ -32,9 +32,11 @@ echo "Folder: $folder"
 cd /hits/basement/mbm/seutelf/grappa/mains/generate_data
 
 
-echo "Calculating single points for sequence $sequence"
-conda activate psi4
-python single_points.py "$folder" --skip_errs --memory "$memory" --num_threads "$num_threads"
+echo "Generating data for sequence $sequence"
+conda activate pepgen
+python generate_pdbs2.py --folder "$folder"/"$sequence" --allow_collagen -s "$sequence"
 
-conda activate grappa_haswell
-python validate_qm.py "$folder" --skip_errs --num_threads "$num_threads"
+echo "Generating states for sequence $sequence"
+conda activate grappa
+python generate_states.py "$folder" -n "$n_states_per_molecule" --temperature 300 --allow_collagen
+
