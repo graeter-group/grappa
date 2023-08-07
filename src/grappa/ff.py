@@ -6,7 +6,7 @@ Class wrapping a model and providing methods for translating various input types
 import torch
 import dgl
 from typing import Union, List, Tuple, Dict, Callable
-from .ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
+from .ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 from .models.deploy import model_from_path, model_from_tag
 import openmm.app.topology
 import openmm.app
@@ -25,7 +25,7 @@ class ForceField:
     def __init__(self,
                  model:Callable=None,
                  model_path:Union[str, Path]=None,
-                 classical_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml"),
+                 classical_ff:openmm.app.ForceField=get_mod_amber99sbildn(),
                  charge_model:Union[str,Callable]=None,
                  allow_radicals:bool=False, device:str="cpu",
                  ) -> None:
@@ -85,6 +85,8 @@ class ForceField:
 
         self.allow_radicals = allow_radicals
 
+        self.split_path = None # path to a json file containing the names of splits of the dataset into train, val and test molecules. This can be attached to forcefields for better evaluation.
+
 
     @classmethod
     def from_tag(cls,
@@ -110,9 +112,10 @@ class ForceField:
 
         if tag == "example":
             model_tag = "example"
-            model = model_from_tag(model_tag, device=device)
+            split_path = []
+            model = model_from_tag(model_tag, device=device, split_path=split_path)
 
-            classical_ff = openmm.app.ForceField("amber99sbildn.xml") if classical_ff is None else classical_ff
+            classical_ff = get_mod_amber99sbildn() if classical_ff is None else classical_ff
 
             allow_radicals = False if allow_radicals is None else allow_radicals
 
@@ -121,6 +124,7 @@ class ForceField:
             
             self = cls(model=model, classical_ff=classical_ff, charge_model=charge_model, allow_radicals=allow_radicals, device=device)
 
+            self.split_path = split_path[0]
             self.units["angle"] = unit.degree
             
             return self
@@ -129,9 +133,10 @@ class ForceField:
 
         elif tag == "radical_example":
             model_tag = "radical_example"
-            model = model_from_tag(model_tag, device=device)
+            split_path = []
+            model = model_from_tag(model_tag, device=device, split_path=split_path)
 
-            classical_ff = get_collagen_forcefield() if classical_ff is None else classical_ff
+            classical_ff = get_mod_amber99sbildn() if classical_ff is None else classical_ff
 
             allow_radicals = True if allow_radicals is None else allow_radicals
 
@@ -140,6 +145,7 @@ class ForceField:
             
             self = cls(model=model, classical_ff=classical_ff, charge_model=charge_model, allow_radicals=allow_radicals, device=device)
 
+            self.split_path = split_path[0]
             self.units["angle"] = unit.degree
             
             return self
@@ -300,7 +306,7 @@ class ForceField:
     # UTILITIES FOR TESTING
     ################################
     @staticmethod
-    def get_classical_model(top:openmm.app.Topology, class_ff:openmm.app.ForceField=openmm.app.ForceField("amber99sbildn.xml")):
+    def get_classical_model(top:openmm.app.Topology, class_ff:openmm.app.ForceField=get_mod_amber99sbildn()):
         """
         Returns a model that acts like the classical forcefield. This can be used to test and compare the workflow to the classical forcefield.
         This model also overwrites the nonbonded parameters!

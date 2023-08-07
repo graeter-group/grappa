@@ -20,11 +20,14 @@ from .grappa_training import RMSE
 
 #%%
 
-def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=10, time_limit=2e4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=None, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False, weight_decay=0, scale_dict={}, l2_dict={}):
+def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, lr_pre=1e-4, lr_conti=1e-4, energy_factor=0, force_factor=1, storage_path="versions", classification_epochs=-1, pretrain_epochs=10, epochs=500, patience=1e3, time_limit=4, device=DEVICE, bce_weight=BCEWEIGHT, pretrain_direct_epochs=100, direct_eval=False, param_statistics=None, param_factor=0.1, final_eval=True, reduce_factor=None, load_path=None, recover_optimizer=False, continue_path=None, use_warmup=False, weight_decay=0, scale_dict={}, l2_dict={}):
     """
     This function is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
     load_path: path to the version directory of the model to continue from.
     """
+
+    time_limit = int(time_limit*60*60) # convert hours to seconds
+
     model = model.to(device)
 
     if not reduce_factor is None:
@@ -119,7 +122,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
                 # in this setting "better" means lowering the train loss by one percent
                 # step is called every log-interval on the total train loss
 
-                return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=1e-10, patience=patience, threshold=1e-3, threshold_mode='rel', cooldown=0, min_lr=1e-10)
+                return torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=1e-10, patience=patience, threshold=1e-3, threshold_mode='rel', cooldown=0, min_lr=1e-20)
 
 
             def training_epoch(self, model, do_all=False):
@@ -128,7 +131,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
                     print("\ntime limit reached, stopping training\n")
                     self.more_training = False
 
-                if self.params["lr"] < 1e-10 and self.epochs > 10:
+                if self.params["lr"] < 1e-10 and self.epoch > 10:
                     self.log("\nminimum lr reached, stopping training\n")
                     print("\nminimum lr reached, stopping training\n")
                     self.more_training = False

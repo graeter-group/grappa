@@ -8,6 +8,7 @@ import os
 
 from grappa.ff_utils.charge_models.charge_models import model_from_dict, randomize_model
 from grappa.constants import DEFAULTBASEPATH
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
 FILTER_REF = True # whether to apply the filtering to the reference energies or the qm energies
 
@@ -29,6 +30,9 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
 
     if not collagen:
         ds.remove_names(patterns=["HYP", "DOP"], upper=True)
+
+    if collagen:
+        ff = get_mod_amber99sbildn()
 
     ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
 

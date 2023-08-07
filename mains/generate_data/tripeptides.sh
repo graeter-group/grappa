@@ -55,7 +55,7 @@ if [ ! -d "$orig_folder" ]; then
   mkdir -p "$orig_folder"
 fi
 
-# Copy all subfolders from the folder with _arg to the original folder
-rsync -a "$folder"/ "$orig_folder"/
+# # Copy all subfolders from the folder with _arg to the original folder
+# rsync -a "$folder"/ "$orig_folder"/
 
 rm *.clean

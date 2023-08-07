@@ -707,10 +707,8 @@ class PDBDataset:
 
         if by_residue:
 
-            from grappa.constants import ONELETTER
-
             for res in se_per_residue.keys():
-                rmse_per_residue[ONELETTER[res]] = np.sqrt(se_per_residue[res]/n_forces_res[res])
+                rmse_per_residue[res] = np.sqrt(se_per_residue[res]/n_forces_res[res])
 
         del se_per_element
         del se_per_residue
@@ -880,7 +878,7 @@ class PDBDataset:
 
                     def make_res_compare_plot(ax):
                         # sort residues to ensure 'b' and 'z' appear at the very right side
-                        residues = sorted(rmse_per_residue.keys(), key=lambda k: (k.lower() in ['b', 'z'], k))
+                        residues = sorted(rmse_per_residue.keys(), key=lambda k: (k.lower() in ['ase', 'nme'], k))
                         values = [rmse_per_residue[res] for res in residues]
                         values_compare = [rmse_per_residue_compare[res] for res in residues]
 
