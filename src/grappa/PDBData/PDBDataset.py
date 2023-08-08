@@ -146,7 +146,7 @@ class PDBDataset:
                 val_names = unique_names[n_train:n_train+n_val]
                 test_names = unique_names[n_train+n_val:]
                 
-                
+
         train_names = [str(n) for n in train_names]
         val_names = [str(n) for n in val_names]
         test_names = [str(n) for n in test_names]
@@ -500,7 +500,7 @@ class PDBDataset:
 
 
     @classmethod
-    def from_pdbs(cls, path: Union[str,Path], energy_name="energies.npy", force_name="forces.npy", xyz_name="positions.npy", is_force:bool=True, info:bool=True, n_max:int=None, skip_errs:bool=False):
+    def from_pdbs(cls, path: Union[str,Path], energy_name="energies.npy", force_name="forces.npy", xyz_name="positions.npy", is_force:bool=True, info:bool=True, n_max:int=None, skip_errs:bool=False, allow_incomplete:bool=False):
         """
         Generates a dataset from a folder with pdb files and .npy files containing energies and forces.
         """
@@ -516,9 +516,23 @@ class PDBDataset:
                     gradients = np.load(pdbpath.parent / force_name) # load the forces.npy file
                     xyz = np.load(pdbpath.parent / xyz_name) # load the positions.npy file
 
+                    if xyz.shape[1] != gradients.shape[1]:
+                        raise ValueError(f"number of atoms per mol {xyz.shape[1]} != number of force vectors per mol {gradients.shape[1]}")
+                    if xyz.shape[2] != 3:
+                        raise ValueError(f"number of dimensions per mol {xyz.shape[2]} != 3")
+                    if gradients.shape[2] != 3:
+                        raise ValueError(f"number of dimensions per force {gradients.shape[2]} != 3")
+
                     if is_force:
                         gradients = -gradients
                     
+                    if len(energies) != len(xyz):
+                        if allow_incomplete:
+                            energies = energies[:len(xyz)]
+                            gradients = gradients[:len(xyz)]
+                        else:
+                            raise ValueError(f"number of energies {len(energies)} != number of xyz {len(xyz)}")
+
                     mol = PDBMolecule.from_pdb(pdbpath=pdbpath, xyz=xyz, gradients=gradients, energies=energies)
                     mols.append(mol)
                     
