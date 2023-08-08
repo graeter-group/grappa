@@ -15,7 +15,7 @@ eval "$($CONDA_PREFIX/bin/conda shell.bash hook)"
 
 # Get arguments
 sequence=${1:-"OA"}
-memory=${3:-40}
+memory=${3:-38}
 num_threads=${4:-4}
 
 basefolder="/hits/basement/mbm/seutelf/grappa/mains/generate_data/make_collagen_ds"
