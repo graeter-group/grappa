@@ -2,7 +2,7 @@
 
 #SBATCH -o /hits/basement/mbm/seutelf/grappa/mains/generate_data/outfiles/info.out-%j
 #SBATCH -t 24:00:00
-#SBATCH --mem=16000
+#SBATCH --mem=42000
 #SBATCH -n 4
 
 set -e
@@ -15,8 +15,7 @@ eval "$($CONDA_PREFIX/bin/conda shell.bash hook)"
 
 # Get arguments
 sequence=${1:-"OA"}
-n_states_per_molecule=${2:-50}
-memory=${3:-15}
+memory=${3:-40}
 num_threads=${4:-4}
 
 basefolder="/hits/basement/mbm/seutelf/grappa/mains/generate_data/make_collagen_ds"
@@ -25,9 +24,6 @@ pdb_folder="$basefolder"/data
 
 folder="$pdb_folder"/"$sequence"
 
-# create the folder if it does not exist:
-mkdir -p "$pdb_folder"
-mkdir -p "$folder"
 
 echo "Folder: $folder"
 
@@ -36,12 +32,6 @@ cd /hits/basement/mbm/seutelf/grappa/mains/generate_data
 
 
 echo "Calculating single points for sequence $sequence"
-
-conda activate pepgen
-python generate_pdbs.py --folder "$folder" --allow_collagen -s "$sequence"
-
-conda activate grappa_haswell
-python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot --allow_collagen
 
 conda activate psi4
 python single_points.py "$folder" --skip_errs --memory "$memory" --num_threads "$num_threads"

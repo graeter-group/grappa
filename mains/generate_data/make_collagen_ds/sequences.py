@@ -8,7 +8,8 @@ def dipeptides_hyp_dop():
         for AA2 in AAs:
             out.append(AA1+AA2)
             out.append(AA2+AA1)
-    return list(set(out))
+    unique_out = sorted(list(set(out)), key=lambda x: x[0] + x[1]*1000)
+    return unique_out
 
 for s in dipeptides_hyp_dop():
     print(s)

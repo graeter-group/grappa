@@ -1,31 +1,37 @@
 #!/bin/bash
 
+N_PER_BATCH=20
+
 set -e
 
 #conda path:
-CONDA_PREFIX="/hits/fast/mbm/seutelf/software/conda"
+CONDA_PREFIX="/hits/basement/mbm/seutelf/software/conda"
 
 eval "$($CONDA_PREFIX/bin/conda shell.bash hook)"
 
-conda activate grappa
-
-NUM_CONFS=50
+conda activate grappa_haswell
 
 # get an integer named batch_idx as argument:
 BATCH_IDX=${1:-0}
-END_IDX=$((BATCH_IDX + 20))
+START_IDX=$(($N_PER_BATCH * $BATCH_IDX))
+END_IDX=$(($N_PER_BATCH * ($BATCH_IDX + 1)-1))
 
-# Assuming your Python function is in a script named 'your_python_script.py'
-# and it prints the list of strings one per line. If this isn't the case, adjust accordingly.
-IFS=$'\n' read -d '' -r -a strings < <(python sequences.py && printf '\0')
+# Assuming Python function is in a script named 'sequences.py'
+# and it prints the list of strings one per line.
+strings=($(python sequences.py))
 
 # Print the total number of strings
 echo "Total strings: ${#strings[@]}"
-echo "Calculating strings from $BATCH_IDX to $((END_IDX-1))"
+echo "Calculating strings from $START_IDX to $END_IDX"
 
 # Iterate over the desired subset
-for idx in $(seq $BATCH_IDX $((END_IDX-1))); do
+counter=0
+for idx in $(seq $START_IDX $END_IDX); do
     if [[ $idx -lt ${#strings[@]} ]]; then
-        sbatch run.sh "${strings[$idx]}" $NUM_CONFS
+        counter=$((counter + 1))
+        echo "Calculating string ${strings[$idx]}"
+        sbatch run.sh "${strings[$idx]}"
     fi
 done
+
+echo "Submitted $counter jobs"
