@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH -o /hits/fast/mbm/seutelf/sbatch/outfiles/info.out-%j
-#SBATCH -t 5:00:00
+#SBATCH -t 6:00:00
 #SBATCH --mem=8000
 #SBATCH -n 4
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/compare_on_both6"
+VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/compare_on_both4"
 
 # Create the output directory if it doesn't exist yet
 mkdir -p $VPATH
@@ -24,6 +24,6 @@ conda activate grappa_cascade
 
 cd $VPATH
 
-grappa_full_run $*
+grappa_eval $*
 
 # simply run 'sbatch run.sh <your options>'
