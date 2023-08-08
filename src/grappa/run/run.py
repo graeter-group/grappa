@@ -157,7 +157,7 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
 
     # load the datasets
     print(f"loading: \n{ds_paths}")
-    datasets = [PDBDataset.load_npz(path, n_max=n_graphs) for path in ds_paths]
+    datasets = [PDBDataset.load_npz(path, n_max=n_graphs, info=False) for path in ds_paths]
 
     # initialize splitter object:
     if continue_path is None and load_path is None:
@@ -235,11 +235,12 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
 
             full_loaders_dict[k_] = eval_data["eval_data"][k]
 
-    print(logdata)
 
     logdata += str(pd.DataFrame(full_loaders_dict))
     with open(os.path.join(storage_path,version_name,"log.txt"), "a") as f:
         f.write(logdata)
+
+    print(logdata)
 
     # save the eval_data:
     with open(os.path.join(storage_path,version_name,"eval_data.json"), "w") as f:

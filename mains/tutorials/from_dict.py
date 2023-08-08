@@ -5,14 +5,14 @@ with open('input_data/GrAPPa_input_HAT.json', "r") as f:
     data = json.load(f)
 
 from grappa.ff import ForceField
-from grappa.ff_utils.classical_ff.collagen_utility import get_collagen_forcefield
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 import openmm.unit
 
 # path to the grappa model the forcefield is supposed to use (this can also be done by tag):
 mpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
 
 # classical forcefield that grapp auses for the nonbonded interactions:
-classical_ff = get_collagen_forcefield()
+classical_ff = get_mod_amber99sbildn()
 
 ff = ForceField(model_path=mpath, classical_ff=classical_ff)
 

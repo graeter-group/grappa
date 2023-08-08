@@ -198,11 +198,12 @@ class PDBDataset:
         pass
 
     @classmethod
-    def load_npz(cls, path:Union[str, Path], keep_order=True, n_max=None):
+    def load_npz(cls, path:Union[str, Path], keep_order=True, n_max=None, info=True):
         """
         Loads a dataset from npz files.
         """
         obj = cls()
+        obj.info = info
         # load:
         if not keep_order:
             paths = Path(path).rglob('*.npz')
@@ -522,14 +523,15 @@ class PDBDataset:
                         raise ValueError(f"number of dimensions per mol {xyz.shape[2]} != 3")
                     if gradients.shape[2] != 3:
                         raise ValueError(f"number of dimensions per force {gradients.shape[2]} != 3")
+                    if gradients.shape[0] != energies.shape[0]:
+                        raise ValueError(f"number of energies {energies.shape[0]} != number of forces {gradients.shape[0]}")
 
                     if is_force:
                         gradients = -gradients
                     
                     if len(energies) != len(xyz):
                         if allow_incomplete:
-                            energies = energies[:len(xyz)]
-                            gradients = gradients[:len(xyz)]
+                            xyz = xyz[:len(energies)]
                         else:
                             raise ValueError(f"number of energies {len(energies)} != number of xyz {len(xyz)}")
 
@@ -850,7 +852,7 @@ class PDBDataset:
                     
                     def make_res_plot(ax):
                         # sort residues to ensure 'b' and 'z' appear at the very right side
-                        residues = sorted(rmse_per_residue.keys(), key=lambda k: (k.lower() in ['b', 'z'], k))
+                        residues = sorted(rmse_per_residue.keys(), key=lambda k: k.lower() in ['ace', 'nme'])
                         values = [rmse_per_residue[res] for res in residues]
                         
                         # create a barplot:
@@ -858,7 +860,7 @@ class PDBDataset:
                         ax.set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
                         ax.set_xlabel("Residue", fontsize=fontsize)
                         ax.set_title("Force RMSE per Residue", fontsize=fontsize)
-                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2, rotation=45)
                         return ax
                     
                     if by_element:
@@ -896,8 +898,7 @@ class PDBDataset:
                         return ax
 
                     def make_res_compare_plot(ax):
-                        # sort residues to ensure 'b' and 'z' appear at the very right side
-                        residues = sorted(rmse_per_residue.keys(), key=lambda k: (k.lower() in ['ase', 'nme'], k))
+                        residues = sorted(rmse_per_residue.keys(), key=lambda k: k.lower() in ['ace', 'nme'])
                         values = [rmse_per_residue[res] for res in residues]
                         values_compare = [rmse_per_residue_compare[res] for res in residues]
 
@@ -914,7 +915,7 @@ class PDBDataset:
                         ax.set_title("Force RMSE per Residue", fontsize=fontsize)
                         ax.set_xticks([r + barWidth / 2 for r in range(len(residues))], residues)
                         ax.legend()
-                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2)
+                        ax.tick_params(axis='both', which='major', labelsize=fontsize-2, rotation=45)
                         return ax
                     
                     if by_element:
