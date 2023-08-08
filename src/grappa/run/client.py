@@ -34,7 +34,7 @@ def get_args():
     parser.add_argument('--test', action='store_true', default=False, help="Reducing dataset size to 50 graphs for testing functionality. (default: False)'")
     parser.add_argument('--seed','-s', type=int, nargs='+', default=None, help="random seed for the split of the dataset into train, val, test (default: 0)")
     parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 500)")
-    parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 1e5)")
+    parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 1e6)")
     parser.add_argument('--patience', type=float, default=None, help="patience of the learning rate scheduler in optimization steps (default: 2e3)")
     parser.add_argument('--plots', action='store_true', dest="plots", default=False, help="create plots during and at the end of training. might take time and memory (default: False)")
     parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '2e-5')")
@@ -43,6 +43,7 @@ def get_args():
     parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
     parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
     parser.add_argument('--ds_split_names', default=None, type=str, help='Path to a file containing the names of the splits of the dataset. If None, the split is done according to the random seed. (default: None)')
+    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 2)')
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
@@ -80,7 +81,7 @@ def get_args():
     parser.add_argument('--no_attentional', dest='attentional', action='store_false')
     parser.set_defaults(attentional=None)
 
-    parser.add_argument('--default_tag', type=str, default="small", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large', 'deep'] (default: 'small')")
+    parser.add_argument('--default_tag', type=str, default="best", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large', 'deep'] (default: 'best')")
     parser.add_argument('--default_scale', type=float, default=1, help="A scale factor for the default parameters for the model.  Only affects widths.")
 
     args = parser.parse_args()
@@ -218,8 +219,12 @@ def run_client():
 def full_run():
     args = get_args()
     vpath = []
-    if args.patience is None:
-        args.patience = 5e3
+    patience = args.patience
+    param_weight = args.param_weight
+
+    if patience is None:
+        # args.patience = 1e4
+        args.patience = 1e20
     run_(args, vpath=vpath)
     
     continue_path = vpath[0]
@@ -239,7 +244,11 @@ def full_run():
     args.continue_path = continue_path
     args.warmup = warmup
     args.lr = lr
-    args.patience = 5e3
+
+    if patience is None:
+        args.patience = 1e20
+    if param_weight is None:
+        args.param_weight = 0
 
     run_(args)
 

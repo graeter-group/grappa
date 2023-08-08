@@ -2,7 +2,7 @@ from grappa.run import run_utils
 
 from grappa.training.with_pretrain import train_with_pretrain
 from grappa.training.utilities import get_param_statistics
-from grappa.run.eval_utils import evaluate
+from grappa.run.eval import eval_on_trainset
 
 from ..models.deploy import get_default_model_config, model_from_config
 
@@ -31,7 +31,7 @@ def get_default_run_config():
         "seed":0,
         "test":False,
         "pretrain_steps":500,
-        "train_steps":1e5,
+        "train_steps":1e6,
         "patience":2e3, # in steps
         "plots":False,
         "device":None,
@@ -48,7 +48,8 @@ def get_default_run_config():
         # "l2_dict":{"n4_improper_k":0.01},
         "scale_dict":{"n4_improper": 0.1},
         "l2_dict":{},
-        "ds_split_names":None,
+        "ds_split_names":None, # for n-fold cross validation
+        "time_limit":2,
     }
 
     return args
@@ -125,7 +126,7 @@ def run_from_config(run_config_path:Union[Path,str]=None, model_config_path:Unio
 # param weight is wrt to the energy mse
 # the zeroth data
 # NOTE: use model_args dict, loaded from a config file
-def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config('small'), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4, vpath=[], scale_dict:dict={}, l2_dict:dict={}, ds_split_names:Union[Path,str]=None):
+def run_once(storage_path, version_name, pretrain_name, model_config=get_default_model_config('small'), param_weight=1, confs=None, mols=None, ds_path=[None], seed=0, test=False, pretrain_steps=2e3, train_steps=1e5, patience=1e-3, plots=False, device=None, test_ds_tags:List[str]=None, load_path=None, lr:float=1e-6, force_factor=1., energy_factor=1., recover_optimizer=False, continue_path=None, warmup:bool=False, weight_decay:float=1e-4, vpath=[], scale_dict:dict={}, l2_dict:dict={}, ds_split_names:Union[Path,str]=None, time_limit:float=2):
     # vpath: gets modified in-place, acts like a C++ reference here
     assert vpath == []
 
@@ -195,11 +196,12 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     ###################
 
     # do the actual training (this function is a mess, will be cleaned up)
-    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay, scale_dict=scale_dict, l2_dict=l2_dict)
+    train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader, storage_path=storage_path, patience=patience_, epochs=epochs, energy_factor=energy_factor, force_factor=force_factor, lr_conti=lr, lr_pre=1e-4, device=device, pretrain_epochs=pretrain_epochs, param_factor=param_weight, param_statistics=statistics, classification_epochs=-1, direct_eval=False, final_eval=False, load_path=load_path, recover_optimizer=recover_optimizer, continue_path=continue_path, use_warmup=warmup, weight_decay=weight_decay, scale_dict=scale_dict, l2_dict=l2_dict, time_limit=time_limit)
 
     ###################
 
     # do final evaluation
+    version_path = os.path.join(storage_path,version_name)
     model_path = os.path.join(storage_path,version_name,"best_model.pt")
     if not os.path.exists(model_path):
         model_path = os.path.join(storage_path,version_name,"last_model.pt")
@@ -210,44 +212,35 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     model = model.to(device)
     model.eval()
 
-    te_loaders = [ds_splitter.get_loaders(i)[2] for i in range(len(ds_paths))]
-
-    te_names = test_ds_tags if not test_ds_tags is None else [f"test_{i}" for i in range(len(te_loaders))]
 
     on_forces = False if force_factor == 0 else True
 
     print(f"\n\nevaluating model\n\t'{model_path}'\non tr, val and test set...\n")
 
-    for n in te_names:
-        n = n.replace("/","-")
-
     plot_folder = os.path.join(storage_path,version_name,"final_rmse_plots")
 
-    eval_data = evaluate(loaders=[tr_loader, vl_loader]+te_loaders, loader_names=["tr", "val"]+te_names, model=model, device=device, plot=False, on_forces=on_forces, plot_folder=plot_folder, rmse_plots=True)
-    
-    with open(os.path.join(storage_path,version_name,"eval_data.json"), "w") as f:
-        json.dump(eval_data, f, indent=4)
+    eval_data = eval_on_trainset(version_path=version_path, model=model, plot=False, all_loaders=True, on_forces=on_forces, test=False, last_model=False, full_loaders=False, ref_ff="ref", device="cpu", noprint=True)
+
     print()
 
-    print(str(pd.DataFrame(eval_data["eval_data"])))
-
-    # write the data of the full loaders to the log file:
+    # write the data of the loaders to the log file:
     logdata = "\n"
     full_loaders_dict = {}
     for k in eval_data["eval_data"]:
-        if k in ["tr", "val", "vl", "te"]:
-            full_loaders_dict[k] = eval_data["eval_data"][k]
+        if any(["train" in k, "test" in k]):
+
+            k_ = k
+            if len(k_) > 12:
+                k_ = k_[:5]+".."+k_[-5:]
+
+            full_loaders_dict[k_] = eval_data["eval_data"][k]
+
+    print(logdata)
+
     logdata += str(pd.DataFrame(full_loaders_dict))
     with open(os.path.join(storage_path,version_name,"log.txt"), "a") as f:
         f.write(logdata)
 
-    if plots:
-        print("plotting...")
-
-        loader_names=["tr", "val"]+te_names
-
-        for i in range(len(loader_names)):
-            loader_names[i] = loader_names[i].replace("/","-")
-
-
-        evaluate(loaders=[tr_loader, vl_loader]+te_loaders, loader_names=loader_names, model=model, device=device, plot_folder=os.path.join(storage_path,version_name,"final_eval_plots"), plot=True, metrics=False, on_forces=True, rmse_plots=False)
+    # save the eval_data:
+    with open(os.path.join(storage_path,version_name,"eval_data.json"), "w") as f:
+        json.dump(eval_data, f, indent=4)

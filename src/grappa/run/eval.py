@@ -47,7 +47,6 @@ def eval_client():
 
     vargs = vars(args)
     vargs.pop("ds_short")
-    vargs.pop("collagen")
 
     # call the function with all arguments passed by keyword:
     eval_once(**vargs)
@@ -89,7 +88,7 @@ def eval_on_new_set(version_path, model, plot=True, ds_base=None, on_forces=True
 
     loaders = [ds_splitter.get_loaders(i)[2] for i in range(len(ds_tag))]
 
-    ds_tags_ = [t.replace("/","-") for t in ds_tag]
+    ds_tags_ = [t.replace("/",">") for t in ds_tag]
 
 
     outer_name = "eval_on_custom_set"
@@ -106,7 +105,7 @@ def eval_on_new_set(version_path, model, plot=True, ds_base=None, on_forces=True
 
 
     
-def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_forces=True, test=False, last_model=False, full_loaders=False, ref_ff:str="ref", device="cpu"):
+def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_forces=True, test=False, last_model=False, full_loaders=False, ref_ff:str="ref", device="cpu", noprint=False):
     
     config_args = run_utils.load_yaml(Path(version_path)/Path("run_config.yml"))
     
@@ -138,7 +137,7 @@ def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_force
 
     if not test_ds_tags is None:
         for i in range(len(test_ds_tags)):
-            test_ds_tags[i] = test_ds_tags[i].replace("/","-")
+            test_ds_tags[i] = test_ds_tags[i].replace("/",">")
 
     te_names = test_ds_tags if not test_ds_tags is None else [f"ds_{i}" for i in range(len(te_loaders))]
 
@@ -160,16 +159,20 @@ def eval_on_trainset(version_path, model, plot=True, all_loaders=False, on_force
         loader_names = te_names
 
     for i in range(len(loader_names)):
-        loader_names[i] = loader_names[i].replace("/","-")
+        loader_names[i] = loader_names[i].replace("/",">")
 
-    print(f"\n\nevaluating model in\n\t'{version_path}'\non {loader_names}\n")
+    if not noprint:
+        print(f"\n\nevaluating model in\n\t'{version_path}'\non {loader_names}\n")
     
     eval_data = evaluate(model=model, device=device, loaders=loaders, loader_names=loader_names, plot=plot, plot_folder=os.path.join(version_path,outer_name), on_forces=on_forces, verbose=True, ref_ff=ref_ff)
     
-    with open(os.path.join(version_path,outer_name,"eval_data.json"), "w") as f:
-        json.dump(eval_data, f, indent=4)
-    print()
-    print(str(pd.DataFrame(eval_data["eval_data"])))
+    if not noprint: 
+        with open(os.path.join(version_path,outer_name,"eval_data.json"), "w") as f:
+            json.dump(eval_data, f, indent=4)
+        print()
+        print(str(pd.DataFrame(eval_data["eval_data"])))
+
+    return eval_data
 
 if __name__ == "__main__":
     eval_client()
