@@ -621,7 +621,7 @@ class SysWriter:
         "{bond/angle}_eq":np.array, the equilibrium distance of the interaction.   
 
         
-        "{proper/improper}_idxs":np.array of shape (#4-body-terms, 4), the indices of the atoms in the molecule that correspond to the parameters. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
+        "{proper/improper}_idxs":np.array of shape (#4-body-terms, 4), the indices of the atoms in the molecule that correspond to the parameters. The central atom is at third position, i.e. index 2. For each entral atom, the array contains all cyclic permutation of the other atoms, i.e. 3 entries that all have different parameters in such a way that the total energy is invariant under cyclic permutation of the atoms.
 
         "{proper/improper}_ks":np.array of shape (#4-body-terms, n_periodicity), the fourier coefficients for the cos terms of torsion. may be negative instead of the equilibrium dihedral angle (which is always set to zero). n_periodicity is a hyperparemter of the model and defaults to 6.
 
@@ -890,7 +890,7 @@ class SysWriter:
                     elif level == "n4_improper":
                         key = "improper"
 
-                    ns, phases, k_vec = param_dict[f"{key}_periodicity"], param_dict[f"{key}_phase"], param_dict[f"{key}_k"]
+                    ns, phases, k_vec = param_dict[f"{key}_ns"], param_dict[f"{key}_phases"], param_dict[f"{key}_ks"]
 
                     idxs = self.graph.nodes[level].data["idxs"].tolist()
 

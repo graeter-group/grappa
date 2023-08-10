@@ -52,7 +52,7 @@ def add_radical_residues(forcefield, topology):
         ref_names = [one_atom_replace_h23_to_h12(n, resname=resname) for n in ref_names]
 
         # check whether all atoms can be matched:
-        atom_names = [a.name for a in template.atoms]
+        atom_names = [read_pdb.one_atom_replace_h23_to_h12(a.name, resname=resname) for a in template.atoms]
         diff1 = set(atom_names) - set(ref_names)
         diff2 = set(ref_names) - set(atom_names)
         if len(diff2) > 2 or len(diff1) > 0:
@@ -60,7 +60,7 @@ def add_radical_residues(forcefield, topology):
             
 
         for atom in template.atoms:
-            name = atom.name
+            name = read_pdb.one_atom_replace_h23_to_h12(atom.name, resname=resname)
 
             # find the atom with that name in the reference template
             try:
@@ -171,8 +171,9 @@ def get_radicals(topology:topology, forcefield:ForceField=get_mod_amber99sbildn(
                 names.pop(idx)
             except ValueError:
             # try with other pdb-naming convention:
-                if read_pdb.one_atom_replace_h23_to_h12(name=n, resname=resname) in names:
-                    idx = names.index(n)
+                converted_names = [one_atom_replace_h23_to_h12(name=name, resname=resname) for name in names]    
+                if n in converted_names:
+                    idx = converted_names.index(n)
                     names.pop(idx)
                 else:
                     # the atom cannot be matched

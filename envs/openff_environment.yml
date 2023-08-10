@@ -1,8 +1,10 @@
 channels:
   - conda-forge
   - omnia
+  - dglteam/label/cu117
+  - pytorch
 dependencies:
-  - python=3.8
+  - python=3.6
   - rdkit
   - openmm
   - openmmtools
@@ -11,3 +13,7 @@ dependencies:
   - ase
   - h5py
   - openff-toolkit
+  - python
+  - pytorch
+  - dgl
+  - pip

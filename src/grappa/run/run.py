@@ -36,7 +36,7 @@ def get_default_run_config():
         "plots":False,
         "device":None,
         "description":[""],
-        "lr":1e-5,
+        "lr":1e-4,
         "warmup":False,
         "name":"",
         "test_ds_tags":None,
@@ -49,7 +49,7 @@ def get_default_run_config():
         "scale_dict":{"n4_improper": 0},
         "l2_dict":{},
         "ds_split_names":None, # for n-fold cross validation
-        "time_limit":4,
+        "time_limit":2,
     }
 
     return args

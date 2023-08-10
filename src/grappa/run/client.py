@@ -37,13 +37,13 @@ def get_args():
     parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 1e6)")
     parser.add_argument('--patience', type=float, default=None, help="patience of the learning rate scheduler in optimization steps (default: 2e3)")
     parser.add_argument('--plots', action='store_true', dest="plots", default=False, help="create plots during and at the end of training. might take time and memory (default: False)")
-    parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-5')")
+    parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-4')")
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--ds_short', default=None, type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
-    parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
+    parser.add_argument('--scale_dict', default={'n4_improper_k':0.}, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
     parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
     parser.add_argument('--ds_split_names', default=None, type=str, help='Path to a file containing the names of the splits of the dataset. If None, the split is done according to the random seed. (default: None)')
-    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 4)')
+    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 2)')
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")

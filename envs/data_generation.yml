@@ -10,3 +10,4 @@ dependencies:
   - psi4
   - pydantic=1.10.8
   - tqdm
+  - pip
