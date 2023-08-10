@@ -43,7 +43,7 @@ if __name__=="__main__":
     if os.path.exists(str(storepath)):
         shutil.rmtree(str(storepath))
 
-    ds = PDBDataset.from_spice(dipeppath, info=True, n_max=N_MAX, with_smiles=SMILES)
+    ds = PDBDataset.from_spice(dipeppath, info=True, n_max=N_MAX, with_smiles=SMILES, randomize=True, seed=0)
 
     # remove conformations with energy > 200 kcal/mol from min energy in ds[i]
 

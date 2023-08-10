@@ -1,5 +1,5 @@
 #%%
-# filter out dipeptides from spice:
+# filter out dipeptides from spice by looking at the names (it would be better to look at the subset!)
 # adjust spicepath from grappa.constants or pass it here:
 
 #%%
