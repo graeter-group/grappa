@@ -1,13 +1,13 @@
 #!/bin/bash
 
 #SBATCH -o /hits/fast/mbm/seutelf/sbatch/outfiles/info.out-%j
-#SBATCH -t 9:00:00
+#SBATCH -t 5:00:00
 #SBATCH --mem=8000
 #SBATCH -n 4
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/compare_on_both10"
+VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/compare_small_2"
 
 # Create the output directory if it doesn't exist yet
 mkdir -p $VPATH

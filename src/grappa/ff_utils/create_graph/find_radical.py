@@ -13,6 +13,7 @@ from pathlib import Path
 import copy
 
 from ..classical_ff.collagen_utility import get_mod_amber99sbildn
+from . import read_pdb
 
 #%%
 
@@ -155,6 +156,7 @@ def get_radicals(topology:topology, forcefield:ForceField=get_mod_amber99sbildn(
 
         # find the atom name of the one that is not in the template
         names = [a.name for a in template.atoms]
+        names_copy = copy.deepcopy(names)
 
         assert len(ref_names) == len(set(ref_names)), f"Found duplicate atom names in residue {resname}."
 
@@ -168,9 +170,15 @@ def get_radicals(topology:topology, forcefield:ForceField=get_mod_amber99sbildn(
                 idx = names.index(n)
                 names.pop(idx)
             except ValueError:
-                diff.append(n)
+            # try with other pdb-naming convention:
+                if read_pdb.one_atom_replace_h23_to_h12(name=n, resname=resname) in names:
+                    idx = names.index(n)
+                    names.pop(idx)
+                else:
+                    # the atom cannot be matched
+                    diff.append(n)
         if len(diff) != 1:
-            errstr = f"Could not find the missing atom in {resname}.\nUnmatched Atom names are          {names}\nand reference names are {ref_names},\ndiff is {diff}."
+            errstr = f"Could not find the missing atom in {resname}.\nAtom names are {names_copy},\n{names} remain unmatched.\nNames of reference ff are {ref_names},\ndiff is {diff}."
             raise ValueError(errstr)
         
         # if the missing atom is a hydrogen, its neighbor is a radical.
@@ -200,3 +208,4 @@ def get_radicals(topology:topology, forcefield:ForceField=get_mod_amber99sbildn(
                 break
 
     return radical_indices, radical_names, residue_indices
+# %%

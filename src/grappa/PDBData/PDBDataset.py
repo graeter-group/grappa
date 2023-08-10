@@ -334,7 +334,8 @@ class PDBDataset:
         skip_errs:bool=True,
         info:bool=True,
         randomize:bool=False,
-        with_smiles:bool=False):
+        with_smiles:bool=False,
+        seed:int=0,):
         """
         Generates a dataset from an hdf5 file.
         """
@@ -362,6 +363,8 @@ class PDBDataset:
             it = f.keys()
             if randomize:
                 import random
+                # set random seed
+                random.seed(seed)
                 it = list(it)
                 random.shuffle(it)
             for name in it:
@@ -401,7 +404,7 @@ class PDBDataset:
 
 
     @classmethod
-    def from_spice(cls, path: Union[str,Path], info:bool=True, n_max:int=None, randomize:bool=False, skip_errs:bool=True, with_smiles:bool=False):
+    def from_spice(cls, path: Union[str,Path], info:bool=True, n_max:int=None, randomize:bool=False, skip_errs:bool=True, with_smiles:bool=False, seed:int=0):
         """
         Generates a dataset from an hdf5 file with spice unit convention.
         """
@@ -425,6 +428,7 @@ class PDBDataset:
             randomize=randomize,
             skip_errs=skip_errs,
             with_smiles=with_smiles,
+            seed=seed,
         )
 
         if not with_smiles:
@@ -937,8 +941,8 @@ class PDBDataset:
             en_std = np.std(qm_energies)
             grad_std = np.std(qm_grads)
 
-            eval_data["energy_std"] = en_std
-            eval_data["grad_std"] = grad_std
+            eval_data["energy_std"] = float(en_std)
+            eval_data["grad_std"] = float(grad_std)
 
             # save the dicts with json:
             with open(plotpath / Path("eval_data.json"), "w") as f:
@@ -948,6 +952,49 @@ class PDBDataset:
 
         return eval_data, rmse_data
         
+
+
+    def residue_hist(self, plotpath:Union[str, Path], fontsize=16):
+        """
+        Creates a histogram of the residues that occur in the dataset excluding ACE and NME.
+        """
+
+        from collections import Counter
+
+        # Gather all residues
+        all_residues = []
+        for mol in self.mols:
+            if mol.sequence is not None:
+                all_residues.extend(mol.sequence.split('-'))
+
+
+        # Exclude ACE and NME residues
+        all_residues = [res for res in all_residues if res not in ['ACE', 'NME']]
+        
+        # Count each residue's occurrences
+        residue_counts = Counter(all_residues)
+
+        # Sorting residues for better visualization
+        residues_sorted = sorted(residue_counts.keys())
+        counts_sorted = [residue_counts[res] for res in residues_sorted]
+
+        # Plot the bar chart
+        plt.figure(figsize=(10, 5))
+        plt.bar(residues_sorted, counts_sorted, edgecolor='black')
+        plt.title('Histogram of Residues (Excluding ACE and NME)', fontsize=fontsize)
+        plt.xlabel('Residue Name', fontsize=fontsize)
+        plt.ylabel('Count', fontsize=fontsize)
+        plt.xticks(residues_sorted, rotation=45, fontsize=fontsize-2)
+        plt.yticks(fontsize=fontsize-2)
+        plt.tight_layout()
+
+        # Save the plot to the specified path
+        plt.savefig(Path(plotpath)/Path("residue_hist.png"), dpi=300)
+
+        # Close the figure to free up memory
+        plt.close()
+
+
 
 
 

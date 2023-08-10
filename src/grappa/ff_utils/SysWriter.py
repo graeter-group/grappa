@@ -614,10 +614,6 @@ class SysWriter:
 
         "atom_epsilon":np.array, the epsilon parameters of the atoms.
 
-        optional (if 'm' or 'mass' in the graph data keys, m has precedence over mass):
-            "atom_mass":np.array, the masses of the atoms in atomic units.
-
-        
         "{bond/angle}_idxs":np.array of shape (#2/3-body-terms, 2/3), the indices of the atoms in the molecule that correspond to the parameters. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
 
         "{bond/angle}_k":np.array, the force constant of the interaction.
@@ -741,9 +737,9 @@ class SysWriter:
             phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(TORSION_PHASE_UNIT)
             k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(TORSION_K_UNIT)
 
-            param_dict["proper_periodicity"] = ns
-            param_dict["proper_phase"] = phases
-            param_dict["proper_k"] = k_vec
+            param_dict["proper_ns"] = ns
+            param_dict["proper_phases"] = phases
+            param_dict["proper_ks"] = k_vec
 
             idxs = self.graph.nodes["n4"].data["idxs"].detach().numpy()
             if self.internal_to_external_idx is not None:
@@ -764,9 +760,9 @@ class SysWriter:
         phases = Quantity(phases, unit=grappa_units.ANGLE_UNIT).value_in_unit(TORSION_PHASE_UNIT)
         k_vec = Quantity(k_vec, unit=grappa_units.TORSION_FORCE_CONSTANT_UNIT).value_in_unit(TORSION_K_UNIT)
 
-        param_dict["improper_periodicity"] = ns
-        param_dict["improper_phase"] = phases
-        param_dict["improper_k"] = k_vec
+        param_dict["improper_ns"] = ns
+        param_dict["improper_phases"] = phases
+        param_dict["improper_ks"] = k_vec
 
         idxs = self.graph.nodes["n4_improper"].data["idxs"].detach().numpy()
         if self.internal_to_external_idx is not None:

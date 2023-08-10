@@ -3,7 +3,6 @@ channels:
   - nvidia
   - conda-forge
   - dglteam/label/cu117
-  - psi4
 dependencies:
   - python
   - pytorch-cuda=11.7
@@ -18,7 +17,6 @@ dependencies:
   - mdtraj
   - nglview
   - h5py
-  - psi4
   - pip
   - tqdm
   - pip:

@@ -93,9 +93,6 @@ try:
 
         "atom_epsilon":np.array, the epsilon parameters of the atoms.
 
-        optional (if 'm' or 'mass' in the graph data keys, m has precedence over mass):
-            "atom_mass":np.array, the masses of the atoms in atomic units.
-
         
         "{bond/angle}_idxs":np.array of shape (#2/3-body-terms, 2/3), the indices of the atoms in the molecule that correspond to the parameters. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
 
@@ -118,7 +115,6 @@ try:
         atom_q: np.ndarray
         atom_sigma: np.ndarray
         atom_epsilon: np.ndarray
-        atom_mass: np.ndarray
         bond_idxs: np.ndarray
         bond_k: np.ndarray
         bond_eq: np.ndarray

@@ -5,8 +5,7 @@ from typing import List, Tuple, Dict, Union, Callable
 
 def replace_h23_to_h12(pdb:PDBFile):
     """
-    for every residue, remap Hs (2,3) -> (2,3), eg HB2, HB3 -> HB2, HB1.
-    (in this order to avoid double remapping)
+    for every residue, remap Hs (2,3) -> (2,1), eg HB2, HB3 -> HB2, HB1.
     """
 
     for atom in pdb.topology.atoms():
