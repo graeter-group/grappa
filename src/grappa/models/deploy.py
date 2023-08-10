@@ -115,10 +115,6 @@ def get_default_model_config(tag:str="best", scale:float=1.0):
         args = get_large_model_config()
     elif tag == "deep":
         args = get_deep_model_config()
-    elif tag == "best":
-        args = get_best_model_config()
-    elif tag == "new_small":
-        args = get_new_small_model_config()
     else:
         raise ValueError(f"Unknown tag {tag}")
 
@@ -127,63 +123,6 @@ def get_default_model_config(tag:str="best", scale:float=1.0):
 
 
 def get_med_model_config():
-    args = {
-        "width":128,
-        "rep_feats":1024,
-        "readout_width":512,
-        "n_conv":2,
-        "n_att":2,
-        "n_heads":8,
-        "old_model":False,
-        "use_improper":True,
-        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
-        "layer_norm":True,
-        "final_dropout":False,
-        "dropout":0,
-        "rep_dropout":0.,
-        "n_att_readout":2,
-        "dense_layers_readout":2,
-        "n_heads_readout":16,
-        "reducer_feats":512,
-        "attention_hidden_feats":1024,
-        "positional_encoding":True,
-        "attentional":True,
-        "n_periodicity_proper":6,
-        "n_periodicity_improper":3,
-    }
-
-    return args
-
-def get_deep_model_config():
-    args = {
-        "width":128,
-        "rep_feats":512,
-        "readout_width":256,
-        "n_conv":2,
-        "n_att":4,
-        "n_heads":8,
-        "old_model":False,
-        "use_improper":True,
-        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
-        "layer_norm":True,
-        "final_dropout":False,
-        "dropout":0,
-        "rep_dropout":0.,
-        "n_att_readout":5,
-        "dense_layers_readout":2,
-        "n_heads_readout":16,
-        "reducer_feats":256,
-        "attention_hidden_feats":1024,
-        "positional_encoding":True,
-        "attentional":True,
-        "n_periodicity_proper":6,
-        "n_periodicity_improper":3,
-    }
-
-    return args
-
-
-def get_small_model_config():
     args = {
         "width":64,
         "rep_feats":512,
@@ -212,41 +151,13 @@ def get_small_model_config():
     return args
 
 
-# def get_new_small_model_config():
-#     args = {
-#         "width":64,
-#         "rep_feats":512,
-#         "readout_width":256,
-#         "n_conv":2,
-#         "n_att":3,
-#         "n_heads":8,
-#         "old_model":False,
-#         "use_improper":True,
-#         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
-#         "layer_norm":True,
-#         "final_dropout":False,
-#         "dropout":0,
-#         "rep_dropout":0.,
-#         "n_att_readout":4,
-#         "dense_layers_readout":2,
-#         "n_heads_readout":16,
-#         "reducer_feats":256,
-#         "attention_hidden_feats":1024,
-#         "positional_encoding":True,
-#         "attentional":True,
-#         "n_periodicity_proper":6,
-#         "n_periodicity_improper":3,
-#     }
-
-#     return args
-
-def get_new_small_model_config():
+def get_deep_model_config():
     args = {
-        "width":64,
-        "rep_feats":512,
-        "readout_width":256,
-        "n_conv":2,
-        "n_att":3,
+        "width":128,
+        "rep_feats":256,
+        "readout_width":128,
+        "n_conv":0,
+        "n_att":6,
         "n_heads":8,
         "old_model":False,
         "use_improper":True,
@@ -257,9 +168,9 @@ def get_new_small_model_config():
         "rep_dropout":0.,
         "n_att_readout":3,
         "dense_layers_readout":2,
-        "n_heads_readout":16,
-        "reducer_feats":512,
-        "attention_hidden_feats":1024,
+        "n_heads_readout":8,
+        "reducer_feats":128,
+        "attention_hidden_feats":512,
         "positional_encoding":True,
         "attentional":True,
         "n_periodicity_proper":6,
@@ -267,6 +178,37 @@ def get_new_small_model_config():
     }
 
     return args
+
+
+def get_small_model_config():
+    args = {
+        "width":128,
+        "rep_feats":256,
+        "readout_width":128,
+        "n_conv":2,
+        "n_att":2,
+        "n_heads":8,
+        "old_model":False,
+        "use_improper":True,
+        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+        "layer_norm":True,
+        "final_dropout":False,
+        "dropout":0,
+        "rep_dropout":0.,
+        "n_att_readout":2,
+        "dense_layers_readout":2,
+        "n_heads_readout":8,
+        "reducer_feats":128,
+        "attention_hidden_feats":512,
+        "positional_encoding":True,
+        "attentional":True,
+        "n_periodicity_proper":6,
+        "n_periodicity_improper":3,
+    }
+
+    return args
+
+
 
 
 def get_large_model_config():
@@ -297,33 +239,6 @@ def get_large_model_config():
 
     return args
 
-def get_best_model_config():
-    args = {
-        "width":256,
-        "rep_feats":1024,
-        "readout_width":512,
-        "n_conv":2,
-        "n_att":3,
-        "n_heads":16,
-        "old_model":False,
-        "use_improper":True,
-        "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
-        "layer_norm":True,
-        "final_dropout":False,
-        "dropout":0.0,
-        "rep_dropout":0.0,
-        "n_att_readout":4,
-        "dense_layers_readout":2,
-        "n_heads_readout":16,
-        "reducer_feats":256,
-        "attention_hidden_feats":2048,
-        "positional_encoding":True,
-        "attentional":True,
-        "n_periodicity_proper":6,
-        "n_periodicity_improper":3,
-    }
-
-    return args
 
 def scale_model_config(args, scale=1):
     """
