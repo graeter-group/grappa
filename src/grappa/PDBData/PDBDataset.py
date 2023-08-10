@@ -547,7 +547,7 @@ class PDBDataset:
                         raise
                     
         if info:
-            print(f"loaded {len(mols)} molecules from {path}")
+            print(f"loaded {len(mols)} molecules with {sum([len(m) for m in mols])} confs from {path}")
 
         return cls(mols, info=info)
         
@@ -814,6 +814,7 @@ class PDBDataset:
 
                 ax[1].text(0.05, 0.95, f"RMSE: {rmse(ff_grads, qm_grads):.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
+
                 plt.tight_layout()
                         
                 # save the figure:
@@ -933,6 +934,11 @@ class PDBDataset:
                         plt.close()
 
 
+            en_std = np.std(qm_energies)
+            grad_std = np.std(qm_grads)
+
+            eval_data["energy_std"] = en_std
+            eval_data["grad_std"] = grad_std
 
             # save the dicts with json:
             with open(plotpath / Path("eval_data.json"), "w") as f:

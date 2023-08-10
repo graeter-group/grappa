@@ -57,11 +57,11 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
 
     # sort the dictionary by the test energy_rmse of the first dataset:
     assert not 0 in [len(list(data[k].keys())) for k in data.keys()], f"Expected all models to have data for at least one dataset."
-    sorted_keys = sorted(list(data.keys()), key=lambda x: data[x][list(data[x].keys())[0]]["test"]["energy_rmse"])
-    data_old = copy.deepcopy(data)
-    data = {}
-    for k in sorted_keys:
-        data[k] = data_old[k]
+    # sorted_keys = sorted(list(data.keys()), key=lambda x: data[x][list(data[x].keys())[0]]["test"]["energy_rmse"])
+    # data_old = copy.deepcopy(data)
+    # data = {}
+    # for k in sorted_keys:
+    #     data[k] = data_old[k]
 
     # data is now a dictionary of the form
     # data[model_name][ds_type][set_type][metric_type] = float
@@ -74,17 +74,19 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
     if len(data_types) == 0:
         raise ValueError(f"No data found in eval_data.")
     total_width = 0.6  # adjust as needed
-    single_bar_width = total_width / len(data_types)
 
     # Prepare the palette, ensuring the colors remain consistent across both plots
     color_palette = plt.get_cmap('tab10')
     color_list = [color_palette(i) for i in range(len(data_types))]
 
     def create_plot_for_sets(metric_type, filename):
+        single_bar_width = total_width / len(data_types)
         fig, ax = plt.subplots(figsize=figsize)
         r = np.arange(n_models)  # the label locations
 
+        mnames = []
         for model_idx, model in enumerate(data.keys()):
+            mnames.append(model)
             for dtype_idx, dtype in enumerate(sorted(data_types)):
                 value = data[model][dtype]["test"][metric_type]
                 error = data[model][dtype]["test"][f"{metric_type}_std"]
@@ -93,32 +95,40 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
 
         ax.set_ylabel('RMSE', fontsize=fontsize)
         ax.set_title(f'Test RMSE {metric_type.capitalize()} for Different Models in kcal/mol (/Å)', fontsize=fontsize)
-        ax.set_xticks([rp + (single_bar_width * len(data_types)) / 2 for rp in r])
-        ax.set_xticklabels(list(data.keys()), rotation=45, ha="right", fontsize=fontsize)
+        offset = single_bar_width * (len(data_types)-1.)/2.
+        ax.set_xticks((r + offset).tolist())
+        ax.set_xticklabels(mnames, rotation=45, ha="right", fontsize=fontsize)
         ax.legend(loc='best', fontsize=fontsize)
+        # make a grid on the plot
+        ax.grid(True, axis='y', linestyle='--', alpha=1)
         plt.tight_layout()
         plt.savefig(filename, dpi=300)
         plt.close()
 
     def create_combined_plot(metric_type, filename, dtype, dtype_idx):
         set_types = ["train", "test"]
+        single_bar_width = total_width / len(set_types)
         fig, ax = plt.subplots(figsize=figsize)
         r = np.arange(n_models)
 
+        mnames = []
         for model_idx, model in enumerate(data.keys()):
+            mnames.append(model)
             for set_idx, set_type in enumerate(set_types):
                 value = data[model][dtype][set_type][metric_type]
                 error = data[model][dtype][set_type][f"{metric_type}_std"]
-                r_new = r[model_idx] + dtype_idx * single_bar_width * len(set_types) + set_idx * single_bar_width
+                r_new = r[model_idx] + set_idx * single_bar_width
                 alpha = 1 if set_type == "test" else 0.5
                 ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype} {set_type}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2, alpha=alpha)
 
         ax.set_ylabel('RMSE', fontsize=fontsize)
         mtype = "Energy" if "energy" in metric_type.lower() else "Force"
         ax.set_title(f'{mtype} RMSE for Different Models in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
-        ax.set_xticks([rp + len(set_types) * (single_bar_width * len(data_types)) / 2 for rp in r])
-        ax.set_xticklabels(list(data.keys()), rotation=45, ha="right", fontsize=fontsize)
+        offset = (len(set_types)-1.)*single_bar_width/2.
+        ax.set_xticks((r + offset).tolist())
+        ax.set_xticklabels(mnames, rotation=45, ha="right", fontsize=fontsize)
         ax.legend(loc='best', fontsize=fontsize)
+        ax.grid(True, axis='y', linestyle='--', alpha=1)
         plt.tight_layout()
         plt.savefig(filename, dpi=300)
         plt.close()
@@ -139,7 +149,7 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
         json.dump(data, f, indent=4)
 
 
-def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None):
+def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[]):
     """
     Create a bar plot comparing model performance of models in subfolders of parent_dir.
 
@@ -166,8 +176,11 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
                 continue
 
             # strip the first ..._ from the name:
-            model_names.append(model_dir.name.split("_", 1)[1] if len(model_dir.name.split("_", 1)) > 1 else model_dir.name)
-            eval_data.append(json.load(open(model_dir_/"eval_data.json", "r"))["eval_data"])
+            model_name = model_dir.name.split("_", 1)[1] if len(model_dir.name.split("_", 1)) > 1 else model_dir.name
+
+            if not model_name in exclude:
+                model_names.append(model_name)
+                eval_data.append(json.load(open(model_dir_/"eval_data.json", "r"))["eval_data"])
 
     compare(eval_data, model_names, plotdir=parent_dir.parent, fontsize=fontsize, figsize=figsize)
 
@@ -184,6 +197,7 @@ def client():
     parser.add_argument("--fontsize", type=int, default=12, help="The fontsize for the plot.")
     parser.add_argument("--figsize", type=int, nargs=2, default=(10,5), help="The figure size for the plot.")
     parser.add_argument("--vpaths", type=str, nargs="+", default=None, help="The paths to the versions to compare.")
+    parser.add_argument("--exclude", type=str, nargs="+", default=[], help="The paths to the versions to compare.")
     args = parser.parse_args()
 
-    compare_versions(args.parent_dir, fontsize=args.fontsize, figsize=args.figsize, vpaths=args.vpaths)
+    compare_versions(args.parent_dir, fontsize=args.fontsize, figsize=args.figsize, vpaths=args.vpaths, exclude=args.exclude)

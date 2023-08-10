@@ -30,13 +30,13 @@ def get_default_run_config():
         "mols":None,
         "seed":0,
         "test":False,
-        "pretrain_steps":500,
+        "pretrain_steps":2000,
         "train_steps":1e6,
         "patience":2e3, # in steps
         "plots":False,
         "device":None,
         "description":[""],
-        "lr":2e-5,
+        "lr":1e-5,
         "warmup":False,
         "name":"",
         "test_ds_tags":None,
@@ -49,7 +49,7 @@ def get_default_run_config():
         "scale_dict":{"n4_improper": 0.1},
         "l2_dict":{},
         "ds_split_names":None, # for n-fold cross validation
-        "time_limit":2,
+        "time_limit":4,
     }
 
     return args

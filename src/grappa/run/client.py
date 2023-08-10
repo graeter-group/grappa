@@ -33,17 +33,17 @@ def get_args():
     parser.add_argument('--n', type=int, default=None, help="how many times to run (default: None)") # NOTE: this might be unnecesary now that we have several seeds
     parser.add_argument('--test', action='store_true', default=False, help="Reducing dataset size to 50 graphs for testing functionality. (default: False)'")
     parser.add_argument('--seed','-s', type=int, nargs='+', default=None, help="random seed for the split of the dataset into train, val, test (default: 0)")
-    parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 500)")
+    parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 2000)")
     parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 1e6)")
     parser.add_argument('--patience', type=float, default=None, help="patience of the learning rate scheduler in optimization steps (default: 2e3)")
     parser.add_argument('--plots', action='store_true', dest="plots", default=False, help="create plots during and at the end of training. might take time and memory (default: False)")
-    parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '2e-5')")
+    parser.add_argument('--lr', type=float, default=None, help="the learning rate (does not apply to pretraining on parameters) (default: '1e-5')")
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--ds_short', default=None, type=str, nargs="+", help="codes for a collections of datasets that are added to the ds_paths. available options: \n'eric_nat': with amber charges, energies filtered at 60kcal/mol, \n'eric_rad': with amber charges (heavy), energies filtered at 60kcal/mol, \n'spice': with energies filtered at 60kcal/mol and filtered for standard amino acids, \n'eric' both of the above (default: [])")
     parser.add_argument('--scale_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
     parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
     parser.add_argument('--ds_split_names', default=None, type=str, help='Path to a file containing the names of the splits of the dataset. If None, the split is done according to the random seed. (default: None)')
-    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 2)')
+    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 4)')
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
@@ -221,10 +221,21 @@ def full_run():
     vpath = []
     patience = args.patience
     param_weight = args.param_weight
+    force_factor = args.force_factor
+    energy_factor = args.energy_factor
+    pretrain_steps = args.pretrain_steps
+
+    if force_factor is None and energy_factor is None:
+        args.force_factor = 10.0
+        args.energy_factor = 1.0
 
     if patience is None:
         # args.patience = 1e4
         args.patience = 1e20
+
+    if pretrain_steps is None:
+        args.pretrain_steps = 1e4
+
     run_(args, vpath=vpath)
     
     continue_path = vpath[0]
@@ -245,10 +256,16 @@ def full_run():
     args.warmup = warmup
     args.lr = lr
 
+    # other defaults for the next run:
+
     if patience is None:
         args.patience = 1e20
     if param_weight is None:
-        args.param_weight = 0
+        args.param_weight = 1e-2
+
+    if force_factor is None and energy_factor is None:
+        args.force_factor = 1.0
+        args.energy_factor = 1.0
 
     run_(args)
 

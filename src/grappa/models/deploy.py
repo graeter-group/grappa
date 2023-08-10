@@ -212,6 +212,34 @@ def get_small_model_config():
     return args
 
 
+# def get_new_small_model_config():
+#     args = {
+#         "width":64,
+#         "rep_feats":512,
+#         "readout_width":256,
+#         "n_conv":2,
+#         "n_att":3,
+#         "n_heads":8,
+#         "old_model":False,
+#         "use_improper":True,
+#         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
+#         "layer_norm":True,
+#         "final_dropout":False,
+#         "dropout":0,
+#         "rep_dropout":0.,
+#         "n_att_readout":4,
+#         "dense_layers_readout":2,
+#         "n_heads_readout":16,
+#         "reducer_feats":256,
+#         "attention_hidden_feats":1024,
+#         "positional_encoding":True,
+#         "attentional":True,
+#         "n_periodicity_proper":6,
+#         "n_periodicity_improper":3,
+#     }
+
+#     return args
+
 def get_new_small_model_config():
     args = {
         "width":64,
@@ -227,10 +255,10 @@ def get_new_small_model_config():
         "final_dropout":False,
         "dropout":0,
         "rep_dropout":0.,
-        "n_att_readout":4,
+        "n_att_readout":3,
         "dense_layers_readout":2,
         "n_heads_readout":16,
-        "reducer_feats":256,
+        "reducer_feats":512,
         "attention_hidden_feats":1024,
         "positional_encoding":True,
         "attentional":True,
