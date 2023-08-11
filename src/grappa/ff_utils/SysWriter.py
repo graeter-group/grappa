@@ -695,8 +695,8 @@ class SysWriter:
 
 
         # ========= BONDS =========
-        eqs = self.graph.nodes["n2"].data["eq"].detach().numpy()
-        ks = self.graph.nodes["n2"].data["k"].detach().numpy()
+        eqs = self.graph.nodes["n2"].data["eq"].detach().numpy()[:,0]
+        ks = self.graph.nodes["n2"].data["k"].detach().numpy()[:,0]
 
         # convert to openmm units:
         eqs = Quantity(eqs, unit=grappa_units.DISTANCE_UNIT).value_in_unit(BOND_EQ_UNIT)
@@ -713,8 +713,8 @@ class SysWriter:
 
         # ========= ANGLES =========
         if "n3" in self.graph.ntypes:
-            eqs = self.graph.nodes["n3"].data["eq"].detach().numpy()
-            ks = self.graph.nodes["n3"].data["k"].detach().numpy()
+            eqs = self.graph.nodes["n3"].data["eq"].detach().numpy()[:,0]
+            ks = self.graph.nodes["n3"].data["k"].detach().numpy()[:,0]
 
             # convert to openmm units:
             eqs = Quantity(eqs, unit=grappa_units.ANGLE_UNIT).value_in_unit(ANGLE_EQ_UNIT)

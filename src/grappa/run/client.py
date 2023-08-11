@@ -242,7 +242,7 @@ def full_run():
     assert not continue_path is None
 
     warmup = True
-    lr = 2e-6
+    lr = 1e-5
     
     # loop over all arguments and set them to None if they are not a bool:
     for key, value in vars(args).items():
