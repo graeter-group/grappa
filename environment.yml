@@ -12,3 +12,4 @@ dependencies:
   - openmm
   - openmmtools
   - matplotlib
+  - h5py

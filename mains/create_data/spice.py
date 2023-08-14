@@ -14,6 +14,7 @@ if __name__=="__main__":
     parser.add_argument("--max_energy", type=float, default=None, help="Maximum energy difference between min and max energy state of a molecule to include in dataset, in grappa units")
     parser.add_argument("--max_force", type=float, default=None, help="Maximum force to include in dataset, in grappa units")
     parser.add_argument("--name", type=str, default=None, help="Name of dataset, default: spice if smiles=False, spice_openff if smiles=True")
+    parser.add_argument("--not_skip_errs", action="store_false", dest="skip_errs", default=True, help="Whether to skip errors.")
 
     args = parser.parse_args()
     
@@ -43,7 +44,7 @@ if __name__=="__main__":
     if os.path.exists(str(storepath)):
         shutil.rmtree(str(storepath))
 
-    ds = PDBDataset.from_spice(dipeppath, info=True, n_max=N_MAX, with_smiles=SMILES, randomize=True, seed=0)
+    ds = PDBDataset.from_spice(dipeppath, info=True, n_max=N_MAX, with_smiles=SMILES, randomize=True, seed=0, skip_errs=args.skip_errs)
 
     # remove conformations with energy > 200 kcal/mol from min energy in ds[i]
 

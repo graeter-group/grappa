@@ -34,7 +34,9 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
     if collagen:
         ff = get_mod_amber99sbildn()
 
-    ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
+    ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen, skip_errs=True)
+
+    ds.save_npz(storepath, overwrite=overwrite)
 
     # filter out conformations that are way out of equilibrium:
     ds.filter_confs(max_energy=200, max_force=500, reference=FILTER_REF)

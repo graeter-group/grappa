@@ -16,7 +16,7 @@ git clone git@github.com:hits-mbm-dev/grappa.git; cd grappa;
 pip install -e .
 ```
 
-- Some tutorials require the additional packages nglview and mdtraj. Install them using ```conda env update --file opt_environment.yml```.
+- Some tutorials require the additional packages nglview and mdtraj. Install them using ```conda env update --file envs/full_environment.yml```.
 
-- For the **grappa.PDBData.matching submodule**, providing the creation of pdbfiles from positions and element alone, one also needs to install ase. In this case use opt_environment.yml or install it via ```conda install -c conda-forge ase```.
+- For the **grappa.PDBData.matching submodule**, providing the creation of pdbfiles from positions and element alone, one also needs to install ase. In this case use full_environment.yml or install it via ```conda install -c conda-forge ase```.
 - If you wish to train models yourself, the additional package pytorch-warmup is required. Install it via ```pip install pytorch-warmup``` or use opt_environment.yml.
