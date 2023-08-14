@@ -247,7 +247,7 @@ class PDBDataset:
 
 
     
-    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False)->None:
+    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False, skip_errs=False)->None:
         """
         Parametrizes the dataset with a forcefield.
         Writes the following entries to the graph:
@@ -258,6 +258,7 @@ class PDBDataset:
         If the forcefield is a string it is interpreted as the name of an openff small molecule forcefield.
         """
 
+        skipped = []
         if self.info:
             print("parametrizing PDBDataset...")
         for i, mol in enumerate(self.mols):
@@ -266,9 +267,16 @@ class PDBDataset:
             try:
                 mol.parametrize(forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
             except Exception as e:
-                raise type(e)(str(e) + f" in molecule {mol.sequence}")
+                if not skip_errs:
+                    raise type(e)(str(e) + f" in molecule {mol.sequence}")
+                else:
+                    skipped.append(i)
+
         if self.info:
             print()
+            if len(skipped) > 0:
+                print(f"skipped {len(skipped)} molecules because of errors")
+                self.mols[:] = [mol for i, mol in enumerate(self.mols) if not i in skipped]
 
     
     def filter_validity(self, forcefield:ForceField=get_mod_amber99sbildn(), sigmas:Tuple[float,float]=(1.,1.), quickload:bool=True)->None:

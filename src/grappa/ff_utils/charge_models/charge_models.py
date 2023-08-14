@@ -185,51 +185,116 @@ def from_dict(d:dict, top:topology, d_rad:dict=None, radical_indices:List[int]=[
             rad_name = rad_names[res_radical_indices.index(res_idx)]
 
 
+
         # IF ID IN RADICAL INDICES, DICT IS GIVEN BY THE RAD NAME
         res = atom.residue.name
         name = atom.name
 
+
         name = one_atom_replace_h23_to_h12(name, res)
+
+        #############################################################
+        # for isoleucine, identify the correct CG atom. in our case, CG1 is the one with two hydrogens, i.e. the one bonded to two Cs
+        if res == "ILE":
+            renaming_needed = None
+            residue = atom.residue
+            # find the atom named CG1.
+            # determine the number of bonds to C atoms
+            # if this number is two, renaming_needed is False, if it is 1: True, else exception.
+        
+            cg1_atom = None
+            for atom in residue.atoms():
+                if atom.name == "CG1":
+                    cg1_atom = atom
+                    break
+
+            if cg1_atom is None:
+                raise RuntimeError("CG1 atom not found in ILE residue")
+
+            # Count the number of carbon atoms bonded to CG1
+            carbon_count = 0
+            for bond in residue.bonds():
+                if bond[0] == cg1_atom or bond[1] == cg1_atom:
+                    if bond[0].element.symbol == "C" and bond[1].element.symbol == "C":
+                        carbon_count += 1
+
+            if carbon_count == 2:
+                renaming_needed = False
+            elif carbon_count == 1:
+                renaming_needed = True
+            else:
+                raise RuntimeError(f"Unexpected number of carbon atoms bonded to CG1 in ILE residue: {carbon_count}")
+
+
+
+            # then, if renaming_needed is True, replace name if it is either in the keys or values of the dict:
+            replacements = {
+                "CG1":"CG2",
+                "HG11":"HG21",
+                "HG12":"HG22",
+                "HG13":"HG23",
+            }
+            if renaming_needed:
+                if name in replacements.keys():
+                    name = replacements[name]
+                elif name in replacements.values():
+                    name = [k for k,v in replacements.items() if v == name][0]
+        #############################################################
 
         # hard code that we only have HIE atm
         if res == "HIS":
             res = "HIE"
 
-        H23_dict = replace_h23_to_h12.d
+
+        lvls = ["A", "B", "G", "D", "E", "Z", "H"]
+
+        # check whether res is in the dict:
+        if not res in (d.keys() if rad_name is None else d_rad.keys()):
+            raise ValueError(f"Residue {res} not in dictionary, residues are {d.keys() if rad_name is None else d_rad.keys()}")
+        
+        # check whether rad_name is in the dict in the radical case:
+        if not rad_name is None:
+            if not rad_name in d_rad[res].keys():
+                raise ValueError(f"Radical {rad_name} not in dictionary for residue {res}, radicals are {d_rad[res].keys()}")
+
+        # pick the dictionary to use:
+        d_used = d[res] if rad_name is None else d_rad[res][rad_name]
+
 
         if not rad_name is None:
             # rename all HB2 to HB1 because these are in the dict for radicals and have the same parameters since they are indisinguishable
-            if not name in d_rad[res][rad_name].keys():
-                if res in H23_dict.keys():
-                    orig_name = name
-                    if name in [f"H{lvl}2" for lvl in H23_dict[res]]:
-                        name = name.replace("2", "1")
-                    elif name in [f"H{lvl}1" for lvl in H23_dict[res]]:
-                        name = name.replace("1", "2")
-            if not name in d_rad[res][rad_name].keys():
-                raise ValueError(f"Neither {name} nor {orig_name} in radical dictionary for {res} {rad_name}.\nStored atom names are {d_rad[res][rad_name].keys()}")
+            if not name in d_used.keys():
+                orig_name = name
+                if name in [f"H{lvl}2" for lvl in lvls]:
+                    name = name.replace("2", "1")
+                elif name in [f"H{lvl}3" for lvl in lvls]:
+                    name = name.replace("3", "1")
+            if not name in d_used.keys():
+                raise ValueError(f"{name} not in radical dictionary for {res} {rad_name}.\nStored atom names are {d_used.keys()}")
 
 
 
         # hard code the H naming of caps (maybe do this in the to_openmm function instead?)
         name = rename_caps(name=name, res=res)
+        
 
-        if not res in (d.keys() if rad_name is None else d_rad.keys()):
-            raise ValueError(f"Residue {res} not in dictionary, residues are {d.keys() if rad_name is None else d_rad.keys()}")
-            
-        if not rad_name is None and not res in d_rad.keys():
-            raise ValueError(f"Residue {res} not in radical dictionary, residues are {d_rad.keys()}")
+        if name not in d_used:
+            # hard code some exceptions that occur sometimes. replace first entry by second.
+            replacements = {
+                "ILE":("CD1", "CD"),
+                }
+            if res in replacements.keys():
+                if name == replacements[res][0]:
+                    name = replacements[res][1]
 
-        if not rad_name is None and not rad_name in d_rad[res].keys():
-            raise ValueError(f"Radical {rad_name} not in dictionary for residue {res}, radicals are {d_rad[res].keys()}")
+            # if it is still not in the dict, raise an error:
+            if name not in d_used:
+                raise ValueError(f"(Atom {name}, Residue {res}, Radical {rad_name}) not in the corresponding dictionary,\nnames in dict are {d_used.keys()}")
 
-        if name not in (d[res] if rad_name is None else d_rad[res][rad_name]):
-            raise ValueError(f"(Atom {name}, Residue {res}, Radical {rad_name}) not in dictionary, atom names are {d[res].keys() if rad_name is None else d_rad[res][rad_name].keys()}")
+        charge = float(d_used[name])
 
-        charge = float(d[res][name]) if rad_name is None else float(d_rad[res][rad_name][name])
-
-        if len((d[res] if rad_name is None else d_rad[res][rad_name]).keys()) != num_atoms:
-            raise RuntimeError(f"Residue {res} has {num_atoms} atoms, but dictionary has {len((d[res] if rad_name is None else d_rad[res][rad_name]).keys())} atoms.\ndictionary entries: {(d[res] if rad_name is None else d_rad[res][rad_name]).keys()},\natom names: {[a.name for a in atom.residue.atoms()]},\nrad name is {rad_name},\nres_idx is {res_idx}, \nres_radical_indices are {res_radical_indices},\nrad_names are {rad_names}")
+        if len(d_used.keys()) != num_atoms:
+            raise RuntimeError(f"Residue {res} has {num_atoms} atoms, but dictionary has {len(d_used.keys())} atoms.\ndictionary entries: {d_used.keys()},\natom names: {[a.name for a in atom.residue.atoms()]},\nrad name is {rad_name},\nres_idx is {res_idx}, \nres_radical_indices are {res_radical_indices},\nrad_names are {rad_names}")
 
         charge = openmm.unit.Quantity(charge, CHARGE_DICT_UNIT).value_in_unit(charge_unit)
         charges.append(charge)
@@ -239,6 +304,9 @@ def from_dict(d:dict, top:topology, d_rad:dict=None, radical_indices:List[int]=[
 
 
 def get_rad_names(atom_names:List[str], rad_indices:List[int]=[], residue_indices:List[int]=None):
+    """
+    Not used anymore.
+    """
 
     rad_names = np.array([None]*len(atom_names))
 

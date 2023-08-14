@@ -7,12 +7,15 @@ import rdkit.Chem.rdchem
 
 from grappa.ff_utils.charge_models.charge_models import model_from_dict
 
+
 import torch
 import numpy as np
 
 from .. import units as grappa_units
 
 from .create_graph import utils, tuple_indices, read_heterogeneous_graph, chemical_features
+
+from .create_graph.tuple_indices import is_improper_, get_symmetric_tuples
 
 from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
@@ -54,6 +57,7 @@ class SysWriter:
                  smiles_flag:bool=False,
                  **system_kwargs) -> None:
         """
+        Creates a system from the topology and forcefield given.
         If allow radicals is true and no radical indices are provided, uses the classical forcefield to determine the radical indices. For this the force field must fail to match the residues containing radicals. If the radical indices are provided, assume that these are all radicals.
         Only one radical per residue is supported.
         """
@@ -313,34 +317,13 @@ class SysWriter:
         """
 
 
-        def is_improper_(rd_mol:rdkit.Chem.rdchem.Mol, idxs:Tuple[int,int,int,int], central_atom_idx:int=2)->bool:
-            """
-            Helper function to check whether the given tuple of indices describes an improper torsion.
-            Checks whether the given tuple of indices describes an improper torsion.
-            We can assume that the tuples describe either a proper or improper torsion.
-            We also assume that the idxs correspond to the indices of the rdkit molecule.
-            """
-            # check whether the central atom is the connected to all other atoms in the rdkit molecule.
-
-            central_atom = rd_mol.GetAtomWithIdx(idxs[central_atom_idx])
-
-            # get the neighbors of the central atom
-            neighbor_idxs = set([n.GetIdx() for n in central_atom.GetNeighbors()])
-
-            # for each atom in the torsion, check if it's a neighbor of the central atom
-            for i, atom_idx in enumerate(idxs):
-                if i != central_atom_idx:  # skip the central atom itself
-                    if atom_idx not in neighbor_idxs:
-                        # if one of the atoms is not connected to it, return False
-                        return False
-
-            # if all atoms are connected to the central atom, this is an improper torsion
-            return True
-
-
         # create an rdkit molecule
         rd_mol = utils.openmm2rdkit_graph(openmm_top=self.top)
+
+        # create a ictionary of bon, tuple, proper torsion terms
+        rd_indices = tuple_indices.get_indices(rd_mol)
         
+
         self.interaction_indices = {"n2":{}, "n3":{}, "n4":{}, "n4_improper":{}}
         
 
@@ -523,18 +506,42 @@ class SysWriter:
                         k_improper = k_improper[:len(improper_idxs)]
 
 
+        # use the rd_mol to obtain a homogeneous graph
+        self.graph = utils.dgl_from_mol(mol=rd_mol, max_element=self.max_element)
 
+
+        # now compare the number of idx pairs obtained from the ff and rdkit_mol. it can be that torsions with k=0 are not listed yet.
+        # add the non-existing index pairs to the end. we assume that angles and bonds have to have a parameter, to only do this for proper torsions:
+        rdkit_propers = tuple_indices.torsion_indices(rd_mol, reduce_symmetry=True)
+        
+        num_propers_now = len(proper_idxs) if not proper_idxs is None else 0
+
+        if len(rdkit_propers) < num_propers_now:
+            raise ValueError(f"Number of proper torsions in rdkit_mol ({len(rdkit_propers)}) is smaller than in the forcefield ({num_propers_now}). This is not allowed.")
+
+        # add the missing ones:
+        elif len(rdkit_propers) > num_propers_now:
+            for idxs in rdkit_propers:
+                symm_rd = get_symmetric_tuples("n4", idxs)
+                if not any([tup in proper_idxs for tup in symm_rd]):
+                    proper_idxs.append(symm_rd[0])
+
+        # insert zero-k-values or the new ones
+        if with_parameters and num_propers_now < len(proper_idxs):
+            k_proper = np.concatenate((k_proper, np.zeros((len(proper_idxs)-num_propers_now, self.proper_periodicity), dtype=np.float32)), axis=0)
+
+
+        # convert the lists to arrays:
         if not proper_idxs is None:
             proper_idxs = np.array(proper_idxs, dtype=np.int32)
         if not improper_idxs is None:
             improper_idxs = np.array(improper_idxs, dtype=np.int32)
 
-
-        # use the rd_mol to obtain a homogeneous graph
-        self.graph = utils.dgl_from_mol(mol=rd_mol, max_element=self.max_element)
-
         # use the interaction idxs to obtain a heterogeneous (final) graph:
         self.graph = read_heterogeneous_graph.from_homogeneous_and_idxs(g=self.graph, bond_idxs=bond_idxs, angle_idxs=angle_idxs, proper_idxs=proper_idxs, improper_idxs=improper_idxs, use_impropers=self.use_impropers)
+
+        # check whether the number of indices matches with the one obtained from the rdmol (NOTE: can be expensive, consider deleting this)
+        tuple_indices.check_indices(rdmol=rd_mol, g=self.graph)
 
         TERMS = self.graph.ntypes
 

@@ -27,6 +27,7 @@ def add_radical_residues(forcefield, topology):
 
     # effectively delete the residues that can be mistaken with radicals:
     # LYN and CYM
+    # NOTE: make this correct
     ######################
     try:
         matches = forcefield.getMatchingTemplates(topology)
@@ -40,6 +41,7 @@ def add_radical_residues(forcefield, topology):
                 match.name = ""
     ######################
 
+    # now identify non-matching residues (assume these are radicals)
     [templates, residues] = generate_unmatched_templates(topology=topology, forcefield=forcefield)
 
     for t_idx, template in enumerate(templates):
@@ -58,16 +60,17 @@ def add_radical_residues(forcefield, topology):
         if len(diff2) > 2 or len(diff1) > 0:
             raise ValueError(f"Template {template.name} does not match reference template:\nIn pdb, not in reference: {diff1}\nIn reference, not in pdb:{diff2},\nallowed is at most one Hydrogen atom that is not in the pdb and no atom that is not in the reference.")
             
-
+        # iterate over the present atoms:
         for atom in template.atoms:
             name = read_pdb.one_atom_replace_h23_to_h12(atom.name, resname=resname)
 
-            # find the atom with that name in the reference template
+            # find the atom with that name in the reference template:
             try:
                 ref_idx = ref_names.index(name)
             except ValueError:
                 print(f"Atom {name} not found in reference template {template.name}: {ref_names}")
                 raise
+                # set the atom types to be the same:
             atom.type = ref_template.atoms[ref_idx].type
 
         # create a new template

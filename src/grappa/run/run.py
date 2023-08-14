@@ -46,7 +46,10 @@ def get_default_run_config():
         "weight_decay":0,
         # "scale_dict":{"n4_improper_k":0., "n3_eq":10., "n3_k":10.},
         # "l2_dict":{"n4_improper_k":0.01},
-        "scale_dict":{"n4_improper": 0},
+        "scale_dict":{
+            "n4_improper": 0,
+            "n4":0
+        },
         "l2_dict":{},
         "ds_split_names":None, # for n-fold cross validation
         "time_limit":2,
