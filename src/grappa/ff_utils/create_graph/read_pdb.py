@@ -42,6 +42,7 @@ replace_h23_to_h12.d = {"CYS":["B"], "ASP":["B"], "GLU":["B","G"], "PHE":["B"], 
 def one_atom_replace_h23_to_h12(name:str, resname:str):
     """
     for one atom, apply the mapping of Hs (2,3) -> (2,3), eg HB2, HB3 -> HB2, HB1.
+    NOTE: this is bad, have to look at the whole residue
     """
 
     if resname in replace_h23_to_h12.d.keys():
@@ -61,7 +62,7 @@ def one_atom_replace_h23_to_h12(name:str, resname:str):
     if resname == "LEU":
         for i in ["3"]:
             if name == f"HD1{i}":
-                name = f"HD1{int(i)-2}"
+                name = f"HD1{int(i)-1}"
                 continue
         if name == f"CG1":
             name = f"CG"

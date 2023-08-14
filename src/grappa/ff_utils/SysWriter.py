@@ -541,7 +541,7 @@ class SysWriter:
         self.graph = read_heterogeneous_graph.from_homogeneous_and_idxs(g=self.graph, bond_idxs=bond_idxs, angle_idxs=angle_idxs, proper_idxs=proper_idxs, improper_idxs=improper_idxs, use_impropers=self.use_impropers)
 
         # check whether the number of indices matches with the one obtained from the rdmol (NOTE: can be expensive, consider deleting this)
-        tuple_indices.check_indices(rdmol=rd_mol, g=self.graph)
+        tuple_indices.index_check(rdmol=rd_mol, g=self.graph)
 
         TERMS = self.graph.ntypes
 

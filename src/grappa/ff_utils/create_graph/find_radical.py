@@ -161,7 +161,7 @@ def get_radicals(topology:topology, forcefield:ForceField=get_mod_amber99sbildn(
         names = [a.name for a in template.atoms]
         names_copy = copy.deepcopy(names)
 
-        assert len(ref_names) == len(set(ref_names)), f"Found duplicate atom names in residue {resname}."
+        assert len(ref_names) == len(set(ref_names)), f"Found duplicate atom names in residue {resname}:\n{ref_names}"
 
         diff = []
         for n in ref_names:
