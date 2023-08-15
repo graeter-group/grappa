@@ -400,7 +400,7 @@ class WriteTorsionParameters(torch.nn.Module):
     \phi is a dense neural network and \chi is a classifier network, predicting a gate score of "how nonzero" the torsion parameter should be.
 
     For Impropers:
-        Enforce antisymmetry under the permutation. Note that each improper torsion occurs thrice in the graph to ensure symmetry of the energy under permutation of the outer atoms. (To reduce the number of parameters that are to be learned, we can use the antisymmetry of the dihedral under the permutation of the outer atoms. If also k is antisymmetric, we have found an energy function that is symmetric under the permutation of the outer atoms.)
+        Enforce symmetry under the permutation. Note that each improper torsion occurs thrice in the graph to ensure symmetry of the energy under permutation of the outer atoms. (To reduce the number of parameters that are to be learned, we can use the antisymmetry of the dihedral, or the symmetry of the cosine of the dihedral, under the permutation of the outer atoms. If k is symmetric, we have found an energy function that is symmetric under the permutation of the outer atoms.)
 
     For Propers:
         Enforce symmetry of the energy function by enforcing symmetry of k under [3,2,1,0] and using symmetry of the dihedral angle under this permutation.
@@ -463,7 +463,7 @@ class WriteTorsionParameters(torch.nn.Module):
         else:
             # enforce antisymmetry under the permutation. Note that each improper torsion occurs thrice in the graph to ensure symmetry of the energy under permutation of the outer atoms. (To reduce the number of parameters that are to be learned, we can use the antisymmetry of the dihedral under the permutation of the outer atoms. If also k is antisymmetric, we have found an energy function that is symmetric under the permutation of the outer atoms.)
             perms = torch.tensor([[0,1,2,3],[3,1,2,0]], dtype=torch.int32)
-            prefactors = torch.tensor([1,-1], dtype=torch.float32)
+            prefactors = torch.tensor([1,1], dtype=torch.float32)
 
         self.torsion_model = PermutationEquivariantTransformer(n_feats=between_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=n_periodicity, permutations=perms, layer_norm=layer_norm, dropout=dropout, reducer_layers=dense_layers, reducer_hidden_feats=reducer_feats, permutation_prefactors=prefactors, positional_encoding=copy.deepcopy(positional_encoding))
 
