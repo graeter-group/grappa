@@ -12,7 +12,7 @@ from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
 FILTER_REF = True # whether to apply the filtering to the reference energies or the qm energies
 
-def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=False, n_max=None, collagen=False, force_field="amber99sbildn.xml", max_energy=None, max_force=None, openff_energies=False):
+def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=False, n_max=None, collagen=False, force_field="amber99sbildn.xml", max_energy=None, max_force=None, openff_energies=False, name=None):
 
     from grappa.PDBData.PDBDataset import PDBDataset
     from openmm.app import ForceField
@@ -50,6 +50,12 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
 
     ds.save_npz(str(storepath)+"_filtered", overwrite=overwrite)
     # ds.save_dgl(str(storepath)+"_filtered_dgl.bin", overwrite=overwrite)
+
+    # create evaluation plots:
+    if not name is None:
+        this_file = Path(__file__).parent
+        plotdir = this_file/name
+        ds.evaluate(plotpath=name, suffix="_total_ref")
 
 
 
@@ -131,7 +137,7 @@ if __name__ == "__main__":
                 print(f"starting the parametrization...")
                 
 
-                make_ds(get_charges=get_charges, storepath=storepath, dspath=dspath, overwrite=args.overwrite, allow_radicals=args.allow_radicals, n_max=args.n_max, collagen=args.collagen, force_field=args.force_field, openff_energies=args.openff_energies, max_energy=args.max_energy, max_force=args.max_force)
+                make_ds(get_charges=get_charges, storepath=storepath, dspath=dspath, overwrite=args.overwrite, allow_radicals=args.allow_radicals, n_max=args.n_max, collagen=args.collagen, force_field=args.force_field, openff_energies=args.openff_energies, max_energy=args.max_energy, max_force=args.max_force, name=ds_name.split("/")[0])
 
 
 

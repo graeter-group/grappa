@@ -254,6 +254,7 @@ def get_symmetric_tuples(level, tuple:Union[Tuple[int], List[int], np.ndarray])-
     return invariant_tuples
 
 def index_check(rdmol:Mol, g:DGLGraph, checked_lvls=["n2","n3","n4"]):
+    checked_lvls = [e for e in checked_lvls if e in g.ntypes]
     idxs_top = get_indices(rdmol)
     idxs_top = {lvl : len(idxs_top[lvl]) if lvl in idxs_top.keys() else 0 for lvl in checked_lvls}
     idxs_ff = {lvl : len(g.nodes[lvl].data["idxs"]) if "idxs" in g.nodes[lvl].data.keys() else 0 for lvl in checked_lvls}

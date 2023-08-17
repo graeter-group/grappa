@@ -81,7 +81,7 @@ def get_args():
     parser.add_argument('--no_attentional', dest='attentional', action='store_false')
     parser.set_defaults(attentional=None)
 
-    parser.add_argument('--default_tag', type=str, default="med", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large', 'deep'] (default: 'best')")
+    parser.add_argument('--default_tag', type=str, default="med", help="A tag for the default parameters for the model. Can be ['small', 'med', 'large', 'deep'] (default: 'med')")
     parser.add_argument('--default_scale', type=float, default=1, help="A scale factor for the default parameters for the model.  Only affects widths.")
 
     args = parser.parse_args()

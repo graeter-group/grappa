@@ -543,7 +543,7 @@ class SysWriter:
 
         # check whether the number of indices matches with the one obtained from the rdmol (NOTE: can be expensive, consider deleting this)
         # NOTE: only do this for torsions for now. will reformulate graph creation using the rdkit indices. However, this means one has to check whether interaction if already in ff when re-parametrising.
-        tuple_indices.index_check(rdmol=rd_mol, g=self.graph, checked_lvls=["n4"])
+        # tuple_indices.index_check(rdmol=rd_mol, g=self.graph, checked_lvls=["n4"])
 
         TERMS = self.graph.ntypes
 
@@ -573,8 +573,26 @@ class SysWriter:
         is_radical = torch.zeros(self.graph.num_nodes("n1"))
         is_radical[np.array(self.radical_indices)] = 1
         self.graph.nodes["n1"].data["is_radical"] = is_radical.float().unsqueeze(dim=-1) # add a dimension to be able to concatenate with the other features
-        # write the feature is_radical_neighbor:
         
+        # write the feature is_radical_neighbor:
+        ######################
+        # Define the message and reduce functions
+        def message_func(edges):
+            return {'m': edges.src['is_radical']}
+
+        def reduce_func(nodes):
+            # Sum up the radical flags from neighbors
+            # If sum > 0, then the node has at least one radical neighbor
+            return {'is_radical_neighbor': (nodes.mailbox['m'].sum(dim=1) > 0).float().unsqueeze(-1)}
+
+        # Define the message passing on the heterograph for the 'n1' node type
+        self.graph.multi_update_all(
+            {('n1', 'n1_edge', 'n1'): (message_func, reduce_func)},
+            "sum"
+        )
+        self.graph.nodes["n1"].data["is_radical_neighbor"] = self.graph.nodes["n1"].data["is_radical_neighbor"][:,0]
+        #########################
+
 
         self.graph.nodes["n1"].data["residue"] = torch.zeros(self.graph.num_nodes("n1"), len(RESIDUES), dtype=torch.float32)
 

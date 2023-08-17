@@ -175,7 +175,7 @@ class PDBDataset:
         """
         Save the dataset to npz files.
         """
-        num_confs = sum(map(len, self.mols))
+        num_confs = sum([len(mol.energies) for mol in self.mols])
 
         if self.info:
             print(f"saving PDBDataset of {len(self)} mols and {num_confs} confs to npz files...")
@@ -291,7 +291,6 @@ class PDBDataset:
             try:
                 mol.parametrize(forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
             except Exception as e:
-                raise
                 if not skip_errs:
                     raise type(e)(str(e) + f" in molecule {mol.sequence}")
                 else:
@@ -348,11 +347,12 @@ class PDBDataset:
         removed_confs = 0
         total_confs = 0
         keep = []
-        for i, mol in enumerate(self.mols):
-            before = len(mol)
-            more_than2left = mol.filter_confs(max_energy=max_energy, max_force=max_force, reference=reference)
+        for i, _ in enumerate(self.mols):
+            
+            before = len(self.mols[i].energies)
+            more_than2left = self.mols[i].filter_confs(max_energy=max_energy, max_force=max_force, reference=reference)
             keep.append(more_than2left)
-            after = len(mol)
+            after = len(self.mols[i].energies)
             removed_confs += before - after
             total_confs += after
 
@@ -361,7 +361,7 @@ class PDBDataset:
         if self.info:
             print(f"Removed {removed_confs} confs due to filtering high energy confs. {total_confs} are left.")
             if len(keep)-sum(keep) > 0:
-                print(f"Removed {len(keep)-sum(keep)} mols")
+                print(f"Removed {len(keep)-sum(keep)} mols because they only had one conformation")
 
 
     @classmethod
@@ -596,7 +596,7 @@ class PDBDataset:
                         raise
                     
         if info:
-            print(f"loaded {len(mols)} molecules with {sum([len(m) for m in mols])} confs from {path}")
+            print(f"loaded {len(mols)} molecules with {sum([len(m.energies) for m in mols])} confs from {path}")
 
         return cls(mols, info=info)
         
@@ -697,8 +697,10 @@ class PDBDataset:
         qm_energies = []
         ff_energies = []
 
-        qm_grads = []
+        grad_diffs = [] # these will be the rmse along the spatial dim
+
         ff_grads = []
+        qm_grads = []
 
         e_rmse_per_mol = []
         grad_rmse_per_mol = []
@@ -712,6 +714,9 @@ class PDBDataset:
         n_forces_res = {}
         n_forces_elem = {}
 
+        total_confs = 0
+        n_mols = 0
+
         e_key = f"u{suffix}"
         f_key = f"grad{suffix}"
         for mol in self.mols:
@@ -720,6 +725,9 @@ class PDBDataset:
 
                     en_ff = mol.graph_data["g"][e_key].flatten()
                     en_mol = mol.energies
+
+                    total_confs += len(en_mol)
+                    n_mols += 1
 
                     ff_energies.append(en_ff-en_ff.mean())
                     qm_energies.append(en_mol-en_mol.mean())
@@ -733,25 +741,35 @@ class PDBDataset:
                     grad_qm = mol.gradients.transpose(1,0,2)
                     grad_ff = mol.graph_data["n1"][f_key]
 
+                    qm_grads.append(grad_qm.flatten())
+                    ff_grads.append(grad_ff.flatten())
+
                     grad_rmse_per_mol.append(rmse(grad_ff, grad_qm))
 
-                    ff_grads.append(grad_ff.flatten())
-                    qm_grads.append(grad_qm.flatten())
+                    diff = grad_ff - grad_qm
+                    diff = np.sqrt(np.sum(np.square(diff), axis=2))
+
+                    grad_diffs.append(diff.flatten())
 
                     # now per element:
                     radical_indices = []
                     if radicals:
-                        radical_indices,_,_ = find_radical.get_radicals(topology=mol.to_openmm(collagen=True).topology)
+                        radical_neighbors = np.argwhere(mol.graph_data["n1"]["is_radical_neighbor"][:,0])[:,0]
+                        if not len(radical_neighbors.shape) == 1:
+                            print(mol.graph_data["n1"]["is_radical_neighbor"][:,0].shape)
+                            raise RuntimeError(f"shapes are not right, this should be a one dim index list, but is of shape {radical_neighbors.shape}")
                     if by_element:
                         for i, element in enumerate(mol.elements):
-                            if i in radical_indices:
-                                element = -1
+                            if radicals:
+                                if i in radical_neighbors:
+                                    element = -1
 
                             if not element in se_per_element.keys():
                                 se_per_element[element] = 0
                                 n_forces_elem[element] = 0
-                            se_per_element[element] += se(grad_ff[i], grad_qm[i])
-                            n_forces_elem[element] += np.prod(grad_ff[i].shape)
+                            # magnitude wise rmse
+                            se_per_element[element] += np.sum(np.square(diff[i]))
+                            n_forces_elem[element] += diff[i].shape[0]
                         
 
                     # now per residue:
@@ -761,8 +779,8 @@ class PDBDataset:
                                 if not res in se_per_residue.keys():
                                     se_per_residue[res] = 0
                                     n_forces_res[res] = 0
-                                se_per_residue[res] += se(grad_ff[i], grad_qm[i])
-                                n_forces_res[res] += np.prod(grad_ff[i].shape)
+                                se_per_residue[res] += np.sum(np.square(diff[i]))
+                                n_forces_res[res] += diff[i].shape[0]
 
 
         # done with the loop, now process:
@@ -790,7 +808,19 @@ class PDBDataset:
         ff_grads = np.concatenate(ff_grads, axis=0).flatten()
         qm_grads = np.concatenate(qm_grads, axis=0).flatten()
 
-        eval_data = {"energy_rmse":rmse(ff_energies, qm_energies), "energy_mae":mae(ff_energies, qm_energies), "grad_rmse":rmse(ff_grads, qm_grads), "grad_mae":mae(ff_grads, qm_grads)}
+        grad_diffs = np.concatenate(grad_diffs, axis=0).flatten()
+
+        eval_data = {
+            "energy_rmse":rmse(ff_energies, qm_energies),
+            "energy_mae":mae(ff_energies, qm_energies),
+            "grad_rmse":rmse(grad_diffs, np.zeros_like(grad_diffs)),
+            "grad_mae":mae(grad_diffs, np.zeros_like(grad_diffs)),
+            "component_grad_rmse":rmse(qm_grads, ff_grads),
+            "component_grad_mae":mae(qm_grads, ff_grads),
+            "energy_L2":rmse(qm_energies, np.zeros_like(qm_energies)),
+            "grad_L2":np.sqrt(3) * rmse(qm_grads, np.zeros_like(qm_grads)), # correct that we average over components.
+            "n_mols":n_mols,
+            "n_confs":total_confs}
 
         rmse_data = {}
         if by_element:
@@ -861,7 +891,7 @@ class PDBDataset:
                 ax[0].text(0.05, 0.95, f"RMSE: {eval_data['energy_rmse']:.2f} kcal/mol", transform=ax[0].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
 
-                ax[1].text(0.05, 0.95, f"RMSE: {rmse(ff_grads, qm_grads):.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
+                ax[1].text(0.05, 0.95, f"RMSE (magnitude): {eval_data['grad_rmse']:.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
 
                 plt.tight_layout()
@@ -880,7 +910,7 @@ class PDBDataset:
 
             
             ax[1].hist(grad_rmse_per_mol, bins=10)
-            ax[1].set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+            ax[1].set_xlabel("RMSE (magnitude) [kcal/mol/Å]", fontsize=fontsize)
             ax[1].set_ylabel("Count", fontsize=fontsize)
             ax[1].set_title("Force RMSE per Molecule", fontsize=fontsize)
             ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
@@ -1343,3 +1373,4 @@ class SplittedDataset:
         self.dgl_splits = PDBDataset.get_dgl_splits(datasets, self.split_indices)
 
     
+# %%

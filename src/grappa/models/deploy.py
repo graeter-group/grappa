@@ -105,7 +105,7 @@ def model_from_path(model_path:Union[Path,str], device:str="cpu", config_path:Un
     return model
 
 
-def get_default_model_config(tag:str="best", scale:float=1.0):
+def get_default_model_config(tag:str="med", scale:float=1.0):
 
     if tag == "small":
         args = get_small_model_config()
