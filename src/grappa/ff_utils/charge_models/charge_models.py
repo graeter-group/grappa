@@ -265,12 +265,17 @@ def from_dict(d:dict, top:topology, d_rad:dict=None, radical_indices:List[int]=[
             # rename all HB2 to HB1 because these are in the dict for radicals and have the same parameters since they are indisinguishable
             if not name in d_used.keys():
                 orig_name = name
-                if name in [f"H{lvl}2" for lvl in lvls]:
-                    name = name.replace("2", "1")
-                elif name in [f"H{lvl}3" for lvl in lvls]:
-                    name = name.replace("3", "1")
+
+                # Create the flattened list (also allow things like HG13 -> HG11):
+                all_names = [f"H{lvl}{symm_idx}{j}" for lvl in lvls for symm_idx in ("", "1", "2") for j in (2, 3)]
+
+                # Check if name is in the list and replace the last character with "1"
+                if name in all_names:
+                    name = name[:-1] + "1"
+
+            # if it is still not in the dict, raise an error:
             if not name in d_used.keys():
-                raise ValueError(f"{name} not in radical dictionary for {res} {rad_name}.\nStored atom names are {d_used.keys()}")
+                raise ValueError(f"{name} not in radical dictionary for {res} {rad_name}. original name is {orig_name}\nStored atom names are {d_used.keys()}")
 
 
 

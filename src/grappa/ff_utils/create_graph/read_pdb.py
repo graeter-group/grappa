@@ -26,13 +26,9 @@ def replace_h23_to_h12(pdb:PDBFile):
             if atom.name == f"CD1":
                 atom.name = f"CD"
                 continue
-    if atom.residue.resname == "LEU":
-        for i in ["3"]:
-            if atom.name == f"HD1{i}":
-                atom.name = f"HD1{int(i)-2}"
-                continue
-        if atom.name == f"CG1":
-            atom.name = f"CG"
+        if atom.residue.name == "LEU":
+            if atom.name == f"CG1":
+                atom.name = f"CG"
 
     return pdb
 
@@ -60,12 +56,8 @@ def one_atom_replace_h23_to_h12(name:str, resname:str):
         if name == f"CD1":
             name = f"CD"
     if resname == "LEU":
-        for i in ["3"]:
-            if name == f"HD1{i}":
-                name = f"HD1{int(i)-1}"
-                continue
-        if name == f"CG1":
-            name = f"CG"
+            if name == f"CG1":
+                name = f"CG"
     return name
     
 

@@ -43,9 +43,10 @@ conda activate pepgen_cascade
 echo "Generating PDBs using pepgen..."
 python generate_pdbs.py --n_max "$n_molecules" -l 3 --folder "$folder"
 
-conda activate psi4_cascade
+conda activate grappa_cascade
 python generate_states.py "$folder"/ -n "$n_states_per_molecule" --temperature 300 --plot
 
+conda activate psi4_cascade
 python single_points.py "$folder"/ --skip_errs --memory "$memory" --num_threads "$num_threads"
 
 python validate_qm.py "$folder"/

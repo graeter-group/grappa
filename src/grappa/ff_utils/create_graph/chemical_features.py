@@ -1,6 +1,10 @@
 from rdkit.Chem.rdchem import Mol
 from rdkit.Chem.rdchem import HybridizationType
 
+# supress openff warning:
+import logging
+logging.getLogger("openff").setLevel(logging.ERROR)
+
 import torch
 
 def get_chemical_features(mol:Mol) -> torch.Tensor:

@@ -7,19 +7,15 @@ import matplotlib.pyplot as plt
 from typing import List, Dict, Tuple, Union
 import os
 import copy
+from grappa.run.run_utils import load_yaml
 
-def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]=Path.cwd(), fontsize:int=12, figsize:Tuple[int,int]=(10,5)):
+def make_data_list(eval_data:List[Dict]):
     """
-    Assume the dicts in eval_data have the form
-        eval_data[dataset_path/ff_info]['energy_rmse'] = float
-        eval_data[dataset_path/ff_info]['grad_rmse'] = float
-    Then this function creates a bar plot with bars for each model for each dataset_path with the rmse values on the y axis.
+    Modify the dict keys such that the keys are: [ds_type][set_type]['energy_rmse'/'grad_rmse']:
     """
-
-    data = {}
-    for data_dict, model_name in zip(eval_data, model_names):
-        if model_name not in data:
-            data[model_name] = {}
+    outlist = []
+    for data_dict in eval_data:
+        outdict = {}
         for k in data_dict.keys():
             if len(k.split('>')) > 2:
                 raise ValueError(f"Expected dataset path to be of the form 'dataset_path/ff_info', but got '{k}'")
@@ -32,20 +28,54 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
 
             if set_type is None:
                 continue
-
-
             ds_type = k.split('>')[0]
 
-            
-            if ds_type not in data[model_name].keys():
+            if ds_type not in outdict.keys():
                 empty_subdict = {"energy_rmse": [], "grad_rmse": []}
-                data[model_name][ds_type] = {"train": copy.deepcopy(empty_subdict), "val": copy.deepcopy(empty_subdict), "test": copy.deepcopy(empty_subdict)}
+                outdict[ds_type] = {"train": copy.deepcopy(empty_subdict), "val": copy.deepcopy(empty_subdict), "test": copy.deepcopy(empty_subdict)}
 
             
             # Append RMSE data points to the lists
-            data[model_name][ds_type][set_type]["energy_rmse"].append(data_dict[k]["energy_rmse"])
-            data[model_name][ds_type][set_type]["grad_rmse"].append(data_dict[k]["grad_rmse"])
+            outdict[ds_type][set_type]["energy_rmse"] = data_dict[k]["energy_rmse"]
+            outdict[ds_type][set_type]["grad_rmse"] = data_dict[k]["grad_rmse"]
 
+        outlist.append(outdict)
+    
+    return outlist
+
+
+def make_data_dict(eval_data:List[Dict], model_names:List[str]):
+    """
+    assume that eval_data is the output of make_data_list
+    """
+    data = {}
+    for data_dict, model_name in zip(eval_data, model_names):
+        if model_name not in data:
+            data[model_name] = {}
+        for ds_type in data_dict.keys():
+            if ds_type not in data[model_name].keys():
+                data[model_name][ds_type] = {}
+            for set_type in data_dict[ds_type].keys():
+                if set_type not in data[model_name][ds_type].keys():
+                    data[model_name][ds_type][set_type] = {"energy_rmse": [], "grad_rmse": []}
+            
+                # Append RMSE data points to the lists
+                data[model_name][ds_type][set_type]["energy_rmse"].append(data_dict[ds_type][set_type]["energy_rmse"])
+                data[model_name][ds_type][set_type]["grad_rmse"].append(data_dict[ds_type][set_type]["grad_rmse"])
+
+    return data
+
+
+def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path.cwd(), fontsize:int=12, figsize:Tuple[int,int]=(10,5), best=False):
+    """
+    Assume the dicts in eval_data have the form
+        eval_data[dataset_path/ff_info]['energy_rmse'] = float
+        eval_data[dataset_path/ff_info]['grad_rmse'] = float
+    Then this function creates a bar plot with bars for each model for each dataset_path with the rmse values on the y axis.
+    best flag make sonly sense i all runs are on the same dataset split seed.
+    """
+
+    data = make_data_dict(eval_dicts, model_names)
 
     for model_name in data.keys():
         for ds_type in data[model_name].keys():
@@ -54,6 +84,7 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
                     value = copy.deepcopy(np.array(data[model_name][ds_type][set_type][metric_type]))
                     data[model_name][ds_type][set_type][metric_type] = value.mean()
                     data[model_name][ds_type][set_type][f"{metric_type}_std"] = value.std()
+                    data[model_name][ds_type][set_type][f"{metric_type}_best"] = value.min()
 
     # sort the dictionary by the test energy_rmse of the first dataset:
     assert not 0 in [len(list(data[k].keys())) for k in data.keys()], f"Expected all models to have data for at least one dataset."
@@ -88,8 +119,12 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
         for model_idx, model in enumerate(data.keys()):
             mnames.append(model)
             for dtype_idx, dtype in enumerate(sorted(data_types)):
-                value = data[model][dtype]["test"][metric_type]
-                error = data[model][dtype]["test"][f"{metric_type}_std"]
+                if best:
+                    value = data[model][dtype]["test"][f"{metric_type}_best"]
+                    error = 0
+                else:
+                    value = data[model][dtype]["test"][metric_type]
+                    error = data[model][dtype]["test"][f"{metric_type}_std"]
                 r_new = r[model_idx] + dtype_idx * single_bar_width
                 ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2)
 
@@ -115,8 +150,12 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
         for model_idx, model in enumerate(data.keys()):
             mnames.append(model)
             for set_idx, set_type in enumerate(set_types):
-                value = data[model][dtype][set_type][metric_type]
-                error = data[model][dtype][set_type][f"{metric_type}_std"]
+                if best:
+                    value = data[model][dtype][set_type][f"{metric_type}_best"]
+                    error = 0
+                else:
+                    value = data[model][dtype][set_type][metric_type]
+                    error = data[model][dtype][set_type][f"{metric_type}_std"]
                 r_new = r[model_idx] + set_idx * single_bar_width
                 alpha = 1 if set_type == "test" else 0.5
                 ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype} {set_type}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2, alpha=alpha)
@@ -149,15 +188,17 @@ def compare(eval_data:List[Dict], model_names:List[str], plotdir:Union[Path,str]
         json.dump(data, f, indent=4)
 
 
-def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[]):
+def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[], best_criterion:Tuple[str, str]=None):
     """
     Create a bar plot comparing model performance of models in subfolders of parent_dir.
 
     For each subfolder of the parent dir, check if it contains a file called 'eval_data.json'. Use the name of the subfolder as the model name. Then create a bar plot comparing the models in the parent of the parent dir.
+    best_criterion: (metric, ds_type)
     """
     parent_dir = Path(parent_dir)
     model_names = []
     eval_data = []
+    splits = []
     dirs = parent_dir.iterdir()
     if not vpaths is None:
         dirs = vpaths
@@ -181,8 +222,43 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
             if not model_name in exclude:
                 model_names.append(model_name)
                 eval_data.append(json.load(open(model_dir_/"eval_data.json", "r"))["eval_data"])
+                config = load_yaml(model_dir/"run_config.yml")
+                split = config["seed"]
+                splits.append(split)
 
-    compare(eval_data, model_names, plotdir=parent_dir.parent, fontsize=fontsize, figsize=figsize)
+    new_data = make_data_list(eval_data)
+
+    if not best_criterion is None:
+        # for each split, loop through the model_names and for those that are the same, only keep the one that is the best according to the criterion
+        assert len(best_criterion) == 2, f"Expected best_criterion to be a tuple of length 2, but got {best_criterion}."
+        assert best_criterion[0] in ["energy_rmse", "grad_rmse"], f"Expected best_criterion[0] to be 'energy_rmse' or 'grad_rmse', but got {best_criterion[0]}."
+
+        # get the best model for each split:
+        best_models = []
+        best_model_values = []
+        best_new_data = []
+        for split in set(splits):
+            # condition on split:
+            split_models = [model for model, s in zip(model_names, splits) if s == split]
+            split_new_data = [data for data, s in zip(new_data, splits) if s == split]
+            split_values = [data[best_criterion[1]]["test"][best_criterion[0]] for data in split_new_data]
+            print(set(split_models))
+            # now differentiate between different model names:
+            for model in set(split_models):
+                # condition on model:
+                model_values = [value for value, m in zip(split_values, split_models) if m == model]
+                model_new_data = [data for data, m in zip(split_new_data, split_models) if m == model]
+
+                best_idx = np.argmin(model_values)
+                best_models.append(copy.deepcopy(model))
+                best_new_data.append(copy.deepcopy(model_new_data[best_idx]))
+
+        # overwrite:
+        new_data = best_new_data
+        model_names = best_models
+        print(model_names)
+
+    compare(new_data, model_names, plotdir=parent_dir.parent, fontsize=fontsize, figsize=figsize, best=False)
 
 
 def client():
@@ -198,6 +274,7 @@ def client():
     parser.add_argument("--figsize", type=int, nargs=2, default=(10,5), help="The figure size for the plot.")
     parser.add_argument("--vpaths", type=str, nargs="+", default=None, help="The paths to the versions to compare.")
     parser.add_argument("--exclude", type=str, nargs="+", default=[], help="The paths to the versions to compare.")
+    parser.add_argument("--best_criterion", type=str, nargs=2, default=None, help="The criterion to use to select the best model for each split. First argument is the metric, second is the dataset type. If None, use all models.")
     args = parser.parse_args()
 
-    compare_versions(args.parent_dir, fontsize=args.fontsize, figsize=args.figsize, vpaths=args.vpaths, exclude=args.exclude)
+    compare_versions(args.parent_dir, fontsize=args.fontsize, figsize=args.figsize, vpaths=args.vpaths, exclude=args.exclude, best_criterion=args.best_criterion)

@@ -15,8 +15,6 @@ import numpy as np
 
 import dgl
 
-
-
 def graph_from_topology(
         topology: openmm.app.Topology,
         classical_ff: Union[openmm.app.ForceField, str]=get_mod_amber99sbildn(), 

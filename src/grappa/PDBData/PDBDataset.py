@@ -247,7 +247,7 @@ class PDBDataset:
 
 
     
-    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False, skip_errs=False)->None:
+    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False, skip_errs=False, backup_path=None, recover=True)->None:
         """
         Parametrizes the dataset with a forcefield.
         Writes the following entries to the graph:
@@ -256,27 +256,64 @@ class PDBDataset:
         if not openffmol is None, get_charge can also take an openffmolecule instead.
 
         If the forcefield is a string it is interpreted as the name of an openff small molecule forcefield.
-        """
 
+        if recover: assume that the numbering is the same!
+        """
+        created_files = []
         skipped = []
+        if not backup_path is None:
+            if not Path(backup_path).exists():
+                os.makedirs(backup_path, exist_ok=True)
+
+
+            
         if self.info:
             print("parametrizing PDBDataset...")
         for i, mol in enumerate(self.mols):
+
+
+            if recover:
+                if not backup_path is None:
+                    file = Path(backup_path)/Path(str(i)+".npz")
+                    if file.exists():
+                        mol = PDBMolecule.load(str(file))
+                    if self.info:
+                        if i%100==1:
+                            print()
+                        print(f"loaded {i+1}/{len(self.mols)}", end="\r")
+                    continue
+
+
             if self.info:
+                if i%100 == 1:
+                    print()
                 print(f"parametrizing {i+1}/{len(self.mols)}", end="\r")
             try:
                 mol.parametrize(forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
             except Exception as e:
+                raise
                 if not skip_errs:
                     raise type(e)(str(e) + f" in molecule {mol.sequence}")
                 else:
                     skipped.append(i)
 
+            if backup_path is not None:
+                fpath = str(Path(backup_path)/Path(str(i)+".npz"))
+                if Path(fpath).exists():
+                    os.remove(fpath)
+                mol.compress(fpath)
+                created_files.append(fpath)
+
         if self.info:
             print()
             if len(skipped) > 0:
                 print(f"skipped {len(skipped)} molecules because of errors")
-                self.mols[:] = [mol for i, mol in enumerate(self.mols) if not i in skipped]
+        if len(skipped) > 0:
+            self.mols[:] = [mol for i, mol in enumerate(self.mols) if not i in skipped]
+            # delete all files that were created in backup_path:
+            if not backup_path is None:
+                for fpath in created_files:
+                    os.remove(fpath)
 
     
     def filter_validity(self, forcefield:ForceField=get_mod_amber99sbildn(), sigmas:Tuple[float,float]=(1.,1.), quickload:bool=True)->None:
@@ -324,7 +361,7 @@ class PDBDataset:
         if self.info:
             print(f"Removed {removed_confs} confs due to filtering high energy confs. {total_confs} are left.")
             if len(keep)-sum(keep) > 0:
-                print("Removed {len(keep)-sum(keep)} mols")
+                print(f"Removed {len(keep)-sum(keep)} mols")
 
 
     @classmethod
@@ -1117,6 +1154,16 @@ class SplittedDataset:
 
         return self
 
+    
+    @staticmethod
+    def do_kfold_split(tested_datasets:List[PDBDataset], k:int=5, seed:int=0)->List[ Tuple[List[str], List[str], List[str]] ]:
+        """
+        Returns a list of length k where each entry defines a split of names such that each name is exactly once in the test set. For k fold cross validatin, apply this with datasets that shall be split into k folds.
+        Then, use the create_with names with split [1,0,0] and all datasets to create the splitter for each fold. This will move the molecules with names that do not appear in the fold to the train set.
+        """
+        pass
+
+
 
     def get_full_loaders(self, shuffle:bool=True, max_train_mols:int=None)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
         """
@@ -1257,7 +1304,7 @@ class SplittedDataset:
     @classmethod
     def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1], seed=0, nographs=False):
         """
-        Generates the split_indices and split_names for the given datasets, contrained by the names in split_names.
+        Generates the split_indices and split_names for the given datasets, constrained by the names in split_names.
         """
 
         self = cls()
@@ -1294,3 +1341,5 @@ class SplittedDataset:
             raise ValueError("No split indices have been created yet.")
         
         self.dgl_splits = PDBDataset.get_dgl_splits(datasets, self.split_indices)
+
+    

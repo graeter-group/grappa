@@ -132,6 +132,9 @@ def run_(args, vpath=[]):
         elif ds_short == "spice_monomers":
             args.ds_tag += [f'monomers/charge_default_ff_gaff-2_11{suffix}']
 
+        elif ds_short == "spice_pubchem":
+            args.ds_tag += [f'pubchem/charge_default_ff_gaff-2_11{suffix}']
+
         elif ds_short == "eric":
             args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
             args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']

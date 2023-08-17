@@ -28,6 +28,7 @@ from ..units import RESIDUES
 
 from grappa.constants import MAX_ELEMENT, TopologyDict, ParamDict
 
+
 # todo:
 # filter topology for residues that are in grappa.constants.RESIDUES -> subtopology
 # write interal->external index things
@@ -541,7 +542,8 @@ class SysWriter:
         self.graph = read_heterogeneous_graph.from_homogeneous_and_idxs(g=self.graph, bond_idxs=bond_idxs, angle_idxs=angle_idxs, proper_idxs=proper_idxs, improper_idxs=improper_idxs, use_impropers=self.use_impropers)
 
         # check whether the number of indices matches with the one obtained from the rdmol (NOTE: can be expensive, consider deleting this)
-        tuple_indices.index_check(rdmol=rd_mol, g=self.graph)
+        # NOTE: only do this for torsions for now. will reformulate graph creation using the rdkit indices. However, this means one has to check whether interaction if already in ff when re-parametrising.
+        tuple_indices.index_check(rdmol=rd_mol, g=self.graph, checked_lvls=["n4"])
 
         TERMS = self.graph.ntypes
 
@@ -571,8 +573,9 @@ class SysWriter:
         is_radical = torch.zeros(self.graph.num_nodes("n1"))
         is_radical[np.array(self.radical_indices)] = 1
         self.graph.nodes["n1"].data["is_radical"] = is_radical.float().unsqueeze(dim=-1) # add a dimension to be able to concatenate with the other features
-
+        # write the feature is_radical_neighbor:
         
+
         self.graph.nodes["n1"].data["residue"] = torch.zeros(self.graph.num_nodes("n1"), len(RESIDUES), dtype=torch.float32)
 
         if self.use_residues:
