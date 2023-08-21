@@ -10,7 +10,7 @@ with open('input_data/GrAPPa_input_HAT.json', "r") as f:
     data: TopologyDict = json.load(f)
 
 # initialize the forcefield from a tag:
-ff = ForceField.from_tag("radical_example")
+ff = ForceField.from_tag("radical_latest")
 
 # %%
 # predict parameters

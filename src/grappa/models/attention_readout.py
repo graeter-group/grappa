@@ -79,7 +79,7 @@ class PermutationEquivariantTransformer(torch.nn.Module):
             torch tensor of shape (n_seq, n_encode) that is invariant under the subset of permutations which we want our output to be invariant (and our layers to be equivariant) to.
             can be generated automatically if the permutations are
                 {+(0,1,2), +(2,1,0)} ["angle symmetry"] -> encoding = [[0],[1],[0]]
-            or  {+(0,1,2,3), +(3,2,1,0), -(0,2,1,3), -(3,1,2,0)} ["torsion symmetry"] -> encoding = [[0],[1],[1],[0]]
+            or  {+(0,1,2,3), +(3,2,1,0),} ["torsion symmetry"] -> encoding = [[0],[1],[1],[0]]
         """
         super().__init__()
         self.n_layers = n_layers
@@ -242,7 +242,8 @@ class RepProjector(torch.nn.Module):
     This Layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
     The graph must have node featires stored at g.nodes["n1"].data["h"] and tuple indices at g.nodes[f"n{dim_tupel}"].data["idxs"].
     """
-    def __init__(self, dim_tupel, in_feats, out_feats, dropout, improper:bool=False) -> None:
+    def __init__(self, dim_tupel, in_feats, out_feats, dropout=0, improper:bool=False) -> None:
+        assert dropout == 0., "dropout is not supported in RepProjector"
         super().__init__()
         self.dim_tupel = dim_tupel
         self.mlp = torch.nn.Sequential(
@@ -268,7 +269,7 @@ class RepProjector(torch.nn.Module):
 
 
         try:
-            # this has the shape num_pairs, 2, rep_dim
+            # this has the shape num_pairs, dim_tuple, rep_dim
             tuples = atom_feats[pairs]
         except IndexError as err:
             err.message += f"\nIt might be that g.nodes['n{self.dim_tupel}'].data['idxs'] has the wrong datatype. It should be a long, byte or bool but is {pairs.dtype}"

@@ -99,6 +99,10 @@ class ForceField:
         """
         Initializes the ForceField from a tag. Available tags:
 
+        latest - The latest model, fine-tuned for good performance. Builds upon amber99sbildn an extension of amber99sbildn with DOP and HYP. Does not allow radicals. For ParamDict, uses degrees instead of radians for angles and torsions.
+
+        radical_latest - The latest model, fine-tuned for good performance. Builds upon an extension of amber99sbildn with DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
+
         example - An example model, not fine-tuned for good performance. Builds upon amber99sbildn. Does not allow radicals. For ParamDict, uses degrees instead of radians for angles and torsions.
 
         radical_example - An example model, not fine-tuned for good performance. Builds upon an extension of amber99sbildn with DOP and HYP. Allows radicals, uses the 'heavy' charge model. For ParamDict, uses degrees instead of radians for angles and torsions.
@@ -132,8 +136,8 @@ class ForceField:
 
             
 
-        elif tag == "radical_example":
-            model_tag = "radical_example"
+        elif tag in ["radical_example", "radical_latest", "radical_grappa_0.1.0"]:
+            model_tag = tag.removeprefix("radical_")
             split_path = []
             model = model_from_tag(model_tag, device=device, split_path=split_path)
 

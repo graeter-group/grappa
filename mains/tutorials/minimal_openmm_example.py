@@ -8,17 +8,25 @@ import openmm.app
 
 
 # initialize the force field from a tag:
-ff = ForceField.from_tag("example")
+ff = ForceField.from_tag("latest")
 
 # ff = openmm.app.ForceField('amber99sbildn.xml', 'tip3p.xml') # uncomment for comparison
 #%%
 
 # load example data:
-from openmm.app import PDBFile
-pdb = PDBFile("input_data/pep.pdb")
+from openmm.app import PDBFile, Modeller
+
+# load pdb and add hydrogens:
+pdb = PDBFile("input_data/1aki.pdb")
+modeller = Modeller(pdb.topology, pdb.positions)
+modeller.addHydrogens(openmm.app.ForceField('amber99sbildn.xml', 'tip3p.xml'))
+# remove water:
+modeller.deleteWater()
+top = modeller.getTopology()
+positions = modeller.getPositions()
 #%%
 # get a system:
-sys = ff.createSystem(pdb.topology)
+sys = ff.createSystem(top)
 # %%
 
 # run a short simulation with these parameters:
@@ -29,16 +37,18 @@ from openmm import unit
 # %%
 # initialize an integrator with  temperature, heat-bath-coupling and timestep:
 integrator = LangevinIntegrator(300*unit.kelvin, 1/unit.picosecond, 0.001*unit.picoseconds)
-simulation = Simulation(pdb.topology, sys, integrator)
+simulation = Simulation(top, sys, integrator)
 # %%
 # set the positions:
-simulation.context.setPositions(pdb.positions)
+simulation.context.setPositions(positions)
 # minimize:
 simulation.minimizeEnergy()
 # %%
-simulation.step(10000)
+simulation.step(1000)
 # keep track of the trajectory from now on:
 simulation.reporters.append(openmm.app.PDBReporter('trajectory.pdb', 10))
+from sys import stdout
+simulation.reporters.append(openmm.app.StateDataReporter(stdout, 100, potentialEnergy=True, temperature=True))
 simulation.step(1000)
 # %%
 
