@@ -392,7 +392,8 @@ class PDBDataset:
         info:bool=True,
         randomize:bool=False,
         with_smiles:bool=False,
-        seed:int=0,):
+        seed:int=0,
+        skip_names:List[str]=[],):
         """
         Generates a dataset from an hdf5 file.
         """
@@ -444,6 +445,8 @@ class PDBDataset:
 
                     mol = PDBMolecule.from_xyz(elements=elements, xyz=xyz, energies=energies, gradients=grads, smiles=smiles)
                     mol.name = name.upper()
+                    if mol.name in skip_names:
+                        continue
                     obj.append(mol)
                     counter += 1
                 except KeyboardInterrupt:
@@ -461,7 +464,7 @@ class PDBDataset:
 
 
     @classmethod
-    def from_spice(cls, path: Union[str,Path], info:bool=True, n_max:int=None, randomize:bool=False, skip_errs:bool=True, with_smiles:bool=False, seed:int=0):
+    def from_spice(cls, path: Union[str,Path], info:bool=True, n_max:int=None, randomize:bool=False, skip_errs:bool=True, with_smiles:bool=False, seed:int=0, skip_names:List[str]=[]):
         """
         Generates a dataset from an hdf5 file with spice unit convention.
         """
@@ -486,6 +489,7 @@ class PDBDataset:
             skip_errs=skip_errs,
             with_smiles=with_smiles,
             seed=seed,
+            skip_names=skip_names,
         )
 
         if not with_smiles:
