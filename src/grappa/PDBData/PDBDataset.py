@@ -217,6 +217,9 @@ class PDBDataset:
             mol = PDBMolecule.load(Path(npz))
             obj.append(mol)
 
+        if obj.info:
+            print(f"loaded {len(obj.mols)} mols with {sum([len(mol.energies) for mol in obj.mols])} confs from npz files.")
+
         if len(obj.mols) == 0:
             raise ValueError(f"no npz files found in path {str(path)}")
 
@@ -247,7 +250,7 @@ class PDBDataset:
 
 
     
-    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False, skip_errs=False, backup_path=None, recover=True)->None:
+    def parametrize(self, forcefield:Union[ForceField,str]=get_mod_amber99sbildn(), get_charges=None, allow_radicals=False, collagen=False, skip_errs=False, backup_path=None, recover=True, logpath=None)->None:
         """
         Parametrizes the dataset with a forcefield.
         Writes the following entries to the graph:
@@ -276,20 +279,28 @@ class PDBDataset:
                 if not backup_path is None:
                     file = Path(backup_path)/Path(str(i)+".npz")
                     if file.exists():
-                        mol = PDBMolecule.load(str(file))
-                    if self.info:
-                        if i%100==1:
-                            print()
-                        print(f"loaded {i+1}/{len(self.mols)}", end="\r")
-                    continue
+                        mol_loaded = PDBMolecule.load(str(file))
+                        if mol.name == mol_loaded.name:
+                            self.mols[i] = mol_loaded
+                            if not logpath is None:
+                                with open(logpath, "a") as f:
+                                    f.write(f"loaded {i+1}/{len(self.mols)}\n")
+                            if self.info:
+                                if i%100==1:
+                                    print()
+                                print(f"loaded {i+1}/{len(self.mols)}", end="\r")
+                            continue
 
 
             if self.info:
                 if i%100 == 1:
                     print()
+                if not logpath is None:
+                    with open(logpath, "a") as f:
+                        f.write(f"parametrizing {i+1}/{len(self.mols)}\n")
                 print(f"parametrizing {i+1}/{len(self.mols)}", end="\r")
             try:
-                mol.parametrize(forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
+                self.mols[i].parametrize(forcefield=forcefield, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen)
             except Exception as e:
                 if not skip_errs:
                     raise type(e)(str(e) + f" in molecule {mol.sequence}")
@@ -300,7 +311,7 @@ class PDBDataset:
                 fpath = str(Path(backup_path)/Path(str(i)+".npz"))
                 if Path(fpath).exists():
                     os.remove(fpath)
-                mol.compress(fpath)
+                self.mols[i].compress(fpath)
                 created_files.append(fpath)
 
         if self.info:
@@ -339,9 +350,10 @@ class PDBDataset:
         
 
         
-    def filter_confs(self, max_energy:float=65., max_force:float=200, reference=False)->None:
+    def filter_confs(self, max_energy:float=65., max_force:float=200, reference=False, deviation_from_ref=False)->None:
         """
         Filters out conformations with energies or forces that are over 60 kcal/mol away from the minimum of the dataset (not the actual minimum). Remove molecules is less than 2 conformations are left. Apply this before parametrizing or re-apply the parametrization after filtering. Units are kcal/mol and kcal/mol/angstrom.
+        If deviation_from_ref is True, max_energy and max_force applies to the deviation from the reference energy. This is for filtering out molecules whose topology has been interpreted wrongly.
         """
 
         removed_confs = 0
@@ -350,7 +362,7 @@ class PDBDataset:
         for i, _ in enumerate(self.mols):
             
             before = len(self.mols[i].energies)
-            more_than2left = self.mols[i].filter_confs(max_energy=max_energy, max_force=max_force, reference=reference)
+            more_than2left = self.mols[i].filter_confs(max_energy=max_energy, max_force=max_force, reference=reference, deviation_from_ref=deviation_from_ref)
             keep.append(more_than2left)
             after = len(self.mols[i].energies)
             removed_confs += before - after
@@ -361,7 +373,7 @@ class PDBDataset:
         if self.info:
             print(f"Removed {removed_confs} confs due to filtering high energy confs. {total_confs} are left.")
             if len(keep)-sum(keep) > 0:
-                print(f"Removed {len(keep)-sum(keep)} mols because they only had one conformation")
+                print(f"Removed {len(keep)-sum(keep)} mols because they hadless than two conformations")
 
 
     @classmethod
@@ -602,16 +614,17 @@ class PDBDataset:
         
 
 
-    def energy_hist(self, filename=None, show=True):
+    def energy_hist(self, filename=None, show=True, fontsize=16):
         energies = np.array([])
         for m in self.mols:
             e = m.energies
             e -= e.min()
-            energies = np.concatenate([energies, e], axis=0)
+            e = e[e>0]
+            energies = np.concatenate([energies, e.flatten()], axis=0)
         plt.hist(energies, bins=100)
-        plt.xlabel("QM Energies")
-        plt.ylabel("Count")
-        plt.title("QM Energies")
+        plt.xlabel("Energy [kcal/mol]", fontsize=fontsize)
+        plt.ylabel("Count" , fontsize=fontsize)
+        plt.title("QM Energies" , fontsize=fontsize)
         plt.yscale("log")
         if not filename is None:
             plt.savefig(filename)
@@ -620,15 +633,15 @@ class PDBDataset:
 
 
 
-    def grad_hist(self, filename=None, show=True):
+    def grad_hist(self, filename=None, show=True, fontsize=16):
         grads = np.array([])
         for m in self.mols:
-            e = m.gradients
-            grads = np.concatenate([grads, e], axis=0)
+            e = np.sqrt(np.sum(np.square(m.gradients), axis=-1))
+            grads = np.concatenate([grads, e.flatten()], axis=0)
         plt.hist(grads, bins=100)
-        plt.xlabel("QM Gradients")
-        plt.ylabel("Count")
-        plt.title("QM Gradients")
+        plt.xlabel("Gradient [kcal/mol/Å]" , fontsize=fontsize)
+        plt.ylabel("Count" , fontsize=fontsize)
+        plt.title("QM Gradients" , fontsize=fontsize)
         plt.yscale("log")
         if not filename is None:
             plt.savefig(filename)
@@ -674,6 +687,7 @@ class PDBDataset:
             except:
                 if remove_errs:
                     return None
+                raise
             
             return mol
         
@@ -751,14 +765,17 @@ class PDBDataset:
 
                     grad_diffs.append(diff.flatten())
 
-                    # now per element:
-                    radical_indices = []
-                    if radicals:
-                        radical_neighbors = np.argwhere(mol.graph_data["n1"]["is_radical_neighbor"][:,0])[:,0]
-                        if not len(radical_neighbors.shape) == 1:
-                            print(mol.graph_data["n1"]["is_radical_neighbor"][:,0].shape)
-                            raise RuntimeError(f"shapes are not right, this should be a one dim index list, but is of shape {radical_neighbors.shape}")
+
                     if by_element:
+                        # now per element:
+                        radical_neighbors = []
+                        if radicals:
+                            radical_neighbors = np.argwhere(mol.graph_data["n1"]["is_radical_neighbor"][:,0])[:,0]
+                            if not len(radical_neighbors.shape) == 1:
+                                print(mol.graph_data["n1"]["is_radical_neighbor"][:,0].shape)
+                                raise RuntimeError(f"shapes are not right, this should be a one dim index list, but is of shape {radical_neighbors.shape}")
+                            radical_neighbors = radical_neighbors.tolist()
+
                         for i, element in enumerate(mol.elements):
                             if radicals:
                                 if i in radical_neighbors:
@@ -818,7 +835,7 @@ class PDBDataset:
             "component_grad_rmse":rmse(qm_grads, ff_grads),
             "component_grad_mae":mae(qm_grads, ff_grads),
             "energy_L2":rmse(qm_energies, np.zeros_like(qm_energies)),
-            "grad_L2":np.sqrt(3) * rmse(qm_grads, np.zeros_like(qm_grads)), # correct that we average over components.
+            "grad_L2":np.sqrt(3) * rmse(qm_grads, np.zeros_like(qm_grads)), # correct that we averages over components. this iis the magnitude rmse
             "n_mols":n_mols,
             "n_confs":total_confs}
 
@@ -883,21 +900,21 @@ class PDBDataset:
                     ax[1].scatter(qm_grads, ff_grads, s=1, alpha=0.4)
                 ax[1].plot(qm_grads, qm_grads, color="black", linewidth=0.8)
                 ax[1].set_title("Forces [kcal/mol/Å]", fontsize=fontsize)
-                ax[1].set_xlabel(f"{refname} Forces", fontsize=fontsize)
-                ax[1].set_ylabel(f"{ff_title} Gradients", fontsize=fontsize)
+                ax[1].set_xlabel(f"{refname} Gradient Components", fontsize=fontsize)
+                ax[1].set_ylabel(f"{ff_title} Gradient Components", fontsize=fontsize)
                 ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
 
                 ax[0].text(0.05, 0.95, f"RMSE: {eval_data['energy_rmse']:.2f} kcal/mol", transform=ax[0].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
 
-                ax[1].text(0.05, 0.95, f"RMSE (magnitude): {eval_data['grad_rmse']:.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
+                ax[1].text(0.05, 0.95, f"RMSE: {eval_data['component_grad_rmse']:.2f} kcal/mol/Å", transform=ax[1].transAxes, fontsize=fontsize-2, verticalalignment='top')
 
 
                 plt.tight_layout()
                         
                 # save the figure:
-                plt.savefig(plotpath / Path("scatter.png"), dpi=300)
+                plt.savefig(plotpath / Path("scatter.png"), dpi=500)
                 plt.close()
 
             # now plot the rmse per molecule histogram:
@@ -910,12 +927,12 @@ class PDBDataset:
 
             
             ax[1].hist(grad_rmse_per_mol, bins=10)
-            ax[1].set_xlabel("RMSE (magnitude) [kcal/mol/Å]", fontsize=fontsize)
+            ax[1].set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
             ax[1].set_ylabel("Count", fontsize=fontsize)
             ax[1].set_title("Force RMSE per Molecule", fontsize=fontsize)
             ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
             plt.tight_layout()
-            plt.savefig(plotpath / Path("rmse_per_mol.png"), dpi=300)
+            plt.savefig(plotpath / Path("rmse_per_mol.png"), dpi=500)
             plt.close()
 
 
@@ -947,14 +964,14 @@ class PDBDataset:
                         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
                         ax = make_elem_plot(ax)
                         plt.tight_layout()
-                        plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
+                        plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=500)
                         plt.close()
 
                     if by_residue:
                         fig, ax = plt.subplots(1, 1, figsize=(10, 5))  # Adjusted width for residue plot
                         ax = make_res_plot(ax)
                         plt.tight_layout()
-                        plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=300)
+                        plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=500)
                         plt.close()
 
                 else:
@@ -1002,14 +1019,14 @@ class PDBDataset:
                         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
                         ax = make_elem_compare_plot(ax)
                         plt.tight_layout()
-                        plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=300)
+                        plt.savefig(plotpath / Path("rmse_per_element.png"), dpi=500)
                         plt.close()
 
                     if by_residue:
                         fig, ax = plt.subplots(1, 1, figsize=(10, 5))  # Adjusted width for residue plot
                         ax = make_res_compare_plot(ax)
                         plt.tight_layout()
-                        plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=300)
+                        plt.savefig(plotpath / Path("rmse_per_residue.png"), dpi=500)
                         plt.close()
 
 
@@ -1027,6 +1044,130 @@ class PDBDataset:
 
         return eval_data, rmse_data
         
+
+    def eval_params(self, plotpath:Union[str, Path], ff:GrappaFF, fontsize=16, ff_name="Forcefield", ref_name="Amber99sbildn", collagen=False, fontname= "DejaVu Sans", figsize=6):
+        from grappa.constants import ParamDict
+        
+        bond_eqs = []
+        bond_eqs_ref = []
+
+        bond_ks = []
+        bond_ks_ref = []
+
+        angle_eqs = []
+        angle_eqs_ref = []
+
+        angle_ks = []
+        angle_ks_ref = []
+
+        torsion_ks = []
+        torsion_ks_ref = []
+
+
+
+        for mol in self.mols:
+            param_dict = mol.get_param_dict(ff, collagen=collagen)
+    
+            bond_eqs.append(param_dict["bond_eq"].flatten())
+            bond_eqs_ref.append(mol.graph_data["n2"]["eq_ref"].flatten())
+        
+            bond_ks.append(param_dict["bond_k"].flatten())
+            bond_ks_ref.append(mol.graph_data["n2"]["k_ref"].flatten())
+
+            angle_eqs.append(param_dict["angle_eq"].flatten())
+            angle_eqs_ref.append(mol.graph_data["n3"]["eq_ref"].flatten())
+
+            angle_ks.append(param_dict["angle_k"].flatten())
+            angle_ks_ref.append(mol.graph_data["n3"]["k_ref"].flatten())
+
+            ks = param_dict["proper_ks"]
+            phases = param_dict["proper_phases"]
+            ks = np.where(phases==0, ks, -ks)
+            torsion_ks.append(ks[:,:4].flatten())
+            torsion_ks_ref.append(mol.graph_data["n4"]["k_ref"][:,:4].flatten())
+
+
+        bond_eqs = np.concatenate(bond_eqs, axis=0)
+        bond_eqs_ref = np.concatenate(bond_eqs_ref, axis=0)
+
+        bond_ks = np.concatenate(bond_ks, axis=0)
+        bond_ks_ref = np.concatenate(bond_ks_ref, axis=0)
+
+        angle_eqs = np.concatenate(angle_eqs, axis=0)
+        angle_eqs_ref = np.concatenate(angle_eqs_ref, axis=0) * 180 / np.pi
+
+        angle_ks = np.concatenate(angle_ks, axis=0)
+        angle_ks_ref = np.concatenate(angle_ks_ref, axis=0) / 180 * np.pi / 180 * np.pi
+
+        torsion_ks = np.concatenate(torsion_ks, axis=0)
+        torsion_ks_ref = np.concatenate(torsion_ks_ref, axis=0)
+
+
+
+        def get_global_min_max(data1, data2):
+            return min(min(data1), min(data2)), max(max(data1), max(data2))
+
+        # Bond-related plots
+        fig1, ax1 = plt.subplots(1,2, figsize=(2*figsize, figsize))
+        min_val, max_val = get_global_min_max(bond_eqs_ref, bond_eqs)
+        ax1[0].scatter(bond_eqs_ref, bond_eqs, s=4, alpha=0.2)
+        ax1[0].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
+        ax1[0].set_title("Bond Equilibrium Distances [Å]", fontsize=fontsize, fontname=fontname)
+        ax1[0].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
+        ax1[0].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax1[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        min_val, max_val = get_global_min_max(bond_ks_ref, bond_ks)
+        ax1[1].scatter(bond_ks_ref, bond_ks, s=4, alpha=0.2)
+        ax1[1].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
+        ax1[1].set_title("Bond Force Constants [kcal/mol/Å²]", fontsize=fontsize, fontname=fontname)
+        ax1[1].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
+        ax1[1].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax1[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        # Angle-related plots
+        fig2, ax2 = plt.subplots(1,2, figsize=(2*figsize, figsize))
+        min_val, max_val = get_global_min_max(angle_eqs_ref, angle_eqs)
+        ax2[0].scatter(angle_eqs_ref, angle_eqs, s=4, alpha=0.2)
+        ax2[0].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
+        ax2[0].set_title("Angle Equilibrium Angles [Deg]", fontsize=fontsize, fontname=fontname)
+        ax2[0].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
+        ax2[0].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax2[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        min_val, max_val = get_global_min_max(angle_ks_ref, angle_ks)
+        ax2[1].scatter(angle_ks_ref, angle_ks, s=4, alpha=0.2)
+        ax2[1].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
+        ax2[1].set_title("Angle Force Constants [kcal/mol/Deg²]", fontsize=fontsize, fontname=fontname)
+        ax2[1].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
+        ax2[1].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax2[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        # Torsion-related plots
+        fig3, ax3 = plt.subplots(1,1, figsize=(figsize*1.1, figsize))
+        min_val, max_val = get_global_min_max(torsion_ks_ref, torsion_ks)
+        ax3.scatter(torsion_ks_ref, torsion_ks, s=4, alpha=0.2)
+        ax3.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
+        ax3.set_title("Torsion Coefficients [kcal/mol]", fontsize=fontsize, fontname=fontname)
+        ax3.set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
+        ax3.set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax3.tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+        # Save and close the plots
+        plotpath = Path(plotpath)
+        fig1.tight_layout()
+        fig1.savefig(plotpath / "bond_params.png", dpi=500)
+        plt.close(fig1)
+
+        fig2.tight_layout()
+        fig2.savefig(plotpath / "angle_params.png", dpi=500)
+        plt.close(fig2)
+
+        fig3.tight_layout()
+        fig3.savefig(plotpath / "torsion_params.png", dpi=500)
+        plt.close(fig3)
+
+
 
 
     def residue_hist(self, plotpath:Union[str, Path], fontsize=16):
@@ -1064,7 +1205,7 @@ class PDBDataset:
         plt.tight_layout()
 
         # Save the plot to the specified path
-        plt.savefig(Path(plotpath)/Path("residue_hist.png"), dpi=300)
+        plt.savefig(Path(plotpath)/Path("residue_hist.png"), dpi=500)
 
         # Close the figure to free up memory
         plt.close()
@@ -1145,6 +1286,9 @@ class PDBDataset:
         splitter = SplittedDataset.create_with_names(datasets=[self], split_names=split_names, nographs=True)
         ds_tr, ds_vl, ds_te = (splitter.get_splitted_datasets(datasets=[self], ds_type=ds_type)[0] for ds_type in ["tr", "vl", "te"])
 
+        if self.info:
+            print(f"Splitting dataset by names. Sizes: {len(ds_tr)}, {len(ds_vl)}, {len(ds_te)}")
+
         return ds_tr, ds_vl, ds_te
 
 
@@ -1189,10 +1333,74 @@ class SplittedDataset:
     def do_kfold_split(tested_datasets:List[PDBDataset], k:int=5, seed:int=0)->List[ Tuple[List[str], List[str], List[str]] ]:
         """
         Returns a list of length k where each entry defines a split of names such that each name is exactly once in the test set. For k fold cross validatin, apply this with datasets that shall be split into k folds.
-        Then, use the create_with names with split [1,0,0] and all datasets to create the splitter for each fold. This will move the molecules with names that do not appear in the fold to the train set.
+        For now, assume that the names from all datasets are different.
+        Then, use the create_with_names with split [1,0,0] and all datasets to create the splitter for each fold. This will move the molecules with names that do not appear in the fold to the train set.
+        The same name may appear twice in the same set, but not across different sets.
         """
-        pass
+        assert k>2, "k must be larger than 2"
 
+        # fold defines the split:
+        split = [(k-2)/k, 1/k, 1/k]
+
+        all_names = [list(set([mol.name for mol in dataset.mols])) for dataset in tested_datasets]
+
+        random.seed(seed)
+        for i_ds in range(len(all_names)):
+            random.shuffle(all_names[i_ds])
+
+        split_names = []
+        for i in range(k):
+            train_names = []
+            val_names = []
+            test_names = []
+
+            for names in all_names:
+                n = len(names)
+
+                start_test = int(i * split[1] * n)
+                end_test = int((i + 1) * split[1] * n)
+
+                start_val = int(end_test)
+                end_val = int(end_test + split[2] * n) # end val may be larger than n! (it is for the last split)
+
+                test_names.extend(names[start_test:end_test])
+                if end_val < n:
+                    val_names.extend(names[start_val:end_val])
+                    train_names.extend(names[:start_test] + names[end_val:])
+                else: 
+                    end_val = end_val - n
+                    # now end_val < start_val and start val is on the very rigth side of the list
+                    val_names.extend(names[:end_val] + names[start_val:])
+                    train_names.extend(names[end_val:start_test])
+
+            split_names.append((train_names, val_names, test_names))
+
+        # Check if train, test and validation sets are disjoint
+        for train, val, test in split_names:
+            assert len(set(train).intersection(set(test))) == 0, f"Test and train sets are not disjoint:\n{set(train).intersection(set(test))}"
+            assert len(set(test).intersection(set(val))) == 0, f"Test and val sets are not disjoint:\n{set(test).intersection(set(val))}"
+            assert len(set(val).intersection(set(train))) == 0, f"Val and train sets are not disjoint:\n{set(val).intersection(set(train))}"
+
+        return split_names
+
+
+
+    @classmethod
+    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1], seed=0, nographs=False):
+        """
+        Generates the split_indices and split_names for the given datasets, constrained by the names in split_names.
+        """
+
+        self = cls()
+
+        # generate the split indices:
+        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names, split=split, seed=seed)
+
+        # write the dgl datasets:
+        if not nographs:
+            self.make_dgl(datasets)
+
+        return self
 
 
     def get_full_loaders(self, shuffle:bool=True, max_train_mols:int=None)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
@@ -1214,9 +1422,20 @@ class SplittedDataset:
         val_ds = [g for subset in self.dgl_splits for g in subset[1]]
         test_ds = [g for subset in self.dgl_splits for g in subset[2]]
 
-        tr_loader = GraphDataLoader(tr_ds, shuffle=shuffle)
-        val_loader = GraphDataLoader(val_ds, shuffle=shuffle)
-        test_loader = GraphDataLoader(test_ds, shuffle=shuffle)
+        if len(tr_ds)>0:
+            tr_loader = GraphDataLoader(tr_ds, shuffle=shuffle)
+        else:
+            tr_loader = []
+        
+        if len(val_ds)>0:
+            val_loader = GraphDataLoader(val_ds, shuffle=shuffle)
+        else:
+            val_loader = []
+        
+        if len(test_ds)>0:
+            test_loader = GraphDataLoader(test_ds, shuffle=shuffle)
+        else:
+            test_loader = []
 
         return tr_loader, val_loader, test_loader
 
@@ -1327,24 +1546,6 @@ class SplittedDataset:
 
         # write the dgl datasets:
         self.make_dgl(datasets)
-
-        return self
-
-
-    @classmethod
-    def create_with_names(cls, datasets:List[PDBDataset], split_names:Tuple[List[str], List[str], List[str]], split=[0.8, 0.1, 0.1], seed=0, nographs=False):
-        """
-        Generates the split_indices and split_names for the given datasets, constrained by the names in split_names.
-        """
-
-        self = cls()
-
-        # generate the split indices:
-        self.split_indices, self.split_names = PDBDataset.get_splitted_datasets(datasets, split_names, split=split, seed=seed)
-
-        # write the dgl datasets:
-        if not nographs:
-            self.make_dgl(datasets)
 
         return self
 

@@ -9,7 +9,7 @@ import tempfile
 from openmm.app import PDBFile, ForceField, Simulation
 from typing import List, Union, Tuple, Dict, Callable
 from dgl import graph, add_reverse_edges
-from openmm.unit import angstrom, unit, kilocalorie_per_mole, Quantity, hartrees, bohr, nanometer
+from openmm.unit import angstrom, unit, kilocalorie_per_mole, Quantity, hartrees, bohr, nanometer, angstrom, degree
 import numpy as np
 from .matching import matching
 import torch
@@ -537,27 +537,36 @@ class PDBMolecule:
             return rmse_e < sigmas[0]*std_e
 
 
-    def filter_confs(self, max_energy:float=60., max_force:float=None, reference=False, mask=None)->bool:
+    def filter_confs(self, max_energy:float=60., max_force:float=None, reference=False, mask=None, deviation_from_ref=False)->bool:
         """
         Filters out conformations with energies or forces that are over max_energy kcal/mol (or max_force kcal/mol/angstrom) away from the minimum of the dataset (not the actual minimum). Apply this before parametrizing or re-apply the parametrization after filtering. Units are kcal/mol and kcal/mol/angstrom.
         Returns True if more than two conformations remain.
         If reference is true, uses u_ref and grad_ref, i.e. usually the qm value subtracted by the nonbonded contribution instead of the stored energies and gradients. This can only be done after parametrising.
         For filtering the graph data, assume that entries are energies if and only if they are stored in 'g' and have 'u_' in their feature name. For gradients, the same applies with 'n1' and 'grad_'.
         If a mask is provided, this mask is used additionally.
+        If deviation_from_ref is True, max_energy and max_force applies to the deviation from the reference energy. This is for filtering out molecules whose topology has been interpreted wrongly.
         """
         if not mask is None:
             assert mask.shape[0] == 1, f"mask should be of shape (1,n_confs), i.e. batching is disabled, shape is {mask.shape}"
 
         if (not max_energy is None) and (not self.energies is None):
-            if not reference:
-                energies = self.energies - self.energies.min()
+            if deviation_from_ref:
+                energies = self.energies - self.energies.mean()
+                ref_energies = self.graph_data["g"]["u_total_ref"]
+                ref_energies = ref_energies - ref_energies.mean()
+                energies = energies - ref_energies
+
+
             else:
-                if len(self.graph_data.keys()) == 0:
-                    raise RuntimeError("No graph data found. Please parametrize first or set reference=False.")
-                # take the reference energies for filtering
-                if not "u_ref" in self.graph_data["g"].keys():
-                    raise RuntimeError(f"No reference energies found. Please parametrize first or set reference=False, \ngraph_data keys are {self.graph_data['g'].keys()}")
-                energies = self.graph_data["g"]["u_ref"] - self.graph_data["g"]["u_ref"].min()
+                if not reference:
+                    energies = self.energies - self.energies.min()
+                else:
+                    if len(self.graph_data.keys()) == 0:
+                        raise RuntimeError("No graph data found. Please parametrize first or set reference=False.")
+                    # take the reference energies for filtering
+                    if not "u_ref" in self.graph_data["g"].keys():
+                        raise RuntimeError(f"No reference energies found. Please parametrize first or set reference=False, \ngraph_data keys are {self.graph_data['g'].keys()}")
+                    energies = self.graph_data["g"]["u_ref"] - self.graph_data["g"]["u_ref"].min()
 
             # create a mask for energies below max_energy
             energy_mask = np.abs(energies) < max_energy
@@ -568,17 +577,23 @@ class PDBMolecule:
             energy_mask = np.ones((1,len(self.xyz)), dtype=bool)
 
         if (not max_force is None) and (not self.gradients is None):
-            if not reference:
+            if deviation_from_ref:            
                 forces = self.gradients
+                ref_forces = self.graph_data["n1"]["grad_total_ref"].transpose(1,0,2)
+                forces = forces - ref_forces
+
             else:
+                if not reference:
+                    forces = self.gradients
+                else:
 
-                if not "grad_ref" in self.graph_data["n1"].keys():
-                    raise RuntimeError(f"No reference gradients found. Please parametrize first or set reference=False., \ngraph_data keys are {self.graph_data['n1'].keys()}")
-                forces = self.graph_data["n1"]["grad_ref"].transpose(1,0,2)
-            
-            # for each conf, take the maximum along atoms and spatial dimension
+                    if not "grad_ref" in self.graph_data["n1"].keys():
+                        raise RuntimeError(f"No reference gradients found. Please parametrize first or set reference=False., \ngraph_data keys are {self.graph_data['n1'].keys()}")
+                    forces = self.graph_data["n1"]["grad_ref"].transpose(1,0,2)
+                
+            # for each conf, take the maximum along atoms and rmse along spatial dimension
 
-            forces = np.max(np.max(np.abs(forces), axis=-1), axis=-1)
+            forces = np.max(np.sqrt(np.sum(np.square(forces), axis=-1)), axis=-1)
 
             force_mask = forces < max_force
             # append a zero dimension if it is not there
@@ -1156,6 +1171,23 @@ class PDBMolecule:
         ff_forces = np.array(ff_forces)
         ff_energies = np.array(ff_energies)
         return ff_energies, -ff_forces
+
+
+    def get_param_dict(self, ff, collagen=False):
+        old_distance = ff.units["distance"]
+        old_energy = ff.units["energy"]
+        old_angle = ff.units["angle"]
+        ff.units["distance"] = angstrom
+        ff.units["energy"] = kilocalorie_per_mole
+        ff.units["angle"] = degree
+        top = self.to_openmm(collagen=collagen).topology
+        param_dict = ff.params_from_topology_dict(top)
+        ff.units["distance"] = old_distance
+        ff.units["energy"] = old_energy
+        ff.units["angle"] = old_angle
+
+        return param_dict
+
 
     @staticmethod
     def do_energy_checks(path:Path, seed:int=0, permute:bool=True, n_conf:int=5, forcefield=None, accuracy:List[float]=[0.1, 1.], verbose:bool=True, fig:bool=True)->bool:
