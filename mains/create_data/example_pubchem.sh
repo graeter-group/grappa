@@ -9,4 +9,4 @@ source /hits/fast/mbm/seutelf/.bashrc_user
 conda activate next_try # must be an env with grappa and openff installed
 # load dataset
 python spice.py --smiles --dipeppath /hits/fast/mbm/seutelf/data/datasets/pubchem_spice.hdf5 --name pubchem --n_max $N_MAX
-python make_graphs.py -off -ff gaff-2.11 -o --ds_name pubchem/base --max_energy 65 --max_force 200
+python make_graphs.py -off -ff gaff-2.11 -o --ds_name pubchem/base --max_energy 65 --max_force 200 --recover

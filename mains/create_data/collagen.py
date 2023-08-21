@@ -10,3 +10,4 @@ ds = PDBDataset.from_pdbs(path=loadpath, energy_name="psi4_energies.npy", force_
 
 ds.filter_confs(max_energy=MAX_ENERGY, max_force=MAX_FORCE, reference=False)
 ds.save_npz(storepath, overwrite=True)
+# %%

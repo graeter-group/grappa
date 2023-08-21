@@ -12,7 +12,7 @@ from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 
 FILTER_REF = True # whether to apply the filtering to the reference energies or the qm energies
 
-def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=False, n_max=None, collagen=False, force_field="amber99sbildn.xml", max_energy=None, max_force=None, openff_energies=False, name=None):
+def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=False, n_max=None, collagen=False, force_field="amber99sbildn.xml", max_energy=None, max_force=None, openff_energies=False, name=None, recover=False, logpath=None):
 
     from grappa.PDBData.PDBDataset import PDBDataset
     from openmm.app import ForceField
@@ -34,7 +34,8 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
     if collagen:
         ff = get_mod_amber99sbildn()
 
-    ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen, skip_errs=True, backup_path=storepath, recover=False)
+    # ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=collagen, skip_errs=True, backup_path=storepath, recover=False)
+    ds.parametrize(forcefield=ff, get_charges=get_charges, allow_radicals=allow_radicals, collagen=False, skip_errs=True, backup_path=storepath, recover=recover, logpath=logpath)
 
     # filter out conformations that are way out of equilibrium:
     ds.filter_confs(max_energy=200, max_force=500, reference=FILTER_REF)
@@ -49,13 +50,13 @@ def make_ds(get_charges, storepath, dspath, overwrite=False, allow_radicals=Fals
     ds.filter_confs(max_energy=max_energy, max_force=max_force, reference=FILTER_REF)
 
     ds.save_npz(str(storepath)+"_filtered", overwrite=overwrite)
-    # ds.save_dgl(str(storepath)+"_filtered_dgl.bin", overwrite=overwrite)
+
 
     # create evaluation plots:
     if not name is None:
         this_file = Path(__file__).parent
         plotdir = this_file/name
-        ds.evaluate(plotpath=name, suffix="_total_ref")
+        ds.evaluate(plotpath=plotdir, suffix="_total_ref")
 
 
 
@@ -91,6 +92,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--max_force", type=float, default=None, help="Maximum force to include in dataset, in grappa units. For the filtered dataset")
 
+    parser.add_argument("--recover", "-rec", action="store_true", default=False, help="recover from a previous run. will load the dataset from the storepath and continue parametrization. default: False")
+
     args = parser.parse_args()
     for ds_name in args.ds_name:
         for tag in args.tag:
@@ -110,6 +113,10 @@ if __name__ == "__main__":
                     tag_ = "default"
 
                 storepath = os.path.join(str(storebase),"charge_"+tag_) # tagged with charge model
+
+                logpath = Path(storepath).parent/"log.txt"
+                logpath = str(logpath)
+
                 if args.collagen:
                     storepath += "_col"
                 if not noise_level is None:
@@ -136,8 +143,12 @@ if __name__ == "__main__":
                 print(f"will write to {storepath}")
                 print(f"starting the parametrization...")
                 
+                with open(logpath, "a") as f:
+                    f.write(f"will write to {storepath}\n")
+                    f.write(f"starting the parametrization...\n")
 
-                make_ds(get_charges=get_charges, storepath=storepath, dspath=dspath, overwrite=args.overwrite, allow_radicals=args.allow_radicals, n_max=args.n_max, collagen=args.collagen, force_field=args.force_field, openff_energies=args.openff_energies, max_energy=args.max_energy, max_force=args.max_force, name=ds_name.split("/")[0])
+
+                make_ds(get_charges=get_charges, storepath=storepath, dspath=dspath, overwrite=args.overwrite, allow_radicals=args.allow_radicals, n_max=args.n_max, collagen=args.collagen, force_field=args.force_field, openff_energies=args.openff_energies, max_energy=args.max_energy, max_force=args.max_force, name=ds_name.split("/")[0], recover=args.recover, logpath=logpath)
 
 
 

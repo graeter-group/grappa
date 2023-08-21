@@ -5,3 +5,5 @@ python radicals.py # create unparametrised PDBDataset
 python make_graphs.py --ds_name radical_AAs/base -o -r --collagen -c heavy --max_energy 100 --max_force 200
 
 python make_graphs.py --ds_name radical_dipeptides/base -o -r --collagen -c heavy --max_energy 100 --max_force 200
+
+python post_filter_radicals.py

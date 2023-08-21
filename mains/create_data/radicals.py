@@ -6,7 +6,10 @@ MAX_FORCE = 400
 
 from grappa.PDBData.PDBDataset import PDBDataset
 # %%
-ds = PDBDataset.from_pdbs(path=loadpath, energy_name="psi4_energies.npy", force_name="psi4_forces.npy", allow_incomplete=True, n_max=10)
+ds = PDBDataset.from_pdbs(path=loadpath, energy_name="psi4_energies.npy", force_name="psi4_forces.npy", allow_incomplete=True)
+
+for i in range(len(ds)):
+    ds[i].name = ds[i].name+"_rad"
 
 ds.filter_confs(max_energy=MAX_ENERGY, max_force=MAX_FORCE, reference=False)
 ds.save_npz(storepath, overwrite=True)
@@ -20,6 +23,9 @@ MAX_FORCE = 400
 from grappa.PDBData.PDBDataset import PDBDataset
 # %%
 ds = PDBDataset.from_pdbs(path=loadpath, energy_name="psi4_energies.npy", force_name="psi4_forces.npy", allow_incomplete=True)
+
+for i in range(len(ds)):
+    ds[i].name = ds[i].name+"_rad"
 
 ds.filter_confs(max_energy=MAX_ENERGY, max_force=MAX_FORCE, reference=False)
 ds.save_npz(storepath, overwrite=True)
