@@ -11,7 +11,7 @@ MAX_ELEMENT = 26
 # from grappa.constants import MAX_ELEMENT
 
 ELEMENTS = {
-    -1: "Radical Neighbor",
+    -1: "Rad Nbr",
     1: "H",
     2: "He",
     3: "Li",
@@ -130,7 +130,7 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
             ff_radical_se = 0
 
             num_energies = 0
-            num_grad_components = 0
+            num_grad_vectors = 0
             on_f = on_forces and "grad_ref" in next(iter(loader)).nodes["n1"].data.keys()
             for i, g in enumerate(loader):
 
@@ -172,18 +172,23 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                             if not grad_ff is None:
                                 ff_res_se[res_id] += torch.square(grad_ff[res_indices] - grad_ref[res_indices]).sum()
 
-                            num_components = len(grads[res_indices].flatten())
-                            res_nums[res_id] += num_components
+                            num_vecs = grads[res_indices].shape[0]
+                            res_nums[res_id] += num_vecs
 
 
-                        onehot_radicals = g.nodes["n1"].data["is_radical"].int()
-                        radical_indices = torch.argwhere(onehot_radicals == 1)[:,0]
-                        radical_se += torch.square(grads[radical_indices] - grad_ref[radical_indices]).sum()
-                        if not grad_ff is None:
-                            ff_radical_se += torch.square(grad_ff[radical_indices] - grad_ref[radical_indices]).sum()
+                        if "is_radical_neighbor" in g.nodes["n1"].data.keys():
+                            onehot_radicals = g.nodes["n1"].data["is_radical_neighbor"].int()
+                            radical_indices = torch.argwhere(onehot_radicals == 1)[:,0]
+                        else:
+                            onehot_radicals = torch.zeros((g.number_of_nodes("n1"), 1), device=device)
+                            radical_indices = torch.tensor([], device=device)
+                        if len(radical_indices) > 0:
+                            radical_se += torch.square(grads[radical_indices] - grad_ref[radical_indices]).sum()
+                            if not grad_ff is None:
+                                ff_radical_se += torch.square(grad_ff[radical_indices] - grad_ref[radical_indices]).sum()
 
-                        num_components = len(grads[radical_indices].flatten())
-                        radical_num += num_components
+                            num_vecs = grads[radical_indices].shape[0]
+                            radical_num += num_vecs 
 
 
                         atom_numbers = torch.argmax(g.nodes["n1"].data["atomic_number"], dim=1)
@@ -195,22 +200,20 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                             if not grad_ff is None:
                                 ff_atom_se[atom_number] += torch.square(grad_ff[atom_ids] - grad_ref[atom_ids]).sum()
 
-                            num_components = len(grads[atom_ids].flatten())
-                            atom_nums[atom_number] += num_components
+                            num_vecs = grads[atom_ids].shape[0]
+                            atom_nums[atom_number] += num_vecs
 
-
-                        grads = grads.flatten()
-                        grad_ref = grad_ref.flatten()
-                        g_total_ae += torch.abs(grads - grad_ref).sum()
-                        g_total_se += torch.square(grads - grad_ref).sum()
+                        diffs = torch.sqrt(torch.sum(torch.square(grads - grad_ref), dim=-1))
+                        g_total_ae += diffs.sum()
+                        g_total_se += torch.square(diffs).sum()
                        
                         if not grad_ff is None:
-                            grad_ff = grad_ff.flatten()
-                            ff_g_total_ae += torch.abs(grad_ff - grad_ref).sum()
-                            ff_g_total_se += torch.square(grad_ff - grad_ref).sum()
+                            diffs = torch.sqrt(torch.sum(torch.square(grad_ff - grad_ref), dim=-1))
+                            ff_g_total_ae += diffs.sum()
+                            ff_g_total_se += torch.square(diffs).sum()
 
 
-                        num_grad_components += len(grads)
+                        num_grad_vectors += len(diffs.flatten())
 
                     num_energies += len(energies)
 
@@ -218,7 +221,7 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
 
 
             with torch.no_grad():
-                if on_f and num_grad_components != 0: # hacky but should work since either all or none are None
+                if on_f and num_grad_vectors != 0: # hacky but should work since either all or none are None
 
                     rmse_data[name]["radical_grad_rmse"] = torch.sqrt(radical_se/radical_num).item() if radical_num > 0 else float("nan")
                     
@@ -226,9 +229,8 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                     rmse_data[name][f"atom_grad_rmse"] = {atom_number: torch.sqrt(atom_se[atom_number]/atom_nums[atom_number]).item() if atom_nums[atom_number] > 0 else float("nan") for atom_number in range(MAX_ELEMENT)}
 
 
-                    eval_data[name]["grad_mae"] = (g_total_ae/num_grad_components).item()
-                    eval_data[name]["grad_rmse"] = torch.sqrt(g_total_se/num_grad_components).item()
-
+                    eval_data[name]["grad_mae"] = (g_total_ae/num_grad_vectors).item()
+                    eval_data[name]["grad_rmse"] = torch.sqrt(g_total_se/num_grad_vectors).item()
 
                 if num_energies != 0:
                     eval_data[name]["energy_mae"] = (en_total_ae/num_energies).item()
@@ -240,8 +242,8 @@ def evaluate(loaders, loader_names, model, device="cpu", plot=False, plot_folder
                         rmse_data[name][f"{ref_ff}_res_grad_rmse"] = {res: torch.sqrt(ff_res_se[res_id]/res_nums[res_id]).item() if res_nums[res_id] > 0 else float("nan") for res_id, res in enumerate(RESIDUES)}
                         rmse_data[name][f"{ref_ff}_atom_grad_rmse"] = {atom_number: torch.sqrt(ff_atom_se[atom_number]/atom_nums[atom_number]).item() if atom_nums[atom_number] > 0 else float("nan") for atom_number in range(MAX_ELEMENT)}
 
-                        eval_data[name][f"{ref_ff}_grad_mae"] = (ff_g_total_ae/num_grad_components).item()
-                        eval_data[name][f"{ref_ff}_grad_rmse"] = torch.sqrt(ff_g_total_se/num_grad_components).item()
+                        eval_data[name][f"{ref_ff}_grad_mae"] = (ff_g_total_ae/num_grad_vectors).item()
+                        eval_data[name][f"{ref_ff}_grad_rmse"] = torch.sqrt(ff_g_total_se/num_grad_vectors).item()
 
                 if num_energies > 0 and not ref_ff is None:
                     eval_data[name][f"{ref_ff}_energy_mae"] = (ff_en_total_ae/num_energies).item()

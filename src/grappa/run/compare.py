@@ -9,7 +9,7 @@ import os
 import copy
 from grappa.run.run_utils import load_yaml
 
-def make_data_list(eval_data:List[Dict]):
+def make_data_list(eval_data:List[Dict], reference=False):
     """
     Modify the dict keys such that the keys are: [ds_type][set_type]['energy_rmse'/'grad_rmse']:
     """
@@ -17,10 +17,14 @@ def make_data_list(eval_data:List[Dict]):
     for data_dict in eval_data:
         outdict = {}
         for k in data_dict.keys():
-            if len(k.split('>')) > 2:
-                raise ValueError(f"Expected dataset path to be of the form 'dataset_path/ff_info', but got '{k}'")
-            if len(k.split('>')) == 1:
+            # if len(k.split('>')) > 2:
+            #     raise ValueError(f"Expected dataset path to be of the form 'dataset_path/ff_info', but got '{k}'")
+            # if len(k.split('>')) == 1:
+            #     continue
+
+            if len(k.split('_')) < 2:
                 continue
+
             
             set_type = "train" if "train" in k else None
             set_type = "val" if "val" in k else set_type
@@ -28,16 +32,23 @@ def make_data_list(eval_data:List[Dict]):
 
             if set_type is None:
                 continue
-            ds_type = k.split('>')[0]
+            # all but the last _...:
+            # concat all splits but the last:
+            ds_type = "_".join(k.split("_")[:-1])
 
             if ds_type not in outdict.keys():
                 empty_subdict = {"energy_rmse": [], "grad_rmse": []}
                 outdict[ds_type] = {"train": copy.deepcopy(empty_subdict), "val": copy.deepcopy(empty_subdict), "test": copy.deepcopy(empty_subdict)}
 
-            
-            # Append RMSE data points to the lists
-            outdict[ds_type][set_type]["energy_rmse"] = data_dict[k]["energy_rmse"]
-            outdict[ds_type][set_type]["grad_rmse"] = data_dict[k]["grad_rmse"]
+            if not reference:
+                # Append RMSE data points to the lists
+                outdict[ds_type][set_type]["energy_rmse"] = data_dict[k]["energy_rmse"]
+                outdict[ds_type][set_type]["grad_rmse"] = data_dict[k]["grad_rmse"]
+
+            else:
+                # Append RMSE data points to the lists
+                outdict[ds_type][set_type]["energy_rmse"] = data_dict[k]["ref_energy_rmse"]
+                outdict[ds_type][set_type]["grad_rmse"] = data_dict[k]["ref_grad_rmse"]
 
         outlist.append(outdict)
     
@@ -120,11 +131,19 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
             mnames.append(model)
             for dtype_idx, dtype in enumerate(sorted(data_types)):
                 if best:
-                    value = data[model][dtype]["test"][f"{metric_type}_best"]
+                    if dtype in data[model].keys():
+                        value = data[model][dtype]["test"][f"{metric_type}_best"]
+                    else:
+                        value = 0
                     error = 0
                 else:
-                    value = data[model][dtype]["test"][metric_type]
-                    error = data[model][dtype]["test"][f"{metric_type}_std"]
+                    if dtype in data[model].keys():
+                        value = data[model][dtype]["test"][metric_type]
+                        error = data[model][dtype]["test"][f"{metric_type}_std"]
+                    else:
+                        value = 0
+                        error = 0
+
                 r_new = r[model_idx] + dtype_idx * single_bar_width
                 ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2)
 
@@ -151,11 +170,18 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
             mnames.append(model)
             for set_idx, set_type in enumerate(set_types):
                 if best:
-                    value = data[model][dtype][set_type][f"{metric_type}_best"]
+                    if set_type == "test":
+                        value = data[model][dtype][set_type][f"{metric_type}_best"]
+                    else:
+                        value = 0
                     error = 0
                 else:
-                    value = data[model][dtype][set_type][metric_type]
-                    error = data[model][dtype][set_type][f"{metric_type}_std"]
+                    if dtype in data[model].keys():
+                        value = data[model][dtype][set_type][metric_type]
+                        error = data[model][dtype][set_type][f"{metric_type}_std"]
+                    else:
+                        value = 0
+                        error = 0
                 r_new = r[model_idx] + set_idx * single_bar_width
                 alpha = 1 if set_type == "test" else 0.5
                 ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype} {set_type}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2, alpha=alpha)
@@ -188,7 +214,7 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
         json.dump(data, f, indent=4)
 
 
-def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[], best_criterion:Tuple[str, str]=None):
+def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[], best_criterion:Tuple[str, str]=None, refname="ref"):
     """
     Create a bar plot comparing model performance of models in subfolders of parent_dir.
 
@@ -212,7 +238,8 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
 
         if model_dir_/"eval_data.json" in model_dir_.iterdir():
             logtxt = open(model_dir/"log.txt", "r").readlines()
-            if not "ref_energy_rmse" in logtxt[-1] and vpaths is None:
+            is_finished = "ref_energy_rmse" in logtxt[-1] or "rows" in logtxt[-1]
+            if not is_finished and vpaths is None:
                 print(f"Skipping {model_dir.name} because it is not finished.")
                 continue
 
@@ -228,6 +255,15 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
 
     new_data = make_data_list(eval_data)
 
+    ref_data = make_data_list(eval_data, reference=True)
+    ref_splits = copy.deepcopy(splits)
+    ref_models = [refname]*len(model_names)
+
+    new_data += ref_data
+    splits += ref_splits
+    model_names += ref_models
+    
+
     if not best_criterion is None:
         # for each split, loop through the model_names and for those that are the same, only keep the one that is the best according to the criterion
         assert len(best_criterion) == 2, f"Expected best_criterion to be a tuple of length 2, but got {best_criterion}."
@@ -241,7 +277,7 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
             # condition on split:
             split_models = [model for model, s in zip(model_names, splits) if s == split]
             split_new_data = [data for data, s in zip(new_data, splits) if s == split]
-            split_values = [data[best_criterion[1]]["test"][best_criterion[0]] for data in split_new_data]
+            split_values = [data[best_criterion[1]]["val"][best_criterion[0]] for data in split_new_data]
             print(set(split_models))
             # now differentiate between different model names:
             for model in set(split_models):

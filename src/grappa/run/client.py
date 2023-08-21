@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 from grappa.run.run import run_from_config
 from grappa.models.deploy import get_default_model_config
-from grappa.constants import DEFAULTBASEPATH
+from grappa.constants import DEFAULTBASEPATH, DS_PATHS
 import copy
 import json
 
@@ -43,7 +43,7 @@ def get_args():
     parser.add_argument('--scale_dict', default={'n4_improper_k':0.}, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-loss. Only has an effect if param_weight is nonzero. For every parameter that is not in the dictionary, 1. is assumed. input must be of the form '{\"n3_k\": 0.1, ...}'.(default: {'n4_improper_k':0., 'n3_eq':10., 'n3_k':10.})")
     parser.add_argument('--l2_dict', default=None, type=json.loads, help="dictionary of scaling factors for the different parameters in the direct-parameter-l2-regularisation. Every parameter that does not appear in the dictionary is not regularised. input must be of the form '{\"n3_k\": 0.1, ...}. (default: {})")
     parser.add_argument('--ds_split_names', default=None, type=str, help='Path to a file containing the names of the splits of the dataset. If None, the split is done according to the random seed. (default: None)')
-    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 2)')
+    parser.add_argument('--time_limit', default=None, type=float, help='Time limit in hours. (default: 3)')
 
 
     parser.add_argument('--n_conv', type=int, default=None, help=" (default: 3)")
@@ -71,7 +71,7 @@ def get_args():
     parser.add_argument('--layer_norm', dest='layer_norm', action='store_true')
     parser.add_argument('--no_layer_norm', dest='layer_norm', action='store_false')
     parser.set_defaults(layer_norm=None)
-    parser.add_argument('--dropout', type=float, default=None, help=" (default: 0.2)")
+    parser.add_argument('--dropout', type=float, default=None, help=" (default: 0)")
     parser.add_argument('--rep_dropout', type=float, default=None, help=" (default: 0)")
     parser.add_argument('--final_dropout', dest='final_dropout', action='store_true', help='Whether to only apply one dropout layer for the representation, which is then located at the very end. The probability will be set to rep_droput. (default: False)')
     parser.add_argument('--no_final_dropout', dest='final_dropout', action='store_false')
@@ -109,57 +109,46 @@ def run_(args, vpath=[]):
     if args.ds_tag is None:
         args.ds_tag = []
 
-    for ds_short in args.ds_short:
-        suffix = "_filtered"
+    if args.ds_path is None:
+        args.ds_path = []
 
-        suffix_col = "_col"
-
-        if ds_short == "eric_nat":
-            args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
-
-        elif ds_short == "eric_rad":
-            args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
-
-        elif ds_short == "spice":
-            args.ds_tag += [f'spice/charge_default_ff_amber99sbildn{suffix}']
-
-        elif ds_short == "spice_openff":
-            args.ds_tag += [f'spice_openff/charge_default_ff_gaff-2_11{suffix}']
-
-        elif ds_short == "spice_qca":
-            args.ds_tag += [f'qca_spice/charge_default_ff_gaff-2_11{suffix}']
-
-        elif ds_short == "spice_monomers":
-            args.ds_tag += [f'monomers/charge_default_ff_gaff-2_11{suffix}']
-
-        elif ds_short == "spice_pubchem":
-            args.ds_tag += [f'pubchem/charge_default_ff_gaff-2_11{suffix}']
-
-        elif ds_short == "eric":
-            args.ds_tag += [f'AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}']
-            args.ds_tag += [f'AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}', f'AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}']
-        
-        else:
-            raise ValueError(f"ds_short {ds_short} not recognized")
-
-
+    tags = args.ds_tag
     if len(args.ds_tag)>0:
-        if args.ds_path is None:
-            args.ds_path = []
         args.ds_path += [str(Path(f"{args.ds_base}/{tag}")) for tag in args.ds_tag]
 
+    # remove the tags in ds_short if they are in the list. then start again. (this emulates a goto for ds_short in [scan, pep, espaloma])
+    while len(args.ds_short)>0:
+        for ds_short in args.ds_short:
 
-    tags = None
+            if ds_short == "pep":
+                args.ds_short += ["spice", "collagen", "radical_AAs", "radical_dipeptides", "scan"]
+
+            elif ds_short == "espaloma":
+                args.ds_short += ["spice_qca", "spice_monomers", "spice_pubchem"]
+          
+            elif ds_short == "scan":
+                args.ds_short += ["scan_nat", "scan_rad"]
+
+            elif ds_short == "opt":
+                args.ds_short += ["opt_nat", "opt_rad"]
+
+            elif ds_short in DS_PATHS.keys():
+                args.ds_path.append(DS_PATHS[ds_short])
+                tags.append(ds_short)
+
+            else:
+                raise ValueError(f"ds_short {ds_short} not recognized")
+
+            args.ds_short.remove(ds_short)
+
     if args.ds_path is None:
         if args.run_config_path is None and args.continue_path is None:
             raise ValueError("either ds_path or ds_tag or a config path must be specified")
 
 
-    
 
     if args.ds_tag == []:
         args.ds_tag = None
-    tags = args.ds_tag
 
     if type(args.ds_path) == str:
         args.ds_path = [args.ds_path]

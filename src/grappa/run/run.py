@@ -52,7 +52,7 @@ def get_default_run_config():
         },
         "l2_dict":{},
         "ds_split_names":None, # for n-fold cross validation
-        "time_limit":2,
+        "time_limit":3,
     }
 
     return args
@@ -159,12 +159,19 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
     assert (continue_path is None or load_path is None), "not both continue_path and load_path can be specified."
 
     # load the datasets
-    print(f"loading: \n{ds_paths}")
+    print(f"loading:")
+    print(*ds_paths, sep="\n")
     datasets = [PDBDataset.load_npz(path, n_max=n_graphs, info=False) for path in ds_paths]
 
     # initialize splitter object:
     if continue_path is None and load_path is None:
-        ds_splitter = SplittedDataset.create(datasets, [0.8, 0.1, 0.1], seed=seed)
+        
+        if ds_split_names is None:
+            ds_splitter = SplittedDataset.create(datasets, split=[0.8, 0.1, 0.1], seed=seed)
+
+        else:
+            # load a given split of the set:
+            ds_splitter = SplittedDataset.create_with_names(datasets, split=[0.8, 0.1, 0.1], split_names=ds_split_names)
 
     # load such that the molecules of the former train set remain in the train set
     elif not continue_path is None:
