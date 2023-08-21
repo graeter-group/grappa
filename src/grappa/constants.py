@@ -1,9 +1,38 @@
 from pathlib import Path
+from openmm import unit
 
 DEFAULTBASEPATH = "/hits/fast/mbm/seutelf/data/datasets/PDBDatasets"
 
 SPICEPATH = "/hits/fast/mbm/seutelf/data/datasets/SPICE-1.1.2.hdf5"
 DEFAULT_DIPEP_PATH = str(Path(SPICEPATH).parent/Path("dipeptides_spice.hdf5"))
+
+DEFAULT_UNITS = {
+    "distance": unit.nanometer,
+    "angle": unit.radian,
+    "energy": unit.kilojoule_per_mole,
+}
+
+############
+suffix = "_filtered"
+suffix_col = "_col"
+
+DS_PATHS = {
+    'scan_nat': f'{DEFAULTBASEPATH}/AA_scan_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}',
+    'opt_nat': f'{DEFAULTBASEPATH}/AA_opt_nat/charge_default{suffix_col}_ff_amber99sbildn{suffix}',
+    'scan_rad': f'{DEFAULTBASEPATH}/AA_scan_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}',
+    'opt_rad': f'{DEFAULTBASEPATH}/AA_opt_rad/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}',
+    'spice': f'{DEFAULTBASEPATH}/spice/charge_default_ff_amber99sbildn{suffix}',
+    'spice_qca': f'{DEFAULTBASEPATH}/qca_spice/charge_default_ff_gaff-2_11{suffix}',
+    'spice_monomers': f'{DEFAULTBASEPATH}/monomers/charge_default_ff_gaff-2_11{suffix}',
+    'spice_pubchem': f'{DEFAULTBASEPATH}/pubchem/charge_default_ff_gaff-2_11{suffix}',
+    'collagen': f'{DEFAULTBASEPATH}/collagen/charge_default{suffix_col}_ff_amber99sbildn{suffix}',
+    'radical_AAs': f'{DEFAULTBASEPATH}/radical_AAs/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}',
+    'radical_dipeptides': f'{DEFAULTBASEPATH}/radical_dipeptides/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}',
+    'tripeptides': f'{DEFAULTBASEPATH}/tripeptides/charge_default{suffix_col}_ff_amber99sbildn{suffix}',
+    'large_peptides': f'{DEFAULTBASEPATH}/large_peptides/charge_default{suffix_col}_ff_amber99sbildn{suffix}'
+}
+############
+
 
 # MAX_ELEMENT = 26 # cover Iron
 

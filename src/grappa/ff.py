@@ -20,8 +20,12 @@ from .ff_utils.SysWriter import TopologyDict, ParamDict
 from .ff_utils.charge_models.charge_models import model_from_dict
 
 from openmm import unit
+from grappa.constants import DEFAULT_UNITS
 
 class ForceField:
+    """
+    Class for machine learned parametrisation of topologies.
+    """
     def __init__(self,
                  model:Callable=None,
                  model_path:Union[str, Path]=None,
@@ -72,11 +76,7 @@ class ForceField:
         
         self.classical_ff = classical_ff # used to create the dgl.graph, i.e. to obtain indices of impropers, propers, angles and bonds.
 
-        self.units = {
-            "distance": unit.nanometer,
-            "angle": unit.radian,
-            "energy": unit.kilojoule_per_mole,
-        }
+        self.units = DEFAULT_UNITS
 
         self.use_improper = True # if False, does not use impropers, which allows for the prediction of parameters without the need of a classical forcefield. The reason is that improper ordering and which ones to use at all are not unique.
         assert self.use_improper, "Currently, the use_improper flag must be True."
@@ -90,7 +90,7 @@ class ForceField:
 
     @classmethod
     def from_tag(cls,
-                 tag:str,
+                 tag:str="latest",
                  device:str="cpu",
                  classical_ff:openmm.app.ForceField=None,
                  charge_model:Union[str,Callable]=None,
@@ -110,8 +110,9 @@ class ForceField:
         else:
             device = device
 
-        if tag == "example":
-            model_tag = "example"
+
+        if tag in ["example", "latest", "grappa_0.1.0"]:
+            model_tag = tag
             split_path = []
             model = model_from_tag(model_tag, device=device, split_path=split_path)
 
@@ -216,7 +217,7 @@ class ForceField:
         return writer.sys
         
 
-    def params_from_topology_dict(self, topology:TopologyDict)->ParamDict:
+    def params_from_topology_dict(self, topology:Union[TopologyDict, openmm.app.Topology])->ParamDict:
         """
         Returns:
             A dictionary containing the parameters predicted by the model for the given topology.
@@ -258,7 +259,11 @@ class ForceField:
 
         }
         """
-        writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff)
+        if isinstance(topology, openmm.app.Topology):
+            writer = SysWriter(top=topology, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff)
+        else:
+            writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff)
+
         writer.set_charge_model(self.charge_model)
         writer.init_graph(with_parameters=False)
         writer.forward_pass(model=self.model, device=self.device)

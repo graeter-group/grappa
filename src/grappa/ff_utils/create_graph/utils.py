@@ -94,7 +94,12 @@ def openmm2rdkit_graph(openmm_top:openmm.app.topology.Topology)->Mol:
 
     # bond_order 1 used for all bonds, regardless what type they are
     for bond in openmm_top.bonds():
-        mol.AddBond(idx_lookup[bond.atom1.index], idx_lookup[bond.atom2.index], rdchem.BondType.SINGLE)
+        atom1_idx = idx_lookup[bond.atom1.index]
+        atom2_idx = idx_lookup[bond.atom2.index]
+        
+        # Check if the bond doesn't already exist
+        if mol.GetBondBetweenAtoms(atom1_idx, atom2_idx) is None:
+            mol.AddBond(atom1_idx, atom2_idx, rdchem.BondType.SINGLE)
 
     mol = mol.GetMol()
 

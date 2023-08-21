@@ -7,15 +7,27 @@ import torch
 from typing import Union, List, Tuple, Dict
 
 
-def model_from_tag(tag:str, device:str="cpu", split_path:List=[])->torch.nn.Module:
+def model_from_tag(tag:str="latest", device:str="cpu", split_path:List=[])->torch.nn.Module:
     """
     Load a trained model from a tag. Available tags are:
     
-    - example: An example model, not fine-tuned for good results.
+    - latest: The latest version of the model. Currently the same as grappa_0.1.0.
 
+    - grappa_0.1.0: The model used in the thesis. Applicable to peptides, proteins and HAT-style radicals.
+
+    - radical_example: An example model, not fine-tuned for good results. Applicable to peptides, proteins and HAT-style radicals.
+    
+    - example: A general example model, not fine-tuned for good results.
     """
+    if tag == "latest":
+        return model_from_tag(tag="grappa_0.1.0", device=device, split_path=split_path)
 
-    if tag == "example":
+    elif tag == "grappa_0.1.0":
+        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/grappa_0.1.0/best_model.pt"
+        split_path.append(str(Path(path).parent/"split.json"))
+        config = None
+
+    elif tag == "example":
         path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
         split_path.append("/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/split.json")
         config = None

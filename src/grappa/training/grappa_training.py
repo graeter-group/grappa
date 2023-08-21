@@ -110,9 +110,13 @@ class GrappaTrain(training.Train):
         #     return super().evaluation(model)
         metric_values = {}
 
-        energy_diffs = []
+        en_se = 0
+        en_ae = 0
+        num_ens = 0
         if self.eval_forces:
-            force_diffs = []
+            force_se = 0
+            force_ae = 0
+            num_forces = 0
 
         for g in self.val_loaders[0]:
             
@@ -122,7 +126,9 @@ class GrappaTrain(training.Train):
                 grads, model, g = utilities.get_grad(model=model, batch=g, device=self.device)
 
                 with torch.no_grad():
-                    force_diffs.append((g.nodes["n1"].data["grad_ref"] - grads).flatten().detach().clone().float())
+                    force_se += torch.sum(torch.square(grads)).detach()
+                    force_ae += torch.sum(torch.sqrt(torch.sum(torch.square(grads), dim=-1))).detach()
+                    num_forces += grads.shape[0] * grads.shape[1] # n_confs * n_atoms
 
             else:
                 with torch.no_grad():
@@ -132,35 +138,34 @@ class GrappaTrain(training.Train):
             ###############################
 
             with torch.no_grad():
-                e_ref = g.nodes["g"].data["u_ref"].detach().clone()
+                e_ref = g.nodes["g"].data["u_ref"].detach()
                 e_ref -= e_ref.mean(dim=-1)
 
-                e_pred = g.nodes["g"].data["u"].detach().clone()
+                e_pred = g.nodes["g"].data["u"].detach()
                 e_pred -= e_pred.mean(dim=-1)
 
-                energy_diffs.append((e_ref-e_pred).flatten().float())
+                en_se += torch.sum(torch.square(e_pred - e_ref)).detach()
+                en_ae += torch.sum(torch.abs(e_pred - e_ref)).detach()
+                num_ens += e_pred.flatten().shape[0]
+
+
 
         with torch.no_grad():
-            energy_diffs = torch.cat(energy_diffs).float()
-
-            if self.eval_forces:
-                force_diffs = torch.cat(force_diffs).float()
-
-
-                key = "f_mae_vl"
-                if key in self.metric_data.keys():
-                    metric_values[key] = torch.nn.functional.l1_loss(force_diffs, torch.zeros_like(force_diffs)).detach().clone().to("cpu").item()
-                key = "f_rmse_vl"
-                if key in self.metric_data.keys():
-                    metric_values[key] = torch.sqrt(torch.nn.functional.mse_loss(force_diffs, torch.zeros_like(force_diffs))).detach().clone().to("cpu").item()
+            key = "f_mae_vl"
+            # sum over the xyz dimension to obtain the magnitude of the deviation
+            if key in self.metric_data.keys():
+                metric_values[key] = (force_ae/num_forces).item()
+            key = "f_rmse_vl"
+            if key in self.metric_data.keys():
+                metric_values[key] = torch.sqrt(force_se/num_forces).item()
 
             key = "u_mae_vl"
             if key in self.metric_data.keys():
-                metric_values[key] = torch.nn.functional.l1_loss(energy_diffs, torch.zeros_like(energy_diffs)).detach().clone().to("cpu").item()
+                metric_values[key] = (en_ae/num_ens).item()
 
             key = "u_rmse_vl"
             if key in self.metric_data.keys():
-                metric_values[key] = torch.sqrt(torch.nn.functional.mse_loss(energy_diffs, torch.zeros_like(energy_diffs))).detach().clone().to("cpu").item()
+                metric_values[key] = torch.sqrt(en_se/num_ens).item()
 
             assert len(self.current_train_loss) == 1
             avg_loss = None
@@ -751,7 +756,7 @@ class GrappaTrain(training.Train):
                     print(f"    Plotting {name} ...")
 
 
-                training.Train.visualize_targets(y_true=y_true, y_pred=y_pred, min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, name=name, ylabel=ylabel, folder_path=fpath, title_name=en_name+" "+l_name+" in kcal/mol", metric_dict=metric_dict, loader_name=l_name, log_scale_accuracy=log_scale_accuracy, percentile=percentile, errors=errors, xlabel=xlabel)
+                training.Train.visualize_targets(y_true=y_true, y_pred=y_pred, min_y=min_y, max_y=max_y, show=show, err_histogram=err_histogram, bins_err=bins_err, bins_2d=bins_2d, name=name, ylabel=ylabel, folder_path=fpath, title_name=en_name+" "+l_name+" in kcal/mol", metric_dict=None, loader_name=l_name, log_scale_accuracy=log_scale_accuracy, percentile=percentile, errors=errors, xlabel=xlabel)
                 plt.close("all")
         return
 
