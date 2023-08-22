@@ -460,8 +460,11 @@ class Train:
                 # with self.warmup_scheduler.dampening():
                 #     # self.scheduler criterion is the last train loss:
                 #     self.scheduler.step(self.metric_data[self.loss_name+"_tr"][-1])
-                self.scheduler.step(self.metric_data[self.loss_name+"_tr"][-1])
-                    
+                try:
+                    self.scheduler.step(self.metric_data[self.loss_name+"_tr"][-1])
+                except IndexError:
+                    pass
+                 
         # write the new lr to the param file
         lr = self.optimizer.state_dict()["param_groups"][0]["lr"]
         if lr != self.params["lr"]:

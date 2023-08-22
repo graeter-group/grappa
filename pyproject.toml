@@ -21,6 +21,7 @@ grappa_train = "grappa.run.client:run_client"
 grappa_full_run = "grappa.run.client:full_run"
 grappa_eval = "grappa.run.eval:eval_client"
 grappa_compare = "grappa.run.compare:client"
+grappa_fold = "grappa.run.make_split:make_split"
 
 [tool.setuptools]
 include-package-data = true

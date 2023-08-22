@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Union, List, Tuple
 import os
 import json
+import time
 
 import math
 
@@ -170,8 +171,19 @@ def run_once(storage_path, version_name, pretrain_name, model_config=get_default
             ds_splitter = SplittedDataset.create(datasets, split=[0.8, 0.1, 0.1], seed=seed)
 
         else:
-            # load a given split of the set:
-            ds_splitter = SplittedDataset.create_with_names(datasets, split=[0.8, 0.1, 0.1], split_names=ds_split_names)
+            timer = 0
+            while not Path(ds_split_names).exists():
+                print(f"waiting for {ds_split_names} to exist...")
+                time.sleep(20)
+                timer += 20
+                if timer > 1e3:
+                    raise ValueError(f"timeout while waiting for {ds_split_names} to exist.")
+
+            split_tuple = json.load(open(ds_split_names, "r"))
+            print("loaded a given split...")
+            
+            # load a given split of the set and put all the molecules that do not appear in the split in the train set:
+            ds_splitter = SplittedDataset.create_with_names(datasets, split=[1., 0., 0.], split_names=split_tuple, seed=seed)
 
     # load such that the molecules of the former train set remain in the train set
     elif not continue_path is None:

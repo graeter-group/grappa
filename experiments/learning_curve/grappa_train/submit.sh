@@ -9,3 +9,4 @@ sbatch run.sh --ds_short pep --seed $SEED --default_tag med --mols 200 --name 20
 sbatch run.sh --ds_short pep --seed $SEED --default_tag med --mols 400 --name 400
 sbatch run.sh --ds_short pep --seed $SEED --default_tag med --mols 600 --name 600
 sbatch run.sh --ds_short pep --seed $SEED --default_tag med --mols 800 --name 800
+sbatch run.sh --ds_short pep --seed $SEED --default_tag med --name all

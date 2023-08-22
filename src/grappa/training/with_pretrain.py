@@ -42,7 +42,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         trainer = grappa_training.TrainSequentialParams(energy_factor=0., force_factor=0., direct_epochs=pretrain_direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics={}, model_saving_interval=5, store_states=True,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
-        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=classification_epochs, bce_weight=bce_weight, storage_path=os.path.join(storage_path,version_name), eval_forces=True, param_statistics=param_statistics, param_factor=param_factor, scale_dict=scale_dict, l2_dict=l2_dict)
+        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=classification_epochs, bce_weight=bce_weight, storage_path=os.path.join(storage_path,version_name), eval_forces=True, param_statistics=param_statistics, param_factor=param_factor, scale_dict=scale_dict, l2_dict=l2_dict, eval_train=False)
 
         #%%
         print("starting pretraining for version", pretrain_name, "\n")
@@ -148,7 +148,7 @@ def train_with_pretrain(model, version_name, pretrain_name, tr_loader, vl_loader
         trainer = ScheduledTrainer(energy_factor=energy_factor, force_factor=force_factor, direct_epochs=direct_epochs, train_loader=tr_loader, val_loader=vl_loader, print_interval=1, log_interval=1, figure_update_interval=None, batch_print_interval=25, evaluation_metrics=metrics, model_saving_interval=5, store_states=True,
         energies=["bond", "angle", "torsion", "improper", "bonded", "bonded_averaged", "ref", "reference_ff"],
         levels=["n2", "n3", "n4", "n4_improper"],
-        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=-1, bce_weight=0., storage_path=storage_path, eval_forces=True, param_statistics=param_statistics, param_factor=param_factor, scale_dict=scale_dict, l2_dict=l2_dict)
+        clip_value=1e-1, average=True, reference_energy="u_ref", classification_epochs=-1, bce_weight=0., storage_path=storage_path, eval_forces=True, param_statistics=param_statistics, param_factor=param_factor, scale_dict=scale_dict, l2_dict=l2_dict, eval_train=False)
 
         trainer.start = time.time()
 

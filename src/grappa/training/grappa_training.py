@@ -12,6 +12,7 @@ import os
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 from typing import List, Dict, Tuple, Union
 
@@ -23,7 +24,7 @@ class GrappaTrain(training.Train):
     This class is neither written efficiently, nor well documented or tested. Only to be used for internal testing.
     """
     # some additional parameters for automated evaluation
-    def __init__(self, *args, reference_energy="u_ref", reference_forcefield="amber99_sbildn", energy_writer=WriteEnergy(),levels=["n2","n3"], energies=["bond", "angle", "total"], bond_help=0, angle_help=0, average=True, errors=False, by_atom=False, eval_interval=None, eval_forces=False, **kwargs):
+    def __init__(self, *args, reference_energy="u_ref", reference_forcefield="amber99_sbildn", energy_writer=WriteEnergy(),levels=["n2","n3"], energies=["bond", "angle", "total"], bond_help=0, angle_help=0, average=True, errors=False, by_atom=False, eval_interval=None, eval_forces=False, eval_train=False, **kwargs):
         super(GrappaTrain, self).__init__(*args, **kwargs)
         self.reference_energy = reference_energy
         self.reference_forcefield = reference_forcefield
@@ -37,6 +38,8 @@ class GrappaTrain(training.Train):
         self.energy_writer = energy_writer
         self.eval_interval = eval_interval
         self.eval_forces = eval_forces
+
+        self.eval_train = eval_train
 
     def training_epoch(self, model, do_all=False):
         if not self.eval_interval is None:
@@ -87,13 +90,20 @@ class GrappaTrain(training.Train):
             return dgl.batch(graphs)
         return coll_fn
     
+
     def init_metric_data(self):
         super(GrappaTrain, self).init_metric_data()
-        if self.eval_forces:
-            self.metric_data["f_mae_vl"] = []
-            self.metric_data["f_rmse_vl"] = []
+
+        self.metric_data["f_mae_vl"] = []
+        self.metric_data["f_rmse_vl"] = []
         self.metric_data["u_mae_vl"] = []
         self.metric_data["u_rmse_vl"] = []
+
+        if self.eval_train:
+            self.metric_data["f_mae_tr"] = []
+            self.metric_data["f_rmse_tr"] = []
+            self.metric_data["u_mae_tr"] = []
+            self.metric_data["u_rmse_tr"] = []
 
     @staticmethod
     def get_forces(model, loader, device):
@@ -113,10 +123,9 @@ class GrappaTrain(training.Train):
         en_se = 0
         en_ae = 0
         num_ens = 0
-        if self.eval_forces:
-            force_se = 0
-            force_ae = 0
-            num_forces = 0
+        force_se = torch.tensor([0], dtype=torch.float32, device=self.device)
+        force_ae = torch.tensor([0], dtype=torch.float32, device=self.device)
+        num_forces = 0
 
         for g in self.val_loaders[0]:
             
@@ -149,23 +158,19 @@ class GrappaTrain(training.Train):
                 num_ens += e_pred.flatten().shape[0]
 
 
-
         with torch.no_grad():
-            key = "f_mae_vl"
-            # sum over the xyz dimension to obtain the magnitude of the deviation
-            if key in self.metric_data.keys():
-                metric_values[key] = (force_ae/num_forces).item()
-            key = "f_rmse_vl"
-            if key in self.metric_data.keys():
-                metric_values[key] = torch.sqrt(force_se/num_forces).item()
+            if num_forces == 0:
+                num_forces = 1
 
-            key = "u_mae_vl"
-            if key in self.metric_data.keys():
-                metric_values[key] = (en_ae/num_ens).item()
+            metric_values["f_mae_vl"] = (force_ae/num_forces).item()
+            
+            metric_values["f_rmse_vl"] = torch.sqrt(force_se/num_forces).item()
 
-            key = "u_rmse_vl"
-            if key in self.metric_data.keys():
-                metric_values[key] = torch.sqrt(en_se/num_ens).item()
+            metric_values["u_mae_vl"] = (en_ae/num_ens).item()
+
+            metric_values["u_rmse_vl"] = torch.sqrt(en_se/num_ens).item()
+
+
 
             assert len(self.current_train_loss) == 1
             avg_loss = None
@@ -180,6 +185,9 @@ class GrappaTrain(training.Train):
                 metric_values["loss_tr"] = avg_loss
 
 
+        if self.eval_train:
+            metric_values.update(self.eval_trainset(model))
+
         for key in metric_values.keys():
             self.metric_data[key].append(metric_values[key])
         self.metric_data["epoch"].append(self.epoch)
@@ -188,6 +196,10 @@ class GrappaTrain(training.Train):
             val_loss = self.metric_data[self.early_stopping_criterion][-1]
         else:
             val_loss = float("inf")
+
+        if self.eval_train:
+            with open(os.path.join(self.version_path,"train_info","metrics.json"), "w") as f:
+                json.dump(self.metric_data, f, indent=4)
 
         # update last and best state:
         if self.saving and (self.epoch%self.model_saving_interval == 0 and self.epoch != 0):
@@ -198,11 +210,69 @@ class GrappaTrain(training.Train):
                     torch.save(model.state_dict(), os.path.join(self.version_path, "best_model.pt"))
                     torch.save(self.optimizer.state_dict(), os.path.join(self.version_path, "best_opt.pt"))
                 self.best_loss = val_loss
+            
 
         model = model.to(self.device)
         model = model.train()
 
         return model
+
+
+    def eval_trainset(self, model):
+        metric_values = {}
+        en_se = 0
+        en_ae = 0
+        num_ens = 0
+        
+        force_se = torch.tensor([0], dtype=torch.float32, device=self.device)
+        force_ae = torch.tensor([0], dtype=torch.float32, device=self.device)
+        num_forces = 0
+
+        for g in self.train_loaders[0]:
+            
+            # write the energy and forces into the graph
+            ###############################
+            if self.eval_forces:
+                grads, model, g = utilities.get_grad(model=model, batch=g, device=self.device)
+
+                with torch.no_grad():
+                    force_se += torch.sum(torch.square(grads)).detach()
+                    force_ae += torch.sum(torch.sqrt(torch.sum(torch.square(grads), dim=-1))).detach()
+                    num_forces += grads.shape[0] * grads.shape[1] # n_confs * n_atoms
+
+            else:
+                with torch.no_grad():
+                    g = g.to(self.device)
+                    g = model(g)
+                    g = self.energy_writer(g)
+            ###############################
+
+            with torch.no_grad():
+                e_ref = g.nodes["g"].data["u_ref"].detach()
+                e_ref -= e_ref.mean(dim=-1)
+
+                e_pred = g.nodes["g"].data["u"].detach()
+                e_pred -= e_pred.mean(dim=-1)
+
+                en_se += torch.sum(torch.square(e_pred - e_ref)).detach()
+                en_ae += torch.sum(torch.abs(e_pred - e_ref)).detach()
+                num_ens += e_pred.flatten().shape[0]
+
+
+
+        with torch.no_grad():
+            if num_forces == 0:
+                num_forces = 1
+
+            metric_values["f_mae_tr"] = (force_ae/num_forces).item()
+            
+            metric_values["f_rmse_tr"] = torch.sqrt(force_se/num_forces).item()
+
+            metric_values["u_mae_tr"] = (en_ae/num_ens).item()
+
+            metric_values["u_rmse_tr"] = torch.sqrt(en_se/num_ens).item()
+
+        return metric_values
 
 
     def get_dataset_info(self, loader):
