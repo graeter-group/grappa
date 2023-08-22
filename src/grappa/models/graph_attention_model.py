@@ -124,7 +124,7 @@ class ResidualConvBlock(torch.nn.Module):
     Implements one residual layer consisting of 1 graph convolutional step, and a skip connection. Block has a nonlinearity at the end but not in the beginning.
     Can only be used for homogeneous graphs. If self_interaction is True, a skipped linear layer is put behind the convolution.
     """
-    def __init__(self, in_feats, out_feats=None, *message_args, activation=torch.nn.ELU(), message_class=dgl.nn.pytorch.conv.SAGEConv, self_interaction=True, layer_norm=True, dropout=0.2):
+    def __init__(self, in_feats, out_feats=None, *message_args, activation=torch.nn.ELU(), message_class=dgl.nn.pytorch.conv.SAGEConv, self_interaction=True, layer_norm=True, dropout=0.0):
         super().__init__()
 
 
@@ -177,6 +177,9 @@ class ResidualConvBlock(torch.nn.Module):
         h_skip = h
 
         h = self.module(g,h)
+
+        # NOTE: ACTIVATION IS MISSING HERE
+        # h = self.activation(h)
 
         h = self.dropout(h)
         

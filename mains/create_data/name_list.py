@@ -23,5 +23,5 @@ if path in DS_PATHS.keys():
 # path = DS_PATHS["spice_pubchem"]
 ds = PDBDataset.load_npz(path, info=False)
 names = [mol.name for mol in ds]
-print(names)
+print(*names, sep=" ")
 # %%

@@ -7,7 +7,10 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/compare_radicals2"
+NAME="lc_dipep_monomers_allfeat2"
+
+
+VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/$NAME"
 
 # Create the output directory if it doesn't exist yet
 mkdir -p $VPATH

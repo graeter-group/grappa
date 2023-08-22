@@ -13,6 +13,5 @@ conda activate next_try # must be an env with grappa and openff installed
 # list is printed by python script
 
 names=$(python name_list.py spice_pubchem)
-
-python spice.py --smiles --dipeppath /hits/fast/mbm/seutelf/data/datasets/pubchem_spice.hdf5 --name pubchem_more --n_max $N_MAX --skip_names $names
+python spice.py --smiles --dipeppath /hits/fast/mbm/seutelf/data/datasets/pubchem_spice.hdf5 --name pubchem_more --n_max $N_MAX --skip_names $names --seed 1
 python make_graphs.py -off -ff gaff-2.11 -o --ds_name pubchem_more/base --max_energy 65 --max_force 200

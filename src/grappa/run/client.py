@@ -247,6 +247,7 @@ def full_run():
     args.continue_path = continue_path
     args.warmup = warmup
     args.lr = lr
+    args.time_limit /= 2
 
     # other defaults for the next run:
 
@@ -261,6 +262,8 @@ def full_run():
 
     run_(args)
 
+    args.lr = 1e-6
+    run_(args)
 
 if __name__ == "__main__":
     run_client()
