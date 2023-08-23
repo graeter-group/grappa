@@ -1,7 +1,7 @@
 
 import argparse
 from pathlib import Path
-from grappa.run.run import run_from_config
+from grappa.run.run import run_from_config, get_default_run_config
 from grappa.models.deploy import get_default_model_config
 from grappa.constants import DEFAULTBASEPATH, DS_PATHS
 import copy
@@ -233,8 +233,6 @@ def full_run():
     continue_path = vpath[0]
     assert not continue_path is None
 
-    warmup = True
-    lr = 1e-5
     
     # loop over all arguments and set them to None if they are not a bool:
     for key, value in vars(args).items():
@@ -245,8 +243,12 @@ def full_run():
         
     
     args.continue_path = continue_path
-    args.warmup = warmup
-    args.lr = lr
+    args.warmup = True
+    args.lr = 1e-5
+
+    if args.time_limit is None:
+        args.time_limit = get_default_run_config()["time_limit"]
+    
     args.time_limit /= 2
 
     # other defaults for the next run:

@@ -4,7 +4,7 @@ SEED=${1:-1}
 
 splitpath="/hits/fast/mbm/seutelf/grappa/mains/split_names/spice_qca_only"
 
-sbatch split.sh $splitpath spice_qca_only
+sbatch split.sh $splitpath spice_qca
 
 sbatch run.sh --ds_short spice_qca --seed $SEED --ds_split_names "$splitpath/fold_0.json"
 sbatch run.sh --ds_short spice_qca --seed $SEED --ds_split_names "$splitpath/fold_1.json"

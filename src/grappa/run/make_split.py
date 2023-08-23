@@ -14,6 +14,7 @@ def make_split():
     parser.add_argument('--ds_short', type=str, nargs="+", default=[], help='Short names of datasets.')
     parser.add_argument('--k', type=int, default=5, help='Number of folds.')
     parser.add_argument('--ds_path', type=str, nargs="+", default=[], help='Paths to datasets.')
+    parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite existing files.')
 
     args = parser.parse_args()
 
@@ -24,6 +25,15 @@ def make_split():
             args.ds_path.append(dspath)
     
     assert not len(args.ds_path) == 0, "No dataset paths given."
+
+    all_exist = True
+    for i in range(args.k):
+        if not Path(os.path.join(args.fold_path,f"fold_{i}.json")).exists():
+            all_exist = False
+            break
+    if all_exist and not args.overwrite:
+        print("All folds already exist. Use --overwrite to overwrite.")
+        return
 
     datasets = [PDBDataset.load_npz(path) for path in args.ds_path]
     folds = SplittedDataset.do_kfold_split(datasets, k=args.k)

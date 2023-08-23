@@ -82,7 +82,11 @@ class ResidualAttentionBlock(torch.nn.Module):
             h = self.layer_norm(h)
  
         h_skip = h
-        h = self.activation(self.module(g,h))
+        h = self.module(g,h)
+
+        # NOTE: this is usually not done in the transformer architecture. remove in some later version!
+        h = self.activation(h)
+
         h = self.attention_dropout(h)
         # h now has the shape (num_nodes, num_heads, out_feats)
 
@@ -212,7 +216,7 @@ class Representation(torch.nn.Module):
         if increase_width is true, doubles the width of the convolutional layers every step until one is larger than out_feats
         If attention_last is true, the attention blocks are put after the convolutional blocks, otherwise before.
     """
-    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, increase_width=True, attention_last=True, in_feat_name:Union[str,List[str]]=["atomic_number", "residue", "in_ring", "formal_charge", "is_radical"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[], dropout=0.2, final_dropout=True):
+    def __init__(self, h_feats:int=256, out_feats:int=512, in_feats:int=None, n_conv=3, n_att=3, n_heads=10, increase_width=True, attention_last=True, in_feat_name:Union[str,List[str]]=["atomic_number", "in_ring", "is_radical", "q_ref"], in_feat_dims:dict={}, bonus_features:List[str]=[], bonus_dims:List[int]=[], dropout=0.2, final_dropout=True):
         """
         Implementing:
             - a single linear layer with node-level-shared weights mapping from in_feats to h_feats
