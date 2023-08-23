@@ -10,11 +10,11 @@ dependencies = [
     "numpy",
     "dgl",
     "torch",
-    "openmm",
     "rdkit",
     "matplotlib",
     "pyyaml",
 ]
+#    "openmm",
 
 [project.scripts]
 grappa_train = "grappa.run.client:run_client"
