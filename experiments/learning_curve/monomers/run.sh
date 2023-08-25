@@ -7,7 +7,7 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-NAME="lc_monomers"
+NAME="lc/lc_monomers"
 
 # mkdir -p /hits/fast/mbm/seutelf/grappa/experiments/learning_curve/qca_spice/$NAME
 

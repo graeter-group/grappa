@@ -7,7 +7,7 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-NAME="lc_dipep_monomers"
+NAME="lc/lc_dipep_monomers"
 
 
 VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/$NAME"

@@ -8,3 +8,4 @@ sbatch run.sh --ds_short spice_qca spice_monomers --seed $SEED --mols 200 --name
 sbatch run.sh --ds_short spice_qca spice_monomers --seed $SEED --mols 400 --name 400
 sbatch run.sh --ds_short spice_qca spice_monomers --seed $SEED --mols 600 --name 600
 sbatch run.sh --ds_short spice_qca spice_monomers --seed $SEED --mols 800 --name 800
+sbatch run.sh --ds_short spice_qca spice_monomers --seed $SEED --name all

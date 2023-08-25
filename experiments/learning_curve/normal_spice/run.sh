@@ -7,7 +7,7 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/lc_spice"
+VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/lc/lc_spice"
 
 # Create the output directory if it doesn't exist yet
 mkdir -p $VPATH

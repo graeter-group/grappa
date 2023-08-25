@@ -7,11 +7,7 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-NAME="lc/lc_qca_spice"
-
-# mkdir -p /hits/fast/mbm/seutelf/grappa/experiments/learning_curve/qca_spice/$NAME
-
-VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/$NAME"
+VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/lc/lc_radicals"
 
 # Create the output directory if it doesn't exist yet
 mkdir -p $VPATH

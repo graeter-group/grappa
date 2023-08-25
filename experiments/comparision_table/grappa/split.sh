@@ -7,7 +7,9 @@
 
 
 splitpath=${1}
-ds_short=${2}
+
+# ds_short: all following arguments:
+ds_short=${@:2}
 
 
 #conda path to fast:
@@ -20,5 +22,5 @@ export DGLBACKEND=pytorch
 
 conda activate grappa_cascade
 
-
-grappa_fold $splitpath --ds_short $ds_short --k 10
+# unfold all ds_short:
+grappa_fold $splitpath --k 10 --ds_short $ds_short
