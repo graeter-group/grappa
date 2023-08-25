@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument('--name', type=str, default='', help="Optional: The name of the version directory (up to indices). (default: '')")
     parser.add_argument('--n', type=int, default=None, help="how many times to run (default: None)") # NOTE: this might be unnecesary now that we have several seeds
     parser.add_argument('--test', action='store_true', default=False, help="Reducing dataset size to 50 graphs for testing functionality. (default: False)'")
-    parser.add_argument('--seed','-s', type=int, nargs='+', default=None, help="random seed for the split of the dataset into train, val, test (default: 0)")
+    parser.add_argument('--seed','-s', type=int, default=None, help="random seed for the split of the dataset into train, val, test (default: 0)")
     parser.add_argument('--pretrain_steps', type=float, default=None, help="approximate number of gradient updates for pretraining (default: 2000)")
     parser.add_argument('--train_steps', type=float, default=None, help="approximate max number of gradient updates for training (default: 1e6)")
     parser.add_argument('--patience', type=float, default=None, help="patience of the learning rate scheduler in optimization steps (default: 2e3)")
@@ -76,7 +76,7 @@ def get_args():
     parser.add_argument('--final_dropout', dest='final_dropout', action='store_true', help='Whether to only apply one dropout layer for the representation, which is then located at the very end. The probability will be set to rep_droput. (default: False)')
     parser.add_argument('--no_final_dropout', dest='final_dropout', action='store_false')
     parser.set_defaults(final_dropout=None)
-    parser.add_argument('--weight_decay', type=float, default=None, help=" (default: 1e-4)")
+    parser.add_argument('--weight_decay', type=float, default=None, help=" (default: 0)")
     parser.add_argument('--attentional', dest='attentional', action='store_true')
     parser.add_argument('--no_attentional', dest='attentional', action='store_false')
     parser.set_defaults(attentional=None)
@@ -121,7 +121,7 @@ def run_(args, vpath=[]):
         for ds_short in args.ds_short:
 
             if ds_short == "pep":
-                args.ds_short += ["spice", "collagen", "radical_AAs", "radical_dipeptides", "scan"]
+                args.ds_short += ["spice", "collagen", "radical_AAs", "radical_dipeptides"]
 
             elif ds_short == "espaloma":
                 args.ds_short += ["spice_qca", "spice_monomers", "spice_pubchem"]
@@ -153,10 +153,6 @@ def run_(args, vpath=[]):
     if type(args.ds_path) == str:
         args.ds_path = [args.ds_path]
 
-    seeds = args.seed
-    if seeds is None:
-        seeds = [0]
-
     run_config_path = args.run_config_path
     model_config_path = args.model_config_path
 
@@ -174,7 +170,6 @@ def run_(args, vpath=[]):
     args = vars(args)
     
     args.pop("ds_short")
-    args.pop("seed")
     args.pop("ds_tag")
     args.pop("ds_base")
     args.pop("run_config_path")
@@ -196,11 +191,8 @@ def run_(args, vpath=[]):
         specified_args["test_ds_tags"] = tags
         specified_args["description"] += tags
 
-    if len(seeds)==1:
-        run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=None, seed=seeds[0], vpath=vpath, **specified_args)
-    else:
-        for idx, seed in enumerate(seeds):
-            run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=idx, seed=seed, vpath=vpath, **specified_args)
+    run_from_config(run_config_path=run_config_path, model_config_path=model_config_path, idx=None, vpath=vpath, **specified_args)
+    
 
 
 def run_client():
@@ -211,11 +203,11 @@ def run_client():
 def full_run():
     args = get_args()
     vpath = []
-    patience = args.patience
-    param_weight = args.param_weight
-    force_factor = args.force_factor
-    energy_factor = args.energy_factor
-    pretrain_steps = args.pretrain_steps
+    patience = copy.deepcopy(args.patience)
+    param_weight = copy.deepcopy(args.param_weight)
+    force_factor = copy.deepcopy(args.force_factor)
+    energy_factor = copy.deepcopy(args.energy_factor)
+    pretrain_steps = copy.deepcopy(args.pretrain_steps)
 
     if force_factor is None and energy_factor is None:
         args.force_factor = 10.0
@@ -230,42 +222,42 @@ def full_run():
 
     run_(args, vpath=vpath)
     
-    continue_path = vpath[0]
+    continue_path = copy.deepcopy(vpath[0])
     assert not continue_path is None
 
-    
-    # loop over all arguments and set them to None if they are not a bool:
-    for key, value in vars(args).items():
-        if key in ["default_tag", "default_scale", "name", "ds_base"]:
-            continue
-        elif not type(value) == bool:
-            setattr(args, key, None)
+
+    LRS = [1e-5, 1e-6]
+    for lr in LRS:
+        print("\nstarting run with lr ", lr)
+        # loop over all arguments and set them to None if they are not a bool:
+        for key, value in vars(args).items():
+            if key in ["default_tag", "default_scale", "name", "ds_base"]:
+                continue
+            elif not type(value) == bool:
+                setattr(args, key, None)
+            
         
-    
-    args.continue_path = continue_path
-    args.warmup = True
-    args.lr = 1e-5
+        args.continue_path = continue_path
+        args.warmup = True
+        args.lr = lr
 
-    if args.time_limit is None:
-        args.time_limit = get_default_run_config()["time_limit"]
-    
-    args.time_limit /= 2
+        if args.time_limit is None:
+            args.time_limit = get_default_run_config()["time_limit"]
+        
+        args.time_limit /= float(len(LRS))
 
-    # other defaults for the next run:
+        # other defaults for the next run:
 
-    if patience is None:
-        args.patience = 1e20
-    if param_weight is None:
-        args.param_weight = 1e-2
+        if patience is None:
+            args.patience = 1e20
+        if param_weight is None:
+            args.param_weight = 1e-3
 
-    if force_factor is None and energy_factor is None:
-        args.force_factor = 1.0
-        args.energy_factor = 1.0
+        if force_factor is None and energy_factor is None:
+            args.force_factor = 1.0
+            args.energy_factor = 1.0
 
-    run_(args)
-
-    args.lr = 1e-6
-    run_(args)
+        run_(args, vpath=[])
 
 if __name__ == "__main__":
     run_client()

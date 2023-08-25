@@ -17,6 +17,9 @@ class ToPositive(torch.nn.Module):
     In both cases, mean and standard deviation of the output are used to scale and shift the functions such that an input with normal distribution would yield the same statistics. This enables the previous layers to output values in the range of a normal distribution, which was shown to be advantageous (as in batch normalization, https://arxiv.org/abs/1502.03167).
     """
     def __init__(self, mean, std, min_=0.):
+        """
+        The argument mean is actually mean - min, i.e. the distance from the minimum to the mean!
+        """
         super().__init__()
 
         self.register_buffer("mean_over_std", torch.tensor(float(mean/std)))
@@ -44,5 +47,6 @@ class ToRange(torch.nn.Module):
         self.register_buffer("max", torch.tensor(float(max_)))
 
     def forward(self, x):
-        # 
+        # NOTE: thee is an error, it should be
+        # return self.max * torch.sigmoid(self.std_over_max*x)
         return self.max * torch.sigmoid(self.std_over_max*x)

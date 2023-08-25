@@ -1456,9 +1456,20 @@ class SplittedDataset:
         val_ds = self.dgl_splits[index][1]
         test_ds = self.dgl_splits[index][2]
 
-        tr_loader = GraphDataLoader(tr_ds, shuffle=True)
-        val_loader = GraphDataLoader(val_ds, shuffle=True)
-        test_loader = GraphDataLoader(test_ds, shuffle=True)
+        if len(tr_ds)>0:
+            tr_loader = GraphDataLoader(tr_ds, shuffle=True)
+        else:
+            tr_loader = []
+
+        if len(val_ds)>0:
+            val_loader = GraphDataLoader(val_ds, shuffle=True)
+        else:
+            val_loader = []
+
+        if len(test_ds)>0:
+            test_loader = GraphDataLoader(test_ds, shuffle=True)
+        else:
+            test_loader = []
 
         return tr_loader, val_loader, test_loader
 
