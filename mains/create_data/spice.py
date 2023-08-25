@@ -58,5 +58,7 @@ if __name__=="__main__":
         shutil.rmtree(str(storepath))
 
     ds.save_npz(storepath, overwrite=True)
+    print(f"saved dataset to {storepath}")
+    print(f"First 10 names: {[m.name for m in ds.mols[:10]]}")
 
 # %%
