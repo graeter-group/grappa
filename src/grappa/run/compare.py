@@ -77,7 +77,7 @@ def make_data_dict(eval_data:List[Dict], model_names:List[str]):
     return data
 
 
-def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path.cwd(), fontsize:int=12, figsize:Tuple[int,int]=(10,5), best=False):
+def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path.cwd(), fontsize:int=12, figsize:Tuple[int,int]=(10,5), best=False, folds=False):
     """
     Assume the dicts in eval_data have the form
         eval_data[dataset_path/ff_info]['energy_rmse'] = float
@@ -85,6 +85,17 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
     Then this function creates a bar plot with bars for each model for each dataset_path with the rmse values on the y axis.
     best flag make sonly sense i all runs are on the same dataset split seed.
     """
+
+    fontname = "Arial"
+
+    import matplotlib as mpl
+    from matplotlib.font_manager import findSystemFonts
+    available_fonts = [f.split('/')[-1] for f in findSystemFonts()]
+    if any(fontname in f for f in available_fonts):
+        mpl.rc('font', family=fontname)
+    else:
+        mpl.rc('font', family='DejaVu Sans')
+
 
     data = make_data_dict(eval_dicts, model_names)
 
@@ -145,10 +156,13 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
                         error = 0
 
                 r_new = r[model_idx] + dtype_idx * single_bar_width
-                ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2)
+                ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=(f"{dtype.replace('_', ' ')}" if not folds else dtype.capitalize()) if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2)
 
         ax.set_ylabel('RMSE', fontsize=fontsize)
-        ax.set_title(f'Test RMSE {metric_type.capitalize()} for Different Models in kcal/mol (/Å)', fontsize=fontsize)
+        if folds:
+            ax.set_title(f'Test RMSE {metric_type.capitalize()} for Different Folds in kcal/mol (/Å)', fontsize=fontsize)
+        else:
+            ax.set_title(f'Test RMSE {metric_type.capitalize()} for Different Models in kcal/mol (/Å)', fontsize=fontsize)
         offset = single_bar_width * (len(data_types)-1.)/2.
         ax.set_xticks((r + offset).tolist())
         ax.set_xticklabels(mnames, rotation=45, ha="right", fontsize=fontsize)
@@ -184,16 +198,40 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
                         error = 0
                 r_new = r[model_idx] + set_idx * single_bar_width
                 alpha = 1 if set_type == "test" else 0.5
-                ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=f"{dtype} {set_type}" if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2, alpha=alpha)
+                ax.bar(r_new, value, color=color_list[dtype_idx], width=single_bar_width, label=(f"{dtype.replace('_', ' ')} {set_type}" if not folds else set_type.capitalize()) if model_idx == 0 else "", yerr=error, capsize=single_bar_width*30/2, alpha=alpha)
 
         ax.set_ylabel('RMSE', fontsize=fontsize)
         mtype = "Energy" if "energy" in metric_type.lower() else "Force"
-        ax.set_title(f'{mtype} RMSE for Different Models in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
+        if folds:
+            ax.set_title(f'{mtype} RMSE for Different Folds in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
+        else:
+            ax.set_title(f'{mtype} RMSE for Different Models in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
         offset = (len(set_types)-1.)*single_bar_width/2.
         ax.set_xticks((r + offset).tolist())
         ax.set_xticklabels(mnames, rotation=45, ha="right", fontsize=fontsize)
+        
+        if folds:
+            if dtype == "spice_monomers" and "energy" in metric_type.lower():
+                # plot red vertical line at 1.68:
+                ax.axhline(y=1.68, color="red", linestyle="--", label="Espaloma", alpha=0.5)
+                ax.set_title(f'{mtype} RMSE for Different Folds of Spice Monomers in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
+
+            if dtype == "spice_qca" and "energy" in metric_type.lower():
+                # plot red vertical line at
+                ax.axhline(y=3.15, color="red", linestyle="--", label="Espaloma", alpha=0.5)
+                ax.set_title(f'{mtype} RMSE for Different Folds of Spice Dipeptides in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
+
+            if dtype == "spice_pubchem" and "energy" in metric_type.lower():
+                # plot red vertical line at
+                ax.axhline(y=2.52, color="red", linestyle="--", label="Espaloma", alpha=0.5)
+                ax.set_title(f'{mtype} RMSE for Different Folds of Spice Pubchem in kcal/mol{("/Å" if mtype=="Force" else "")}', fontsize=fontsize)
+
+
+
         ax.legend(loc='best', fontsize=fontsize)
         ax.grid(True, axis='y', linestyle='--', alpha=1)
+
+
         plt.tight_layout()
         plt.savefig(filename, dpi=300)
         plt.close()
@@ -214,7 +252,7 @@ def compare(eval_dicts:Dict, model_names:List[str], plotdir:Union[Path,str]=Path
         json.dump(data, f, indent=4)
 
 
-def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[], best_criterion:Tuple[str, str]=None, refname="ref"):
+def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:int=12, figsize:Tuple[int,int]=(10,5), vpaths:List[str]=None, exclude:List[str]=[], best_criterion:Tuple[str, str]=None, refname="ref", folds=False, best=False, ref=False):
     """
     Create a bar plot comparing model performance of models in subfolders of parent_dir.
 
@@ -226,11 +264,24 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
     eval_data = []
     splits = []
     dirs = parent_dir.iterdir()
+
+    existing_folds = []
+
+    from grappa.run.run_utils import load_yaml
+
     if not vpaths is None:
         dirs = vpaths
     for model_dir in dirs:
 
         model_dir_ = Path(model_dir)
+
+        run_config = load_yaml(model_dir/"run_config.yml")
+
+        foldpath = run_config["ds_split_names"]
+
+        if foldpath not in existing_folds:
+            existing_folds.append(foldpath)
+
         
         # if grappa_eval was called, the file is here:
         if (model_dir_/"eval_plots"/"eval_data.json").exists():
@@ -246,6 +297,10 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
             # strip the first ..._ from the name:
             model_name = model_dir.name.split("_", 1)[1] if len(model_dir.name.split("_", 1)) > 1 else model_dir.name
 
+            if folds:
+                # the index of foldpath in the list of existing folds:
+                model_name = f"{existing_folds.index(foldpath)}"
+
             if not model_name in exclude:
                 model_names.append(model_name)
                 eval_data.append(json.load(open(model_dir_/"eval_data.json", "r"))["eval_data"])
@@ -255,13 +310,14 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
 
     new_data = make_data_list(eval_data)
 
-    ref_data = make_data_list(eval_data, reference=True)
-    ref_splits = copy.deepcopy(splits)
-    ref_models = [refname]*len(model_names)
+    if ref:
+        ref_data = make_data_list(eval_data, reference=True)
+        ref_splits = copy.deepcopy(splits)
+        ref_models = [refname]*len(model_names)
 
-    new_data += ref_data
-    splits += ref_splits
-    model_names += ref_models
+        new_data += ref_data
+        splits += ref_splits
+        model_names += ref_models
     
 
     if not best_criterion is None:
@@ -294,7 +350,7 @@ def compare_versions(parent_dir:Union[Path,str]=Path.cwd()/"versions", fontsize:
         model_names = best_models
         print(model_names)
 
-    compare(new_data, model_names, plotdir=parent_dir.parent, fontsize=fontsize, figsize=figsize, best=False)
+    compare(new_data, model_names, plotdir=parent_dir.parent, fontsize=fontsize, figsize=figsize, best=best, folds=folds)
 
 
 def client():
@@ -306,11 +362,14 @@ def client():
     parser = argparse.ArgumentParser(description="Compare the performance of different models on different datasets.")
 
     parser.add_argument("-d", "--parent_dir", type=str, help="The parent directory containing the models to compare.", default=Path.cwd()/"versions")
-    parser.add_argument("--fontsize", type=int, default=12, help="The fontsize for the plot.")
+    parser.add_argument("--fontsize", type=int, default=14, help="The fontsize for the plot.")
     parser.add_argument("--figsize", type=int, nargs=2, default=(10,5), help="The figure size for the plot.")
     parser.add_argument("--vpaths", type=str, nargs="+", default=None, help="The paths to the versions to compare.")
     parser.add_argument("--exclude", type=str, nargs="+", default=[], help="The paths to the versions to compare.")
     parser.add_argument("--best_criterion", type=str, nargs=2, default=None, help="The criterion to use to select the best model for each split. First argument is the metric, second is the dataset type. If None, use all models.")
+    parser.add_argument("--folds", action="store_true", help="If true, compare folds.")
+    parser.add_argument("--best", action="store_true", help="If true, only compare the best model for each split.")
+    parser.add_argument("--ref", action="store_true", help="If true, compare the reference model.")
     args = parser.parse_args()
 
-    compare_versions(args.parent_dir, fontsize=args.fontsize, figsize=args.figsize, vpaths=args.vpaths, exclude=args.exclude, best_criterion=args.best_criterion)
+    compare_versions(args.parent_dir, fontsize=args.fontsize, figsize=args.figsize, vpaths=args.vpaths, exclude=args.exclude, best_criterion=args.best_criterion, folds=args.folds, best=args.best, ref=args.ref)

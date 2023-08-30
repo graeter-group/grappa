@@ -909,11 +909,10 @@ class PDBDataset:
 
         if fontname is not None:
             import matplotlib as mpl
-            from matplotlib.font_manager import findSystemFonts
-            available_fonts = [f.split('/')[-1] for f in findSystemFonts()]
-            if any(fontname in f for f in available_fonts):
+            try:
                 mpl.rc('font', family=fontname)
-            else:
+            except:
+                print(f"WARNING: could not set font to {fontname}, using default")
                 mpl.rc('font', family='DejaVu Sans')
 
         def rmse(a,b):
@@ -1128,14 +1127,12 @@ class PDBDataset:
 
         if fontname is not None:
             import matplotlib as mpl
-            from matplotlib.font_manager import findSystemFonts
-            available_fonts = [f.split('/')[-1] for f in findSystemFonts()]
-            if any(fontname in f for f in available_fonts):
+            try:
                 mpl.rc('font', family=fontname)
-            else:
+            except:
+                print(f"WARNING: could not set font to {fontname}, using default")
                 mpl.rc('font', family='DejaVu Sans')
-        
-        
+
         bond_eqs = []
         bond_eqs_ref = []
 
@@ -1200,17 +1197,17 @@ class PDBDataset:
         min_val, max_val = get_global_min_max(bond_eqs_ref, bond_eqs)
         ax1[0].scatter(bond_eqs_ref, bond_eqs, s=6, alpha=0.2)
         ax1[0].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
-        ax1[0].set_title("Bond Equilibrium Distances [Å]", fontsize=fontsize, fontname=fontname)
-        ax1[0].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
-        ax1[0].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax1[0].set_title("Bond Equilibrium Distances [Å]", fontsize=fontsize)
+        ax1[0].set_xlabel(f"{ref_name}", fontsize=fontsize)
+        ax1[0].set_ylabel(f"{ff_name}", fontsize=fontsize)
         ax1[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         min_val, max_val = get_global_min_max(bond_ks_ref, bond_ks)
         ax1[1].scatter(bond_ks_ref, bond_ks, s=6, alpha=0.2)
         ax1[1].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
-        ax1[1].set_title("Bond Force Constants [kcal/mol/Å²]", fontsize=fontsize, fontname=fontname)
-        ax1[1].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
-        ax1[1].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax1[1].set_title("Bond Force Constants [kcal/mol/Å²]", fontsize=fontsize)
+        ax1[1].set_xlabel(f"{ref_name}", fontsize=fontsize)
+        ax1[1].set_ylabel(f"{ff_name}", fontsize=fontsize)
         ax1[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         # Angle-related plots
@@ -1218,17 +1215,17 @@ class PDBDataset:
         min_val, max_val = get_global_min_max(angle_eqs_ref, angle_eqs)
         ax2[0].scatter(angle_eqs_ref, angle_eqs, s=6, alpha=0.2)
         ax2[0].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
-        ax2[0].set_title("Angle Equilibrium Angles [Deg]", fontsize=fontsize, fontname=fontname)
-        ax2[0].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
-        ax2[0].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax2[0].set_title("Angle Equilibrium Angles [Deg]", fontsize=fontsize)
+        ax2[0].set_xlabel(f"{ref_name}", fontsize=fontsize)
+        ax2[0].set_ylabel(f"{ff_name}", fontsize=fontsize)
         ax2[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         min_val, max_val = get_global_min_max(angle_ks_ref, angle_ks)
         ax2[1].scatter(angle_ks_ref, angle_ks, s=6, alpha=0.2)
         ax2[1].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
-        ax2[1].set_title("Angle Force Constants [kcal/mol/Deg²]", fontsize=fontsize, fontname=fontname)
-        ax2[1].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
-        ax2[1].set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax2[1].set_title("Angle Force Constants [kcal/mol/Deg²]", fontsize=fontsize)
+        ax2[1].set_xlabel(f"{ref_name}", fontsize=fontsize)
+        ax2[1].set_ylabel(f"{ff_name}", fontsize=fontsize)
         ax2[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         # Torsion-related plots
@@ -1236,9 +1233,9 @@ class PDBDataset:
         min_val, max_val = get_global_min_max(torsion_ks_ref, torsion_ks)
         ax3.scatter(torsion_ks_ref, torsion_ks, s=6, alpha=0.2)
         ax3.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
-        ax3.set_title("Torsion Coefficients [kcal/mol]", fontsize=fontsize, fontname=fontname)
-        ax3.set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
-        ax3.set_ylabel(f"{ff_name}", fontsize=fontsize, fontname=fontname)
+        ax3.set_title("Torsion Coefficients [kcal/mol]", fontsize=fontsize)
+        ax3.set_xlabel(f"{ref_name}", fontsize=fontsize)
+        ax3.set_ylabel(f"{ff_name}", fontsize=fontsize)
         ax3.tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         # Save and close the plots
