@@ -11,10 +11,10 @@ from openmm import unit
 # initialize the force field from a tag:
 # ff = ForceField.from_tag("latest")
 
-LATEST = False
+LATEST = True
 
 
-vpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/constrain/versions/0_1"
+vpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/constrain/versions/3_1000"
 
 param_weight = Path(vpath).name.split("_")[-1]
 
@@ -54,7 +54,7 @@ param_dict = ff.params_from_topology_dict(top)
 param_dict_ref = ff_ref.params_from_topology_dict(top)
 # %%
 from grappa.PDBData.utils.utils import eval_params
-eval_params(param_dict, param_dict_ref, plotpath=str(param_weight) if not LATEST else "latest", fontsize=16, ff_name="Grappa", ref_name="Amber 99SBildn", collagen=False, fontname="Arial", figsize=6)
+eval_params(param_dict, param_dict_ref, plotpath=str(param_weight) if not LATEST else "latest", fontsize=16, ff_name="Grappa", ref_name="Amber ff99SBildn", collagen=False, fontname="Arial", figsize=6)
 #%%
 
 print(f"Num Residues: {len(list(top.residues()))}")

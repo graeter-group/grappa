@@ -25,7 +25,7 @@ tripep_ds = PDBDataset.load_npz(DS_PATHS['tripeptides'], n_max=n_max)
 foldername = Path(grappa_vpath).parent.name
 
 tripep_ds.calc_ff_data(get_mod_amber99sbildn(), suffix="_amber99")
-eval_data, _ = tripep_ds.evaluate(plotpath=f"{foldername}/tripep_plots/amber", suffix="_amber99", name="Amber 99SBildn", refname="QM")
+eval_data, _ = tripep_ds.evaluate(plotpath=f"{foldername}/tripep_plots/amber", suffix="_amber99", name="Amber ff99SBildn", refname="QM")
 amber_energy_rmse = eval_data['energy_rmse']
 amber_force_rmse = eval_data['grad_rmse']
 amber_force_components_rmse = eval_data['component_grad_rmse']
@@ -71,9 +71,9 @@ for i, p in enumerate(paths):
 
     # plot only for the first model
     if first:
-        tripep_ds.evaluate(plotpath=f"{foldername}/tripep_plots", by_element=True, by_residue=True, suffix="", name="Grappa", compare_name="Amber 99SBildn", compare_suffix="_amber99", fontsize=16, fontname="Arial", refname="QM")
+        tripep_ds.evaluate(plotpath=f"{foldername}/tripep_plots", by_element=True, by_residue=True, suffix="", name="Grappa", compare_name="Amber ff99SBildn", compare_suffix="_amber99", fontsize=16, fontname="Arial", refname="QM")
 
-        tripep_ds.eval_params(plotpath=f"{foldername}/tripep_plots", ff_name="Grappa", ff=ff, fontname="Arial", ref_name="Amber 99SBildn")
+        tripep_ds.eval_params(plotpath=f"{foldername}/tripep_plots", ff_name="Grappa", ff=ff, fontname="Arial", ref_name="Amber ff99SBildn")
 
         first = False
 

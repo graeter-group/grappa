@@ -2,7 +2,7 @@
 from grappa.ff import ForceField
 import openmm.unit
 import openmm.app
-from grappa.ff_utils.classical_ff.collagen_utility import get_amber99sbildn
+from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 from pathlib import Path
 from openmm import unit
 from grappa.PDBData.PDBDataset import PDBDataset
@@ -22,9 +22,9 @@ for i,p in [(0,1),(1,10),(2,100),(3,1000)]:
 
     param_weight = Path(vpath).name.split("_")[-1]
 
-    ff_ref = ForceField(classical_ff=get_amber99sbildn(), model=None)
+    ff_ref = ForceField(classical_ff=get_mod_amber99sbildn(), model=None)
 
-    ff = ForceField(classical_ff=get_amber99sbildn(), model_path=Path(vpath)/"best_model.pt")
+    ff = ForceField(classical_ff=get_mod_amber99sbildn(), model_path=Path(vpath)/"best_model.pt")
 
     if LATEST:
         ff = ForceField.from_tag("latest")
@@ -34,7 +34,7 @@ for i,p in [(0,1),(1,10),(2,100),(3,1000)]:
     ds.calc_ff_data(forcefield=ff, suffix="")
 
 
-    eval_data, _ = ds.evaluate(plotpath=str(param_weight), by_element=True, by_residue=True, suffix="", name="Grappa", fontsize=16, fontname="Arial", refname="Amber 99SBildn")
+    eval_data, _ = ds.evaluate(plotpath=str(param_weight), by_element=True, by_residue=True, suffix="", name="Grappa", fontsize=16, fontname="Arial", refname="Amber ff99SBildn")
 
     energy_rmse = eval_data['energy_rmse']
     force_rmse = eval_data['grad_rmse']

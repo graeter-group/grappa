@@ -5,17 +5,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from grappa.run.run_utils import load_yaml
-from grappa.models.deploy import model_from_path
+from grappa.models.deploy import model_from_version
 from grappa.ff import ForceField
 import json
 import os
 from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
+
 #%%
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--vpath", '-v', help="Name of version folder", type=str, default="lc/lc_grappa_new")
-parser.add_argument("--no_tripeptides", "-t", action="store_true", default=False)
+parser.add_argument("--vpath", '-v', help="Name of version folder", type=str, default="lc/lc_espaloma_new")
+
 parser.add_argument("--overwrite", "-o", action="store_true", default=False)
 args = parser.parse_args()
 grappa_vpath = f'/hits/fast/mbm/seutelf/grappa/mains/runs/{args.vpath}/versions'
@@ -33,17 +34,17 @@ if calc_deviations:
 
     n_folds = 10 # used for checking for errors
 
-    spice_grappa = PDBDataset.load_npz(DS_PATHS['spice'], n_max=n_max, info=False)
-    collagen = PDBDataset.load_npz(DS_PATHS['collagen'], n_max=n_max, info=False)
-    radical_AAs = PDBDataset.load_npz(DS_PATHS['radical_AAs'], n_max=n_max, info=False)
-    radical_dipeptides = PDBDataset.load_npz(DS_PATHS['radical_dipeptides'], n_max=n_max, info=False)
+    spice_monomers = PDBDataset.load_npz(DS_PATHS['spice_monomers'], n_max=n_max, info=False)
 
-    datasets = [radical_AAs, radical_dipeptides, spice_grappa, collagen]
-    ds_names = ["Radical AAs", "Radical Dipeptides", "Spice Dipeptides", "HYP/DOP Dipeptides"]
-    if not args.no_tripeptides:
-        tripeptides = PDBDataset.load_npz(DS_PATHS['tripeptides'], n_max=n_max, info=False)
-        datasets.append(tripeptides)
-        ds_names.append("Tripeptides")
+    spice_dipeptides_all = PDBDataset.load_npz(DS_PATHS['spice_qca'], n_max=n_max, info=False)
+
+    spice_pubchem = PDBDataset.load_npz(DS_PATHS['spice_pubchem'], n_max=n_max, info=False)
+
+
+
+    datasets = [spice_monomers, spice_dipeptides_all, spice_pubchem]
+    ds_names = ["Spice Monomers", "Spice Dipeptides", "Spice Pubchem"]
+
 
     #%%
 
@@ -106,12 +107,14 @@ if calc_deviations:
 
 
             # evaluate on test set:
-            ff = ForceField(
-                model_path=p / 'best_model.pt',
-                classical_ff=get_mod_amber99sbildn(),
-                allow_radicals=True)
+            # ff = ForceField(
+            #     model_path=p / 'best_model.pt',
+            #     classical_ff=get_mod_amber99sbildn(),
+            #     allow_radicals=True)
 
-            ds_te.calc_ff_data(ff, suffix="_grappa", allow_radicals=True)
+            model = model_from_version(p)
+
+            ds_te.calc_ff_data(model=model, suffix="_grappa", allow_radicals=True)
             eval_data, _ = ds_te.evaluate(plotpath=None, suffix="_grappa")
             force_rmse = eval_data['grad_rmse']
 

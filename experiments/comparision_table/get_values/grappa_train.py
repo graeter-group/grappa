@@ -44,7 +44,7 @@ for ds_name, ds in zip(ds_names, datasets):
     with_radicals = "radical" in ds_name.lower()
 
     ds.calc_ff_data(get_mod_amber99sbildn(), suffix="_amber99", allow_radicals=True)
-    eval_data, _ = ds.evaluate(plotpath=f"{foldername}/{ds_name}_plots/amber", suffix="_amber99", name="Amber 99SBildn", refname="QM")
+    eval_data, _ = ds.evaluate(plotpath=f"{foldername}/{ds_name}_plots/amber", suffix="_amber99", name="Amber ff99SBildn", refname="QM")
     amber_energy_rmse = eval_data['energy_rmse']
     amber_force_rmse = eval_data['grad_rmse']
     amber_force_components_rmse = eval_data['component_grad_rmse']
@@ -116,7 +116,7 @@ for ds_name, ds in zip(ds_names, datasets):
 
     # assert len(full_test_ds) == len(ds), f"Length of full_test_ds ({len(full_test_ds)}) does not match length of ds ({len(ds)})"
 
-    eval_data, _ = full_test_ds.evaluate(plotpath=f"{foldername}/{ds_name}_plots", by_element=True, by_residue=True, suffix="", name="Grappa", compare_name="Amber 99SBildn", compare_suffix="_amber99", fontsize=16, fontname="Arial", refname="QM", radicals=with_radicals)
+    eval_data, _ = full_test_ds.evaluate(plotpath=f"{foldername}/{ds_name}_plots", by_element=True, by_residue=True, suffix="", name="Grappa", compare_name="Amber ff99SBildn", compare_suffix="_amber99", fontsize=16, fontname="Arial", refname="QM", radicals=with_radicals)
 
     energy_rmse = eval_data['energy_rmse']
     force_rmse = eval_data['grad_rmse']
