@@ -1096,7 +1096,7 @@ class PDBMolecule:
 
     def get_ff_data(self, forcefield:Union[ForceField, Callable, str]=None, collagen:bool=False, quickload:bool=False)->Tuple[np.ndarray, np.ndarray]:
         """
-        Returns energies, gradients that are calculated by the forcefield for all states xyz. Tha state axis is the zeroth axis.
+        Returns energies, gradients that are calculated by the forcefield for all states xyz. Tha state axis is the zeroth axis. shape: (n_confs, n_atoms, 3) for gradients, (n_confs) for energies.
         If str, assume that it is a small molecule forcefield.
         quickload: simply take the reference energies written in the graph upon parametrization.
         If collagen, load the openmm topology with adding the collagen specific bonds.

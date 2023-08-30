@@ -64,19 +64,19 @@ class ForceField:
 
         if model is not None and model_path is not None:
             raise ValueError("Either model or model_path must be given, not both.")
-        if model is None and model_path is None:
-            raise ValueError("Either model or model_path must be given.")
 
         if model is not None:
             self.model = model
-        else:
+        elif model_path is not None:
             self.model = model_from_path(model_path, device=self.device)
             self.model.eval()
+        else:
+            self.model = None
 
         
         self.classical_ff = classical_ff # used to create the dgl.graph, i.e. to obtain indices of impropers, propers, angles and bonds.
 
-        self.units = DEFAULT_UNITS
+        self.units = DEFAULT_UNITS # distance, angle, energy
 
         self.use_improper = True # if False, does not use impropers, which allows for the prediction of parameters without the need of a classical forcefield. The reason is that improper ordering and which ones to use at all are not unique.
         assert self.use_improper, "Currently, the use_improper flag must be True."
@@ -190,7 +190,7 @@ class ForceField:
 
         writer = SysWriter(top=topology, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
         writer.set_charge_model(self.charge_model)
-        writer.init_graph(with_parameters=False)
+        writer.init_graph(with_parameters=(self.model is None))
         writer.forward_pass(model=self.model, device=self.device)
         writer.update_system()
     
@@ -214,7 +214,7 @@ class ForceField:
 
         writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff, **system_kwargs)
         writer.set_charge_model(self.charge_model)
-        writer.init_graph(with_parameters=False)
+        writer.init_graph(with_parameters=(self.model is None))
         writer.forward_pass(model=self.model, device=self.device)
         writer.update_system()
     
@@ -269,7 +269,7 @@ class ForceField:
             writer = SysWriter.from_dict(topology=topology, ordered_by_res=True, allow_radicals=self.allow_radicals, classical_ff=self.classical_ff)
 
         writer.set_charge_model(self.charge_model)
-        writer.init_graph(with_parameters=False)
+        writer.init_graph(with_parameters=(self.model is None))
         writer.forward_pass(model=self.model, device=self.device)
         d = writer.get_parameter_dict(units=self.units)
         return d

@@ -7,7 +7,7 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-NAME="num_params_espaloma_table_no_pubchem"
+NAME="num_params/num_params_espaloma_table_no_pubchem"
 
 
 VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/$NAME"

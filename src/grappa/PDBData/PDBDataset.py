@@ -668,35 +668,69 @@ class PDBDataset:
         self.mols[:] = [lambd(i, mol) for i, mol in enumerate(self.mols) ]
 
 
-    def calc_ff_data(self, forcefield, suffix="", collagen:bool=False, allow_radicals:bool=False, remove_errs=False):
+    def calc_ff_data(self, forcefield=None, suffix="", collagen:bool=False, allow_radicals:bool=False, remove_errs=False, model=None):
         """
         Calculates the energies and forces for the given forcefield and stores them in the molecules.
         """
 
-        def _write_data(mol, idx, forcefield, collagen, suffix):
-            # determine whether smiles or not:
-            if len(mol.pdb) == 1:
-                raise ValueError(f"Cannot calculate energies and forces for molecules given by a smiles string: Will have to use openff, this takes too long. Smiles is {mol.pdb[0]}")
-            try:
-                if self.info:
-                    print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
+        if not forcefield is None:
 
-                if allow_radicals and not isinstance(forcefield, GrappaFF):
-                    forcefield = find_radical.add_radical_residues(forcefield, topology=mol.to_openmm(collagen=collagen).topology)
+            def _write_data(mol, idx, collagen, suffix, forcefield):
+                # determine whether smiles or not:
+                if len(mol.pdb) == 1:
+                    raise ValueError(f"Cannot calculate energies and forces for molecules given by a smiles string: Will have to use openff, this takes too long. Smiles is {mol.pdb[0]}")
+                try:
+                    if self.info:
+                        print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
 
-                energies, grads = mol.get_ff_data(forcefield, collagen=collagen)
+                    if allow_radicals and not isinstance(forcefield, GrappaFF):
+                        forcefield = find_radical.add_radical_residues(forcefield, topology=mol.to_openmm(collagen=collagen).topology)
 
-                mol.graph_data["g"][f"u{suffix}"] = energies
-                mol.graph_data["n1"][f"grad{suffix}"] = grads.transpose(1,0,2)
-            except:
-                if remove_errs:
-                    return None
-                raise
-            
-            return mol
+                    energies, grads = mol.get_ff_data(forcefield, collagen=collagen)
+
+                    mol.graph_data["g"][f"u{suffix}"] = energies
+                    mol.graph_data["n1"][f"grad{suffix}"] = grads.transpose(1,0,2)
+                except:
+                    if remove_errs:
+                        return None
+                    raise
+                
+                return mol
         
 
-        self.mols[:] = [_write_data(mol, idx, forcefield, collagen, suffix) for idx, mol in enumerate(self.mols) if not _write_data(mol, idx, forcefield, collagen, suffix) is None]
+        elif not model is None:
+            forcefield = model
+            from grappa.training.utilities import get_grad
+            def _write_data(mol, idx, collagen, suffix, forcefield):
+                if self.info:
+                    print(f"calculating energies and forces for {idx+1}/{len(self.mols)}...", end="\r")
+                model = forcefield
+                model = model.to("cpu")
+                u_nonbonded = mol.graph_data["g"]["u_nonbonded_ref"]
+                grad_nonbonded = mol.graph_data["n1"]["grad_nonbonded_ref"]
+
+                g = mol.to_dgl(collagen=collagen)
+                
+                # write param in graph:
+                g = model(g)
+                grad, model, g = get_grad(model=model, batch=g, device="cpu")
+                u = g.nodes["g"].data["u"].detach().numpy()
+                grad = grad.detach().numpy()
+
+                u_total = u + u_nonbonded
+                mol.graph_data["g"][f"u{suffix}"] = u_total
+                grad_total = grad + grad_nonbonded
+                mol.graph_data["n1"][f"grad{suffix}"] = grad_total
+
+                return mol
+                
+
+
+        else:
+            raise ValueError("either forcefield or model_path must be given")
+
+
+        self.mols[:] = [_write_data(mol=mol, idx=idx, forcefield=forcefield, collagen=collagen, suffix=suffix) for idx, mol in enumerate(self.mols) if not _write_data(mol=mol, idx=idx, forcefield=forcefield, collagen=collagen, suffix=suffix) is None]
 
 
 
@@ -822,6 +856,10 @@ class PDBDataset:
         del se_per_element
         del se_per_residue
 
+        if len(qm_energies) == 0:
+            raise RuntimeError(f"no energies found for suffix {suffix}")
+        if len(qm_grads) == 0:
+            raise RuntimeError(f"no gradients found for suffix {suffix}")
 
         ff_energies = np.concatenate(ff_energies, axis=0)
         qm_energies = np.concatenate(qm_energies, axis=0)
@@ -863,10 +901,20 @@ class PDBDataset:
 
 
 
-    def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, by_element=True, by_residue=True, scatter=True, name="Forcefield", compare_suffix=None, fontsize=16, compare_name="reference", radicals:bool=False, refname="QM")->Tuple[Dict[str, float], Dict[str, float]]:
+    def evaluate(self, suffix:str="", plotpath:Union[str, Path]=None, by_element=True, by_residue=True, scatter=True, name="Forcefield", compare_suffix=None, fontsize=16, compare_name="reference", radicals:bool=False, refname="QM", fontname=None)->Tuple[Dict[str, float], Dict[str, float]]:
         """
-        Calculates the RMSE and MAE of the data stored with suffix and returns a dictionary containing these. If a plotpath is given, also creates a scatterplot of the energies and forces, a histogram for the grad rmse per molecule and a histogram for the rmse per element/residue.
+        Calculates the RMSE and MAE of the data stored with suffix and returns a dictionary containing these. If a plotpath is given, also creates a scatterplot of the energies and forces, a histogram for the grad rmse per molecule and a histogram for the rmse per element/residue. Returns eval_data, rmse_data
         """
+
+
+        if fontname is not None:
+            import matplotlib as mpl
+            from matplotlib.font_manager import findSystemFonts
+            available_fonts = [f.split('/')[-1] for f in findSystemFonts()]
+            if any(fontname in f for f in available_fonts):
+                mpl.rc('font', family=fontname)
+            else:
+                mpl.rc('font', family='DejaVu Sans')
 
         def rmse(a,b):
             return np.sqrt(np.mean((a-b)**2))
@@ -892,7 +940,7 @@ class PDBDataset:
                 else:
                     ax[0].scatter(qm_energies, ff_energies)
                 ax[0].plot(qm_energies, qm_energies, color="black", linewidth=0.8)
-                ax[0].set_title("Energies [kcal/mol]]", fontsize=fontsize)
+                ax[0].set_title("Energies [kcal/mol]", fontsize=fontsize)
                 ax[0].set_xlabel(f"{refname} Energies", fontsize=fontsize)
                 ax[0].set_ylabel(f"{ff_title} Energies", fontsize=fontsize)
                 ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
@@ -929,7 +977,7 @@ class PDBDataset:
             ax[0].set_title("Energy RMSE per Molecule", fontsize=fontsize)
             ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
-            
+            # now create 
             ax[1].hist(grad_rmse_per_mol, bins=10)
             ax[1].set_xlabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
             ax[1].set_ylabel("Count", fontsize=fontsize)
@@ -937,6 +985,29 @@ class PDBDataset:
             ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
             plt.tight_layout()
             plt.savefig(plotpath / Path("rmse_per_mol.png"), dpi=500)
+            plt.close()
+
+            # now create the plots above as violin plots. on the left plot, compare energies of target and reference, on the right plot, compare gradients of target and reference 
+            fig, ax = plt.subplots(1,2, figsize=(10,5))
+
+            # Violin plot for energies
+            ax[0].violinplot([e_rmse_per_mol, e_rmse_per_mol_compare] if not compare_suffix is None else [e_rmse_per_mol], showmeans=True, showmedians=True)
+            ax[0].set_title("Energy RMSE per Molecule", fontsize=fontsize)
+            ax[0].set_xticks([1, 2] if not compare_suffix is None else [1])
+            ax[0].set_xticklabels([ff_title, compare_name] if not compare_suffix is None else [ff_title])
+            ax[0].set_ylabel("RMSE [kcal/mol]", fontsize=fontsize)
+            ax[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+            # Violin plot for gradients
+            ax[1].violinplot([grad_rmse_per_mol, grad_rmse_per_mol_compare] if not compare_suffix is None else [grad_rmse_per_mol], showmeans=True, showmedians=True)
+            ax[1].set_title("Gradient RMSE per Molecule", fontsize=fontsize)
+            ax[1].set_xticks([1, 2] if not compare_suffix is None else [1])
+            ax[1].set_xticklabels([ff_title, compare_name] if not compare_suffix is None else [ff_title])
+            ax[1].set_ylabel("RMSE [kcal/mol/Å]", fontsize=fontsize)
+            ax[1].tick_params(axis='both', which='major', labelsize=fontsize-2)
+
+            plt.tight_layout()
+            plt.savefig(plotpath / Path("violin_plots.png"), dpi=500)
             plt.close()
 
 
@@ -1050,7 +1121,20 @@ class PDBDataset:
         
 
     def eval_params(self, plotpath:Union[str, Path], ff:GrappaFF, fontsize=16, ff_name="Forcefield", ref_name="Amber99sbildn", collagen=False, fontname= "DejaVu Sans", figsize=6):
-        from grappa.constants import ParamDict
+        """
+        Creates a plot in which parameters predicted by the given forcefield are compared with those in the dataset.
+        Improper torsion parameters cannot be compared as we have 3 improper terms with independent parameters.
+        """
+
+        if fontname is not None:
+            import matplotlib as mpl
+            from matplotlib.font_manager import findSystemFonts
+            available_fonts = [f.split('/')[-1] for f in findSystemFonts()]
+            if any(fontname in f for f in available_fonts):
+                mpl.rc('font', family=fontname)
+            else:
+                mpl.rc('font', family='DejaVu Sans')
+        
         
         bond_eqs = []
         bond_eqs_ref = []
@@ -1114,7 +1198,7 @@ class PDBDataset:
         # Bond-related plots
         fig1, ax1 = plt.subplots(1,2, figsize=(2*figsize, figsize))
         min_val, max_val = get_global_min_max(bond_eqs_ref, bond_eqs)
-        ax1[0].scatter(bond_eqs_ref, bond_eqs, s=4, alpha=0.2)
+        ax1[0].scatter(bond_eqs_ref, bond_eqs, s=6, alpha=0.2)
         ax1[0].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
         ax1[0].set_title("Bond Equilibrium Distances [Å]", fontsize=fontsize, fontname=fontname)
         ax1[0].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
@@ -1122,7 +1206,7 @@ class PDBDataset:
         ax1[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         min_val, max_val = get_global_min_max(bond_ks_ref, bond_ks)
-        ax1[1].scatter(bond_ks_ref, bond_ks, s=4, alpha=0.2)
+        ax1[1].scatter(bond_ks_ref, bond_ks, s=6, alpha=0.2)
         ax1[1].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
         ax1[1].set_title("Bond Force Constants [kcal/mol/Å²]", fontsize=fontsize, fontname=fontname)
         ax1[1].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
@@ -1132,7 +1216,7 @@ class PDBDataset:
         # Angle-related plots
         fig2, ax2 = plt.subplots(1,2, figsize=(2*figsize, figsize))
         min_val, max_val = get_global_min_max(angle_eqs_ref, angle_eqs)
-        ax2[0].scatter(angle_eqs_ref, angle_eqs, s=4, alpha=0.2)
+        ax2[0].scatter(angle_eqs_ref, angle_eqs, s=6, alpha=0.2)
         ax2[0].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
         ax2[0].set_title("Angle Equilibrium Angles [Deg]", fontsize=fontsize, fontname=fontname)
         ax2[0].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
@@ -1140,7 +1224,7 @@ class PDBDataset:
         ax2[0].tick_params(axis='both', which='major', labelsize=fontsize-2)
 
         min_val, max_val = get_global_min_max(angle_ks_ref, angle_ks)
-        ax2[1].scatter(angle_ks_ref, angle_ks, s=4, alpha=0.2)
+        ax2[1].scatter(angle_ks_ref, angle_ks, s=6, alpha=0.2)
         ax2[1].plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
         ax2[1].set_title("Angle Force Constants [kcal/mol/Deg²]", fontsize=fontsize, fontname=fontname)
         ax2[1].set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)
@@ -1150,7 +1234,7 @@ class PDBDataset:
         # Torsion-related plots
         fig3, ax3 = plt.subplots(1,1, figsize=(figsize*1.1, figsize))
         min_val, max_val = get_global_min_max(torsion_ks_ref, torsion_ks)
-        ax3.scatter(torsion_ks_ref, torsion_ks, s=4, alpha=0.2)
+        ax3.scatter(torsion_ks_ref, torsion_ks, s=6, alpha=0.2)
         ax3.plot([min_val, max_val], [min_val, max_val], color="black", linewidth=0.8)
         ax3.set_title("Torsion Coefficients [kcal/mol]", fontsize=fontsize, fontname=fontname)
         ax3.set_xlabel(f"{ref_name}", fontsize=fontsize, fontname=fontname)

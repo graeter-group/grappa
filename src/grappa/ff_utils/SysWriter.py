@@ -322,7 +322,7 @@ class SysWriter:
         rd_mol = utils.openmm2rdkit_graph(openmm_top=self.top)
 
         # create a ictionary of bon, tuple, proper torsion terms
-        rd_indices = tuple_indices.get_indices(rd_mol)
+        # rd_indices = tuple_indices.get_indices(rd_mol)
         
 
         self.interaction_indices = {"n2":{}, "n3":{}, "n4":{}, "n4_improper":{}}
@@ -613,10 +613,23 @@ class SysWriter:
         """
         Writes the parameters predicted by the model into the graph. The model must already be on the given device.
         """
-        self.graph = self.graph.to(device)
-        with torch.no_grad():
-            self.graph = model(self.graph)
-        self.graph = self.graph.cpu()
+        if not model is None:
+            self.graph = self.graph.to(device)
+            with torch.no_grad():
+                self.graph = model(self.graph)
+            self.graph = self.graph.cpu()
+
+        else:
+            self.graph.nodes["n2"].data["k"] = self.graph.nodes["n2"].data["k_ref"]
+            self.graph.nodes["n2"].data["eq"] = self.graph.nodes["n2"].data["eq_ref"]
+            self.graph.nodes["n3"].data["k"] = self.graph.nodes["n3"].data["k_ref"]
+            self.graph.nodes["n3"].data["eq"] = self.graph.nodes["n3"].data["eq_ref"]
+            self.graph.nodes["n4"].data["k"] = self.graph.nodes["n4"].data["k_ref"]
+            if self.use_impropers:
+                self.graph.nodes["n4_improper"].data["k"] = self.graph.nodes["n4_improper"].data["k_ref"]
+
+            self.graph.nodes["n1"].data["q"] = self.graph.nodes["n1"].data["q_ref"]
+
 
 
     def get_parameter_dict(self, units:Dict=None)->ParamDict:

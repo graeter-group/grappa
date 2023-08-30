@@ -48,7 +48,9 @@ def shape_test(ds, n_check=1, force_factor=0):
 
 
 def get_grad(model, batch, device="cpu", energy_writer=WriteEnergy(), retain_graph=False):
-
+    """
+    Returns grad, model, batch. write the energy in batch.
+    """
     # recognize a possible context in which the function is called
     def grad_active():
         x = torch.tensor([1.], requires_grad=True)

@@ -7,7 +7,7 @@
 #SBATCH -G 1
 #SBATCH --gres=gpu:1
 
-NAME="num_params/num_params_grappa_pep"
+NAME="lc/lc_grappa_tripep"
 
 
 VPATH="/hits/fast/mbm/seutelf/grappa/mains/runs/$NAME"

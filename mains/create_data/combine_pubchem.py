@@ -9,8 +9,13 @@ from pathlib import Path
 newpath = Path(DS_PATHS['spice_pubchem'])
 name = newpath.name
 #name = name.removesuffix("_filtered")
-oldpath1 = str(newpath.parent) + "_old/" + name
-oldpath2 = str(newpath.parent) + "_more/" + name
+
+suffix = "_5"
+
+# oldpath1 = str(newpath.parent) + "_old/" + name
+
+oldpath1 = str(newpath.parent) + f"/{name}"
+oldpath2 = str(newpath.parent) + f"_more{suffix}/" + name
 
 #%%
 ds1 = PDBDataset.load_npz(oldpath1)
@@ -23,5 +28,5 @@ ds2.mols = add_mols
 # %%
 ds3 = ds1 + ds2
 # %%
-ds3.save_npz(newpath)
+ds3.save_npz(newpath, overwrite=True)
 # %%
