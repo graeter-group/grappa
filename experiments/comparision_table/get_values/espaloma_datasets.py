@@ -14,7 +14,7 @@ from grappa.ff_utils.classical_ff.collagen_utility import get_mod_amber99sbildn
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("vpath", help="Path to version folder", default="compare_espaloma_table_no_pubchem", type=str)
+parser.add_argument("--vpath", '-v', help="Path to version folder", default="compare_espaloma_table", type=str)
 args = parser.parse_args()
 grappa_vpath = f'/hits/fast/mbm/seutelf/grappa/mains/runs/{args.vpath}/versions'
 

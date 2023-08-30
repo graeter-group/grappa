@@ -16,7 +16,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--vpath", '-v', help="Name of version folder", type=str, default="lc/lc_espaloma_new")
-
+parser.add_argument("--ignore_ns", '-i', help="Ignore these n_mols", nargs='+', type=int, default=[])
 parser.add_argument("--overwrite", "-o", action="store_true", default=False)
 args = parser.parse_args()
 grappa_vpath = f'/hits/fast/mbm/seutelf/grappa/mains/runs/{args.vpath}/versions'
@@ -27,7 +27,7 @@ os.makedirs(foldername, exist_ok=True)
 n_max = None
 
 
-calc_deviations = args.overwrite or not Path(f"{foldername}/lc_data.json").exists()
+calc_deviations = args.overwrite or not (Path(f"{foldername}/lc_data.json").exists() and Path(f"{foldername}/lc_energy_data.json").exists())
 
 if calc_deviations:
 
@@ -52,11 +52,13 @@ if calc_deviations:
 
 
     data = {}
+    data_energy = {}
 
     first = True
     for ds_name, ds in zip(ds_names, datasets):
         
         data[ds_name] = {}
+        data_energy[ds_name] = {}
         # data[ds_name+"_amber"] = []
 
         paths = list(Path(grappa_vpath).glob('*'))
@@ -117,11 +119,14 @@ if calc_deviations:
             ds_te.calc_ff_data(model=model, suffix="_grappa", allow_radicals=True)
             eval_data, _ = ds_te.evaluate(plotpath=None, suffix="_grappa")
             force_rmse = eval_data['grad_rmse']
+            energy_rmse = eval_data['energy_rmse']
 
             if n_mols in data[ds_name].keys():
                 data[ds_name][n_mols].append(force_rmse)
+                data_energy[ds_name][n_mols].append(energy_rmse)
             else:
                 data[ds_name][n_mols] = [force_rmse]
+                data_energy[ds_name][n_mols] = [energy_rmse]
 
         ds_name_ = ds_name.replace(" ", "_")
         ds_name_ = ds_name.replace("/", "-")
@@ -129,15 +134,39 @@ if calc_deviations:
 
         with open(f"{foldername}/{ds_name_}_lc_data.json", "w") as f:
             json.dump(data[ds_name], f, indent=4)
+        with open(f"{foldername}/{ds_name_}_lc_energy_data.json", "w") as f:
+            json.dump(data_energy[ds_name], f, indent=4)
 
     with open(f"{foldername}/lc_data.json", "w") as f:
         json.dump(data, f, indent=4)
+    
+    with open(f"{foldername}/lc_energy_data.json", "w") as f:
+        json.dump(data_energy, f, indent=4)
 
 #%%
+
+esp_errors = {
+    "Spice Monomers": 6.05 * np.sqrt(3),
+    "Spice Dipeptides": 7.85 * np.sqrt(3),
+    "Spice Pubchem": 6.87 * np.sqrt(3),
+}
 
 from lc_plot import lc_plot
 
 with open(f"{foldername}/lc_data.json", "r") as f:
     data = json.load(f)
 
-lc_plot(data, title="Learning Curve", fontname="Arial", ylabel="Force RMSE [kcal/mol/Å]", show=False, plotpath=f"{foldername}", fit=False, logx=True, logy=True, ignore_n_worst=1, connect_dots=True)
+lc_plot(data, title="Learning Curve", fontname="Arial", ylabel="Force RMSE [kcal/mol/Å]", show=False, plotpath=f"{foldername}", fit=False, logx=True, logy=False, ignore_n_worst=0, connect_dots=True, ignore_ns=args.ignore_ns, hlines=esp_errors)
+
+
+esp_errors_energies = {
+    "Spice Monomers": 1.68,
+    "Spice Dipeptides": 3.15,
+    "Spice Pubchem": 2.52,
+}
+
+
+with open(f"{foldername}/lc_energy_data.json", "r") as f:
+    data = json.load(f)
+
+lc_plot(data, title="Learning Curve", fontname="Arial", ylabel="Energy RMSE [kcal/mol]", show=False, plotpath=f"{foldername}", fit=False, logx=True, logy=False, ignore_n_worst=0, connect_dots=True, ignore_ns=args.ignore_ns, hlines=esp_errors_energies, suffix="_energy")

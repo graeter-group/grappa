@@ -13,3 +13,5 @@ def dipeptides_hyp_dop():
 
 for s in dipeptides_hyp_dop():
     print(s)
+
+print(len(dipeptides_hyp_dop()))
