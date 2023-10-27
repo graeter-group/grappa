@@ -10,7 +10,7 @@ def affine_fit(x, a, b):
     return a * x + b
 
 def lc_plot(data:Dict, title="Learning Curve", fontname="Arial", ylabel="Force RMSE [kcal/mol/Å]", 
-            show=False, plotpath=None, fit=True, logx=False, logy=False, fontsize=16, connect_dots=False, ignore_n_worst=0, ylim=None, n_min=20, ignore_ns:List[int]=[], hlines:Dict=None, suffix=""):
+            show=False, plotpath=None, fit=True, logx=False, logy=False, fontsize=16, connect_dots=False, ignore_n_worst=0, ylim=None, n_min=20, ignore_ns:List[int]=[], hlines:Dict=None, suffix="", take_min=False):
     """
     data[ds_type][n_mols] = rmse_list
     """
@@ -53,13 +53,21 @@ def lc_plot(data:Dict, title="Learning Curve", fontname="Arial", ylabel="Force R
             # sort errs and ignore the worst n
             if ignore_n_worst > 0 and len(errs_k) > ignore_n_worst:
                 errs_k = np.sort(errs_k)[:-ignore_n_worst]
-            errs.append(np.mean(errs_k))
+            if take_min:
+                errs.append(np.min(errs_k))
+            else:
+                errs.append(np.mean(errs_k))
             errs_std.append(np.std(errs_k))
 
         y_means = np.array(errs)
         y_stds = np.array(errs_std)        
 
-        plt.errorbar(x, y_means, yerr=y_stds, linestyle='None' if not connect_dots else '-', marker='o', label=f"{ds_type}", color=colors[i], capsize=5)
+        if not take_min:
+            plt.errorbar(x, y_means, yerr=y_stds, linestyle='None' if not connect_dots else '-', marker='o', label=f"{ds_type}", color=colors[i], capsize=5)
+
+        else:
+            plt.plot(x, y_means, linestyle='None' if not connect_dots else '-', marker='o', label=f"{ds_type}", color=colors[i])
+
 
         if not hlines is None:
             if ds_type in hlines.keys():

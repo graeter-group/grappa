@@ -11,10 +11,10 @@ from openmm import unit
 # initialize the force field from a tag:
 # ff = ForceField.from_tag("latest")
 
-LATEST = True
+LATEST = False
 
 
-vpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/constrain/versions/3_1000"
+vpath = "/hits/fast/mbm/seutelf/grappa/mains/runs/constrain/versions/5_100000"
 
 param_weight = Path(vpath).name.split("_")[-1]
 

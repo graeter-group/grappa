@@ -17,7 +17,8 @@ ds = PDBDataset.load_npz(ds_path, n_max=None)
 
 LATEST = False
 
-for i,p in [(0,1),(1,10),(2,100),(3,1000)]:
+for i,p in [(0,1),(1,10),(2,100),(3,1000), (4,10000), (5,100000)]:
+# for i,p in [(4,10000), (5,100000)]:
     vpath = f"/hits/fast/mbm/seutelf/grappa/mains/runs/constrain/versions/{i}_{p}"
 
     param_weight = Path(vpath).name.split("_")[-1]

@@ -9,7 +9,7 @@ import json
 data_large_peptides = json.load(open("energy_force_rmse.json"))
 data_qm_tripeptides = json.load(open("tripep_QM_energy_force_rmse.json"))
 # %%
-param_weight = np.array([1,10,100,1000])
+param_weight = np.array([1,10,100,1000, 10000, 100000])
 forces_qm_rmse = np.array([data_qm_tripeptides[str(p)][1] for p in param_weight])
 forces_rmse = np.array([data_large_peptides[str(p)][1] for p in param_weight])
 # %%
@@ -21,11 +21,11 @@ plt.figure(figsize=(10, 6))
 with open("amber_tripep_QM_energy_force_rmse.json", "r") as f:
     amber_error = json.load(f)[1]
 
-plt.hlines(amber_error, 0, 1000, linestyle='--', label='Tripeptides: Amber ff', colors="green")
+plt.hlines(amber_error, 0, 1e5, linestyle='--', label='Tripeptides: Amber ff', colors="green")
 
 # Plot the data
-plt.plot(param_weight, forces_rmse, marker='o', linestyle='--', label='Large Peptides: Diff')
 plt.plot(param_weight, forces_qm_rmse, marker='o', linestyle='--', label='Tripeptides: Grappa')
+plt.plot(param_weight, forces_rmse, marker='o', linestyle='--', label='Large Peptides: Diff')
 
 # Customize axes to be logarithmic, set labels, and title
 plt.xscale("log")
@@ -56,14 +56,14 @@ plt.figure(figsize=(10, 6))
 with open("amber_tripep_QM_energy_force_rmse.json", "r") as f:
     amber_energy_error = json.load(f)[0]
 
-plt.hlines(amber_energy_error, 0, 1000, linestyle='--', label='Tripeptides: Amber ff', colors="green")
+plt.hlines(amber_energy_error, 0, 1e5, linestyle='--', label='Tripeptides: Amber ff', colors="green")
 
 plt.plot(param_weight, energies_qm_rmse, marker='o', linestyle='--', label='Tripeptides: Grappa')
 plt.plot(param_weight, energies_rmse, marker='o', linestyle='--', label='Large Peptides: Diff')
 
 # Customize axes, labels, and title
 plt.xscale("log")
-plt.yscale("log")
+# plt.yscale("log")
 plt.xlabel("Parameter Weight")
 plt.ylabel("Energy RMSE [kcal/mol]")
 plt.title("Energy RMSE on Tripeptides (QM) and Large Peptides")
@@ -83,7 +83,7 @@ fig, axs = plt.subplots(1, 2, figsize=(16, 6))
 with open("amber_tripep_QM_energy_force_rmse.json", "r") as f:
     amber_error = json.load(f)[1]
 
-axs[0].hlines(amber_error, 0, 1000, linestyle='--', label='Tripeptides: Amber ff', colors="green")
+axs[0].hlines(amber_error, 1, 1e5, linestyle='--', label='Tripeptides: Amber ff', colors="green")
 
 axs[0].plot(param_weight, forces_qm_rmse, marker='o', linestyle='--', label='Tripeptides: Grappa')
 
@@ -102,7 +102,7 @@ axs[0].legend(loc="best")
 with open("amber_tripep_QM_energy_force_rmse.json", "r") as f:
     amber_energy_error = json.load(f)[0]
 
-axs[1].hlines(amber_energy_error, 0, 1000, linestyle='--', label='Tripeptides: Amber ff', colors="green")
+axs[1].hlines(amber_energy_error, 1, 1e5, linestyle='--', label='Tripeptides: Amber ff', colors="green")
 axs[1].plot(param_weight, energies_qm_rmse, marker='o', linestyle='--', label='Tripeptides: Grappa')
 axs[1].plot(param_weight, energies_rmse, marker='o', linestyle='--', label='Large Peptides: Diff')
 

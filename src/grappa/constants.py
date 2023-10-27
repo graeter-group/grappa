@@ -29,7 +29,9 @@ DS_PATHS = {
     'radical_AAs': f'{DEFAULTBASEPATH}/radical_AAs/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}',
     'radical_dipeptides': f'{DEFAULTBASEPATH}/radical_dipeptides/charge_heavy{suffix_col}_ff_amber99sbildn{suffix}',
     'tripeptides': f'{DEFAULTBASEPATH}/tripeptides/charge_default{suffix_col}_ff_amber99sbildn{suffix}',
-    'large_peptides': f'{DEFAULTBASEPATH}/large_peptides/charge_default{suffix_col}_ff_amber99sbildn{suffix}'
+    'large_peptides': f'{DEFAULTBASEPATH}/large_peptides/charge_default{suffix_col}_ff_amber99sbildn{suffix}',
+    'radical_AAs_avg': f'{DEFAULTBASEPATH}/radical_AAs/charge_avg{suffix_col}_ff_amber99sbildn{suffix}',
+    'radical_dipeptides_avg': f'{DEFAULTBASEPATH}/radical_dipeptides/charge_avg{suffix_col}_ff_amber99sbildn{suffix}',
 }
 ############
 

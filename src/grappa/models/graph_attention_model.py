@@ -37,6 +37,7 @@ class ResidualAttentionBlock(torch.nn.Module):
 
         outfeat_per_head = math.ceil(out_feats/num_heads)
 
+        # NOTE: use attentioan_layer
         self.module = dgl.nn.pytorch.conv.DotGatConv(in_feats=in_feats, out_feats=outfeat_per_head, num_heads=num_heads)
 
         ############################
