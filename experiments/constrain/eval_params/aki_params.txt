@@ -1,2 +1,0 @@
-Num Residues: 129
-Num Atoms: 1960
