@@ -6,7 +6,7 @@ from typing import Union
 from pathlib import Path
 
 from grappa.io import Molecule, Parameters
-from grappa.run.run_utils import load_yaml
+from grappa.run.run_utils import load_yaml, load_weights_torchhub
 from grappa.models.get_models import get_full_model
 
 
@@ -20,35 +20,42 @@ class Grappa():
     def from_config(cls, config_path:Union[Path,str]):
         config = load_yaml(config_path)
 
+        # load model 
+        architecture = config["architecture"]
         stat_dict = None # is it necessary to give access to this or is it always the default statistics in get_full_model?
-        # could just enforce proper naming in config 
+        #TODO: could just enforce proper naming in config 
         model_args = {
             "statistics": stat_dict,
-            "rep_feats": config["rep_feats"],
-            "between_feats": config["width"],
-            "n_conv": config["n_conv"],
-            "n_att": config["n_att"],
-            "in_feat_name": config["in_feat_name"],
-            "old": config["old_model"],
-            "n_heads": config["n_heads"],
-            "readout_feats": config["readout_width"],
-            "use_improper": config["use_improper"],
-            "dense_layers": config["dense_layers_readout"],
-            "n_att_readout": config["n_att_readout"],
-            "n_heads_readout": config["n_heads_readout"],
-            "reducer_feats": config["reducer_feats"],
-            "attention_hidden_feats": config["attention_hidden_feats"],
-            "positional_encoding": config["positional_encoding"],
-            "layer_norm": config["layer_norm"],
-            "dropout": config["dropout"],
-            "final_dropout": config["final_dropout"],
-            "rep_dropout": config["rep_dropout"],
-            "attentional": config["attentional"],
-            "n_periodicity_proper": config["n_periodicity_proper"],
-            "n_periodicity_improper": config["n_periodicity_improper"],
+            "rep_feats": architecture["rep_feats"],
+            "between_feats": architecture["width"],
+            "n_conv": architecture["n_conv"],
+            "n_att": architecture["n_att"],
+            "in_feat_name": architecture["in_feat_name"],
+            "old": architecture["old_model"],
+            "n_heads": architecture["n_heads"],
+            "readout_feats": architecture["readout_width"],
+            "use_improper": architecture["use_improper"],
+            "dense_layers": architecture["dense_layers_readout"],
+            "n_att_readout": architecture["n_att_readout"],
+            "n_heads_readout": architecture["n_heads_readout"],
+            "reducer_feats": architecture["reducer_feats"],
+            "attention_hidden_feats": architecture["attention_hidden_feats"],
+            "positional_encoding": architecture["positional_encoding"],
+            "layer_norm": architecture["layer_norm"],
+            "dropout": architecture["dropout"],
+            "final_dropout": architecture["final_dropout"],
+            "rep_dropout": architecture["rep_dropout"],
+            "attentional": architecture["attentional"],
+            "n_periodicity_proper": architecture["n_periodicity_proper"],
+            "n_periodicity_improper": architecture["n_periodicity_improper"],
         }
-
         model = get_full_model(**model_args)
+
+        #load parameters
+        weights = config["weights"]
+        state_dict = load_weights_torchhub(weights["url"],weights["filename"])
+        model.load_state_dict(state_dict)
+
         return Grappa(model)
 
     def predict(self, input: Molecule) -> Parameters:

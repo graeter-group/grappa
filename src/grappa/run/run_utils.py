@@ -4,6 +4,7 @@ import random
 import json
 from typing import Tuple, List, Union
 import dgl
+import torch
 
 import yaml
 import math
@@ -277,6 +278,11 @@ def store_yaml(d:dict, path:Union[str,Path]):
     with open(str(path), 'w') as f:
         yaml.dump(d, f)
 
+def load_weights_torchhub(url:str, filename:str) -> dict:
+    models_path = Path(__file__).parents[1] / "mains" / "models"
+    #torch.hub.set_dir('models_path')   # probably not necessary
+    state_dict = torch.hub.load_state_dict_from_url(url, model_dir=str(models_path),file_name=filename)
+    return state_dict
 
 # def clean_vpath(storage_path, must_contain="log.txt"):
 #     for e in Path(storage_path).glob("*"):
