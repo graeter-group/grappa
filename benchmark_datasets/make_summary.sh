@@ -1,7 +1,11 @@
 #!/bin/bash
 
-target_path="/hits/fast/mbm/seutelf/data/datasets"
-summary_path="/hits/fast/mbm/seutelf/espaloma_orig/summaries"
+set -e
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
+
+target_path="$SCRIPT_DIR/../data/datasets"
+summary_path="$SCRIPT_DIR/summaries"
 
 
 # List of dataset names

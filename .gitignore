@@ -61,6 +61,7 @@ tmp/
 /.luarc.json
 
 data/
+esp_data/
 data_backup/
 npy_charge_dicts/
 **/nohup.out

@@ -1,7 +1,10 @@
 #!/bin/bash
 
-espaloma_ds_path="/hits/fast/mbm/seutelf/esp_data"
-target_path="/hits/fast/mbm/seutelf/data/datasets"
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
+
+espaloma_ds_path="$SCRIPT_DIR/../data/esp_data"
+target_path="$SCRIPT_DIR/../data/datasets"
 
 
 # List of dataset names
@@ -15,4 +18,3 @@ done
 # add duplicates: (not, the duplicates provided from espaloma are not complete, calcuate them in the split function instead)
 # python add_duplicates.py --duplpath "$espaloma_ds_path/duplicated-isomeric-smiles-merge" --targetpath "$target_path"
 python create_split.py --dspath "$target_path" --splitpath "$target_path/../splits" --check --create_duplicates
-

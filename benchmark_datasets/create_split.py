@@ -206,8 +206,6 @@ def create_split(dspath, splitpath, partition:(0.8, 0.1, 0.1), split_id=None, se
 
         # Generate list of all IDs without duplicates
         all_ids = [f.stem for f in Path(ds_dir).glob('*.npz') if (ds_name, f.stem) not in all_dups]
-
-        print(len(all_ids), len(all_files))
         
         # Shuffle
         random.shuffle(all_ids)
