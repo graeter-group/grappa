@@ -268,7 +268,7 @@ def get_data(ds_paths:List[Union[str, Path]], n_graphs=None, force_factor=0)->Tu
     return datasets, datanames
 
 
-def load_yaml(path:Union[str,Path]):
+def load_yaml(path:Union[str,Path]) -> dict:
     with open(str(path), 'r') as f:
         d = yaml.safe_load(f)
     return d
