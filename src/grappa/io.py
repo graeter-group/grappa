@@ -28,15 +28,40 @@ class Molecule():
     
     def _validate(self):
         # check the input for consistency
+        # TODO: compare to current input validation
         pass   
     
     def  __post_init__(self):
-        if self.angles is None:
-            pass
-            # build angles from bonds
-        if self.propers is None:
-            pass
-            # build dihedrals from bonds
+        #TODO: check whether this does what is is supposed to do
+        if self.angles is None or self.propers is None:
+            # generate bound_to dict
+            bound_to = {}
+            for bond in self.bonds:
+                for i,atomnr in enumerate(bond):
+                    if bound_to.get(atomnr):
+                        bound_to[atomnr].append(bond[1-i])
+                        bound_to[atomnr].sort(key=int)
+                    else:
+                        bound_to[atomnr] = [bond[1-i]]
+
+            if self.angles is None:
+                self.angles = []
+                # build angles from bound_to
+                for atomnr, neighbors in bound_to.items():
+                    for i, n1 in enumerate(neighbors):
+                        for ii, n2 in enumerate(neighbors[:i]):
+                            self.angles.append([n1,atomnr,n2])
+
+            if self.propers is None:
+                self.propers = []
+                # build proper dihedrals from bound_to
+                for atomnr, neighbors in bound_to.items():
+                    for i, center in enumerate(neighbors):
+                        for ii, outer1 in enumerate(neighbors[:i]):
+                            for iii,outer2 in enumerate(bound_to.get(center)):
+                                if atomnr != outer2:
+                                    self.propers.append([outer1,atomnr,center,outer2])
+            
 
         self._validate()
     

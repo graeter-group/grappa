@@ -61,6 +61,7 @@ class Grappa():
     def predict(self, input: Molecule) -> Parameters:
         self.model.eval()
         # try if this give good error messages if input is wrong size
+        # what happens if no weights are specified?
         parameters = self.model(input)
         return parameters
 
