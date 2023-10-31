@@ -1,0 +1,228 @@
+;
+; File 'topol.top' was generated
+; By user: hartmaec (7122)
+; On host: rh05659.villa-bosch.de
+; At date: Fri Jun 24 15:13:48 2022
+;
+; This is a standalone topology file
+;
+; Created by:
+; :-) GROMACS - gmx pdb2gmx, 2021-MODIFIED (-:
+;
+; Executable: /hits/fast/mbm/hartmaec/sw/gromacs-2021/run/bin/gmx
+; Data prefix: /hits/fast/mbm/hartmaec/sw/gromacs-2021/run
+; Working dir: /hits/fast/mbm/hartmaec/workdir/TopologyChanger/test_delatom
+; Command line:
+; gmx pdb2gmx -f Ala_delHA.gro -o Ala_nat.gro -ignh
+; Force field was read from current directory or a relative path - path added.
+;
+
+; Include forcefield parameters
+#include "./amber99sb-star-ildnp.ff/forcefield.itp"
+
+[ moleculetype ]
+; Name nrexcl
+Protein  3       
+
+[ atoms ]
+; nr type resnr residue atom cgnr charge mass typeB chargeB massB
+; residue 1 ACE rtp ACE q 0.0
+1        CT       1        ACE      CH3      1        -0.3662  12.01   
+2        HC       1        ACE      HH31     2        0.1123   1.008   
+3        HC       1        ACE      HH32     3        0.1123   1.008   
+4        HC       1        ACE      HH33     4        0.1123   1.008   
+5        C        1        ACE      C        5        0.5972   12.01   
+6        O        1        ACE      O        6        -0.5679  16.0     ;        qtot     0       
+; residue 2 ALA rtp ALA q 0.0
+7        N        2        ALA      N        7        -0.4157  14.01   
+8        H        2        ALA      H        8        0.2719   1.008   
+9        CT       2        ALA      CA       9        0.1160   12.01   
+10       CT       2        ALA      CB       10       -0.1825  12.01   
+11       HC       2        ALA      HB1      11       0.0603   1.008   
+12       HC       2        ALA      HB2      12       0.0603   1.008   
+13       HC       2        ALA      HB3      13       0.0603   1.008   
+14       C        2        ALA      C        14       0.5973   12.01   
+15       O        2        ALA      O        15       -0.5679  16.0     ;        qtot     0       
+; residue 3 NME rtp NME q 0.0
+16       N        3        NME      N        16       -0.4157  14.01   
+17       H        3        NME      H        17       0.2719   1.008   
+18       CT       3        NME      CH3      18       -0.149   12.01   
+19       H1       3        NME      HH31     19       0.0976   1.008   
+20       H1       3        NME      HH32     20       0.0976   1.008   
+21       H1       3        NME      HH33     21       0.0976   1.008    ;        qtot     0       
+
+[ bonds ]
+; ai aj funct c0 c1 c2 c3
+1        2        1       
+1        3        1       
+1        4        1       
+1        5        1       
+5        6        1       
+5        7        1       
+7        8        1       
+7        9        1        0.13600  282001.600000  ; patched parameter
+9        10       1        0.14955  259408.000000  ; patched parameter
+9        14       1        0.14916  265265.600000  ; patched parameter
+10       11       1        0.10900  284512.0
+10       12       1        0.10900  284512.0
+10       13       1        0.10900  284512.0
+14       15       1       
+14       16       1       
+16       17       1       
+16       18       1       
+18       19       1       
+18       20       1       
+18       21       1       
+
+[ pairs ]
+; ai aj funct c0 c1 c2 c3
+1        8        1       
+1        9        1       
+2        6        1       
+2        7        1       
+3        6        1       
+3        7        1       
+4        6        1       
+4        7        1       
+5        10       1       
+5        14       1       
+6        8        1       
+6        9        1       
+7        11       1       
+7        12       1       
+7        13       1       
+7        15       1       
+7        16       1       
+8        10       1       
+8        14       1       
+9        17       1       
+9        18       1       
+10       15       1       
+10       16       1       
+11       14       1       
+12       14       1       
+13       14       1       
+14       19       1       
+14       20       1       
+14       21       1       
+15       17       1       
+15       18       1       
+17       19       1       
+17       20       1       
+17       21       1       
+
+[ angles ]
+; ai aj ak funct c0 c1 c2 c3
+2        1        3        1       
+2        1        4        1       
+2        1        5        1       
+3        1        4        1       
+3        1        5        1       
+4        1        5        1       
+1        5        6        1       
+1        5        7        1       
+6        5        7        1       
+5        7        8        1       
+5        7        9        1       
+8        7        9        1       
+7        9        10       1        117.0000000 669.440000  ; patched parameter
+7        9        14       1        117.0000000 527.184000  ; patched parameter
+10       9        14       1        117.0000000 527.184000  ; patched parameter
+9        10       11       1        109.500  418.400 
+9        10       12       1        109.500  418.400 
+9        10       13       1        109.500  418.400 
+11       10       12       1        109.500  292.880 
+11       10       13       1        109.500  292.880 
+12       10       13       1        109.500  292.880 
+9        14       15       1       
+9        14       16       1       
+15       14       16       1       
+14       16       17       1       
+14       16       18       1       
+17       16       18       1       
+16       18       19       1       
+16       18       20       1       
+16       18       21       1       
+19       18       20       1       
+19       18       21       1       
+20       18       21       1       
+
+[ dihedrals ]
+; ai aj ak al funct c0 c1 c2 c3 c4 c5
+2        1        5        6        9       
+2        1        5        7        9       
+3        1        5        6        9       
+3        1        5        7        9       
+4        1        5        6        9       
+4        1        5        7        9       
+1        5        7        8        9       
+1        5        7        9        9       
+6        5        7        8        9       
+6        5        7        9        9       
+5        7        9        10       9       
+5        7        9        14       9        180.000000 1.6279944 1         ; patched parameter
+5        7        9        14       9        180.000000 21.068532 2         ; patched parameter
+5        7        9        14       9        180.000000 1.447664 3         ; patched parameter
+8        7        9        10       9       
+8        7        9        14       9       
+7        9        10       11       9       
+7        9        10       12       9       
+7        9        10       13       9       
+14       9        10       11       9       
+14       9        10       12       9       
+14       9        10       13       9       
+7        9        14       15       9       
+7        9        14       16       9        180.000000 6.556746 1         ; patched parameter
+7        9        14       16       9        180.000000 20.284450 2         ; patched parameter
+7        9        14       16       9        180.000000 0.297901 3         ; patched parameter
+10       9        14       15       9       
+10       9        14       16       9       
+9        14       16       17       9       
+9        14       16       18       9       
+15       14       16       17       9       
+15       14       16       18       9       
+14       16       18       19       9       
+14       16       18       20       9       
+14       16       18       21       9       
+17       16       18       19       9       
+17       16       18       20       9       
+17       16       18       21       9       
+; ai aj ak al funct c0 c1 c2 c3
+1        7        5        6        4       
+5        9        7        8        4       
+7        10       9        14       4        180.0000000 43.93200 2         ; patched parameter
+7        9        14       16       4        105.4    0.75     1       
+9        16       14       15       4       
+14       18       16       17       4       
+
+
+; Include Position restraint file
+#ifdef   POSRES  
+#include "posre.itp"
+#endif  
+
+
+; Include water topology
+#include "./amber99sb-star-ildnp.ff/tip3p.itp"
+
+#ifdef   POSRES_WATER
+[ position_restraints ]
+; Position restraint for each water oxygen
+; i funct fcx fcy fcz
+1        1        1000     1000     1000    
+#endif  
+
+
+; Include topology for ions
+#include "./amber99sb-star-ildnp.ff/ions.itp"
+
+[ system ]
+; Name
+Green    Red      Orange   Magenta  Azure    Cyan     Skyblue  in       water   
+
+[ molecules ]
+; Compound #mols
+Protein  1       
+SOL         551
+NA               2
+CL               2
