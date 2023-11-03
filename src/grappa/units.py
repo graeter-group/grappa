@@ -1,5 +1,5 @@
 """
-units used in grappa
+Units used internally in grappa.
 """
 
 from openmm import unit

@@ -60,6 +60,7 @@ tmp/
 *.code-workspace
 /.luarc.json
 
+old_src/
 data/
 esp_data/
 data_backup/
