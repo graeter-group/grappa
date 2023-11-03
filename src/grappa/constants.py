@@ -1,3 +1,5 @@
+IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion as used by grappa
+
 # MAX_ELEMENT = 26 # cover Iron
 
 MAX_ELEMENT = 53 # cover Iodine

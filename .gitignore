@@ -62,6 +62,8 @@ tmp/
 
 old_src/
 data/
+# do not ignore data/ in grappa/src/grappa/data:
+!src/grappa/data/
 esp_data/
 data_backup/
 npy_charge_dicts/
