@@ -89,3 +89,8 @@ print("Num proper grappa:", len(torsions_grappa))
 print("Num improper grappa:", len(impropers_grappa))
 print("Num openmm:", len(torsions_openmm))
 # %%
+mol.bonds[:10]
+# %%
+mol.sort()
+mol.bonds[:10]
+# %%

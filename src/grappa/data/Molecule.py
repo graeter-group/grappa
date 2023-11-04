@@ -31,12 +31,13 @@ class Molecule():
     angles: Optional[Union[list[tuple[int,int,int]], np.ndarray]] = None
     propers: Optional[Union[list[tuple[int,int,int,int]], np.ndarray]] = None
 
+    neighbor_dict: Optional[Dict[int, List[int]]] = None # if needed, this is calculated from bonds and stored. This is used to calculate angles and propers if they are not given and later on to check whether torsions are improper.
 
     def _validate(self):
         # check the input for consistency
         # TODO: compare to current input validation
         # this could check that no equivalent improper torsions or bonds are present
-        pass   
+        pass
     
     def  __post_init__(self):
         #TODO: check whether this does what is is supposed to do
@@ -54,9 +55,25 @@ class Molecule():
 
         self._validate()
     
+    def sort(self):
+        """
+        Sort the interation tuples to the convention tuple[0] < tuple[-1] using invariant permutations.
+        Impropers are not affected.
+        """
+        for i, bond in enumerate(self.bonds):
+            # this notation is agnostic of the data type of self.bonds:
+            self.bonds[i] = (bond[0], bond[1]) if bond[0] < bond[1] else (bond[1], bond[0])
+        
+        for i, angle in enumerate(self.angles):
+            self.angles[i] = (angle[0], angle[1], angle[2]) if angle[0] < angle[2] else (angle[2], angle[1], angle[0])
+
+        for i, proper in enumerate(self.propers):
+            self.propers[i] = (proper[0], proper[1], proper[2], proper[3]) if proper[0] < proper[3] else (proper[3], proper[2], proper[1], proper[0])
+
+        
 
     @classmethod
-    def from_openmm_system(cls, openmm_system:"openmm.app.System", openmm_topology:"openmm.app.Topology", improper_central_atom_position:int=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, improper_central_atom_position:int=None):
         """
         Create a Molecule from an openmm system. If bonds is None, the bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
@@ -264,3 +281,12 @@ class Molecule():
         array_dict = np.load(path)
         return cls.from_dict(array_dict)
 
+
+    def is_improper(self, torsion):
+        """
+        Returns is_improper, actual_central_atom_position. See utils/tuple_indices.py for details.
+        """
+        if self.neighbor_dict is None:
+            self.neighbor_dict = tuple_indices.get_neighbor_dict(bonds=self.bonds, sort=True)
+
+        return tuple_indices.is_improper(ids=torsion, neighbor_dict=self.neighbor_dict, central_atom_position=None)

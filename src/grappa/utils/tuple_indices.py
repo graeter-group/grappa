@@ -67,6 +67,7 @@ def get_neighbor_dict(bonds:List[Tuple[int, int]], sort:bool=True)->Dict:
     # generate neighbor_dict dict such that neighbor_dict[atom_id] = [neighbor1, neighbor2, ...]
     neighbor_dict = {}
     for bond in bonds:
+        assert len(bond) == 2, f"Encountered bond with more than two atoms: {bond}"
         for i,atom_id in enumerate(bond):
             if neighbor_dict.get(atom_id):
                 assert bond[1-i] != atom_id, f"Encountered self-bond: {bond}"
