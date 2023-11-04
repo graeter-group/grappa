@@ -86,8 +86,10 @@ def get_neighbor_dict(bonds:List[Tuple[int, int]], sort:bool=True)->Dict:
 def is_improper(ids:Tuple[int,int,int,int], neighbor_dict:Dict, central_atom_position:int=None)->bool:
     # NOTE: this should also return the central atom position and this positions should be consistent in the Molecule class.
     """
+    Returns is_improper, actual_central_atom_position.
     Helper function to check whether the given tuple of indices describes an improper torsion.
     Checks whether the given tuple of indices describes an improper torsion.
+    Also the index of the central atom in the input tuple is returned.
     It is assumed that the tuples describe either a proper or improper torsion.
     The central_atom_position is the index of the central atom in the tuple. If known, this can offer an evaluation speedup. This is a convention. In amber force fields, the central atom is the third atom in the tuple, i.e. at position 2.
     """
@@ -105,8 +107,11 @@ def is_improper(ids:Tuple[int,int,int,int], neighbor_dict:Dict, central_atom_pos
             if i != central_atom_position:  # skip the central atom itself
                 if atom_id not in neighbor_idxs:
                     # if one of the atoms is not connected to it, return False
-                    return False
+                    return False, None
 
+        # if all atoms are connected to the central atom, this is an improper torsion
+        return True, central_atom_position
+    
     else:
         # try all atoms as potential central atom:
         for central_atom in ids:
@@ -115,7 +120,7 @@ def is_improper(ids:Tuple[int,int,int,int], neighbor_dict:Dict, central_atom_pos
 
             # for each atom in the torsion, check if it's a neighbor of the central atom
             if all([atom_id in neighbor_idxs for atom_id in ids if atom_id != central_atom]):
-                return True
-
-    # if all atoms are connected to the central atom, this is an improper torsion
-    return True
+                return True, ids.index(central_atom)
+        
+        # we have not found a central atom.
+        return False, None

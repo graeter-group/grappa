@@ -38,6 +38,9 @@ def get_idx_tuples(force:openmm.Force):
 # some smiles string:
 smilestring = 'CC(C)(C)C(=O)OC1CC2C3CCC4=CC(=O)CCC4=C3C(CCC12C)C(=O)OC(C)(C)C'
 
+# very small molecule:
+# smilestring = 'CCC'
+
 
 from openff.toolkit import ForceField
 from openff.toolkit import Molecule as OpenFFMolecule
@@ -64,17 +67,25 @@ assert set(angles_openmm) == set(angles_grappa), "Not all openmm angles are cont
 # %%
 f = get_force(system, 'PeriodicTorsionForce')
 torsions_openmm = get_idx_tuples(f)
-torsions_openmm = [(t0, t1, t2, t3) if t0 < t3 else (t3, t2, t1, t0) for t0, t1, t2, t3 in torsions_openmm] # canonical sorting
+# make them unique:
+torsions_openmm = set(torsions_openmm)
+
+# make the tuples sets since we are only interesetd in whether they occur or not
+torsions_openmm = [set(t) for t in torsions_openmm]
 torsions_grappa = mol.propers
 impropers_grappa = mol.impropers
 
-# canonical sorting:
-torsions_grappa = [(t0, t1, t2, t3) if t0 < t3 else (t3, t2, t1, t0) for t0, t1, t2, t3 in torsions_grappa]
-impropers_grappa = [(t0, t1, t2, t3) if t0 < t3 else (t3, t2, t1, t0) for t0, t1, t2, t3 in impropers_grappa]
+# we can make the tuples sets since we are only interesetd in whether they occur or not
+torsions_grappa = [set(t) for t in torsions_grappa]
+impropers_grappa = [set(t) for t in impropers_grappa]
 
-# NOTE: canonical sorting for impropers is flawed!
 
-assert all([t in torsions_grappa or t in impropers_grappa for t in torsions_openmm]), "Not all openmm torsions are either contained in grappa or are improper."
+if not all([t in torsions_grappa or t in impropers_grappa for t in torsions_openmm]):
+    raise RuntimeError(f"Not all openmm torsions are either contained in grappa or are improper:\nnum_proper_grappa:{len(torsions_grappa)}\nnum_improper_grappa:{len(impropers_grappa)}\nnum_openmm:{len(torsions_openmm)}\nopenmm torsions not in grappa:{[t for t in torsions_openmm if not (t in torsions_grappa or t in impropers_grappa)]}\ngrappa torsions not in openmm:{[t for t in torsions_grappa if not t in torsions_openmm]}")
 # %%
 assert len(mol.impropers) > 0
+# %%
+print("Num proper grappa:", len(torsions_grappa))
+print("Num improper grappa:", len(impropers_grappa))
+print("Num openmm:", len(torsions_openmm))
 # %%
