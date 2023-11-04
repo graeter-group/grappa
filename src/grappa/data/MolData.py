@@ -71,8 +71,8 @@ class MolData():
         pass
     
 
-    @staticmethod
-    def from_dict(array_dict:Dict):
+    @classmethod
+    def from_dict(cls, array_dict:Dict):
         """
         Create a Molecule from a dictionary of arrays.
         """
@@ -85,16 +85,16 @@ class MolData():
         """
         np.savez(path, **self.to_dict())
 
-    @staticmethod
-    def load(path:str):
+    @classmethod
+    def load(cls, path:str):
         """
         Load the molecule from a npz file.
         """
         array_dict = np.load(path)
-        return Molecule.from_dict(array_dict)
+        return cls.from_dict(array_dict)
 
-    @staticmethod
-    def from_openmm_system(openmm_system, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None):
+    @classmethod
+    def from_openmm_system(cls, openmm_system, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.

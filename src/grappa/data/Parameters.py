@@ -57,8 +57,8 @@ class Parameters():
     improper_ns: Optional[np.ndarray]
     improper_phases: Optional[np.ndarray]
 
-    @staticmethod
-    def from_dgl(dgl_graph):
+    @classmethod
+    def from_dgl(cls, dgl_graph):
         """
         Assumes that the dgl graph has the following features:
             - 'ids' at node type n1 (these are the atom ids)
@@ -66,8 +66,8 @@ class Parameters():
         """
         pass
 
-    @staticmethod
-    def from_openmm_system(openmm_system, mol:Molecule, mol_is_sorted:bool=False):
+    @classmethod
+    def from_openmm_system(cls, openmm_system, mol:Molecule, mol_is_sorted:bool=False):
         """
         Uses an openmm system to obtain classical parameters. The molecule is used to obtain the atom and interacion ids (not the openmm system!). The order of atom in the openmm system must be the same as in mol.atoms. Improper torsion parameters are not obtained from the openmm system.
         mol_is_sorted: if True, then it is assumed that the id tuples are sorted:
@@ -126,3 +126,5 @@ class Parameters():
                         proper_ks[proper_idx, periodicity-1] = torsion_k
                         proper_ns[proper_idx, periodicity-1] = periodicity
                         proper_phases[proper_idx, periodicity-1] = phase
+            
+        pass

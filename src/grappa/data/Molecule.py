@@ -55,8 +55,8 @@ class Molecule():
         self._validate()
     
 
-    @staticmethod
-    def from_openmm_system(openmm_system:"openmm.app.System", openmm_topology:"openmm.app.Topology", improper_central_atom_position:int=None):
+    @classmethod
+    def from_openmm_system(cls, openmm_system:"openmm.app.System", openmm_topology:"openmm.app.Topology", improper_central_atom_position:int=None):
         """
         Create a Molecule from an openmm system. If bonds is None, the bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
@@ -141,7 +141,7 @@ class Molecule():
             atoms.append(atom.index)
 
 
-        return Molecule(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges)
+        return cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges)
 
 
     def add_features(self, feat_names:list[str]=['ring_encoding'], **kwargs):
@@ -231,15 +231,15 @@ class Molecule():
         return array_dict
     
 
-    @staticmethod
-    def from_dict(array_dict:Dict):
+    @classmethod
+    def from_dict(cls, array_dict:Dict):
         """
         Create a Molecule from a dictionary of arrays. The additional features are saved as additional dictionary entries. The keys of the additional features must not be the same as the molecule attributes and their values must be numpy arrays.
         """
 
         assert all([isinstance(feat, np.ndarray) for feat in array_dict.values()]), f"Dict values must be numpy arrays but found {[type(f) for f in array_dict.values()]}"
 
-        return Molecule(
+        return cls(
             atoms=array_dict['atoms'],
             bonds=array_dict['bonds'],
             angles=array_dict['angles'],
@@ -256,11 +256,11 @@ class Molecule():
         """
         np.savez(path, **self.to_dict())
 
-    @staticmethod
-    def load(path:str):
+    @classmethod
+    def load(cls, path:str):
         """
         Load the molecule from a npz file.
         """
         array_dict = np.load(path)
-        return Molecule.from_dict(array_dict)
+        return cls.from_dict(array_dict)
 
