@@ -31,9 +31,16 @@ def get_sp_hybridization_encoding(openff_mol:"openff.toolkit.Molecule")->np.ndar
             ]
         )
 
-def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[list, int]=None):
+def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[list, int]=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
     """
-    Retursn system, topology.
+    Returns system, topology, openff_molecule.
+    Supported (tested) force fields:
+    - gaff-2.11
+    - openff-1.2.0.offxml
+    - openff-2.0.0.offxml
+    - openff_unconstrained-1.2.0.offxml
+    - openff_unconstrained-2.0.0.offxml
+
     """
     from openff.toolkit import ForceField, Topology
     from openff.toolkit.topology import Molecule
@@ -56,11 +63,11 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
 
         if partial_charges is not None:
             # use the charges given in the raw molecule:
-            openmm_system = ff.create_openmm_system(topology, charge_from_molecules=[mol])
+            openmm_system = ff.create_openmm_system(topology, charge_from_molecules=[mol], **system_kwargs)
         
         else:
             # calculate the charges from the force field (expensive!)
-            openmm_system = ff.create_openmm_system(topology)
+            openmm_system = ff.create_openmm_system(topology, **system_kwargs)
 
     elif 'gaff' in openff_forcefield:
         # assert that openmmforcefields is installed:
@@ -68,6 +75,11 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
 
         from openmmforcefields.generators import SystemGenerator
         top = mol.to_topology().to_openmm()
+
+        if partial_charges is not None:
+            raise NotImplementedError("Externally given partial charges are not supported yet for openmmforcefields force fields.")
+        if not len(system_kwargs) == 0:
+            raise NotImplementedError("Externally given system kwargs are not supported yet for openmmforcefields force fields.")
 
         system_generator = SystemGenerator(small_molecule_forcefield=openff_forcefield)
 
@@ -81,4 +93,4 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
     else:
         raise NotImplementedError("Only openff and gaff force fields are supported.")
     
-    return openmm_system, openmm_topology
+    return openmm_system, openmm_topology, mol

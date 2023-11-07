@@ -4,7 +4,7 @@ import numpy as np
 
 dspath = Path(__file__).parents[1]/'data'/"datasets"/"spice-des-monomers"
 
-data = np.load(dspath/"0.npz")
+data = np.load(dspath/"34.npz")
 
 smiles = data['mapped_smiles'].item()
 print([k for k in data.keys()])
@@ -16,15 +16,16 @@ charges = data['am1bcc_elf_charges']
 energy_ref = data['energy_ref']
 gradient_ref = data['gradient_ref']
 
+print(np.mean(np.square(energy_ref - energy)))
 # %%
 
 from grappa.data import MolData
 
-mol = MolData.from_smiles(mapped_smiles=smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield='openff_unconstrained-1.2.0.offxml', partial_charges=charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
+mol = MolData.from_smiles(mapped_smiles=smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
 # %%
 from grappa.utils import openmm_utils, openff_utils
 
-system, topol = openff_utils.get_openmm_system(smiles, openff_forcefield='openff_unconstrained-1.2.0.offxml', partial_charges=charges)
+system, topol, _ = openff_utils.get_openmm_system(smiles, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges)
 
 energies_cl, forces_cl = openmm_utils.get_energies(openmm_system=system, xyz=xyz)
 # %%
@@ -36,6 +37,7 @@ mol.energy -= mol.energy.mean()
 energies_cl -= energies_cl.mean()
 plt.scatter(mol.energy, energies_cl)
 plt.show()
+assert 1e-10 < np.sqrt(np.mean((energies_cl - mol.energy)**2)) < 10
 # %%
 print("validate that the reference energy is qm - nonbonded with the given charges:")
 system = openmm_utils.remove_forces_from_system(system, keep=['NonbondedForce'])
@@ -44,17 +46,19 @@ nonb_energies, nonb_forces = openmm_utils.get_energies(openmm_system=system, xyz
 u_reference = mol.energy - nonb_energies
 u_reference -= u_reference.mean()
 
-mol.reference_energy -= mol.reference_energy.mean()
+mol.energy_ref -= mol.energy_ref.mean()
 
-plt.scatter(u_reference, mol.reference_energy)
+plt.scatter(u_reference, mol.energy_ref)
 plt.show()
-print("rmse:", np.sqrt(np.mean((u_reference - mol.reference_energy)**2)), "kcal/mol")
+print("rmse:", np.sqrt(np.mean((u_reference - mol.energy_ref)**2)), "kcal/mol")
+assert np.sqrt(np.mean((u_reference - mol.energy_ref)**2)) < 1e-1
 # %%
 # same for reference gradient
-grad_reference = mol.gradient - nonb_forces
-plt.scatter(grad_reference, mol.reference_gradient)
+grad_reference = mol.gradient + nonb_forces
+plt.scatter(grad_reference, mol.gradient_ref)
 plt.show()
-print("rmse:", np.sqrt(np.mean((grad_reference - mol.reference_gradient)**2)), "kcal/mol/A")
+print("rmse:", np.sqrt(np.mean((grad_reference - mol.gradient_ref)**2)), "kcal/mol/A")
+assert np.sqrt(np.mean((grad_reference - mol.gradient_ref)**2)) < 1e-1
 #%%
 g = mol.to_dgl()
 g.nodes['n1'].data['atomic_number'].shape
@@ -64,7 +68,7 @@ params = Parameters.from_dgl(g, suffix='_ref')
 assert np.allclose(params.bond_eq, mol.classical_parameters.bond_eq, atol=1e-3)
 # %%
 # now predict bonded energy of the classical ff:
-system, topol = openff_utils.get_openmm_system(smiles, openff_forcefield='openff_unconstrained-1.2.0.offxml', partial_charges=charges)
+system, topol, _ = openff_utils.get_openmm_system(smiles, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges)
 system = openmm_utils.remove_forces_from_system(system, exclude=['NonbondedForce'])
 b_energies, b_forces = openmm_utils.get_energies(openmm_system=system, xyz=xyz)
 # %%
@@ -87,4 +91,5 @@ plt.scatter(grappa_bonded_e, b_energies)
 plt.show()
 
 print('rmse between grappa and openmm bonded energy:\n', np.sqrt(np.mean((grappa_bonded_e - b_energies)**2)), 'kcal/mol')
+assert np.sqrt(np.mean((grappa_bonded_e - b_energies)**2)) < 1e-3
 # %%

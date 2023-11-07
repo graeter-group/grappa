@@ -2,6 +2,7 @@
 
 def get_energies(openmm_system, xyz):
     """
+    Returns enegries, forces.
     Assume that xyz is in angstroem.
     """
     from openmm import app

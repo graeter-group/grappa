@@ -53,8 +53,7 @@ class Molecule():
 
         if self.additional_features is None:
             self.additional_features= {}
- 
-        # NOTE: add additional, related versions of improper torsions (if not present) to fulfill the required permutation invariance!
+
 
         self._validate()
     
@@ -204,6 +203,27 @@ class Molecule():
 
             else:
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")
+            
+    @classmethod
+    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:np.ndarray=None):
+        """
+        Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used t initialize the interaction tuples and, if partial_charges is None, to obtain the partial charges.
+        """
+        assert pkgutil.find_loader("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
+
+        from grappa.utils import openff_utils
+
+        # get the openmm system and topology:
+        system, topol, openff_mol = openff_utils.get_openmm_system(mapped_smiles=mapped_smiles, openff_forcefield=openff_forcefield, partial_charges=partial_charges)
+
+        # get the molecule from the openmm system and topology:
+        mol = cls.from_openmm_system(openmm_system=system, openmm_topology=topol, partial_charges=partial_charges)
+
+        # add features:
+        mol.add_features(feat_names=['ring_encoding', 'sp_hybridization'], openff_mol=openff_mol)
+
+        return mol
+    
     
     def to_dgl(self, max_element=53, exclude_feats:list[str]=[]):
         """
