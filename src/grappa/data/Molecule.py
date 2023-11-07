@@ -7,6 +7,9 @@ from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
 from grappa import constants
 from grappa.utils import tuple_indices
+from dgl import DGLGraph
+import dgl.heterograph
+import torch
 
 import pkgutil
 
@@ -73,7 +76,7 @@ class Molecule():
         
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, improper_central_atom_position:int=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges=None):
         """
         Create a Molecule from an openmm system. If bonds is None, the bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
@@ -110,7 +113,7 @@ class Molecule():
                         # skip this torsion if it is already present (in a different order, which is fine becasue we always store all three independent orderings for a given central atom and because the central atom is unique assuming there are no fully connected sets of four atoms):
                         continue
 
-                    is_improper, central_idx = tuple_indices.is_improper(ids=torsion, neighbor_dict=neighbor_dict, central_atom_position=improper_central_atom_position)
+                    is_improper, central_idx = tuple_indices.is_improper(ids=torsion, neighbor_dict=neighbor_dict)
                     if is_improper:
                         # permute two atoms such that the central atom is at the index given by grappa.constants.IMPROPER_CENTRAL_IDX:
                         central_atom = torsion[central_idx]
@@ -142,14 +145,14 @@ class Molecule():
                         improper_sets.append(set(torsion))
 
 
-
-        # get partial charges from the openmm system:
-        partial_charges = []
-        for force in openmm_system.getForces():
-            if force.__class__.__name__ == 'NonbondedForce':
-                for i in range(force.getNumParticles()):
-                    q, _, _ = force.getParticleParameters(i)
-                    partial_charges.append(q.value_in_unit(openmm_unit.elementary_charge))
+        if partial_charges is None:
+            # get partial charges from the openmm system:
+            partial_charges = []
+            for force in openmm_system.getForces():
+                if force.__class__.__name__ == 'NonbondedForce':
+                    for i in range(force.getNumParticles()):
+                        q, _, _ = force.getParticleParameters(i)
+                        partial_charges.append(q.value_in_unit(openmm_unit.elementary_charge))
 
         # get atomic numbers and atom indices using zip:
         atomic_numbers, atoms = [], []
@@ -205,16 +208,92 @@ class Molecule():
     def to_dgl(self, max_element=53, exclude_feats:list[str]=[]):
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
-        The dgl graph has the following node types:
+        The dgl graph has the following node types (if the number of respective nodes is nonzero):
             - g: global
             - n1: atoms
             - n2: bonds
             - n3: angles
             - n4: propers
-            - n4_improper: impropers
+            - n4_improper: impropers        
         The node type n1 carries the feature 'ids', which are the identifiers in self.atoms. The other interaction levels (n{>1}) carry the idxs (not ids) of the atoms as ordered in self.atoms as feature 'idxs'. These are not the identifiers but must be translated back to the identifiers using ids = self.atoms[idxs] after the forward pass.
         """
-        pass
+        assert not any([ids is None for ids in [self.angles, self.propers]]), f"atoms, bonds, angles, propers and impropers must not be None"
+        
+        # initialize empty dictionary
+        hg = {}
+
+        idx_from_id = {id:idx for idx, id in enumerate(self.atoms)}
+
+        # transform entries of n{>1} to idxs of the atoms:
+        idxs = {
+            "n1": torch.tensor(self.atoms, dtype=torch.int64), # these are ids
+            "n2": torch.tensor([(idx_from_id[bond[0]], idx_from_id[bond[1]]) for bond in self.bonds], dtype=torch.int64), # these are idxs
+            "n3": torch.tensor([(idx_from_id[angle[0]], idx_from_id[angle[1]], idx_from_id[angle[2]]) for angle in self.angles], dtype=torch.int64), # these are idxs
+            "n4": torch.tensor([(idx_from_id[proper[0]], idx_from_id[proper[1]], idx_from_id[proper[2]], idx_from_id[proper[3]]) for proper in self.propers], dtype=torch.int64), # these are idxs
+            "n4_improper": torch.tensor([(idx_from_id[improper[0]], idx_from_id[improper[1]], idx_from_id[improper[2]], idx_from_id[improper[3]]) for improper in self.impropers], dtype=torch.int64), # these are idxs
+        }
+
+        # define the heterograph structure:
+
+        b = idxs["n2"].transpose(0,1) # transform from (n_bonds, 2) to (2, n_bonds)
+
+        # the edges of the other direction:
+        first_idxs = torch.cat((b[0], b[1]), dim=0)
+        second_idxs = torch.cat((b[1], b[0]), dim=0) # shape (2*n_bonds,)
+
+        hg[("n1", "n1_edge", "n1")] = torch.stack((first_idxs, second_idxs), dim=0).int() # shape (2, 2*n_bonds)
+        assert len(self.bonds)*2 == len(hg[("n1", "n1_edge", "n1")][0]), f"number of edges in graph ({len(hg[('n1', 'n1_edge', 'n1')][0])}) does not match 2*number of bonds ({2*len(self.bonds)})"
+            
+        # ======================================
+        # since we do not need neighborhood for levels other than n1, simply create a graph with only self loops:
+        # ======================================
+        TERMS = ["n2", "n3", "n4", "n4_improper"]
+
+        TERMS = [t for t in TERMS if not len(idxs[t]) == 0]
+
+        for term in TERMS+["g"]:
+            key = (term, f"{term}_edge", term)
+            n_nodes = len(idxs[term]) if term != "g" else 1
+            hg[key] = torch.stack(
+                [
+                    torch.arange(n_nodes),
+                    torch.arange(n_nodes),
+                ], dim=0).int()
+
+        # transform to tuples of tensors:
+        hg = {key: (value[0], value[1]) for key, value in hg.items()}
+
+        for k, (vsrc,vdest) in hg.items():
+            # make sure that the tensors have the correct shape:
+            assert vsrc.shape == vdest.shape, f"shape of {k} is {vsrc.shape} and {vdest.shape}"
+            assert len(vdest.shape) > 0, f"shape of {k} is {vdest.shape} and {vdest.shape}"
+            assert vsrc.shape[0] > 0, f"shape of {k} is {vsrc.shape} and {vdest.shape}"
+
+        # init graph
+        hg = dgl.heterograph(hg)
+
+        # write indices in the nodes
+        for term in TERMS:
+            hg.nodes[term].data["idxs"] = idxs[term]
+
+        # for n1, call the feature 'ids' instead of 'idxs' because these are the identifiers of the atoms, not indices:
+        hg.nodes["n1"].data["ids"] = idxs["n1"]
+
+        assert len(self.bonds)*2 == hg.num_edges('n1_edge'), f"number of n1_edges in graph ({hg.num_edges('n1_edge')}) does not match 2 times number of bonds ({len(self.bonds)})"
+
+        # add standard features (atomic number and partial charge):
+        atom_onehot = torch.nn.functional.one_hot(torch.tensor(self.atomic_numbers), num_classes=max_element).float()
+        hg.nodes["n1"].data["atomic_number"] = atom_onehot
+        hg.nodes["n1"].data["partial_charge"] = torch.tensor(self.partial_charges, dtype=torch.float32)
+
+        # add additional features:
+        for feat in self.additional_features.keys():
+            if feat in exclude_feats:
+                continue
+            hg.nodes["n1"].data[feat] = torch.tensor(self.additional_features[feat], dtype=torch.float32)
+
+        return hg
+
 
 
     def to_dict(self):

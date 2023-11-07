@@ -115,7 +115,8 @@ def is_improper(ids:Tuple[int,int,int,int], neighbor_dict:Dict, central_atom_pos
     
     else:
         # try all atoms as potential central atom:
-        for central_atom in ids:
+        # order: 2,1,0,3 because position 2 is the central atom in amber force fields (->small speedup)
+        for central_atom in (ids[i] for i in [2,1,0,3]):
             # get the neighbor_dict of the central atom
             neighbor_idxs = neighbor_dict[central_atom]
 

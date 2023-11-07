@@ -7,6 +7,8 @@ from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
 from grappa.utils import tuple_indices
 from grappa import units as U
+import torch
+from dgl import DGLGraph
 
 from .Molecule import Molecule
 
@@ -55,16 +57,87 @@ class Parameters():
     improper_phases: Optional[np.ndarray]
 
     @classmethod
-    def from_dgl(cls, dgl_graph):
+    def from_dgl(cls, g:DGLGraph, suffix:str=''):
         """
         Assumes that the dgl graph has the following features:
             - 'ids' at node type n1 (these are the atom ids)
             - 'idxs' at node types n2, n3, n4, n4_improper (these are the indices of the atom ids the n1-'ids' vector and thus need to be converted to atom ids by ids = atoms[idxs])
         """
-        pass
+
+        # Extract the atom indices for each type of interaction
+        # Assuming the indices are stored in edge data for 'n2', 'n3', and 'n4'
+        # and that there's a mapping from indices to atom IDs available in node data for 'n1'
+        atom_ids = g.nodes['n1'].data['ids'].numpy()
+        bonds = g.nodes['n2'].data['idxs'].numpy()
+
+        # Convert indices to atom IDs
+        bonds = atom_ids[bonds]
+
+        # Extract the classical parameters from the graph, assuming they have the suffix
+        bond_k = g.nodes['n2'].data[f'k{suffix}'].numpy()
+        bond_eq = g.nodes['n2'].data[f'eq{suffix}'].numpy()
+
+        if 'n3' in g.ntypes:
+            angle_k = g.nodes['n3'].data[f'k{suffix}'].numpy()
+            angle_eq = g.nodes['n3'].data[f'eq{suffix}'].numpy()
+            angles = g.nodes['n3'].data['idxs'].numpy()
+            angles = atom_ids[angles]
+        else:
+            angle_k = np.array([])
+            angle_eq = np.array([])
+            angles = np.array([])
+
+        if 'n4' in g.ntypes:
+            proper_ks = g.nodes['n4'].data[f'k{suffix}'].numpy()
+            # Assuming the phases are stored with a similar naming convention
+            proper_phases = np.where(
+                proper_ks > 0,
+                np.zeros_like(proper_ks),
+                np.zeros_like(proper_ks) + np.pi
+            )
+            proper_ks = np.abs(proper_ks)
+            propers = g.nodes['n4'].data['idxs'].numpy()
+            propers = atom_ids[propers] 
+
+        else:
+            proper_ks = np.array([])
+            proper_phases = np.array([])
+            propers = np.array([])
+
+        # Check if improper torsions are present
+        if 'n4_improper' in g.ntypes:
+            improper_ks = g.nodes['n4_improper'].data[f'k{suffix}'].numpy()
+            improper_phases = np.where(
+                improper_ks > 0,
+                np.zeros_like(improper_ks),
+                np.zeros_like(improper_ks) + np.pi
+            )
+            improper_ks = np.abs(improper_ks)
+            impropers = atom_ids[g.nodes['n4_improper'].data['idxs'].numpy()]
+        else:
+            improper_ks = np.array([])
+            improper_phases = np.array([])
+            impropers = np.array([])
+
+        return cls(
+            atoms=atom_ids,
+            bonds=bonds,
+            bond_k=bond_k,
+            bond_eq=bond_eq,
+            angles=angles,
+            angle_k=angle_k,
+            angle_eq=angle_eq,
+            propers=propers,
+            proper_ks=proper_ks,
+            proper_phases=proper_phases,
+            impropers=impropers,
+            improper_ks=improper_ks,
+            improper_phases=improper_phases,
+        )
+
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, mol:Molecule, mol_is_sorted:bool=False, check_torsions:bool=True):
+    def from_openmm_system(cls, openmm_system, mol:Molecule, mol_is_sorted:bool=False):
         """
         Uses an openmm system to obtain classical parameters. The molecule is used to obtain the atom and interacion ids (not the openmm system!). The order of atom in the openmm system must be the same as in mol.atoms. Improper torsion parameters are not obtained from the openmm system.
         mol_is_sorted: if True, then it is assumed that the id tuples are sorted:
@@ -85,6 +158,7 @@ class Parameters():
         bonds = mol.bonds
         angles = mol.angles
         propers = mol.propers
+        impropers = mol.impropers
 
         # initialize the arrays to zeros:
         bond_k = np.zeros(len(bonds), dtype=np.float32)
@@ -93,6 +167,9 @@ class Parameters():
         angle_eq = np.zeros(len(angles), dtype=np.float32)
         proper_ks = np.zeros((len(propers), 6), dtype=np.float32)
         proper_phases = np.zeros((len(propers), 6), dtype=np.float32)
+        improper_ks = np.zeros((len(impropers), 6), dtype=np.float32)
+        improper_phases = np.zeros((len(impropers), 6), dtype=np.float32)
+
 
         # iterate through bond, angle and proper torsion forces in openmm_system. then write the parameter to the corresponding position in the array.
         for force in openmm_system.getForces():
@@ -135,24 +212,35 @@ class Parameters():
                 for i in range(force.getNumTorsions()):
                     atom1, atom2, atom3, atom4, periodicity, phase, torsion_k = force.getTorsionParameters(i)
 
-                    proper = (atoms[atom1], atoms[atom2], atoms[atom3], atoms[atom4]) if atoms[atom1] < atoms[atom4] else (atoms[atom4], atoms[atom3], atoms[atom2], atoms[atom1])
-                    try:
-                        proper_idx = propers.index(proper)
-                    except ValueError:
-                        # if the torsion is not in the list of propers, it must be an improper torsion. skip it.
-                        if check_torsions:
-                            is_improper, _ = mol.is_improper(proper)
-                            if not is_improper:
-                                raise RuntimeError(f"Encountered a proper torsion {proper} in the openmm system that is not in the list of propers of the molecule.")
-                        continue
-
                     # units:
                     torsion_k = torsion_k.value_in_unit(U.TORSION_K_UNIT)
                     phase = phase.value_in_unit(U.TORSION_PHASE_UNIT)
+                    
+                    # write to array: Enforce positive k here.
+                    phase = phase if torsion_k > 0 else (phase + np.pi) % (2*np.pi)
+                    torsion_k = torsion_k if torsion_k > 0 else -torsion_k
 
-                    # write to array:
-                    proper_ks[proper_idx, periodicity-1] = torsion_k
-                    proper_phases[proper_idx, periodicity-1] = phase
+                    torsion = (atoms[atom1], atoms[atom2], atoms[atom3], atoms[atom4])
+                    
+                    is_improper, _ = mol.is_improper(torsion)
+                    if not is_improper:
+                        torsion = torsion if atoms[atom1] < atoms[atom4] else (atoms[atom4], atoms[atom3], atoms[atom2], atoms[atom1])
+                        try:
+                            proper_idx = propers.index(torsion)
+                        except ValueError:
+                            raise ValueError(f"The torsion {torsion} is not a proper torsion in the molecule {mol}.")
+                        
+                        proper_ks[proper_idx, periodicity-1] = torsion_k if torsion_k > 0 else -torsion_k
+                        proper_phases[proper_idx, periodicity-1] = phase
+
+                    else:
+                        try:
+                            improper_idx = impropers.index(torsion)
+                        except ValueError:
+                            raise ValueError(f"The torsion {torsion} is not an improper torsion in the molecule {mol}.")
+
+                        improper_ks[improper_idx, periodicity-1] = torsion_k if torsion_k > 0 else -torsion_k
+                        improper_phases[improper_idx, periodicity-1] = phase
         
         return cls(
             atoms=atoms,
@@ -165,7 +253,66 @@ class Parameters():
             propers=propers,
             proper_ks=proper_ks,
             proper_phases=proper_phases,
-            impropers=None,
-            improper_ks=None,
-            improper_phases=None,
+            impropers=impropers,
+            improper_ks=improper_ks,
+            improper_phases=improper_phases,
         )
+    
+    def to_dict(self):
+        """
+        Save the parameters as a dictionary of arrays.
+        """
+        d = {
+            'atoms': self.atoms,
+            'bonds': self.bonds,
+            'bond_k': self.bond_k,
+            'bond_eq': self.bond_eq,
+            'angles': self.angles,
+            'angle_k': self.angle_k,
+            'angle_eq': self.angle_eq,
+            'propers': self.propers,
+            'proper_ks': self.proper_ks,
+            'proper_phases': self.proper_phases,
+        }
+        if self.impropers is not None:
+            d['impropers'] = self.impropers
+            d['improper_ks'] = self.improper_ks
+            d['improper_phases'] = self.improper_phases
+
+        return d
+
+
+    @classmethod
+    def from_dict(cls, array_dict:Dict):
+        """
+        Create a Parameters object from a dictionary of arrays.
+        """
+        return cls(**array_dict)
+    
+
+    def write_to_dgl(self, g:DGLGraph)->DGLGraph:
+        """
+        Write the parameters to a dgl graph.
+        For torsion, assume that phases are only 0 or pi.
+        """
+        # write the classical parameters
+        g.nodes['n2'].data['k_ref'] = torch.tensor(self.bond_k, dtype=torch.float32)
+        g.nodes['n2'].data['eq_ref'] = torch.tensor(self.bond_eq, dtype=torch.float32)
+
+        if 'n3' in g.ntypes:
+            g.nodes['n3'].data['k_ref'] = torch.tensor(self.angle_k, dtype=torch.float32)
+            g.nodes['n3'].data['eq_ref'] = torch.tensor(self.angle_eq, dtype=torch.float32)
+
+        if 'n4' in g.ntypes:
+            proper_ks = np.where(
+                np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
+                self.proper_ks, -self.proper_ks)
+            g.nodes['n4'].data['k_ref'] = torch.tensor(proper_ks, dtype=torch.float32)
+
+        if 'n4_improper' in g.ntypes:
+            improper_ks = np.where(
+                np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
+                self.improper_ks, -self.improper_ks)
+            g.nodes['n4_improper'].data['k_ref'] = torch.tensor(improper_ks, dtype=torch.float32)
+
+        return g
