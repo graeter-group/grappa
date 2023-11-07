@@ -81,18 +81,18 @@ def extract_data(g, mol):
         # conformation, atom, spatial dimension
         # i.e. forces are stored as (conformation, atom, spatial dimension), atomic numbers as (atom)
 
-        data[f'u_{ff_name}'] = g.nodes['g'].data[f'u_{ff_name}'][0].numpy()
-        data[f'u_{ff_name}_prime'] = g.nodes['n1'].data[f'u_{ff_name}_prime'].transpose(0,1).numpy()
+        data[f'energy_{ff_name}'] = g.nodes['g'].data[f'u_{ff_name}'][0].numpy()
+        data[f'gradient_{ff_name}'] = g.nodes['n1'].data[f'u_{ff_name}_prime'].transpose(0,1).numpy()
 
-        assert len(data[f'u_{ff_name}'].shape) == 1
-        assert len(data[f'u_{ff_name}_prime'].shape) == 3
+        assert len(data[f'energy_{ff_name}'].shape) == 1
+        assert len(data[f'gradient_{ff_name}'].shape) == 3
 
-        assert data[f'u_{ff_name}'].shape[0] == data[f'u_{ff_name}_prime'].shape[0] == data['xyz'].shape[0]
-        assert data[f'u_{ff_name}_prime'].shape == data['xyz'].shape
+        assert data[f'energy_{ff_name}'].shape[0] == data[f'gradient_{ff_name}'].shape[0] == data['xyz'].shape[0]
+        assert data[f'gradient_{ff_name}'].shape == data['xyz'].shape
 
         # convert to angstrom and kcal/mol
-        data[f'u_{ff_name}'] = Quantity(data[f'u_{ff_name}'], esp_energy).value_in_unit(ENERGY_UNIT)
-        data[f'u_{ff_name}_prime'] = Quantity(data[f'u_{ff_name}_prime'], esp_force).value_in_unit(FORCE_UNIT)
+        data[f'energy_{ff_name}'] = Quantity(data[f'energy_{ff_name}'], esp_energy).value_in_unit(ENERGY_UNIT)
+        data[f'gradient_{ff_name}'] = Quantity(data[f'gradient_{ff_name}'], esp_force).value_in_unit(FORCE_UNIT)
 
     return data
 
