@@ -88,6 +88,9 @@ def set_partial_charges(system, partial_charges:Union[list, np.ndarray])->'openm
         raise ValueError("Number of partial charges does not match number of particles.")
     
     for i, charge in enumerate(partial_charges):
-        nonbonded_force.setParticleParameters(i, charge=unit.Quantity(charge, unit.elementary_charge))
+        # get the parameters:
+        _, sigma, epsilon = nonbonded_force.getParticleParameters(i)
+        # set the charge:
+        nonbonded_force.setParticleParameters(i, charge=charge, sigma=sigma, epsilon=epsilon)
 
     return system

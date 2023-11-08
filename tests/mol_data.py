@@ -135,4 +135,8 @@ gradient_ref = np.zeros((1, len(openff_mol.atoms), 3))
 moldata = MolData.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energies, gradient=gradient, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
 # %%
 assert moldata.improper_gradient_ref.std() > 1e-5
+g = moldata.to_dgl()
+d = moldata.to_dict()
+# %%
+d.keys()
 # %%

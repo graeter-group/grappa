@@ -129,10 +129,11 @@ class MolData():
 
         # remove bond, angle, proper, improper since these are stored in the molecule
         paramdict = {
-            k: v for k, v in self.classical_parameters.to_dict() if k not in ['bond', 'angle', 'proper', 'improper']
-            }
+            k: v for k, v in self.classical_parameters.to_dict().items() if k not in ['atoms', 'bonds', 'angles', 'propers', 'impropers']
+        }
 
-        assert set(paramdict.keys()).isdisjoint(array_dict.keys()), "Parameters and MolData have overlapping keys."
+        if not set(paramdict.keys()).isdisjoint(array_dict.keys()):
+            raise ValueError(f"Parameter keys and array keys overlap: {set(paramdict.keys()).intersection(array_dict.keys())}")
 
         array_dict.update(paramdict)
 
@@ -171,13 +172,16 @@ class MolData():
         improper_energy_ref = array_dict.get('improper_energy_ref', None)
         improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
 
-        # Reconstruct the molecule from the dictionary
-        molecule_dict = {k: v for k, v in array_dict.items() if k.startswith('mol_')}
+        param_keys = ['bond_k', 'bond_eq', 'angle_k', 'angle_eq', 'proper_ks', 'proper_phases', 'improper_ks', 'improper_phases']
+
+        tuple_keys = ['atoms', 'bonds', 'angles', 'propers', 'impropers']
+
+        # Reconstruct the molecule from the dictionary. for this, we need to filter out the keys that are not part of the molecule. We can assume that all keys are disjoint since we check this during saving.
+        molecule_dict = {k: v for k, v in array_dict.items() if k not in param_keys and not 'energy' in k and not 'gradient' in k and not k=='xyz'}
         molecule = Molecule.from_dict(molecule_dict)
 
         # Reconstruct the parameters, excluding keys that are part of the molecule
-        param_keys = ['bond_k', 'bond_eq', 'angle_k', 'angle_eq', 'proper_ks', 'proper_phases', 'improper_ks', 'improper_phases']
-        param_dict = {k: array_dict[k] for k in param_keys if k in array_dict}
+        param_dict = {k: array_dict[k] for k in array_dict if k in param_keys or k in tuple_keys}
         classical_parameters = Parameters.from_dict(param_dict)
 
         # Extract force field energies and gradients
@@ -282,11 +286,25 @@ class MolData():
 
         self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb)
 
+        if not partial_charges is None:
+            # set the partial charges in the openmm system
+            openmm_system = openmm_utils.set_partial_charges(system=openmm_system, partial_charges=partial_charges)
+
+        # calculate the reference energy and gradient from the openmm system to (maybe?) include this in the training objective
+        total_ref_energy, total_ref_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
+        total_ref_gradient = -total_ref_gradient # the reference gradient is the negative of the force
+
+        self.ff_energy['total_ref'] = total_ref_energy
+        self.ff_gradient['total_ref'] = total_ref_gradient
+        
+
         if self.energy_ref is None:
             # calculate reference energy and gradient from the openmm system using the partial charges provided
-            if not partial_charges is None:
-                # set the partial charges in the openmm system
-                openmm_system = openmm_utils.set_partial_charges(system=openmm_system, partial_charges=partial_charges)
+
+            # create a deep copy of the system:
+            system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
+
+            # remnove all but the nonbonded forces
 
             self.energy_ref, self.gradient_ref = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
             self.gradient_ref = -self.gradient_ref # the reference gradient is the negative of the force
@@ -297,7 +315,7 @@ class MolData():
 
         # get a list of sets of improper torsion tuples:
         improper_sets = [set(t) for t in self.molecule.impropers]
-        print(improper_sets)
+
         # set all ks to zero that are not impropers:
         for force in openmm_system.getForces():
             if not isinstance(force, openmm.PeriodicTorsionForce):

@@ -320,6 +320,7 @@ class Molecule():
         """
         Save the molecule as a dictionary of arrays. The additional features are saved as additional dictionary entries. The keys of the additional features must not be the same as the molecule attributes and their values must be numpy arrays.
         """
+        # check that the additional features are not the same as the molecule attributes since keys must be unique:
         assert not any([key in
             [
                 'atoms',

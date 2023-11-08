@@ -8,7 +8,7 @@ target_path="$SCRIPT_DIR/../data/grappa_datasets"
 
 
 # List of dataset names
-datasets=("rna-nucleoside") # "spice-des-monomers" "spice-dipeptide" "rna-diverse" "gen2" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem")
+datasets=("rna-nucleoside" "spice-des-monomers" "spice-dipeptide" "rna-diverse" "gen2" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem")
 
 # Loop through each dataset name
 for ds in "${datasets[@]}"; do
