@@ -5,6 +5,8 @@ import torch
 import numpy as np
 from to_npz import load_graph, load_mol, extract_data
 import json
+from create_split import make_smile_dict, get_all_duplicates
+import copy
 
 #%%
 
@@ -70,8 +72,22 @@ def main(dspath, targetpath):
     print("\nDone!")
     print(f"Processed {num_total} molecules, {num_success} successfully, {num_err} with errors")
 
-    with open(targetpath/"duplicates.json", 'w') as file:
+    with open(targetpath/"duplicates_espaloma.json", 'w') as file:
         json.dump(duplicates, file, indent=4)
+
+    duplicates_espaloma = copy.deepcopy(duplicates)
+
+    # these duplicates are incomplete: there are more molecules with the same smiles string:
+    smiledict = make_smile_dict(targetpath)
+    np.savez_compressed(targetpath/'smiles.npz', **smiledict)
+    duplicates = get_all_duplicates(smile_dict=smiledict)
+
+    with open(targetpath/'duplicates.json', 'w') as f:
+        json.dump(duplicates, f, indent=4)
+
+    print(f"Duplicates recognized by espaloma: {len(duplicates_espaloma)}")
+
+    print(f"Actual duplicate smiles: {len(duplicates)}")
 
 
 import argparse

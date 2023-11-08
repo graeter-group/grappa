@@ -116,9 +116,9 @@ def main(dspath, targetpath):
     total_confs = 0
 
     for idx, molpath in enumerate(dspath.iterdir()):
-        num_total += 1
         if not molpath.is_dir():
             continue
+        num_total += 1
         try:
             print(f"Processing {idx}", end='\r')
             g, mol = load_graph(molpath), load_mol(molpath)

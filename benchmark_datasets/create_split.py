@@ -11,7 +11,8 @@ from collections import defaultdict
 
 def get_all_duplicates(smile_dict):
     """
-    Returns a list of lists of lists mol=[dsname, id] for mols with the same smiles string.
+    Returns a list of lists of mol=[dsname, id] (mols are here defined by id and smiles string) for mols with the same smiles string.
+    The smile_dict mus be of form described in make_smile_dict.
     """
     # Initialize a dictionary to store smiles as keys and lists of (dsname, id) as values.
     smiles_to_mols = defaultdict(list)
@@ -32,6 +33,9 @@ def get_all_duplicates(smile_dict):
 
 
 def make_smile_dict(dspath: str) -> dict:
+    """
+    Creates a dictionary that maps dsname to an array of [ids, smiles strings].
+    """
     dspath = Path(dspath)
     smile_dict = {}
     
@@ -59,6 +63,11 @@ def make_smile_dict(dspath: str) -> dict:
 
 
 def load_smiles(dspath, splitpath, split_id=None):
+    """
+    Loads smiles from the dataset at dspath and splits them according to the split file at splitpath.
+    Returns a tuple of lists of smiles and ids for train, val, test in the form
+    ->(train_smiles, val_smiles, test_smiles), (train_ds_ids, val_ds_ids, test_ds_ids)
+    """
     dspath = Path(dspath)
     splitpath = Path(splitpath)
 

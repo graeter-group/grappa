@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
 from grappa.data import Molecule, Parameters
-from grappa.utils import openff_utils
+from grappa.utils import openff_utils, openmm_utils
 import torch
 from dgl import DGLGraph
 
@@ -29,6 +29,10 @@ class MolData():
     # reference values (centered bonded energy, bonded gradient)
     energy_ref: np.ndarray
     gradient_ref: np.ndarray
+
+    # improper contributions of the reference forcefield:
+    improper_energy_ref: Optional[np.ndarray] = None
+    improper_gradient_ref: Optional[np.ndarray] = None
     
     # additional characterizations:
     mapped_smiles: Optional[str] = None
@@ -88,6 +92,13 @@ class MolData():
 
         g.nodes['n1'].data['gradient_ref'] = torch.tensor(self.gradient_ref.transpose(1, 0, 2), dtype=torch.float32)
 
+        if not self.improper_energy_ref is None:
+            g.nodes['g'].data['improper_energy_ref'] = torch.tensor(self.improper_energy_ref.reshape(1, -1), dtype=torch.float32)
+            g.nodes['g'].data['improper_energy_ref'] -= g.nodes['g'].data['improper_energy_ref'].mean(dim=1)
+
+        if not self.improper_gradient_ref is None:
+            g.nodes['n1'].data['improper_gradient_ref'] = torch.tensor(self.improper_gradient_ref.transpose(1, 0, 2), dtype=torch.float32)
+
         # write positions in shape (n_atoms, n_confs, 3)
         g.nodes['n1'].data['xyz'] = torch.tensor(self.xyz.transpose(1, 0, 2), dtype=torch.float32)
 
@@ -106,6 +117,11 @@ class MolData():
         array_dict['gradient'] = self.gradient
         array_dict['energy_ref'] = self.energy_ref
         array_dict['gradient_ref'] = self.gradient_ref
+
+        if not self.improper_energy_ref is None:
+            array_dict['improper_energy_ref'] = self.improper_energy_ref
+        if not self.improper_gradient_ref is None:
+            array_dict['improper_gradient_ref'] = self.improper_gradient_ref
 
         moldict = self.molecule.to_dict()
         assert set(moldict.keys()).isdisjoint(array_dict.keys()), "Molecule and MolData have overlapping keys."
@@ -152,6 +168,9 @@ class MolData():
         energy_ref = array_dict.get('energy_ref')
         gradient_ref = array_dict.get('gradient_ref')
 
+        improper_energy_ref = array_dict.get('improper_energy_ref', None)
+        improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
+
         # Reconstruct the molecule from the dictionary
         molecule_dict = {k: v for k, v in array_dict.items() if k.startswith('mol_')}
         molecule = Molecule.from_dict(molecule_dict)
@@ -179,7 +198,9 @@ class MolData():
             ff_energy=ff_energy,
             ff_gradient=ff_gradient,
             ff_nonbonded_energy=ff_nonbonded_energy,
-            ff_nonbonded_gradient=ff_nonbonded_gradient
+            ff_nonbonded_gradient=ff_nonbonded_gradient,
+            improper_energy_ref=improper_energy_ref,
+            improper_gradient_ref=improper_gradient_ref
         )
 
     
@@ -229,6 +250,7 @@ class MolData():
         partial_charges = data_dict.get(partial_charge_key, None)
         energy_ref = data_dict.get('energy_ref', None)
         gradient_ref = data_dict.get('gradient_ref', None)
+        
 
         if smiles is not None:
             self = cls.from_smiles(mapped_smiles=smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
@@ -254,6 +276,7 @@ class MolData():
         If energy_ref and gradient_ref are None, they are also calculated from the openmm system.
         mapped_smiles and pdb have no effect on the system, are optional and only required for reproducibility.
         """
+        import openmm
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges)
         params = Parameters.from_openmm_system(openmm_system, mol=mol)
 
@@ -261,7 +284,33 @@ class MolData():
 
         if self.energy_ref is None:
             # calculate reference energy and gradient from the openmm system using the partial charges provided
-            raise NotImplementedError("Reference energy and gradient calculation from openmm system is not yet implemented.")
+            if not partial_charges is None:
+                # set the partial charges in the openmm system
+                openmm_system = openmm_utils.set_partial_charges(system=openmm_system, partial_charges=partial_charges)
+
+            self.energy_ref, self.gradient_ref = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
+            self.gradient_ref = -self.gradient_ref # the reference gradient is the negative of the force
+
+        # calculate the contribution from improper torsions in the system:
+        # remove all forces but periodic torsions
+        openmm_system = openmm_utils.remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
+
+        # get a list of sets of improper torsion tuples:
+        improper_sets = [set(t) for t in self.molecule.impropers]
+        print(improper_sets)
+        # set all ks to zero that are not impropers:
+        for force in openmm_system.getForces():
+            if not isinstance(force, openmm.PeriodicTorsionForce):
+                raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
+            for i in range(force.getNumTorsions()):
+                atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
+                if not {self.molecule.atoms[atom1], self.molecule.atoms[atom2], self.molecule.atoms[atom3], self.molecule.atoms[atom4]} in improper_sets:
+                    force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
+
+
+        # get energy and gradient. these are now only sourced from improper torsions.
+        self.improper_energy_ref, self.improper_gradient_ref = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
+        self.improper_gradient_ref = -self.improper_gradient_ref # the reference gradient is the negative of the force
 
         return self
     

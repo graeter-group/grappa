@@ -5,7 +5,7 @@ Contains the output dataclass 'Parameters'.
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
-from grappa.utils import tuple_indices
+from grappa.utils import openmm_utils
 from grappa import units as U
 import torch
 from dgl import DGLGraph
@@ -144,6 +144,7 @@ class Parameters():
             bonds[i][0] < bonds[i][1] for all i
             angles[i][0] < angles[i][2] for all i
             propers[i][0] < propers[i][3] for all i
+            impropers: the central atom is inferred from connectivity, then it is put at place grappa.constants.IMPROPER_CENTRAL_IDX by invariant permutation.
         """
         from openmm import HarmonicAngleForce, HarmonicBondForce, PeriodicTorsionForce
         from openmm import System
@@ -228,20 +229,21 @@ class Parameters():
                         try:
                             proper_idx = propers.index(torsion)
                         except ValueError:
-                            raise ValueError(f"The torsion {torsion} is not a proper torsion in the molecule {mol}.")
+                            raise ValueError(f"The torsion {torsion} is not included in the proper torsion list of the molecule.")
                         
                         proper_ks[proper_idx, periodicity-1] = torsion_k if torsion_k > 0 else -torsion_k
                         proper_phases[proper_idx, periodicity-1] = phase
 
-                    else:
-                        try:
-                            improper_idx = impropers.index(torsion)
-                        except ValueError:
-                            raise ValueError(f"The torsion {torsion} is not an improper torsion in the molecule {mol}.")
+                        # set k to zero in the force:
+                        force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
 
-                        improper_ks[improper_idx, periodicity-1] = torsion_k if torsion_k > 0 else -torsion_k
-                        improper_phases[improper_idx, periodicity-1] = phase
-        
+                    else:
+                        # since we cannot translate from position 0 to position 2 (we can only transport the central atom position from 0 to 3 or 1 to 2), simply assign zero. We can learn on improper contributions instead.
+
+                        continue
+
+
+
         return cls(
             atoms=atoms,
             bonds=bonds,

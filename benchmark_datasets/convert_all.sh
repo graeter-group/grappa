@@ -15,6 +15,7 @@ for ds in "${datasets[@]}"; do
   python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds"
 done
 
-# add duplicates: (not, the duplicates provided from espaloma are not complete, calcuate them in the split function instead)
-# python add_duplicates.py --duplpath "$espaloma_ds_path/duplicated-isomeric-smiles-merge" --targetpath "$target_path"
-python create_split.py --dspath "$target_path" --splitpath "$target_path/../splits" --check --create_duplicates
+python add_duplicates.py --duplpath "$espaloma_ds_path/duplicated-isomeric-smiles-merge" --targetpath "$target_path"
+
+# create a split for each dataset using a random seed for reproducibility
+python create_split.py --dspath "$target_path" --splitpath "$target_path/../splits" --check --create_duplicates --seed 0
