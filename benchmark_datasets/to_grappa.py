@@ -1,3 +1,5 @@
+# NOTE: use dataset class!
+
 from grappa.data import MolData
 from pathlib import Path
 import numpy as np

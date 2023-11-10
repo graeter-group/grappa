@@ -30,6 +30,8 @@ class MolData():
     energy_ref: np.ndarray
     gradient_ref: np.ndarray
 
+    mol_id: str
+
     # improper contributions of the reference forcefield:
     improper_energy_ref: Optional[np.ndarray] = None
     improper_gradient_ref: Optional[np.ndarray] = None
@@ -117,6 +119,7 @@ class MolData():
         array_dict['gradient'] = self.gradient
         array_dict['energy_ref'] = self.energy_ref
         array_dict['gradient_ref'] = self.gradient_ref
+        array_dict['mol_id'] = self.mol_id
 
         if not self.improper_energy_ref is None:
             array_dict['improper_energy_ref'] = self.improper_energy_ref
@@ -168,6 +171,10 @@ class MolData():
         gradient = array_dict.get('gradient')
         energy_ref = array_dict.get('energy_ref')
         gradient_ref = array_dict.get('gradient_ref')
+        mol_id = array_dict.get('mol_id', None)
+        if not mol_id is None:
+            if isinstance(mol_id, np.ndarray):
+                mol_id = mol_id[0]
 
         improper_energy_ref = array_dict.get('improper_energy_ref', None)
         improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
@@ -197,6 +204,7 @@ class MolData():
             gradient=gradient,
             energy_ref=energy_ref,
             gradient_ref=gradient_ref,
+            mol_id=mol_id,
             molecule=molecule,
             classical_parameters=classical_parameters,
             ff_energy=ff_energy,
@@ -230,23 +238,30 @@ class MolData():
         Create a MolData object from a dictionary containing a mapped_smiles string or pdb and arrays of conformations, energies and gradients, but not necessarily the interaction tuples and classical parameters.
         The forcefield is used to obtain the interaction tuples and classical parameters. If a smiles string is used, the forcefield refers to an openff forcefield. If a pdb file is used, the forcefield refers to an openmm forcefield.
         The following dictionray items are required:
-            - Either: mapped_smiles: (str) or pdb: (str).startswith(
+            - Either: mapped_smiles: (str) or pdb: (str)
+            - Either: smiles: (str) or sequence: (str)
             - xyz: (n_confs, n_atoms, 3)
             - energy: (n_confs,)
             - gradient: (n_confs, n_atoms, 3)
         """
-        smiles = None
+        mapped_smiles = None
         if 'mapped_smiles' in data_dict.keys():
-            smiles = data_dict['mapped_smiles']
-            if not isinstance(smiles, str):
-                smiles = smiles[0]
+            mapped_smiles = data_dict['mapped_smiles']
+            if not isinstance(mapped_smiles, str):
+                mapped_smiles = mapped_smiles[0]
         pdb = None
         if 'pdb' in data_dict.keys():
             pdb = data_dict['pdb']
             if not isinstance(pdb, str):
                 pdb = pdb[0]
-        assert smiles is not None or pdb is not None, "Either a smiles string or a pdb file must be provided."
-        assert not (smiles is not None and pdb is not None), "Either a smiles string or a pdb file must be provided, not both."
+        assert mapped_smiles is not None or pdb is not None, "Either a smiles string or a pdb file must be provided."
+        assert not (mapped_smiles is not None and pdb is not None), "Either a smiles string or a pdb file must be provided, not both."
+
+        mol_id = data_dict.get('smiles', data_dict.get('sequence', None))
+        if mol_id is None:
+            raise ValueError("Either a smiles string or a sequence string must be provided as key 'smiles' or 'sequence' in the data dictionary.")
+        if isinstance(mol_id, np.ndarray):
+            mol_id = mol_id[0]
 
         xyz = data_dict['xyz']
         energy = data_dict['energy_qm']
@@ -256,8 +271,8 @@ class MolData():
         gradient_ref = data_dict.get('gradient_ref', None)
         
 
-        if smiles is not None:
-            self = cls.from_smiles(mapped_smiles=smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
+        if mapped_smiles is not None:
+            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id)
         else:
             raise NotImplementedError("pdb files are not supported yet.")
 
@@ -273,7 +288,7 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.
@@ -284,7 +299,7 @@ class MolData():
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges)
         params = Parameters.from_openmm_system(openmm_system, mol=mol)
 
-        self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb)
+        self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id)
 
         if not partial_charges is None:
             # set the partial charges in the openmm system
@@ -304,9 +319,8 @@ class MolData():
             # create a deep copy of the system:
             system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
 
-            # remnove all but the nonbonded forces
-
-            self.energy_ref, self.gradient_ref = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
+            # remnove all but the nonbonded forces in this copy:
+            self.energy_ref, self.gradient_ref = openmm_utils.get_energies(system2=system2, xyz=xyz)
             self.gradient_ref = -self.gradient_ref # the reference gradient is the negative of the force
 
         # calculate the contribution from improper torsions in the system:
@@ -334,9 +348,13 @@ class MolData():
     
 
     @classmethod
-    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, openff_forcefield='openff_unconstrained-1.2.0.offxml'):
+    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, openff_forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to initialize the interaction tuples, classical parameters and, if partial_charges is None, to obtain the partial charges.
         """
-        system, topology, _ = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=openff_forcefield, partial_charges=partial_charges)
-        return cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles)
+        system, topology, openff_mol = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=openff_forcefield, partial_charges=partial_charges)
+
+        if mol_id is None:
+            mol_id = openff_mol.to_smiles(mapped=False)
+
+        return cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id)

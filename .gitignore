@@ -62,6 +62,7 @@ tmp/
 *.code-workspace
 /.luarc.json
 
+wandb/
 old_src/
 data/
 # do not ignore data/ in grappa/src/grappa/data:

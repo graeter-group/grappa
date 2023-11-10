@@ -1,6 +1,7 @@
 #%%
 from pathlib import Path
 import numpy as np
+import torch
 
 dspath = Path(__file__).parents[1]/'data'/"datasets"/"spice-des-monomers"
 
@@ -22,7 +23,8 @@ gradient_ref = data['gradient_ref']
 from grappa.data import MolData
 
 mol = MolData.from_smiles(mapped_smiles=smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
-# %%
+#%%
+#%%
 from grappa.utils import openmm_utils, openff_utils
 
 system, topol, _ = openff_utils.get_openmm_system(smiles, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges)
@@ -72,14 +74,10 @@ system, topol, _ = openff_utils.get_openmm_system(smiles, openff_forcefield='ope
 system = openmm_utils.remove_forces_from_system(system, remove=['NonbondedForce'])
 b_energies, b_forces = openmm_utils.get_energies(openmm_system=system, xyz=xyz)
 # %%
-from grappa.models.energy import WriteEnergy
-from grappa.models.geometry import GeometryInGraph
+from grappa.models.Energy import Energy
 
-geom = GeometryInGraph()
 
-g = geom(g)
-
-writer = WriteEnergy(suffix='_ref', write_suffix='_val')
+writer = Energy(suffix='_ref', write_suffix='_val')
 g = writer(g)
 grappa_bonded_e = g.nodes['g'].data['energy_val'].flatten().numpy()
 grappa_bonded_e -= grappa_bonded_e.mean()

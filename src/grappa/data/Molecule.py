@@ -273,7 +273,7 @@ class Molecule():
 
         for term in TERMS+["g"]:
             key = (term, f"{term}_edge", term)
-            n_nodes = len(idxs[term]) if term != "g" else 1
+            n_nodes = len(idxs[term]) if term not in ["g"] else 1
             hg[key] = torch.stack(
                 [
                     torch.arange(n_nodes),
