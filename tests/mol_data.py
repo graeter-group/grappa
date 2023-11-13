@@ -23,7 +23,10 @@ gradient_ref = data['gradient_ref']
 from grappa.data import MolData
 
 mol = MolData.from_smiles(mapped_smiles=smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield='openff_unconstrained-2.0.0.offxml', partial_charges=charges, energy_ref=energy_ref, gradient_ref=gradient_ref)
-#%%
+assert len(mol.molecule.impropers)==0
+g = mol.to_dgl()
+assert g.num_nodes('n4_improper') == 0
+assert g.nodes["n4_improper"].data['k_ref'].shape[0] == 0
 #%%
 from grappa.utils import openmm_utils, openff_utils
 

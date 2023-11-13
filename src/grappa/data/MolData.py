@@ -101,6 +101,12 @@ class MolData():
         if not self.improper_gradient_ref is None:
             g.nodes['n1'].data['improper_gradient_ref'] = torch.tensor(self.improper_gradient_ref.transpose(1, 0, 2), dtype=torch.float32)
 
+        for k, v in self.ff_energy.items():
+            g.nodes['g'].data[f'energy_{k}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)
+        
+        for k, v in self.ff_gradient.items():
+            g.nodes['n1'].data[f'gradient_{k}'] = torch.tensor(v.transpose(1, 0, 2), dtype=torch.float32)
+
         # write positions in shape (n_atoms, n_confs, 3)
         g.nodes['n1'].data['xyz'] = torch.tensor(self.xyz.transpose(1, 0, 2), dtype=torch.float32)
 
@@ -171,10 +177,9 @@ class MolData():
         gradient = array_dict.get('gradient')
         energy_ref = array_dict.get('energy_ref')
         gradient_ref = array_dict.get('gradient_ref')
-        mol_id = array_dict.get('mol_id', None)
-        if not mol_id is None:
-            if isinstance(mol_id, np.ndarray):
-                mol_id = mol_id[0]
+        mol_id = array_dict.get('mol_id')
+        if isinstance(mol_id, np.ndarray):
+            mol_id = str(mol_id)
 
         improper_energy_ref = array_dict.get('improper_energy_ref', None)
         improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
@@ -183,8 +188,11 @@ class MolData():
 
         tuple_keys = ['atoms', 'bonds', 'angles', 'propers', 'impropers']
 
+        exclude_molecule_keys = ['xyz', 'mol_id'] + param_keys
+
         # Reconstruct the molecule from the dictionary. for this, we need to filter out the keys that are not part of the molecule. We can assume that all keys are disjoint since we check this during saving.
-        molecule_dict = {k: v for k, v in array_dict.items() if k not in param_keys and not 'energy' in k and not 'gradient' in k and not k=='xyz'}
+        molecule_dict = {k: v for k, v in array_dict.items() if not k in exclude_molecule_keys and not 'energy' in k and not 'gradient' in k}
+
         molecule = Molecule.from_dict(molecule_dict)
 
         # Reconstruct the parameters, excluding keys that are part of the molecule
@@ -357,4 +365,8 @@ class MolData():
         if mol_id is None:
             mol_id = openff_mol.to_smiles(mapped=False)
 
-        return cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id)
+        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id)
+
+        self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic"], openff_mol=openff_mol)
+
+        return self

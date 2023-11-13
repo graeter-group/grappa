@@ -121,3 +121,25 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     assert len(set(out['val']).intersection(set(out['test']))) == 0, "Val and test sets must not overlap"
 
     return out
+
+
+def mean_absolute_error(y_true, y_pred):
+    return torch.mean(torch.abs(y_true - y_pred))
+
+def root_mean_squared_error(y_true, y_pred):
+    return torch.sqrt(torch.mean(torch.square(y_true - y_pred)))
+
+def invariant_mae(y_true, y_pred):
+    """
+    Calculates the mean absolute error between y_true and y_pred, but invariant to rotations assuming that the last dimension of y_true and y_pred are spatial. (i.e. use the compnent rmse as absolute error for each instance.)
+    """
+    diffs = torch.sqrt(torch.sum(torch.square(y_true - y_pred), dim=-1))
+    return torch.mean(diffs)
+
+def invariant_rmse(y_true, y_pred):
+    """
+    Calculates the root mean squared error between y_true and y_pred, but invariant to rotations assuming that the last dimension of y_true and y_pred are spatial. (i.e. use the compnent rmse as absolute error for each instance.)
+    In the case of RMSE, this means: invariant_rmse = sqrt(3) * rmse
+    """
+    diffs = torch.sum(torch.square(y_true - y_pred), dim=-1)
+    return torch.sqrt(torch.mean(diffs))

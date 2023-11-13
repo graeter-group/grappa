@@ -18,21 +18,21 @@ import pkgutil
 class Molecule():
     """
     Input dataclass for grappa parameter description
-    Additional features are a dict with name: array/list of shape n_atoms x feat_dim
+    Additional features are a dict with name: array/List of shape n_atoms x feat_dim
     """
-    # id tuples:
-    atoms: Union[list[int], np.ndarray]
-    bonds: Union[list[tuple[int,int]], np.ndarray]
-    impropers: Union[list[tuple[int,int,int,int]], np.ndarray]
+    # id Tuples:
+    atoms: Union[List[int], np.ndarray]
+    bonds: Union[List[Tuple[int,int]], np.ndarray]
+    impropers: Union[List[Tuple[int,int,int,int]], np.ndarray]
 
     # atom properties:
-    atomic_numbers: list[int]
-    partial_charges: list[float]
-    additional_features: Dict[str,list] = None
+    atomic_numbers: List[int]
+    partial_charges: List[float]
+    additional_features: Dict[str,List] = None
     
-    # more id tuples:
-    angles: Optional[Union[list[tuple[int,int,int]], np.ndarray]] = None
-    propers: Optional[Union[list[tuple[int,int,int,int]], np.ndarray]] = None
+    # more id Tuples:
+    angles: Optional[Union[List[Tuple[int,int,int]], np.ndarray]] = None
+    propers: Optional[Union[List[Tuple[int,int,int,int]], np.ndarray]] = None
 
     neighbor_dict: Optional[Dict[int, List[int]]] = None # if needed, this is calculated from bonds and stored. This is used to calculate angles and propers if they are not given and later on to check whether torsions are improper.
 
@@ -121,7 +121,7 @@ class Molecule():
                         other_atoms2 = [other_atoms[i] for i in (1,2,0)]
                         other_atoms3 = [other_atoms[i] for i in (2,0,1)]
 
-                        # now form the three versions of the torsion tuple such that the central atom is always at the same position and the other atoms are taken in the order of the respective other_atoms list:
+                        # now form the three versions of the torsion tuple such that the central atom is always at the same position and the other atoms are taken in the order of the respective other_atoms List:
                         torsion1, torsion2, torsion3 = [], [], []
                         other_atom_position = 0
                         for position in range(4):
@@ -135,12 +135,12 @@ class Molecule():
                                 torsion3.append(other_atoms3[other_atom_position])
                                 other_atom_position += 1
 
-                        # now append the three torsions to the list of impropers:
+                        # now append the three torsions to the List of impropers:
                         impropers.append(tuple(torsion1))
                         impropers.append(tuple(torsion2))
                         impropers.append(tuple(torsion3))
 
-                        # also append the set of atoms to the list of improper sets:
+                        # also append the set of atoms to the List of improper sets:
                         improper_sets.append(set(torsion))
 
 
@@ -153,6 +153,14 @@ class Molecule():
                         q, _, _ = force.getParticleParameters(i)
                         partial_charges.append(q.value_in_unit(openmm_unit.elementary_charge))
 
+        elif isinstance(partial_charges, int):
+            partial_charges = [partial_charges] * len(List(openmm_topology.atoms()))
+        elif isinstance(partial_charges, np.ndarray):
+            partial_charges = partial_charges.toList()
+        else:
+            if not isinstance(partial_charges, List):
+                raise ValueError(f"partial_charges must be None, int or np.ndarray but is {type(partial_charges)}")
+
         # get atomic numbers and atom indices using zip:
         atomic_numbers, atoms = [], []
         for atom in openmm_topology.atoms():
@@ -163,12 +171,13 @@ class Molecule():
         return cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges)
 
 
-    def add_features(self, feat_names:list[str]=['ring_encoding'], **kwargs):
+    def add_features(self, feat_names:List[str]=['ring_encoding'], **kwargs):
         """
         Add features to the molecule by keyword. Currently supported:
             - 'ring_encoding': a one-hot encoding of ring membership obtained from rdkit. feat dim: 7
             - 'sp_hybridization': a one-hot encoding of the hybridization of the atom. openff_mol must be passed as a keyword argument. feat dim: 6
-            - 'is_radical': a boolean indicating whether the atom is a radical or not. feat dim: 1
+            - 'is_aromatic': a one-hot encoding indicating whether the atom is aromatic or not. openff_mol must be passed as a keyword argument. feat dim: 1
+            - 'is_radical': a one-hot encoding indicating whether the atom is a radical or not. feat dim: 1
         """
         for feat_name in feat_names:
 
@@ -194,7 +203,17 @@ class Molecule():
                 from grappa.utils import openff_utils
                 openff_mol = kwargs['openff_mol']
                 sp_hybridization = openff_utils.get_sp_hybridization_encoding(openff_mol)
-                self.additional_features['sp_hybridisation'] = sp_hybridization
+                self.additional_features[feat_name] = sp_hybridization
+
+
+            elif feat_name == 'is_aromatic':
+                assert "openff_mol" in kwargs, f"openff_mol must be passed as a keyword argument to use the feature {feat_name}"
+                assert pkgutil.find_loader("openff.toolkit") is not None, f"openff.toolkit must be installed to use the feature {feat_name}"
+                assert pkgutil.find_loader("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
+                from grappa.utils import openff_utils
+                openff_mol = kwargs['openff_mol']
+                is_aromatic = openff_utils.get_is_aromatic(openff_mol)
+                self.additional_features[feat_name] = is_aromatic
 
 
             elif feat_name == 'is_radical':
@@ -205,7 +224,7 @@ class Molecule():
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")
             
     @classmethod
-    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:np.ndarray=None):
+    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:Union[np.ndarray, int]=None):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used t initialize the interaction tuples and, if partial_charges is None, to obtain the partial charges.
         """
@@ -225,7 +244,7 @@ class Molecule():
         return mol
     
     
-    def to_dgl(self, max_element=53, exclude_feats:list[str]=[]):
+    def to_dgl(self, max_element=53, exclude_feats:List[str]=[]):
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
         The dgl graph has the following node types (if the number of respective nodes is nonzero):
@@ -269,8 +288,6 @@ class Molecule():
         # ======================================
         TERMS = ["n2", "n3", "n4", "n4_improper"]
 
-        TERMS = [t for t in TERMS if not len(idxs[t]) == 0]
-
         for term in TERMS+["g"]:
             key = (term, f"{term}_edge", term)
             n_nodes = len(idxs[term]) if term not in ["g"] else 1
@@ -286,8 +303,6 @@ class Molecule():
         for k, (vsrc,vdest) in hg.items():
             # make sure that the tensors have the correct shape:
             assert vsrc.shape == vdest.shape, f"shape of {k} is {vsrc.shape} and {vdest.shape}"
-            assert len(vdest.shape) > 0, f"shape of {k} is {vdest.shape} and {vdest.shape}"
-            assert vsrc.shape[0] > 0, f"shape of {k} is {vsrc.shape} and {vdest.shape}"
 
         # init graph
         hg = dgl.heterograph(hg)
@@ -302,7 +317,14 @@ class Molecule():
         assert len(self.bonds)*2 == hg.num_edges('n1_edge'), f"number of n1_edges in graph ({hg.num_edges('n1_edge')}) does not match 2 times number of bonds ({len(self.bonds)})"
 
         # add standard features (atomic number and partial charge):
-        atom_onehot = torch.nn.functional.one_hot(torch.tensor(self.atomic_numbers), num_classes=max_element).float()
+        if max(self.atomic_numbers) > max_element:
+            raise ValueError(f"max_element ({max_element}) must be larger than the largest atomic number ({max(self.atomic_numbers)})")
+        
+        # we have no atomic number 0, so we can safely subtract 1 from all atomic numbers:
+        atom_onehot = torch.nn.functional.one_hot(torch.tensor(self.atomic_numbers)-1, num_classes=max_element).float()
+
+        assert len(self.atomic_numbers) == len(self.partial_charges) == len(self.atoms) == hg.num_nodes('n1'), f"number of atoms ({len(self.atoms)}), atomic numbers ({len(self.atomic_numbers)}), partial charges ({len(self.partial_charges)}) and nodes in n1 ({hg.num_nodes('n1')}) must be equal"
+
         hg.nodes["n1"].data["atomic_number"] = atom_onehot
         hg.nodes["n1"].data["partial_charge"] = torch.tensor(self.partial_charges, dtype=torch.float32)
 
@@ -310,7 +332,10 @@ class Molecule():
         for feat in self.additional_features.keys():
             if feat in exclude_feats:
                 continue
-            hg.nodes["n1"].data[feat] = torch.tensor(self.additional_features[feat], dtype=torch.float32)
+            try:
+                hg.nodes["n1"].data[feat] = torch.tensor(self.additional_features[feat], dtype=torch.float32)
+            except Exception as e:
+                raise Exception(f"Failed to add feature {feat} to the graph. Error: {e}")
 
         return hg
 

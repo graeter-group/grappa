@@ -142,3 +142,8 @@ class Dataset(torch.utils.data.Dataset):
         partition can be a tuple of floats or a dict of tuples of floats. If it is a tuple, the same partition is used for all datasets. If it is a dict, the keys must be the dataset names and the values must be tuples of floats.
         """
         return torch_utils.calc_split_ids(ids=self.mol_ids, partition=partition, seed=seed, ds_names=self.subdataset)
+    
+
+
+
+# NOTE: loader and batching strategy!

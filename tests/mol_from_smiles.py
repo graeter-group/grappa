@@ -43,3 +43,4 @@ for ntype in g2.ntypes:
 print(f"Unconstrained and constrained forcefield give the same parameters:\n{all_same}")
 # %%
 print("The nonbonded parameters, however, are the same.")
+# %%

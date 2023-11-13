@@ -77,47 +77,31 @@ class Parameters():
         bond_k = g.nodes['n2'].data[f'k{suffix}'].numpy()
         bond_eq = g.nodes['n2'].data[f'eq{suffix}'].numpy()
 
-        if 'n3' in g.ntypes:
-            angle_k = g.nodes['n3'].data[f'k{suffix}'].numpy()
-            angle_eq = g.nodes['n3'].data[f'eq{suffix}'].numpy()
-            angles = g.nodes['n3'].data['idxs'].numpy()
-            angles = atom_ids[angles]
-        else:
-            angle_k = np.array([])
-            angle_eq = np.array([])
-            angles = np.array([])
+        angle_k = g.nodes['n3'].data[f'k{suffix}'].numpy()
+        angle_eq = g.nodes['n3'].data[f'eq{suffix}'].numpy()
+        angles = g.nodes['n3'].data['idxs'].numpy()
+        angles = atom_ids[angles]
 
-        if 'n4' in g.ntypes:
-            proper_ks = g.nodes['n4'].data[f'k{suffix}'].numpy()
-            # Assuming the phases are stored with a similar naming convention
-            proper_phases = np.where(
-                proper_ks > 0,
-                np.zeros_like(proper_ks),
-                np.zeros_like(proper_ks) + np.pi
-            )
-            proper_ks = np.abs(proper_ks)
-            propers = g.nodes['n4'].data['idxs'].numpy()
-            propers = atom_ids[propers] 
+        proper_ks = g.nodes['n4'].data[f'k{suffix}'].numpy()
+        # Assuming the phases are stored with a similar naming convention
+        proper_phases = np.where(
+            proper_ks > 0,
+            np.zeros_like(proper_ks),
+            np.zeros_like(proper_ks) + np.pi
+        )
+        proper_ks = np.abs(proper_ks)
+        propers = g.nodes['n4'].data['idxs'].numpy()
+        propers = atom_ids[propers] 
 
-        else:
-            proper_ks = np.array([])
-            proper_phases = np.array([])
-            propers = np.array([])
 
-        # Check if improper torsions are present
-        if 'n4_improper' in g.ntypes:
-            improper_ks = g.nodes['n4_improper'].data[f'k{suffix}'].numpy()
-            improper_phases = np.where(
-                improper_ks > 0,
-                np.zeros_like(improper_ks),
-                np.zeros_like(improper_ks) + np.pi
-            )
-            improper_ks = np.abs(improper_ks)
-            impropers = atom_ids[g.nodes['n4_improper'].data['idxs'].numpy()]
-        else:
-            improper_ks = np.array([])
-            improper_phases = np.array([])
-            impropers = np.array([])
+        improper_ks = g.nodes['n4_improper'].data[f'k{suffix}'].numpy()
+        improper_phases = np.where(
+            improper_ks > 0,
+            np.zeros_like(improper_ks),
+            np.zeros_like(improper_ks) + np.pi
+        )
+        improper_ks = np.abs(improper_ks)
+        impropers = atom_ids[g.nodes['n4_improper'].data['idxs'].numpy()]
 
         return cls(
             atoms=atom_ids,
@@ -301,20 +285,17 @@ class Parameters():
         g.nodes['n2'].data['k_ref'] = torch.tensor(self.bond_k, dtype=torch.float32)
         g.nodes['n2'].data['eq_ref'] = torch.tensor(self.bond_eq, dtype=torch.float32)
 
-        if 'n3' in g.ntypes:
-            g.nodes['n3'].data['k_ref'] = torch.tensor(self.angle_k, dtype=torch.float32)
-            g.nodes['n3'].data['eq_ref'] = torch.tensor(self.angle_eq, dtype=torch.float32)
+        g.nodes['n3'].data['k_ref'] = torch.tensor(self.angle_k, dtype=torch.float32)
+        g.nodes['n3'].data['eq_ref'] = torch.tensor(self.angle_eq, dtype=torch.float32)
 
-        if 'n4' in g.ntypes:
-            proper_ks = np.where(
-                np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
-                self.proper_ks, -self.proper_ks)
-            g.nodes['n4'].data['k_ref'] = torch.tensor(proper_ks, dtype=torch.float32)
+        proper_ks = np.where(
+            np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
+            self.proper_ks, -self.proper_ks)
+        g.nodes['n4'].data['k_ref'] = torch.tensor(proper_ks, dtype=torch.float32)
 
-        if 'n4_improper' in g.ntypes:
-            improper_ks = np.where(
-                np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
-                self.improper_ks, -self.improper_ks)
-            g.nodes['n4_improper'].data['k_ref'] = torch.tensor(improper_ks, dtype=torch.float32)
+        improper_ks = np.where(
+            np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
+            self.improper_ks, -self.improper_ks)
+        g.nodes['n4_improper'].data['k_ref'] = torch.tensor(improper_ks, dtype=torch.float32)
 
         return g

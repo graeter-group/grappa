@@ -54,12 +54,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--source_path",
         type=str,
-        help="Path to the folder with heterograph and mol files from espaloma.",
+        help="Path to the folder with npz files containing smiles, positions, energies and gradients.",
     )
     parser.add_argument(
         "--target_path",
         type=str,
-        help="Path to the target folder in which tha dataset is stored as collection of npz files.",
+        help="Path to the target folder in which the dataset is stored as collection of npz files.",
     )
     parser.add_argument(
         "--forcefield",

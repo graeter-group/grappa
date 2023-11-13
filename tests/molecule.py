@@ -100,3 +100,11 @@ mol.bonds[:10]
 ##############################################
 g = mol.to_dgl(max_element=20)
 # %%
+small_openff_mol = OpenFFMolecule.from_smiles('CC', allow_undefined_stereo=True)
+mapped_smiles = small_openff_mol.to_smiles(mapped=True)
+small_mol = Molecule.from_smiles(mapped_smiles, partial_charges=0)
+# %%
+g = small_mol.to_dgl()
+# %%
+g.nodes['n4_improper'].data['idxs']
+# %%

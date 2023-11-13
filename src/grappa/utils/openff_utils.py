@@ -31,7 +31,21 @@ def get_sp_hybridization_encoding(openff_mol:"openff.toolkit.Molecule")->np.ndar
             ]
         )
 
-def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[list, int]=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
+def get_is_aromatic(openff_mol:"openff.toolkit.Molecule")->np.ndarray:
+    """
+    Returns a numpy array of shape (n_atoms, 1) that one-hot encodes wheter the atom is aromatic.
+    """
+    mol = openff_mol.to_rdkit()
+    return np.array(
+            [
+                [
+                    int(atom.GetIsAromatic())
+                ]
+                for atom in mol.GetAtoms()
+            ]
+        )
+
+def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[np.ndarray, list, int]=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
     """
     Returns system, topology, openff_molecule.
     Supported (tested) force fields:
@@ -49,9 +63,14 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
     topology = Topology.from_molecules(mol)
     openmm_topology = topology.to_openmm()
 
-    if not partial_charges is None:
-        if isinstance(partial_charges, int):
+    if partial_charges is not None:
+        if isinstance(partial_charges, np.ndarray):
+            partial_charges = partial_charges.tolist()
+        elif isinstance(partial_charges, int):
             partial_charges = [partial_charges] * len(mol.atoms)
+        else:
+            if not isinstance(partial_charges, list):
+                raise TypeError(f"partial_charges must be either a list, a numpy array or an integer but is {type(partial_charges)}")
 
         # use the charges given in the raw molecule:
         from openff.units import unit as openff_unit
