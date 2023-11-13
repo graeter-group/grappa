@@ -4,10 +4,14 @@ Contains the grappa input dataclass 'Molecule' and output dataclass 'Parameters'
 XX further describe both
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+from dataclasses import dataclass, asdict, field
 from typing import Optional
 import numpy as np
+from pathlib import Path
+import json
 
+from grappa.run.run_utils import dataclass_from_dict
 
 # TODO:compare to constants.py TopologyDict -> rename to Topology?
 @dataclass
@@ -17,12 +21,14 @@ class Molecule():
     Angles and proper dihedrals are optional and will be inferred from the bonds if None
     Additional features are a dict with name: array/list of shape n_atoms x feat_dim
     """
-    atomnrs: list[int]
-    elements: list[str]
-    partial_charges: list[float]
+    atoms: list[int]
     bonds: list[tuple[int,int]]
     impropers: list[tuple[int,int,int,int]]
-    additional_features: dict[str,list]
+    atomic_nrs: list[int]
+    partial_charges: list[float]
+    epsilons: list[float]
+    sigmas: list[float]
+    additional_features: dict[str,list] = field(default_factory=dict)
     angles: Optional[list[tuple[int,int,int]]] = None
     propers: Optional[list[tuple[int,int,int,int]]] = None
     
@@ -30,6 +36,7 @@ class Molecule():
         # check the input for consistency
         # TODO: compare to current input validation
         pass   
+
     
     def  __post_init__(self):
         #TODO: check whether this does what is is supposed to do
@@ -64,6 +71,26 @@ class Molecule():
             
 
         self._validate()
+
+    def to_json(self, path: Path) -> None:
+        """Write dict to file according to JSON format."""
+        with open(path,'w') as f:
+            json.dump(asdict(self),f)
+
+    @classmethod
+    def from_json(cls, path: Path) -> Molecule:
+        """Return JSON file content as dict."""
+        with open(path, "r") as f:
+            data = json.load(f)      
+        mol = dataclass_from_dict(Molecule, data)     
+        return mol
+    
+    @classmethod
+    def create_empty(cls) -> Molecule:
+        "Return Molecule with empty attributes."
+        return Molecule([],[],[],[],[],[],[],{})
+
+
     
 # TODO: compare to constants.py ParamDict --> should this stay the same?
 @dataclass

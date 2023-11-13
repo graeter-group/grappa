@@ -11,6 +11,3 @@ class GromacsMolecule(Molecule):
     @classmethod
     def from_top(cls, top_path:Union[Path,str]):
         raise NotImplementedError
-    
-    def from_kimmdy(cls, kimmdylist):
-        pass

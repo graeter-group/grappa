@@ -63,6 +63,7 @@ class Grappa():
         # try if this give good error messages if input is wrong size
         # what happens if no weights are specified?
         parameters = self.model(input)
+        #TODO: convert input to correct format
         return parameters
 
 

@@ -3,6 +3,7 @@ import numpy as np
 import random
 import json
 from typing import Tuple, List, Union
+import dataclasses
 import dgl
 import torch
 
@@ -283,6 +284,14 @@ def load_weights_torchhub(url:str, filename:str) -> dict:
     #torch.hub.set_dir('models_path')   # probably not necessary
     state_dict = torch.hub.load_state_dict_from_url(url, model_dir=str(models_path),file_name=filename)
     return state_dict
+
+def dataclass_from_dict(cls, d):
+    try:
+        fieldtypes = {f.name:f.type for f in dataclasses.fields(cls)}
+        return cls(**{f:dataclass_from_dict(fieldtypes[f],d[f]) for f in d})
+    except:
+        return d # Not a dataclass field
+
 
 # def clean_vpath(storage_path, must_contain="log.txt"):
 #     for e in Path(storage_path).glob("*"):
