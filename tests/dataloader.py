@@ -15,6 +15,7 @@ g.nodes['g'].data.keys()
 # %%
 loader = GraphDataLoader(ds, batch_size=100, shuffle=True, num_workers=1, pin_memory=True)
 # %%
+device = 'cpu'
 if torch.cuda.is_available():
     device = 'cuda'
 for g, dsname in loader.to(device):

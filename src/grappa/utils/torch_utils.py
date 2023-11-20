@@ -133,6 +133,8 @@ def invariant_mae(y_true, y_pred):
     """
     Calculates the mean absolute error between y_true and y_pred, but invariant to rotations assuming that the last dimension of y_true and y_pred are spatial. (i.e. use the compnent rmse as absolute error for each instance.)
     """
+    if y_true.shape[-1] != 3:
+        raise ValueError("y_true must have shape (..., 3) for invariant_mae")
     diffs = torch.sqrt(torch.sum(torch.square(y_true - y_pred), dim=-1))
     return torch.mean(diffs)
 
@@ -141,5 +143,7 @@ def invariant_rmse(y_true, y_pred):
     Calculates the root mean squared error between y_true and y_pred, but invariant to rotations assuming that the last dimension of y_true and y_pred are spatial. (i.e. use the compnent rmse as absolute error for each instance.)
     In the case of RMSE, this means: invariant_rmse = sqrt(3) * rmse
     """
+    if y_true.shape[-1] != 3:
+        raise ValueError("y_true must have shape (..., 3) for invariant_rmse")
     diffs = torch.sum(torch.square(y_true - y_pred), dim=-1)
     return torch.sqrt(torch.mean(diffs))

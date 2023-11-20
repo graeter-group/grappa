@@ -26,7 +26,7 @@ class Dataset(torch.utils.data.Dataset):
     Items are returned as (graph, subdataset) tuples.
     The mol_ids are used to create splits into train, validation and test sets.
     """
-    def __init__(self, graphs:List[DGLGraph], mol_ids:List[str], subdataset:Union[List[str], str]):
+    def __init__(self, graphs:List[DGLGraph]=[], mol_ids:List[str]=[], subdataset:Union[List[str], str]=[]):
         """
         Args:
             graphs (List[DGLGraph]): list of dgl graphs
@@ -134,6 +134,22 @@ class Dataset(torch.utils.data.Dataset):
         mol_ids = self.mol_ids + other.mol_ids
         subdataset = self.subdataset + other.subdataset
         return Dataset(graphs, mol_ids, subdataset)
+
+
+    def remove_uncommon_features(self):
+        """
+        Removes features that are not present in all graphs. This is necessary for batching.
+        """
+        removed = set()
+        features = set(self.graphs[0].ndata.keys())
+        for graph in self.graphs:
+            features = features.intersection(set(graph.ndata.keys()))
+        for graph in self.graphs:
+            removed = removed.union(set(graph.ndata.keys()).difference(features))
+            for feature in set(graph.ndata.keys()).difference(features):
+                del graph.ndata[feature]
+
+        print(f"Removed features:\n  {removed}")
     
 
     def calc_split_ids(self, partition:Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], seed:int=0):
@@ -144,6 +160,22 @@ class Dataset(torch.utils.data.Dataset):
         return torch_utils.calc_split_ids(ids=self.mol_ids, partition=partition, seed=seed, ds_names=self.subdataset)
     
 
+    def slice(self, start, stop):
+        # Create a new dataset instance with only the sliced data
+        sliced_graphs = self.graphs[start:stop]
+        sliced_mol_ids = self.mol_ids[start:stop]
+        sliced_subdataset = self.subdataset[start:stop]
 
+        return Dataset(graphs=sliced_graphs, mol_ids=sliced_mol_ids, subdataset=sliced_subdataset)
+    
 
-# NOTE: loader and batching strategy!
+    def shuffle(self, seed:int=0):
+        """
+        Shuffle the dataset in place and return it
+        """
+        np.random.seed(seed)
+        perm = np.random.permutation(len(self.graphs))
+        self.graphs[:] = [self.graphs[i] for i in perm]
+        self.mol_ids[:] = [self.mol_ids[i] for i in perm]
+        self.subdataset[:] = [self.subdataset[i] for i in perm]
+        return self

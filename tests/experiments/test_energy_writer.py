@@ -21,7 +21,7 @@ model = torch.nn.Sequential(
 dglpath = Path(__file__).parents[2]/'data'/'dgl_datasets'
 # %%
 dsname = 'spice-dipeptide'
-ds, _ = dgl.load_graphs(str(dglpath/dsname)+".bin")
+ds, _ = dgl.load_graphs(str(dglpath/dsname/"graphs.bin"))
 
 num_confs = []
 for g in ds:
@@ -144,6 +144,13 @@ g.nodes['n2'].data['energies'] = torch.randn((g.num_nodes("n2"), g.nodes['g'].da
 print(g.nodes['n2'].data['energies'].shape)
 print(g.nodes['g'].data['energy_ref'].shape)
 print(dgl.readout_nodes(g, op='sum', ntype='n2', feat='energies').shape)
+
+#%%
+
+print(g.nodes['n1'].data['gradient_ref'].shape)
+
+print(dgl.readout_nodes(g, op='sum', ntype='n1', feat='gradient_ref').shape)
+
 #%%
 
 

@@ -63,6 +63,9 @@ tmp/
 /.luarc.json
 
 wandb/
+checkpoints/
+lightning_logs/
+
 old_src/
 data/
 # do not ignore data/ in grappa/src/grappa/data:

@@ -25,6 +25,7 @@ def batch(graphs: List[DGLGraph]) -> DGLGraph:
 
     batched_graph = graphs
 
+
     # make deep copies of the idx features
     # then shift them
     for graph, offset in zip(batched_graph, n1_offsets):
