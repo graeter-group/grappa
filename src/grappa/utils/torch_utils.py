@@ -68,10 +68,14 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     # now split the uniques such that for each ds_name, the ratio of train, val and test is approx the same as in the partition dict
     # Shuffle
     for dsname in uniques.keys():
-        if not isinstance(partition, tuple):
+        if isinstance(partition, dict):
             ds_partition = partition[dsname]
-        else:
+        elif isinstance(partition, tuple):
             ds_partition = partition
+        elif isinstance(partition, list):
+            ds_partition = tuple(partition)
+        else:
+            raise ValueError(f"Unknown type for partition: {type(partition)}")
 
         assert abs(sum(ds_partition) - 1) <= 1e-10, "Partitions must sum to 1.0"
         assert len(ds_partition) == 3, "Partitions must be a tuple of length 3"

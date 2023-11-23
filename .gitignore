@@ -68,8 +68,11 @@ lightning_logs/
 
 old_src/
 data/
+runs/
+
 # do not ignore data/ in grappa/src/grappa/data:
 !src/grappa/data/
+
 src/grappa/models/
 esp_data/
 data_backup/

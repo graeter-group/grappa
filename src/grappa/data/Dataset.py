@@ -149,7 +149,8 @@ class Dataset(torch.utils.data.Dataset):
             for feature in set(graph.ndata.keys()).difference(features):
                 del graph.ndata[feature]
 
-        print(f"Removed features:\n  {removed}")
+        if len(removed) > 0:
+            print(f"Removed features:\n  {removed}")
     
 
     def calc_split_ids(self, partition:Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], seed:int=0):

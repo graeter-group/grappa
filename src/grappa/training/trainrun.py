@@ -1,6 +1,6 @@
 #%%
 from grappa.data import Dataset, GraphDataLoader
-from grappa.models import Energy, get_models
+from grappa.models import Energy, deploy
 from grappa.training.loss import ParameterLoss, EnergyLoss, GradientLoss
 
 import torch
@@ -9,34 +9,78 @@ from grappa.utils.torch_utils import root_mean_squared_error, mean_absolute_erro
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 import wandb
+from grappa.utils.run_utils import get_rundir, load_yaml
 from grappa import utils
 from typing import List, Dict
+from grappa.training.get_dataloaders import get_dataloaders
+from grappa.training.lightning_model import LitModel
+from grappa.training.lightning_trainer import get_lightning_trainer
+from grappa.training.config import default_config
+
+#NOTE inint wandb before starting train run. write default oconfig there and provide cmds to overwrite it
 
 #%%
-def do_trainrun(config:Dict):
-    """Do a single training run with the given configuration.
-
-    Args:
-        config (Dict): Dictionary containing the configuration for the training run.
+def do_trainrun(config:Dict, project:str='grappa'):
     """
+    Do a single training run with the given configuration.
+    """
+
+    # check whether all config args are allowed:
+    default_config_ = default_config()
+    for k in config.keys():
+        if k not in default_config_:
+            raise KeyError(f"Key {k} not an allowed config argument.")
+        if isinstance(config[k], dict):
+            for kk in config[k].keys():
+                if kk not in default_config_[k]:
+                    raise KeyError(f"Key {k}-{kk} not an allowed config argument.")
+                
+
     # Get the model
-    model = get_models.get_full_model(config['model_config'])
+    model = deploy.model_from_config(config=config['model_config'])
 
-    # Get the dataset
-    # configure sampling weights or total number of mols
-    dataset = sum([Dataset.load(p) for p in config['datasets']])
+    ###############################
+    class ParamFixer(torch.nn.Module):
+        def forward(self, g):
+            g.nodes['n2'].data['k'] = g.nodes['n2'].data['k'][:,0]
+            g.nodes['n2'].data['eq'] = g.nodes['n2'].data['eq'][:,0]
+            g.nodes['n3'].data['k'] = g.nodes['n3'].data['k'][:,0]
+            g.nodes['n3'].data['eq'] = g.nodes['n3'].data['eq'][:,0]
+            return g
 
-    # Get the split ids
-    # load if path in config, otherwise generate. For now, always generate it.
-    if False:
-        pass
-    else:
-        split_ids = dataset.calc_split_ids((0.8,0.1,0.1))
+    model = torch.nn.Sequential(
+        model,
+        ParamFixer(),
+        Energy(suffix=''),
+        Energy(suffix='_ref', write_suffix="_classical_ff")
+    )
+    ###############################
 
-    tr, vl, te = dataset.split(*split_ids.values())
 
     # Get the dataloaders
-    train_loader = GraphDataLoader(tr, batch_size=config['tr_batch_size'], shuffle=True, num_workers=config['train_loader_workers'], pin_memory=config['pin_memory'], conf_strategy=config['conf_strategy'])
-    val_loader = GraphDataLoader(vl, batch_size=config['val_batch_size'], shuffle=False, num_workers=config['val_loader_workers'], pin_memory=config['pin_memory'], conf_strategy=config['conf_strategy'])
-    test_loader = GraphDataLoader(te, batch_size=config['te_batch_size'], shuffle=False, num_workers=config['test_loader_workers'], pin_memory=config['pin_memory'], conf_strategy=config['conf_strategy'])
-    
+    tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'])
+
+    # Get a pytorch lightning model
+    lit_model = LitModel(model=model, tr_loader=tr_loader, vl_loader=val_loader, te_loader=test_loader, **config['lit_model_config'])
+
+    # Initialize wandb
+    wandb.init(project=project, config=config)
+
+    # Get the trainer
+    trainer = get_lightning_trainer(**config['trainer_config'])
+
+    # write the current config to the run directory. NOTE: initialize a logging dir for the trainer first!
+    utils.run_utils.write_yaml(config, Path(trainer.logger.experiment.dir)/"grappa_config.yaml")
+
+    print(f"\nStarting training run {wandb.run.name}...\nSaving logs to {wandb.run.dir}...\n")
+
+    # Train the model
+    trainer.fit(model=lit_model, train_dataloaders=tr_loader, val_dataloaders=val_loader)
+
+
+def trainrun_from_file(config_path:Path):
+    """
+    Do a single training run with the configuration in the given file.
+    """
+    config = load_yaml(config_path)
+    do_trainrun(config)
