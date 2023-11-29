@@ -53,7 +53,7 @@ class LitModel(pl.LightningModule):
         
         self.model = model
         self.tuplewise_energy_loss = TuplewiseEnergyLoss()
-        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3)
+        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3) # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
 
         self.lrs = lrs
         self.lr = self.lrs[0]
@@ -126,9 +126,9 @@ class LitModel(pl.LightningModule):
 
 
     def on_train_epoch_end(self) -> None:
+        # log the metrics every log_train_interval epochs:
 
         if self.current_epoch % self.log_train_interval == 0:
-            # log the metrics
             metrics = self.train_evaluator.pool()
             for dsname in metrics.keys():
                 for key in metrics[dsname].keys():
@@ -137,18 +137,23 @@ class LitModel(pl.LightningModule):
                     else:
                         self.log(f'{dsname}/train/{key}', metrics[dsname][key], on_epoch=True)
         
+        return super().on_train_epoch_end()
+        
+
+    def on_train_epoch_start(self) -> None:
+        # Update epoch-dependent hyperparameters such as lr and loss weights.
+
         self.set_lr()
 
         if self.current_epoch > self.classical_epochs:
             self.loss.param_weight = 0
 
         if self.current_epoch > self.start_qm_epochs:
-            print(f'setting the loss weights to\n  param_weight: {self.loss.param_weight}\n  gradient_weight: {self.gradient_weight}\n  energy_weight: {self.energy_weight}')
+            # print(f'setting the loss weights to\n  param_weight: {self.loss.param_weight}\n  gradient_weight: {self.gradient_weight}\n  energy_weight: {self.energy_weight}')
             self.loss.gradient_weight = float(self.gradient_weight)
             self.loss.energy_weight = float(self.energy_weight)
             
-
-        return super().on_train_epoch_end()
+        return super().on_train_epoch_start()
 
 
 

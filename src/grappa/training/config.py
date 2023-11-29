@@ -64,10 +64,10 @@ def default_config(model_tag:str='small')->Dict:
         "lrs": {0: 1e-4, 3: 1e-5, 200: 1e-6, 400: 1e-7},
         "start_qm_epochs": 5,
         "add_restarts": [200, 400],
-        "warmup_steps": int(1e3),
+        "warmup_steps": int(2e2),
         "classical_epochs": 40,
-        "energy_weight": 1e-5,
-        "gradient_weight": 10.0,
+        "energy_weight": 1.,
+        "gradient_weight": 1.,
         "tuplewise_weight": 0.,
         "log_train_interval": 5,
         "log_classical": False,
@@ -77,7 +77,8 @@ def default_config(model_tag:str='small')->Dict:
     trainer_config = {
         "max_epochs": 500,
         "gradient_clip_val": 1e1,
-        "profiler": "simple"
+        "profiler": "simple",
+        'early_stopping_criterion': 'avg/val/rmse_gradients',
     }
 
     config = {

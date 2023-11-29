@@ -156,6 +156,15 @@ class Evaluator:
                     if key not in self.metric_names:
                         del metrics[dsname][key]
 
+        # now calculate an averaged metric for the different datasets where each dataset gets the same weight, i.e. just form the average along the datasets:
+        metrics['avg'] = {}
+        for key in ['mae_energies', 'mae_gradients', 'rmse_energies', 'rmse_gradients']:
+            if not self.metric_names is None:
+                if key not in self.metric_names:
+                    continue
+
+            metrics['avg'][key] = np.mean([metrics[dsname][key] for dsname in metrics.keys() if dsname not in ['avg', 'all']])
+
 
         # reset the storage
         self.init_storage()
