@@ -4,6 +4,8 @@ IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion 
 
 MAX_ELEMENT = 53 # cover Iodine
 
+BONDED_CONTRIBUTIONS = [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]
+
 RESIDUES = ['ACE', 'NME', 'CYS', 'ASP', 'SER', 'GLN', 'LYS', 'ILE', 'PRO', 'THR', 'PHE', 'ASN', 'GLY', 'HIS', 'LEU', 'ARG', 'TRP', 'ALA', 'VAL', 'GLU', 'TYR', 'MET', "HIE", "HID", "HIP", "DOP", "HYP"]
 
 ONELETTER = {

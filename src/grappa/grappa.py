@@ -11,7 +11,7 @@ from grappa.utils.run_utils import load_yaml, load_weights_torchhub
 from grappa.models.deploy import model_from_config
 
 
-class Grappa():
+class Grappa:
     """
     Model wrapper class. Wraps a trained model and provides the interface to predict bonded parameters for a certain molecule.
     """

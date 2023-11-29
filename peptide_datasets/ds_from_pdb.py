@@ -1,9 +1,17 @@
+"""
+Parametrise the spice dipeptide dataset with the Amber 99SBildn forcefield and store the dataset as npz files representing a MolData object.
+"""
 
-from grappa.data import MolData
+
+from grappa.data import MolData, Molecule
 from pathlib import Path
 import numpy as np
+from openmm.app import ForceField
+import tempfile
+from openmm.app import PDBFile
+from grappa.utils import openmm_utils
 
-def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml'):
+def main(source_path, target_path, forcefield):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -25,14 +33,28 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
         try:
             print(f"Processing {idx}", end='\r')
             data = np.load(molfile)
-            # ransform to actual dictionary
+            # transform to actual dictionary
             data = {k:v for k,v in data.items()}
 
-            moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield)
-            moldata.molecule.add_features(['ring_encoding'])
+            xyz = data['n1 xyz'].transpose(1,0,2)
+            gradient = data['n1 grad_qm'].transpose(1,0,2)
+            energy = data['g u_qm'][0]
+            pdb = data['pdb'].tolist()
+            pdbstring = ''.join(pdb)
+            sequence = str(data['sequence'])
+
+            # get topology:
+            topology = openmm_utils.topology_from_pdb(pdbstring)
+
+            system = ForceField(forcefield).createSystem(topology)
 
             total_mols += 1
-            total_confs += data['xyz'].shape[0]
+            total_confs += xyz.shape[0]
+
+            # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
+            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=sequence, pdb=pdbstring)
+
+            moldata.molecule.add_features(['ring_encoding'])
 
             moldata.save(target_path/(molfile.stem+'.npz'))
 
@@ -64,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--forcefield",
         type=str,
-        default='openff_unconstrained-2.0.0.offxml',
+        default='amber99sbildn.xml',
         help="Which forcefield to use for creating improper torsion and classical parameters. if no energy_ref and gradient_ref are given, the nonbonded parameters are used as reference.",
     )
     args = parser.parse_args()

@@ -1,9 +1,17 @@
+"""
+Parametrise the spice dipeptide dataset with the Amber 99SBildn forcefield and store the dataset as npz files representing a MolData object.
+THIS DOES CURRENTLY NOT WORK BECAUSE THE MAPPED SMILES CONTAINS NO RESIDUE INFORMATION.
+"""
 
-from grappa.data import MolData
+raise NotImplementedError("This script does not work yet because the mapped smiles does not contain residue information.")
+
+from grappa.data import MolData, Molecule
 from pathlib import Path
 import numpy as np
+from openff.toolkit import Molecule as OFFMolecule
+from openmm.app import ForceField
 
-def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml'):
+def main(source_path, target_path, forcefield):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -25,14 +33,21 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
         try:
             print(f"Processing {idx}", end='\r')
             data = np.load(molfile)
-            # ransform to actual dictionary
+            # transform to actual dictionary
             data = {k:v for k,v in data.items()}
 
-            moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield)
-            moldata.molecule.add_features(['ring_encoding'])
+            xyz = data['xyz']
+            energy = data['energy_qm']
+            gradient = data['gradient_qm']
+
+            mapped_smiles = data['mapped_smiles']
+            if not isinstance(mapped_smiles, str):
+                mapped_smiles = mapped_smiles[0]
 
             total_mols += 1
             total_confs += data['xyz'].shape[0]
+
+            moldata = MolData.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, forcefield_type='openmm')
 
             moldata.save(target_path/(molfile.stem+'.npz'))
 
@@ -64,7 +79,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--forcefield",
         type=str,
-        default='openff_unconstrained-2.0.0.offxml',
+        default='amber99sbildn.xml',
         help="Which forcefield to use for creating improper torsion and classical parameters. if no energy_ref and gradient_ref are given, the nonbonded parameters are used as reference.",
     )
     args = parser.parse_args()
