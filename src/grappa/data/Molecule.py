@@ -10,42 +10,110 @@ from grappa.utils import tuple_indices
 from dgl import DGLGraph
 import dgl.heterograph
 import torch
-
+from pathlib import Path
 import pkgutil
 
 
-@dataclass
 class Molecule():
     """
-    Input dataclass for grappa parameter description
-    Additional features are a dict with name: array/List of shape n_atoms x feat_dim
+    A dataclass representing a molecule for use in GRAPPA (Graph-based Parameters for Proteins and beyond) simulations.
+
+    This class stores various molecular structures such as atoms, bonds, angles, torsions, and additional features 
+    necessary for molecular dynamics simulations. It includes methods to handle both proper and improper torsions 
+    and maintains an optional internal dictionary for neighbor relationships.
+
+    Attributes:
+        atoms (np.ndarray[int] of shape (n_atoms)): A list or array of atom identifiers. These identifiers are unique but 
+            not necessarily ordered or starting from zero.
+        bonds (np.ndarray[int] of shape (n_bonds, 2)): A list of tuples or an np.ndarray
+            containing two atom ids representing a bond between them. Each bond may only appear once.
+            By convention, the first atom id should be smaller than the second atom id. (This is currently not enforced.)
+        impropers (np.ndarray[int] of shape (n_impropers, 4)): A list of tuples or
+            an np.ndarray containing four atom ids representing an improper torsion between them.
+            Upon construction, one can pass the improper torsions in any order and any amount of permuted versions, the post_init function will sort them, create the three independent versions and store them in the order given by the central atom position.
+            After construction, the central atom is always at position grappa.constants.IMPROPER_CENTRAL_IDX.
+            Each set of atom ids appears three times for the three independent dihedral angles
+            that can be defined for this set of atoms under the constraint that the central atom is given.
+            (There are 6==3! possible permutations, but only 3 are independent because of the antisymmetry of the dihedral angle under exchange of the first and last or the second and third atom.)
+        atomic_numbers (List[int]): A list of atomic numbers corresponding to the element of each atom in the molecule.
+        partial_charges (List[float]): A list of partial charges for each atom in units of the elementary charge.
+        additional_features (Optional[Dict[str, List]]): A dictionary containing additional features associated with 
+            atoms. The dictionary keys are feature names, and values are lists or arrays of shape (n_atoms, feat_dim).
+
+    Optional Attributes:
+        angles (Optional[Union[List[Tuple[int, int, int]], np.ndarray]]): A list or array of tuples, each representing 
+            an angle between three atoms. By convention, the first atom ID in the tuple is smaller than the third. 
+            If not provided, angles can be calculated from bonds.
+        propers (Optional[Union[List[Tuple[int, int, int, int]], np.ndarray]]): A list or array of tuples, each 
+            representing a proper torsion between four atoms. By convention, the first atom ID in the tuple is smaller 
+            than the fourth. If not provided, proper torsions can be calculated from bonds.
+        neighbor_dict (Optional[Dict[int, List[int]]]): An internal variable storing neighbor relationships of atoms. 
+            It is calculated from bonds and used for deriving angles, proper and improper torsions if they are not 
+            explicitly provided.
+
+    Note:
+        - The `additional_features` attribute can be used to add custom features relevant to specific molecule types.
     """
-    # id Tuples:
-    atoms: Union[List[int], np.ndarray]
-    bonds: Union[List[Tuple[int,int]], np.ndarray]
-    impropers: Union[List[Tuple[int,int,int,int]], np.ndarray]
 
-    # atom properties:
-    atomic_numbers: List[int]
-    partial_charges: List[float]
-    additional_features: Dict[str,List] = None
-    
-    # more id Tuples:
-    angles: Optional[Union[List[Tuple[int,int,int]], np.ndarray]] = None
-    propers: Optional[Union[List[Tuple[int,int,int,int]], np.ndarray]] = None
+    def __init__(
+        self,
+        atoms: Union[List[int], np.ndarray],
+        bonds: Union[List[Tuple[int, int]], np.ndarray],
+        impropers: Union[List[Tuple[int, int, int, int]], np.ndarray],
+        atomic_numbers: List[int],
+        partial_charges: List[float],
+        additional_features: Optional[Dict[str, List]] = None,
+        angles: Optional[Union[List[Tuple[int, int, int]], np.ndarray]] = None,
+        propers: Optional[Union[List[Tuple[int, int, int, int]], np.ndarray]] = None,
+        improper_in_correct_format: bool = False,
+        ring_encoding: bool = True,
+    )->None:
+        self.atoms = atoms
+        self.bonds = bonds
+        self.impropers = impropers
+        self.atomic_numbers = atomic_numbers
+        self.partial_charges = partial_charges
+        self.additional_features = additional_features
+        self.angles = angles
+        self.propers = propers
+        self.neighbor_dict = None  # Calculated from bonds if needed
 
-    neighbor_dict: Optional[Dict[int, List[int]]] = None # if needed, this is calculated from bonds and stored. This is used to calculate angles and propers if they are not given and later on to check whether torsions are improper.
+        if not improper_in_correct_format:
+            self.process_impropers()
+
+        self.__post_init__()
+        self._validate()
+
+        if ring_encoding:
+            self.add_features(feat_names=['ring_encoding'])
+
+    def process_impropers(self):
+        """
+        Updates the impropers such that they are as described in the class docstring.
+        """
+        if self.neighbor_dict is None:
+            self.neighbor_dict = tuple_indices.get_neighbor_dict(bonds=self.bonds, sort=True)
+            
+        _, self.impropers = tuple_indices.get_torsions(torsion_ids=self.impropers, neighbor_dict=self.neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
+
 
     def _validate(self):
         # check the input for consistency
         # TODO: compare to current input validation
-        # this could check that no equivalent improper torsions or bonds are present
+
         pass
     
     def  __post_init__(self):
         #TODO: check whether this does what is is supposed to do
         if self.angles is None or self.propers is None:
-            tuple_dict = tuple_indices(bonds=self.bonds)
+            is_sorted = False
+
+            if self.neighbor_dict is None:
+                self.neighbor_dict = tuple_indices.get_neighbor_dict(bonds=self.bonds, sort=True)
+                is_sorted = True
+
+            tuple_dict = tuple_indices.get_idx_tuples(bonds=self.bonds, neighbor_dict=self.neighbor_dict, is_sorted=is_sorted)
+
             if self.angles is None:
                 self.angles = tuple_dict['angles']
             if self.propers is None:
@@ -56,6 +124,8 @@ class Molecule():
 
 
         self._validate()
+
+    
     
     def sort(self):
         """
@@ -75,12 +145,23 @@ class Molecule():
         
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True):
         """
-        Create a Molecule from an openmm system. If bonds is None, the bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
+        Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
         The indices are those of the topology.
-        """
+        Arguments:
+            - openmm_system: an openmm system
+            - openmm_topology: an openmm topology
+            - partial_charges: a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system.
+            - no_ring_encoding: if True, the ring encoding feature (for which rdkit is needd) is not added.
+
+        Args:
+            openmm_system ([openmm.System]): an openmm system defining the improper torsions and, if partial_charges is None, the partial charges.
+            openmm_topology ([openmm.app.Topology]): an openmm topology defining the bonds and atomic numbers.
+            partial_charges ([type], optional): a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system. Defaults to None.
+            ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
+            """
         assert pkgutil.find_loader("openmm") is not None, "openmm must be installed to use this constructor."
 
         import openmm.unit as openmm_unit
@@ -98,51 +179,18 @@ class Molecule():
         tuple_dict = tuple_indices.get_idx_tuples(bonds=bonds, is_sorted=True, neighbor_dict=neighbor_dict)
         angles = tuple_dict['angles']
         propers = tuple_dict['propers']
-                
-                
-        # get the improper torsions from the openmm system:
-        impropers = []
-        improper_sets = []
+
+        # get the improper torsions:
+        all_torsions = []
         for force in openmm_system.getForces():
             if force.__class__.__name__ == 'PeriodicTorsionForce':
                 for i in range(force.getNumTorsions()):
-                    torsion = force.getTorsionParameters(i)[0], force.getTorsionParameters(i)[1], force.getTorsionParameters(i)[2], force.getTorsionParameters(i)[3]
+                    *torsion, _,_,_ = force.getTorsionParameters(i)
+                    assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
 
-                    if set(torsion) in improper_sets:
-                        # skip this torsion if it is already present (in a different order, which is fine becasue we always store all three independent orderings for a given central atom and because the central atom is unique assuming there are no fully connected sets of four atoms):
-                        continue
+                    all_torsions.append(tuple(torsion))
 
-                    is_improper, central_idx = tuple_indices.is_improper(ids=torsion, neighbor_dict=neighbor_dict)
-                    if is_improper:
-                        # permute two atoms such that the central atom is at the index given by grappa.constants.IMPROPER_CENTRAL_IDX:
-                        central_atom = torsion[central_idx]
-                        other_atoms = [torsion[i] for i in range(4) if i != central_idx]
-                        # now permute the torsion cyclically while keeping the central atom at its position to obtain the other two independent orderings:
-                        other_atoms2 = [other_atoms[i] for i in (1,2,0)]
-                        other_atoms3 = [other_atoms[i] for i in (2,0,1)]
-
-                        # now form the three versions of the torsion tuple such that the central atom is always at the same position and the other atoms are taken in the order of the respective other_atoms List:
-                        torsion1, torsion2, torsion3 = [], [], []
-                        other_atom_position = 0
-                        for position in range(4):
-                            if position == constants.IMPROPER_CENTRAL_IDX:
-                                torsion1.append(central_atom)
-                                torsion2.append(central_atom)
-                                torsion3.append(central_atom)
-                            else:
-                                torsion1.append(other_atoms[other_atom_position])
-                                torsion2.append(other_atoms2[other_atom_position])
-                                torsion3.append(other_atoms3[other_atom_position])
-                                other_atom_position += 1
-
-                        # now append the three torsions to the List of impropers:
-                        impropers.append(tuple(torsion1))
-                        impropers.append(tuple(torsion2))
-                        impropers.append(tuple(torsion3))
-
-                        # also append the set of atoms to the List of improper sets:
-                        improper_sets.append(set(torsion))
-
+        _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
 
         if partial_charges is None:
             # get partial charges from the openmm system:
@@ -154,11 +202,11 @@ class Molecule():
                         partial_charges.append(q.value_in_unit(openmm_unit.elementary_charge))
 
         elif isinstance(partial_charges, int):
-            partial_charges = [partial_charges] * len(List(openmm_topology.atoms()))
+            partial_charges = [partial_charges] * len(list(openmm_topology.atoms()))
         elif isinstance(partial_charges, np.ndarray):
-            partial_charges = partial_charges.toList()
+            partial_charges = partial_charges.tolist()
         else:
-            if not isinstance(partial_charges, List):
+            if not isinstance(partial_charges, list):
                 raise ValueError(f"partial_charges must be None, int or np.ndarray but is {type(partial_charges)}")
 
         # get atomic numbers and atom indices using zip:
@@ -167,11 +215,15 @@ class Molecule():
             atomic_numbers.append(atom.element.atomic_number)
             atoms.append(atom.index)
 
+        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True)
 
-        return cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges)
+        if ring_encoding:
+            self.add_features(feat_names=['ring_encoding'])
+
+        return self
 
 
-    def add_features(self, feat_names:List[str]=['ring_encoding'], **kwargs):
+    def add_features(self, feat_names:Union[str,List[str]]=['ring_encoding'], **kwargs):
         """
         Add features to the molecule by keyword. Currently supported:
             - 'ring_encoding': a one-hot encoding of ring membership obtained from rdkit. feat dim: 7
@@ -179,8 +231,10 @@ class Molecule():
             - 'is_aromatic': a one-hot encoding indicating whether the atom is aromatic or not. openff_mol must be passed as a keyword argument. feat dim: 1
             - 'is_radical': a one-hot encoding indicating whether the atom is a radical or not. feat dim: 1
         """
-        for feat_name in feat_names:
+        if isinstance(feat_names, str):
+            feat_names = [feat_names]
 
+        for feat_name in feat_names:
 
             if feat_name == 'ring_encoding':
                 assert pkgutil.find_loader("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
@@ -223,10 +277,12 @@ class Molecule():
             else:
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")
             
+
     @classmethod
     def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:Union[np.ndarray, int]=None):
         """
-        Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used t initialize the interaction tuples and, if partial_charges is None, to obtain the partial charges.
+        DEPRECATED, USE from_openff_molecule INSTEAD.
+        Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to obtain improper torsions and, if partial_charges is None, to obtain the partial charges.
         """
         assert pkgutil.find_loader("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
 
@@ -239,12 +295,70 @@ class Molecule():
         mol = cls.from_openmm_system(openmm_system=system, openmm_topology=topol, partial_charges=partial_charges)
 
         # add features:
-        mol.add_features(feat_names=['ring_encoding', 'sp_hybridization'], openff_mol=openff_mol)
+        mol.add_features(feat_names=['ring_encoding', 'sp_hybridization', 'is_aromatic'], openff_mol=openff_mol)
+
+        return mol
+
+
+    @classmethod
+    def from_openff_molecule(cls, openff_mol, partial_charges:Union[np.ndarray, float, List[float]]=None, impropers:Union[str, List[Tuple[int,int,int,int]]]='smirnoff'):
+        """
+        Creates a Molecule from an openff molecule. The openff molecule must have partial charges id partial_charges is None.
+        impropers can either be a method, 'smirnoff' or 'amber', or a list of tuples of atom ids.
+        Args:
+            openff_mol (openff.toolkit.topology.Molecule): an openff molecule
+            partial_charges (Union[np.ndarray, float, List[float]]): the partial charges of the molecule. If None, the partial charges are obtained from the openff molecule.
+            impropers (Union[str, List[Tuple[int,int,int,int]]]): the improper torsions of the molecule. If 'smirnoff' or 'amber', the improper torsions are obtained from the openff molecule. If a list of tuples of atom ids, these are used as the improper torsions.
+        """
+        assert pkgutil.find_loader("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
+
+        atoms = [atom.molecule_atom_index for atom in openff_mol.atoms]
+
+        atomic_numbers = [atom.atomic_number for atom in openff_mol.atoms]
+
+        # get a list of bond idxs where the first atom idx is smaller than the second:
+        bonds = [(bond.atom1_index, bond.atom2_index) if bond.atom1_index < bond.atom2_index else (bond.atom2_index, bond.atom1_index) for bond in openff_mol.bonds]
+
+        if partial_charges is None:
+            assert openff_mol.partial_charges is not None, f"partial_charges must be passed as an argument or be present in the openff molecule but both are None"
+
+            from openff.units import unit
+            partial_charges = (openff_mol.partial_charges/unit.elementary_charge).magnitude
+
+        if isinstance(partial_charges, int):
+            partial_charges = [partial_charges] * len(atoms)
+        elif isinstance(partial_charges, np.ndarray):
+            partial_charges = partial_charges.tolist()
+        else:
+            if not isinstance(partial_charges, list):
+                raise ValueError(f"partial_charges must be None, int or np.ndarray but is {type(partial_charges)}")
+
+
+        # get the impropers:
+        if isinstance(impropers, str):
+            if impropers == 'smirnoff':
+                impropers = openff_mol.smirnoff_impropers
+
+            elif impropers == 'amber':
+                impropers = openff_mol.amber_impropers
+
+            # now get the indices of these, but only one version of each improper since we generate the other permutations in the post_init function:
+            impropers = list(set(
+                tuple(
+                    sorted((atoms[0]._molecule_atom_index, atoms[1]._molecule_atom_index, atoms[2]._molecule_atom_index, atoms[3]._molecule_atom_index))
+                ) for atoms in impropers
+            ))
+            
+        # initialize with the corresponding flag to covnert the impropers to grappa format:
+        mol = cls(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=False)
+
+        # add features:
+        mol.add_features(feat_names=['ring_encoding', 'sp_hybridization', 'is_aromatic'], openff_mol=openff_mol)
 
         return mol
     
     
-    def to_dgl(self, max_element=53, exclude_feats:List[str]=[]):
+    def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:List[str]=[]):
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
         The dgl graph has the following node types (if the number of respective nodes is nonzero):
@@ -389,7 +503,8 @@ class Molecule():
             impropers=array_dict['impropers'],
             atomic_numbers=array_dict['atomic_numbers'],
             partial_charges=array_dict['partial_charges'],
-            additional_features={key:array_dict[key] for key in array_dict.keys() if key not in ['atoms', 'bonds', 'angles', 'propers', 'impropers', 'atomic_numbers', 'partial_charges']}
+            additional_features={key:array_dict[key] for key in array_dict.keys() if key not in ['atoms', 'bonds', 'angles', 'propers', 'impropers', 'atomic_numbers', 'partial_charges']},
+            improper_in_correct_format=True, # assume this is already in the correct format since it was stored
         )
     
     def save(self, path:str):

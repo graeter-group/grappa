@@ -2,6 +2,8 @@ import torch
 import dgl
 from typing import Tuple, List, Dict, Union
 
+from grappa.constants import BONDED_CONTRIBUTIONS
+
 def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
     """
     Get the parameters of a graph asuming that they are stored at g.nodes[lvl].data[{k}/{eq}+suffix]
@@ -20,7 +22,7 @@ def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
         Dictionary of parameters.
     """
     params = {}
-    for lvl, param_name in [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]:
+    for lvl, param_name in BONDED_CONTRIBUTIONS:
         if (lvl, param_name) in exclude:
             continue
 
@@ -264,3 +266,30 @@ def get_tuplewise_energies(g, suffix="", center=False):
             energies[lvl] = energies[lvl] - energies[lvl].mean(dim=1, keepdim=True)
 
     return energies
+
+
+def get_stat_dict(loader, suffix="_ref"):
+    '''
+    Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}.
+    '''
+    parameters = None
+
+    with torch.no_grad():
+        for g,_ in loader:
+            if parameters is None:
+                parameters = get_parameters(g,suffix=suffix)
+            else:
+                these_params = get_parameters(g,suffix=suffix)
+                for k, v in these_params.items():
+                    # remove the suffix from the key in the stat dict:
+                    parameters[k.replace(suffix, "")] = torch.cat((parameters[k], v), dim=0)
+        
+        stat_dict = {'mean':{}, 'std':{}}
+
+        for k, v in parameters.items():
+            stat_dict['mean'][k] = torch.mean(v, dim=0)
+            stat_dict['std'][k] = torch.std(v, dim=0)
+
+    return stat_dict
+
+

@@ -127,6 +127,11 @@ class MolData():
         array_dict['gradient_ref'] = self.gradient_ref
         array_dict['mol_id'] = self.mol_id
 
+        if not self.mapped_smiles is None:
+            array_dict['mapped_smiles'] = self.mapped_smiles
+        if not self.pdb is None:
+            array_dict['pdb'] = self.pdb
+
         if not self.improper_energy_ref is None:
             array_dict['improper_energy_ref'] = self.improper_energy_ref
         if not self.improper_gradient_ref is None:
@@ -181,6 +186,14 @@ class MolData():
         if isinstance(mol_id, np.ndarray):
             mol_id = str(mol_id)
 
+        mapped_smiles = array_dict.get('mapped_smiles', None)
+        if isinstance(mapped_smiles, np.ndarray):
+            mapped_smiles = str(mapped_smiles)
+
+        pdb = array_dict.get('pdb', None)
+        if isinstance(pdb, np.ndarray):
+            pdb = str(pdb)
+
         improper_energy_ref = array_dict.get('improper_energy_ref', None)
         improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
 
@@ -188,7 +201,7 @@ class MolData():
 
         tuple_keys = ['atoms', 'bonds', 'angles', 'propers', 'impropers']
 
-        exclude_molecule_keys = ['xyz', 'mol_id'] + param_keys
+        exclude_molecule_keys = ['xyz', 'mol_id', 'pdb'] + param_keys
 
         # Reconstruct the molecule from the dictionary. for this, we need to filter out the keys that are not part of the molecule. We can assume that all keys are disjoint since we check this during saving.
         molecule_dict = {k: v for k, v in array_dict.items() if not k in exclude_molecule_keys and not 'energy' in k and not 'gradient' in k}
@@ -220,7 +233,9 @@ class MolData():
             ff_nonbonded_energy=ff_nonbonded_energy,
             ff_nonbonded_gradient=ff_nonbonded_gradient,
             improper_energy_ref=improper_energy_ref,
-            improper_gradient_ref=improper_gradient_ref
+            improper_gradient_ref=improper_gradient_ref,
+            mapped_smiles=mapped_smiles,
+            pdb=pdb,
         )
 
     
@@ -280,7 +295,7 @@ class MolData():
         
 
         if mapped_smiles is not None:
-            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, openff_forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id)
+            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff')
         else:
             raise NotImplementedError("pdb files are not supported yet.")
 
@@ -328,7 +343,7 @@ class MolData():
             system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
 
             # remnove all but the nonbonded forces in this copy:
-            self.energy_ref, self.gradient_ref = openmm_utils.get_energies(system2=system2, xyz=xyz)
+            self.energy_ref, self.gradient_ref = openmm_utils.get_energies(openmm_system=system2, xyz=xyz)
             self.gradient_ref = -self.gradient_ref # the reference gradient is the negative of the force
 
         # calculate the contribution from improper torsions in the system:
@@ -356,11 +371,29 @@ class MolData():
     
 
     @classmethod
-    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, openff_forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None):
+    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff'):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to initialize the interaction tuples, classical parameters and, if partial_charges is None, to obtain the partial charges.
+        The forcefield_type can be either openff, openmm or openmmforcefields.
         """
-        system, topology, openff_mol = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=openff_forcefield, partial_charges=partial_charges)
+        if forcefield_type == 'openff':
+            system, topology, openff_mol = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=forcefield, partial_charges=partial_charges)
+        
+        elif forcefield_type == 'openmm':
+            raise NotImplementedError("This does not work for openff molecules. The residues are needed.")
+
+            from openmm.app import ForceField
+            from openff.toolkit import Molecule as OFFMolecule
+
+            ff = ForceField(forcefield)
+            openff_mol = OFFMolecule.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=True)
+            topology = openff_mol.to_topology().to_openmm()
+            system = ff.createSystem(topology)
+
+        elif forcefield_type == 'openmmforcefields':
+            raise NotImplementedError("openmmforcefields is not supported yet.")
+        else:
+            raise ValueError(f"forcefield_type must be either openff, openmm or openmmforcefields, not {forcefield_type}")
 
         if mol_id is None:
             mol_id = openff_mol.to_smiles(mapped=False)

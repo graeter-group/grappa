@@ -59,6 +59,8 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
     from openff.toolkit import ForceField, Topology
     from openff.toolkit.topology import Molecule
 
+    assert isinstance(mapped_smiles, str), "mapped_smiles must be a string."
+
     mol = Molecule.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=True)
     topology = Topology.from_molecules(mol)
     openmm_topology = topology.to_openmm()
