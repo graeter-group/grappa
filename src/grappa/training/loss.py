@@ -205,12 +205,11 @@ class MolwiseLoss(torch.nn.Module):
                 gradients_ref = graph_utils.get_gradients(graph, suffix="_ref")
                 loss_term = loss_term + self.mse_loss(gradients, gradients_ref) * self.gradient_weight
 
-
             if self.energy_weight != 0:
                 energies = graph_utils.get_energies(graph)
                 energies_ref = graph_utils.get_energies(graph, suffix="_ref")
-                loss_term = loss_term + self.mse_loss(energies, energies_ref) * self.energy_weight            
-
+                energy_contrib = self.mse_loss(energies, energies_ref) * self.energy_weight
+                loss_term = loss_term + energy_contrib
 
             if self.param_weight != 0:
                 params = graph_utils.get_parameters(graph)
