@@ -19,7 +19,7 @@ class Evaluator:
 
     the pool function returns a dictionary containing dictionaries for each dsname with the averaged metrics. For energies, this average is per conformation, for gradients it is per 3-vector, that is total number of atoms times conformations.
     """
-    def __init__(self, log_parameters=True, log_classical_values=True, metric_names:List[str]=None):
+    def __init__(self, log_parameters=False, log_classical_values=False, metric_names:List[str]=None):
         """
         metric_names: list of strings for filtering metrics that should be logged. e.g. ['rmse_energies', 'rmse_gradients'] will only log these two metrics.
         """
@@ -175,15 +175,18 @@ class Evaluator:
 
 class ExplicitEvaluator:
     """
-    Does the same as the Evaluator but by unbatching the graphs and storing the energies and gradients explicitly on CPU RAM.
+    Does the same as the Evaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False):
+    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref'):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
         self.log_parameters = log_parameters
         self.log_classical_values = log_classical_values
         self.keep_data = keep_data
+        self.device = device
+        self.suffix = suffix
+        self.suffix_ref = suffix_ref
 
         self.init_storage()
 
@@ -212,22 +215,25 @@ class ExplicitEvaluator:
 
         # get the energies and gradients
         for g, dsname in zip(graphs, dsnames):
-            energies = utils.graph_utils.get_energies(g).detach().flatten().cpu()
-            energies_ref = utils.graph_utils.get_energies(g, suffix='_ref').detach().flatten().cpu()
-            energies_classical = utils.graph_utils.get_energies(g, suffix='_classical_ff').flatten().cpu()
+            energies = utils.graph_utils.get_energies(g, suffix=self.suffix).detach().flatten().to(self.device)
+            energies_ref = utils.graph_utils.get_energies(g, suffix=self.suffix_ref).detach().flatten().to(self.device)
+            if self.log_classical_values:
+                energies_classical = utils.graph_utils.get_energies(g, suffix='_classical_ff').flatten().to(self.device)
 
             # get the gradients in shape (n_atoms*n_confs, 3)
-            gradients = utils.graph_utils.get_gradients(g).detach().flatten(start_dim=0, end_dim=1).cpu()
-            gradients_ref = utils.graph_utils.get_gradients(g, suffix='_ref').detach().flatten(start_dim=0, end_dim=1).cpu()
-            gradients_classical = utils.graph_utils.get_gradients(g, suffix='_classical_ff').detach().flatten(start_dim=0, end_dim=1).cpu()
+            gradients = utils.graph_utils.get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+            gradients_ref = utils.graph_utils.get_gradients(g, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+            if self.log_classical_values:
+                gradients_classical = utils.graph_utils.get_gradients(g, suffix='_classical_ff').detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
-            parameters = utils.graph_utils.get_parameters(g, exclude=[('n4_improper', 'k')])
-            for p in parameters.values():
-                p = p.detach().flatten().cpu()
+            if self.log_parameters:
+                parameters = utils.graph_utils.get_parameters(g, exclude=[('n4_improper', 'k')], suffix=self.suffix)
+                for p in parameters.values():
+                    p = p.detach().flatten().to(self.device)
 
-            ref_parameters = utils.graph_utils.get_parameters(g, suffix='_ref', exclude=[('n4_improper', 'k')])
-            for p in ref_parameters.values():
-                p = p.detach().flatten().cpu()
+                ref_parameters = utils.graph_utils.get_parameters(g, suffix=self.suffix_ref, exclude=[('n4_improper', 'k')])
+                for p in ref_parameters.values():
+                    p = p.detach().flatten().to(self.device)
 
             # store everything:
             self.energies.setdefault(dsname, []).append(energies)
@@ -274,6 +280,11 @@ class ExplicitEvaluator:
         metrics = {}
         for dsname in self.energies.keys():
             metrics[dsname] = {}
+
+            metrics[dsname]['n_confs'] = self.energies[dsname].shape[0]
+
+            metrics[dsname]['std_energies'] = float(self.energies[dsname].std().item())
+            metrics[dsname]['std_gradients'] = float(self.gradients[dsname].std().item() * np.sqrt(3))
 
             # calculate the metrics
             metrics[dsname]['rmse_energies'] = float(root_mean_squared_error(self.energies[dsname], self.reference_energies[dsname]).item())

@@ -41,11 +41,14 @@ def default_config(model_tag:str='small')->Dict:
             [
                 "spice-des-monomers",
                 "spice-dipeptide",
-                "spice-pubchem", # NOTE: ALSO ADD RNA
+                "spice-pubchem",
                 "gen2",
                 "gen2-torsion",
                 "pepconf-dlc",
                 "protein-torsion",
+                "rna-nucleoside",
+                "rna-diverse",
+                "rna-trinucleotide",
             ] 
         ],
         "conf_strategy": "mean",

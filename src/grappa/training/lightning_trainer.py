@@ -1,30 +1,30 @@
-import torch
-from pathlib import Path
-from grappa.utils.torch_utils import root_mean_squared_error, mean_absolute_error, invariant_rmse, invariant_mae
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 import wandb
-from grappa import utils
-from typing import List, Dict
-from grappa.training.get_dataloaders import get_dataloaders
-from grappa.utils.run_utils import get_rundir
+from pathlib import Path
 
 
 def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='avg/val/rmse_gradients')->pl.Trainer:
 
-    wandb_logger = WandbLogger()
+    # Generate a unique ID for the run
+    run_id = wandb.util.generate_id()
 
-    run_id = wandb_logger.experiment.id
+    # Initialize Wandb with a custom name (using the generated ID)
+    wandb.init(name=run_id)
 
-    # Checkpoint directory path using the run name
-    checkpoint_dir = f'checkpoints/{run_id}/'
+    # Initialize WandbLogger with the existing run
+    wandb_logger = WandbLogger(experiment=wandb.run)
+
+    # Checkpoint directory in the run directory
+    wandb_run_dir = wandb_logger.experiment.dir
+    checkpoint_dir = str(Path(wandb_run_dir) / "checkpoints")
 
     # ModelCheckpoint callback with dynamic path and filename
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         monitor=early_stopping_criterion,
         dirpath=checkpoint_dir,
-        filename='model-{epoch:02d}-{'+early_stopping_criterion+':.2f}',
-        save_top_k=2,
+        filename='best-model',
+        save_top_k=1,
         mode='min',
         save_last=True,
         every_n_epochs=10,
