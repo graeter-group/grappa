@@ -1,9 +1,0 @@
-# for pip dependencies:
-CUDA 11.8:
-pip install torch torchvision dgl -f https://data.dgl.ai/wheels/cu118/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
-
-CUDA 11.7:
-pip install torch==2.0.0 torchvision==0.15.1 dgl -f https://data.dgl.ai/wheels/cu117/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
-
-
-conda install python=3.9 openmm=7.7.0=py39hb10b54c_0 -c conda-forge -y

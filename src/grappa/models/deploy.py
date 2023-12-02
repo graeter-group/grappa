@@ -7,43 +7,6 @@ from grappa.utils import run_utils
 from typing import Union, List, Tuple, Dict
 
 
-def model_from_tag(tag:str="latest", device:str="cpu", split_path:List=[])->torch.nn.Module:
-    """
-    Load a trained model from a tag. Available tags are:
-    
-    - latest: The latest version of the model. Currently the same as grappa_0.1.0.
-
-    - grappa_0.1.0: The model used in the thesis. Applicable to peptides, proteins and HAT-style radicals.
-
-    - radical_example: An example model, not fine-tuned for good results. Applicable to peptides, proteins and HAT-style radicals.
-    
-    - example: A general example model, not fine-tuned for good results.
-    """
-    if tag == "latest":
-        return model_from_tag(tag="grappa_0.1.0", device=device, split_path=split_path)
-
-    elif tag == "grappa_0.1.0":
-        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/grappa_0.1.0/best_model.pt"
-        split_path.append(str(Path(path).parent/"split.json"))
-        config = None
-
-    elif tag == "example":
-        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/best_model.pt"
-        split_path.append("/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/example/split.json")
-        config = None
-
-    elif tag == "radical_example":
-        path = "/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/radical_example/best_model.pt"
-        split_path.append("/hits/fast/mbm/seutelf/grappa/mains/runs/stored_models/radical_example/split.json")
-        config = None
-    else:
-        raise ValueError(f"Unknown tag {tag}")
-    
-
-    model = model_from_path(model_path=path, config_path=config, device=device)
-
-    return model
-
 
 
 def model_from_config(config_path: Union[Path, str] = None, config: Dict = None, stat_dict: Dict = None):

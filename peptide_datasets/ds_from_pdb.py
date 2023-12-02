@@ -49,7 +49,7 @@ def main(source_path, target_path, forcefield):
             system = ForceField(forcefield).createSystem(topology)
 
             total_mols += 1
-            total_confs += xyz.shape[0]
+            total_confs += len(energy)
 
             # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
             moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=sequence, pdb=pdbstring)
