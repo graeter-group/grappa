@@ -494,6 +494,10 @@ class Molecule():
 
         assert all([isinstance(feat, np.ndarray) for feat in array_dict.values()]), f"Dict values must be numpy arrays but found {[type(f) for f in array_dict.values()]}"
 
+        additional_features = {key:array_dict[key] for key in array_dict.keys() if key not in ['atoms', 'bonds', 'angles', 'propers', 'impropers', 'atomic_numbers', 'partial_charges']}
+
+        assert all([feat.shape[0] == array_dict['atoms'].shape[0] for feat in additional_features.values()]), f"Additional features must have the same number of atoms as the molecule but found {[feat.shape[0] for feat in additional_features.values()]}"
+
         return cls(
             atoms=array_dict['atoms'],
             bonds=array_dict['bonds'],
@@ -502,7 +506,7 @@ class Molecule():
             impropers=array_dict['impropers'],
             atomic_numbers=array_dict['atomic_numbers'],
             partial_charges=array_dict['partial_charges'],
-            additional_features={key:array_dict[key] for key in array_dict.keys() if key not in ['atoms', 'bonds', 'angles', 'propers', 'impropers', 'atomic_numbers', 'partial_charges']},
+            additional_features=additional_features,
             improper_in_correct_format=True, # assume this is already in the correct format since it was stored
         )
     

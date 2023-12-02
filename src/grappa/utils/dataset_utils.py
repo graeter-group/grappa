@@ -29,15 +29,21 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
     URLS = {
         'tripeptides_amber99sbildn': 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release/tripeptides_amber99sbildn.zip',
     }
+
+    dir_path = Path(data_dir) / tag
+
+    if dir_path.exists():
+        return dir_path
     
+    # Download the file if it doesn't exist
     if not tag in URLS:
         raise ValueError(f"Tag {tag} not recognized. Available tags are {list(URLS.keys())}")
     
-    return load_dataset(url=URLS[tag], data_dir=data_dir)
+    return load_dataset(url=URLS[tag], data_dir=data_dir, filename=tag)
 
 
 
-def load_dataset(url, data_dir=get_data_path()/'dgl_datasets'):
+def load_dataset(url:str, data_dir:Path=get_data_path()/'dgl_datasets', filename:str=None)->Path:
     """
     Downloads a zip dataset from a given URL if it's not already present in the local directory, 
     then extracts it.
@@ -56,7 +62,8 @@ def load_dataset(url, data_dir=get_data_path()/'dgl_datasets'):
     data_dir.mkdir(parents=True, exist_ok=True)
 
     # Extract filename from URL
-    filename = url.split('/')[-1].split('.')[0]
+    if filename is None:
+        filename = url.split('/')[-1].split('.')[0]
     dir_path = data_dir / filename
 
 

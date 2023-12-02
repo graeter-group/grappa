@@ -9,6 +9,7 @@ from grappa.data import Molecule, Parameters
 from grappa.utils import openff_utils, openmm_utils
 import torch
 from dgl import DGLGraph
+from grappa import constants
 
 import pkgutil
 
@@ -31,6 +32,10 @@ class MolData():
     gradient_ref: np.ndarray
 
     mol_id: str
+
+    # mol_id is either a smiles string or a sequence string that is also stored
+    sequence: Optional[str] = None
+    smiles: Optional[str] = None
 
     # improper contributions of the reference forcefield:
     improper_energy_ref: Optional[np.ndarray] = None
@@ -76,7 +81,7 @@ class MolData():
         self._validate()
     
     
-    def to_dgl(self, max_element=53, exclude_feats:list[str]=[])->DGLGraph:
+    def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:list[str]=[])->DGLGraph:
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
         Also creates entries 'xyz', 'energy_ref' and 'gradient_ref' in the global node type g and in the atom node type n1, which contain the reference energy and gradient, respectively. The shapes are different than in the class attributes, namely (1, n_confs) and (n_atoms, n_confs, 3) respectively. (This is done because feature tensors must have len == num_nodes)
@@ -137,6 +142,10 @@ class MolData():
             array_dict['mapped_smiles'] = self.mapped_smiles
         if not self.pdb is None:
             array_dict['pdb'] = self.pdb
+        if not self.smiles is None:
+            array_dict['smiles'] = self.smiles
+        if not self.sequence is None:
+            array_dict['sequence'] = self.sequence
 
         if not self.improper_energy_ref is None:
             array_dict['improper_energy_ref'] = self.improper_energy_ref
@@ -200,6 +209,15 @@ class MolData():
         if isinstance(pdb, np.ndarray):
             pdb = str(pdb)
 
+        smiles = array_dict.get('smiles', None)
+        if isinstance(smiles, np.ndarray):
+            smiles = str(smiles)
+
+        sequence = array_dict.get('sequence', None)
+        if isinstance(sequence, np.ndarray):
+            sequence = str(sequence)
+
+
         improper_energy_ref = array_dict.get('improper_energy_ref', None)
         improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
 
@@ -207,7 +225,7 @@ class MolData():
 
         tuple_keys = ['atoms', 'bonds', 'angles', 'propers', 'impropers']
 
-        exclude_molecule_keys = ['xyz', 'mol_id', 'pdb', 'mapped_smiles'] + param_keys
+        exclude_molecule_keys = ['xyz', 'mol_id', 'pdb', 'mapped_smiles', 'smiles', 'sequence'] + param_keys
 
         # Reconstruct the molecule from the dictionary. for this, we need to filter out the keys that are not part of the molecule. We can assume that all keys are disjoint since we check this during saving.
         molecule_dict = {k: v for k, v in array_dict.items() if not k in exclude_molecule_keys and not 'energy' in k and not 'gradient' in k}
@@ -242,6 +260,8 @@ class MolData():
             improper_gradient_ref=improper_gradient_ref,
             mapped_smiles=mapped_smiles,
             pdb=pdb,
+            smiles=smiles,
+            sequence=sequence,
         )
 
     
@@ -286,6 +306,9 @@ class MolData():
         assert mapped_smiles is not None or pdb is not None, "Either a smiles string or a pdb file must be provided."
         assert not (mapped_smiles is not None and pdb is not None), "Either a smiles string or a pdb file must be provided, not both."
 
+        smiles = data_dict.get('smiles', None)
+        sequence = data_dict.get('sequence', None)
+
         mol_id = data_dict.get('smiles', data_dict.get('sequence', None))
         if mol_id is None:
             raise ValueError("Either a smiles string or a sequence string must be provided as key 'smiles' or 'sequence' in the data dictionary.")
@@ -301,11 +324,11 @@ class MolData():
         
 
         if mapped_smiles is not None:
-            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff')
+            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles)
         else:
             raise NotImplementedError("pdb files are not supported yet.")
 
-
+        self.sequence = sequence
 
         # Extract force field energies and gradients
         self.ff_energy.update({k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('energy_') and not k == 'energy_ref'})
@@ -317,7 +340,7 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.
@@ -361,7 +384,7 @@ class MolData():
         openmm_system = openmm_utils.remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
 
         # get a list of sets of improper torsion tuples:
-        improper_sets = [set(t) for t in self.molecule.impropers]
+        improper_set = {tuple(sorted(t)) for t in self.molecule.impropers}
 
         # set all ks to zero that are not impropers:
         for force in openmm_system.getForces():
@@ -369,7 +392,7 @@ class MolData():
                 raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
             for i in range(force.getNumTorsions()):
                 atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
-                if not {self.molecule.atoms[atom1], self.molecule.atoms[atom2], self.molecule.atoms[atom3], self.molecule.atoms[atom4]} in improper_sets:
+                if not tuple(sorted((self.molecule.atoms[atom1], self.molecule.atoms[atom2], self.molecule.atoms[atom3], self.molecule.atoms[atom4]))) in improper_set:
                     force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
 
 
@@ -405,10 +428,13 @@ class MolData():
         else:
             raise ValueError(f"forcefield_type must be either openff, openmm or openmmforcefields, not {forcefield_type}")
 
-        if mol_id is None:
-            mol_id = openff_mol.to_smiles(mapped=False)
+        smiles = openff_mol.to_smiles(mapped=False)
 
-        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id)
+        if mol_id is None:
+            mol_id = smiles
+        
+
+        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles)
 
         self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic"], openff_mol=openff_mol)
 

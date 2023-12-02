@@ -5,7 +5,7 @@ Collection of models and utilities for protein force fields with parameters lear
 
 ## Installation
 ```
-conda create -n grappa python=3.9
+conda create -n grappa python=3.9 -y
 conda activate grappa
 bash envs/cuda_117.sh
 ```
