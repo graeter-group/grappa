@@ -13,6 +13,9 @@ def get_rundir()->Path:
     return rundir
 
 def load_weights_torchhub(url:str, filename:str=None) -> dict:
+    """
+    Loads a model from a url. If filename is None, the filename is inferred from the url.
+    """
     models_path = Path(__file__).parents[3] / "models"
     models_path.mkdir(parents=True, exist_ok=True)
     state_dict = torch.hub.load_state_dict_from_url(url, model_dir=str(models_path),file_name=filename)

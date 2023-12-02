@@ -62,7 +62,7 @@ def load_dataset(url, data_dir=get_data_path()/'dgl_datasets'):
 
     # Download the file if it doesn't exist
     if not dir_path.exists():
-        print(f"Downloading{filename} from:\n'{url}'")
+        print(f"Downloading {filename} from:\n'{url}'")
 
         # this is the path to the zip file that is deleted after extraction
         zip_path = dir_path.with_suffix('.zip')
@@ -86,7 +86,7 @@ def load_dataset(url, data_dir=get_data_path()/'dgl_datasets'):
         # Unzip the file
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             zip_ref.extractall(str(data_dir))
-            print(f"Extracted {filename} to {data_dir}")
+            print(f"Stored dataset at:\n{dir_path}")
         
         # delete the zip file
         os.remove(zip_path)

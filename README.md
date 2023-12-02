@@ -1,22 +1,13 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-Collection of models and utilities for protein force fields with parameters learned by deep graph neural networks. Usage: See grappa.ff.Forcefield class and mains/tutorials.
+Collection of models and utilities for protein force fields with parameters learned by deep graph neural networks. Usage: See `examples/usage`.
 
 
 ## Installation
-Openmm is a requirement that will be made optional in the future. Currently they are necessary and cannot be installed using pip.
-Therefore one has to use conda to install the package.
+...
 
-- Create a new conda environment, **install grappas dependecies using conda**, clone the repository and install grappa from source:
-```
-conda activate base && mamba create -n grappa && conda activate grappa
-conda env update --file environment.yml
+## Pretrained Models
+Pretrained models can be obtained by using `grappa.utils.run_utils.load_model(url)` with an url that points to a release file. An example can be found at `examples/usage/openmm_wrapper.py`. There will be release-dependent tags linking to the proper urls in the future.
 
-git clone git@github.com:hits-mbm-dev/grappa.git; cd grappa;
-pip install -e .
-```
-
-- Some tutorials require the additional packages nglview and mdtraj. Install them using ```conda env update --file envs/full_environment.yml```.
-
-- For the **grappa.PDBData.matching submodule**, providing the creation of pdbfiles from positions and element alone, one also needs to install ase. In this case use full_environment.yml or install it via ```conda install -c conda-forge ase```.
-- If you wish to train models yourself, the additional package pytorch-warmup is required. Install it via ```pip install pytorch-warmup``` or use opt_environment.yml.
+## Datasets
+Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag(tag)` constructor. An example can be found at `examples/usage/evaluation.py`. Available tags are listed in the documentation of the Dataset class.
