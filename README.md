@@ -4,7 +4,12 @@ Collection of models and utilities for protein force fields with parameters lear
 
 
 ## Installation
-...
+```
+conda create -n grappa python=3.9
+conda activate grappa
+bash envs/cuda_117.sh
+```
+
 
 ## Pretrained Models
 Pretrained models can be obtained by using `grappa.utils.run_utils.load_model(url)` with an url that points to a release file. An example can be found at `examples/usage/openmm_wrapper.py`. There will be release-dependent tags linking to the proper urls in the future.
