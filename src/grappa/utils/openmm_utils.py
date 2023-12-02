@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Union, Dict
+from typing import Union, Dict, List
 from pathlib import Path
 import tempfile
 
@@ -35,7 +35,7 @@ def get_energies(openmm_system, xyz):
     return np.array(energies), np.array(forces)
 
 
-def remove_forces_from_system(system, remove=None, keep=None)->'openmm.System':
+def remove_forces_from_system(system, remove:Union[List[str], str]=None, keep=None, info=False)->'openmm.System':
     """
     Modifies the OpenMM system by removing forces according to the 'remove' and 'keep' lists.
     Forces are identified by their class name.
@@ -49,16 +49,23 @@ def remove_forces_from_system(system, remove=None, keep=None)->'openmm.System':
     - system: The modified OpenMM System object.
     """
 
+    if not isinstance(remove, list):
+        remove = [remove]
+
     # First, identify the indices of the forces to remove
     forces_to_remove = []
     for i, force in enumerate(system.getForces()):
         force_name = force.__class__.__name__.lower()
         if keep is not None:
-            if not any(k.lower() in force_name for k in keep):
+            if not any([k.lower() in force_name for k in keep]):
                 forces_to_remove.append(i)
+                if info:
+                    print(f"Removing force {force_name}")
         elif remove is not None:
-            if any(k.lower() in force_name for k in remove):
+            if any([k.lower() in force_name for k in remove]):
                 forces_to_remove.append(i)
+                if info:
+                    print(f"Removing force {force_name}")
 
     # Remove the forces by index, in reverse order to not mess up the indices
     for i in reversed(forces_to_remove):
@@ -115,6 +122,7 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
     impropers = parameters.impropers
     propers = parameters.propers
 
+    
     bond_ks = Quantity(parameters.bond_k, unit=grappa_units.BOND_K_UNIT)
     bond_eqs = Quantity(parameters.bond_eq, unit=grappa_units.BOND_EQ_UNIT)
     angle_ks = Quantity(parameters.angle_k, unit=grappa_units.ANGLE_K_UNIT)
@@ -124,8 +132,8 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
     proper_ks = Quantity(parameters.proper_ks, unit=grappa_units.TORSION_K_UNIT)
     proper_phases = Quantity(parameters.proper_phases, unit=grappa_units.TORSION_PHASE_UNIT)
 
-    assert np.all(proper_ks >= 0)
-    assert np.all(improper_ks >= 0)
+    assert np.all(parameters.proper_ks >= 0)
+    assert np.all(parameters.improper_ks >= 0)
 
     # create a dictionary because we will need lookups and dict lookup is more efficient than list.index (these are shallow copies)
     bond_lookup = {tuple(b):(bond_ks[i], bond_eqs[i]) for i, b in enumerate(bonds)}
@@ -133,7 +141,7 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
     improper_lookup = {tuple(i) for i, i in enumerate(impropers)}
     proper_lookup = {tuple(p) for i, p in enumerate(propers)}
 
-    ordered_torsions = {sorted(tuple(p)) for p in list(improper_lookup) + list(proper_lookup)}
+    ordered_torsions = {tuple(sorted(p)) for p in list(improper_lookup) + list(proper_lookup)}
 
     # loop through the system forces, overwrite the parameters if present, otherwise add the interaction.
     # in each step, first transform the parameter id to the system index.
@@ -155,9 +163,9 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
 
                 if not bond_param is None:
                     # Update the parameters
-                    new_length, new_k = bond_param
+                    new_k, new_length = bond_param
                     force.setBondParameters(i, atom1, atom2, new_length, new_k)
-            force.updateParametersInContext(system.context)
+
 
         elif isinstance(force, openmm.HarmonicAngleForce):
             for i in range(force.getNumAngles()):
@@ -168,8 +176,8 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
                     angle_param = angle_lookup.pop((atom3, atom2, atom1), None)
 
                 if not angle_param is None:
-                    force.setAngleParameters(i, atom1, atom2, atom3, angle_param[1], angle_param[0])
-            force.updateParametersInContext(system.context)
+                    new_k, new_angle = angle_param
+                    force.setAngleParameters(i, atom1, atom2, atom3, new_angle, new_k)
 
 
         # check whether torsion is contained in both proper or improper. if so, set its k to zero, effectively removing the force.
@@ -178,10 +186,9 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
                 atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
 
                 # Check in proper and improper torsions
-                if sorted((atom1, atom2, atom3, atom4)) in ordered_torsions:
-                    # Set k to zero or update parameters
+                if tuple(sorted((atom1, atom2, atom3, atom4))) in ordered_torsions:
+                    # Set k to zero to effectively remove from the system. We will add another torsion force later.
                     force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
-            force.updateParametersInContext(system.context)
 
     
         # now add the bonds and angles that have not been added yet as new forces.
@@ -203,15 +210,17 @@ def write_to_system(system, parameters:'grappa.data.Parameters'):
 
     # Adding all torsions:
     proper_torsion_force = openmm.PeriodicTorsionForce()
-    for i, torsion in enumerate(impropers):
-        for n in range(1, len(improper_ks[i])):
-            proper_torsion_force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], periodicity=n, phase=improper_phases[i][n], k=improper_ks[i][n])
+    for i, torsion in enumerate(propers):
+        for n in range(len(proper_ks[i])):
+            if proper_ks[i][n].value_in_unit(grappa_units.TORSION_K_UNIT) != 0.:
+                proper_torsion_force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], periodicity=n+1, phase=proper_phases[i][n], k=proper_ks[i][n])
 
     # Adding all impropers:
     improper_torsion_force = openmm.PeriodicTorsionForce()
     for i, torsion in enumerate(impropers):
-        for n in range(1, len(improper_ks[i])):
-            improper_torsion_force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], periodicity=n, phase=improper_phases[i][n], k=improper_ks[i][n])
+        for n in range(len(improper_ks[i])):
+            if improper_ks[i][n].value_in_unit(grappa_units.TORSION_K_UNIT) != 0.:
+                improper_torsion_force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], periodicity=n+1, phase=improper_phases[i][n], k=improper_ks[i][n])
 
     system.addForce(proper_torsion_force)
     system.addForce(improper_torsion_force)
