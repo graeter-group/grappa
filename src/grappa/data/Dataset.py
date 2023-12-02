@@ -6,11 +6,10 @@ If initialized with a list of MolData objects, stores a list the mol_ids and a l
 """
 
 from grappa.data import MolData
-from grappa.utils import torch_utils
+from grappa.utils import torch_utils, dataset_utils
 import dgl
 from dgl import DGLGraph
 import json
-
 from pathlib import Path
 
 from typing import List, Union, Tuple, Dict
@@ -39,6 +38,29 @@ class Dataset(torch.utils.data.Dataset):
         self.mol_ids = mol_ids
         self.subdataset = subdataset
         assert len(graphs) == len(mol_ids) == len(subdataset)
+
+    def from_tag(tag:str, data_dir:Union[str, Path]=dataset_utils.get_data_path()/'dgl_datasets'):
+        """
+        Returns a Dataset object from a tag. Downloads the dataset if it is not already present in the data_dir.
+        Args:
+            tag (str): tag of the dataset to be loaded
+            data_dir (Union[str, Path]): path to the directory where the dataset is stored. Default: 'grappa/data/dgl_datasets'
+        Returns:
+            dataset (Dataset): Dataset object containing the graphs, mol_ids and subdataset names
+
+        Possible tags are:
+        BENCHMARK ESPALOMA:
+            - 'spice-dipeptide'
+            - 'spice-des-monomers'
+            - 'spice-pubchem'
+            ...
+        PEPTIDE DATASET:
+            - 'tripeptide_amber99sbildn'
+            - 'spice_dipeptide_amber99sbildn'
+        """
+        path = dataset_utils.get_path_from_tag(tag=tag, data_dir=data_dir)
+        return Dataset.load(path)
+
 
     def __len__(self):
         return len(self.graphs)

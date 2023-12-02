@@ -2,20 +2,19 @@ import torch
 from pathlib import Path
 from typing import Union, Dict
 import yaml
+from grappa.models.deploy import model_from_config
 
 def get_rundir()->Path:
     """
     Returns the path to the directory in which runs are stored
     """
     rundir = Path(__file__).parents[3] / "runs"
-    print(rundir)
     rundir.mkdir(parents=True, exist_ok=True)
     return rundir
 
-def load_weights_torchhub(url:str, filename:str) -> dict:
+def load_weights_torchhub(url:str, filename:str=None) -> dict:
     models_path = Path(__file__).parents[3] / "models"
     models_path.mkdir(parents=True, exist_ok=True)
-    #torch.hub.set_dir('models_path')   # probably not necessary
     state_dict = torch.hub.load_state_dict_from_url(url, model_dir=str(models_path),file_name=filename)
     return state_dict
 
@@ -42,8 +41,16 @@ def write_yaml(d:dict, path:Union[str,Path])->None:
         yaml.dump(d, f)
 
 
-def get_data_path()->Path:
+
+def load_model(url:str, filename:str=None):
     '''
-    Returns the default path where to look for datasets.
+    Loads a model from a url. If filename is None, the filename is inferred from the url.
     '''
-    return Path(__file__).parents[3] / "data"
+    model_dict = load_weights_torchhub(url, filename)
+    state_dict = model_dict['state_dict']
+    config = model_dict['config']
+    model = model_from_config(config=config['model_config'])
+    model.load_state_dict(state_dict)
+    return model
+
+

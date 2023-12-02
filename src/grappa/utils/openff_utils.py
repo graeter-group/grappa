@@ -45,7 +45,7 @@ def get_is_aromatic(openff_mol:"openff.toolkit.Molecule")->np.ndarray:
             ]
         )
 
-def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[np.ndarray, list, int]=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
+def get_openmm_system(mapped_smiles:str, smiles:str=None, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[np.ndarray, list, int]=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
     """
     Returns system, topology, openff_molecule.
     Supported (tested) force fields:
@@ -59,9 +59,16 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
     from openff.toolkit import ForceField, Topology
     from openff.toolkit.topology import Molecule
 
-    assert isinstance(mapped_smiles, str), "mapped_smiles must be a string."
+    assert mapped_smiles is not None or smiles is not None, "Either mapped_smiles or smiles must be given."
+    assert mapped_smiles is None or smiles is None, "Either mapped_smiles or smiles must be given, but not both."
 
-    mol = Molecule.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=True)
+    if mapped_smiles is not None:
+        assert isinstance(mapped_smiles, str), "mapped_smiles must be a string."
+        mol = Molecule.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=True)
+    else:
+        assert isinstance(smiles, str), "smiles must be a string."
+        mol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+
     topology = Topology.from_molecules(mol)
     openmm_topology = topology.to_openmm()
 

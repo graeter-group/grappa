@@ -50,11 +50,12 @@ class MolData():
 
 
     def _validate(self):
-        # parameter atoms must be same as molecule atoms
-        # check shapes
+        for k,v in self.ff_energy.items():
+            assert v.shape == self.energy.shape, f"Shape of ff_energy {k} does not match energy: {v.shape} vs {self.energy.shape}"
+        for k,v in self.ff_gradient.items():
+            assert v.shape == self.gradient.shape, f"Shape of ff_gradient {k} does not match gradient: {v.shape} vs {self.gradient.shape}"
 
-        pass
-    
+
     def  __post_init__(self):
 
         # setting {} by default is not possible in dataclasses, thus do this here:
@@ -66,6 +67,11 @@ class MolData():
             self.ff_nonbonded_energy = dict()
         if self.ff_nonbonded_gradient is None:
             self.ff_nonbonded_gradient = dict()
+
+        if not "qm" in self.ff_energy.keys():
+            self.ff_energy["qm"] = self.energy
+        if not "qm" in self.ff_gradient.keys():
+            self.ff_gradient["qm"] = self.gradient
 
         self._validate()
     
@@ -201,7 +207,7 @@ class MolData():
 
         tuple_keys = ['atoms', 'bonds', 'angles', 'propers', 'impropers']
 
-        exclude_molecule_keys = ['xyz', 'mol_id', 'pdb'] + param_keys
+        exclude_molecule_keys = ['xyz', 'mol_id', 'pdb', 'mapped_smiles'] + param_keys
 
         # Reconstruct the molecule from the dictionary. for this, we need to filter out the keys that are not part of the molecule. We can assume that all keys are disjoint since we check this during saving.
         molecule_dict = {k: v for k, v in array_dict.items() if not k in exclude_molecule_keys and not 'energy' in k and not 'gradient' in k}
@@ -302,25 +308,26 @@ class MolData():
 
 
         # Extract force field energies and gradients
-        self.ff_energy = {k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('energy_') and not k == 'energy_ref'}
-        self.ff_gradient = {k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('gradient_') and not k == 'gradient_ref'}
-        self.ff_nonbonded_energy = {k.split('_', 2)[2]: v for k, v in data_dict.items() if k.startswith('nonbonded_energy_')}
-        self.ff_nonbonded_gradient = {k.split('_', 2)[2]: v for k, v in data_dict.items()if k.startswith('nonbonded_gradient_')}
+        self.ff_energy.update({k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('energy_') and not k == 'energy_ref'})
+        self.ff_gradient.update({k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('gradient_') and not k == 'gradient_ref'})
+        self.ff_nonbonded_energy.update({k.split('_', 2)[2]: v for k, v in data_dict.items() if k.startswith('nonbonded_energy_')})
+        self.ff_nonbonded_gradient.update({k.split('_', 2)[2]: v for k, v in data_dict.items()if k.startswith('nonbonded_gradient_')})
 
         return self
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.
         If energy_ref and gradient_ref are None, they are also calculated from the openmm system.
         mapped_smiles and pdb have no effect on the system, are optional and only required for reproducibility.
+        If the improper parameters are incompatible with the openmm system, the improper torsion parameters are all set to zero.
         """
         import openmm
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges)
-        params = Parameters.from_openmm_system(openmm_system, mol=mol)
+        params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
 
         self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id)
 
@@ -332,8 +339,11 @@ class MolData():
         total_ref_energy, total_ref_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
         total_ref_gradient = -total_ref_gradient # the reference gradient is the negative of the force
 
-        self.ff_energy['total_ref'] = total_ref_energy
-        self.ff_gradient['total_ref'] = total_ref_gradient
+        if ff_name is None:
+            ff_name = 'reference_ff'
+
+        self.ff_energy[ff_name] = total_ref_energy
+        self.ff_gradient[ff_name] = total_ref_gradient
         
 
         if self.energy_ref is None:

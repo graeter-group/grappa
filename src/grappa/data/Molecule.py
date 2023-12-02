@@ -142,7 +142,6 @@ class Molecule():
         for i, proper in enumerate(self.propers):
             self.propers[i] = (proper[0], proper[1], proper[2], proper[3]) if proper[0] < proper[3] else (proper[3], proper[2], proper[1], proper[0])
 
-        
 
     @classmethod
     def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True):
