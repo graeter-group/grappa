@@ -39,10 +39,10 @@ config['data_config']['train_batch_size'] = 10
 # config['lit_model_config']['log_params'] = True
 config['lit_model_config']['start_qm_epochs'] = 5
 config['lit_model_config']['classical_epochs'] = 5
-config['lit_model_config']['energy_weight'] = 10
+config['lit_model_config']['energy_weight'] = 50
 config['lit_model_config']['gradient_weight'] = 1
 
-config['trainer_config']['max_epochs'] = 500
+config['trainer_config']['max_epochs'] = 10000
 
 
 model = do_trainrun(config, project='tests')
