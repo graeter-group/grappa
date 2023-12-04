@@ -10,6 +10,7 @@ from grappa import units as U
 from grappa import constants
 import torch
 from dgl import DGLGraph
+import warnings
 
 from .Molecule import Molecule
 
@@ -253,8 +254,8 @@ class Parameters():
         assert len(torsions) == len(torsion_ks), "The torsion lists must have the same length."
 
         # (these asserts can be removed if we allow bonds and angles with no energy contribution)
-        assert len(bonds) >= len(mol.bonds), "The bond lists must contain all bonds in the molecule."
-        assert len(angles) >= len(mol.angles), "The angle lists must contain all angles in the molecule."
+        assert len(bonds) >= len(mol.bonds), f"The bond lists must contain all bonds in the molecule but len(bonds)={len(bonds)} and len(mol.bonds)={len(mol.bonds)}."
+        assert len(angles) >= len(mol.angles), f"The angle lists must contain all angles in the molecule but len(angles)={len(angles)} and len(mol.angles)={len(mol.angles)}."
 
         # assert that no bond, angle appears twice:
         assert len(np.unique(bonds, axis=0)) == len(bonds), f"The bond lists must not contain duplicates but {len(bonds) - len(np.unique(bonds, axis=0))} duplicates were found."
@@ -282,12 +283,10 @@ class Parameters():
         # now we are done with bonds and angles. For torsions, we need to differentiate between proper and improper torsions.
 
         # first initialize the arrays to zeros:
-        MAX_PERIODICITY = max(torsion_periodicities)
-
-        proper_ks = np.zeros((len(mol.propers), MAX_PERIODICITY), dtype=np.float32)
-        proper_phases = np.zeros((len(mol.propers), MAX_PERIODICITY), dtype=np.float32)
-        improper_ks = np.zeros((len(mol.impropers), MAX_PERIODICITY), dtype=np.float32)
-        improper_phases = np.zeros((len(mol.impropers), MAX_PERIODICITY), dtype=np.float32)
+        proper_ks = np.zeros((len(mol.propers), constants.N_PERIODICITY_PROPER), dtype=np.float32)
+        proper_phases = np.zeros((len(mol.propers), constants.N_PERIODICITY_PROPER), dtype=np.float32)
+        improper_ks = np.zeros((len(mol.impropers), constants.N_PERIODICITY_IMPROPER), dtype=np.float32)
+        improper_phases = np.zeros((len(mol.impropers), constants.N_PERIODICITY_IMPROPER), dtype=np.float32)
 
         # iterate through torsions and write the parameters to the corresponding position in the array.
         for torsion, torsion_k, phase, periodicity in zip(torsions, torsion_ks, torsion_phases, torsion_periodicities):
@@ -304,6 +303,9 @@ class Parameters():
             is_improper, central_atom_position = mol.is_improper(torsion)
 
             if not is_improper:
+                if periodicity > constants.N_PERIODICITY_PROPER:
+                    raise ValueError(f"The torsion {torsion} has a periodicity larger than {constants.N_PERIODICITY_PROPER}.")    
+            
                 # use that dihedral angle is invariant under reversal for canonical ordering:
                 torsion = torsion if torsion[0] < torsion[3] else (torsion[3], torsion[2], torsion[1], torsion[0])
                 try:
@@ -325,6 +327,9 @@ class Parameters():
                 # the dihedral is invariant under order reversal and antisymmetric under permutation of the first and last or the second and third atom.
                 # the symmetry leads to a symmetry of the energy term ( k cos(n phi + phase) ).
                 # the antisymmetry of the dihedral, however, only leads to a symmetry of the energy term if the phase is either 0 or pi.
+
+                if periodicity > constants.N_PERIODICITY_IMPROPER:
+                    raise ValueError(f"The torsion {torsion} has a periodicity larger than {constants.N_PERIODICITY_IMPROPER}.")
 
                 # the permutations above only mix 0 and 3 or 1 and 2, thus we can only permute the central atom from position 0 to 3 or from position 1 to 2:
                 incompatible = False
@@ -418,17 +423,17 @@ class Parameters():
         return cls(**array_dict)
     
 
-    def write_to_dgl(self, g:DGLGraph)->DGLGraph:
+    def write_to_dgl(self, g:DGLGraph, n_periodicity_proper=constants.N_PERIODICITY_PROPER, n_periodicity_improper=constants.N_PERIODICITY_IMPROPER, suffix:str='_ref')->DGLGraph:
         """
         Write the parameters to a dgl graph.
-        For torsion, assume that phases are only 0 or pi.
+        For torsion, we assume (and assert) that phases are only 0 or pi.
         """
         # write the classical parameters
-        g.nodes['n2'].data['k_ref'] = torch.tensor(self.bond_k, dtype=torch.float32)
-        g.nodes['n2'].data['eq_ref'] = torch.tensor(self.bond_eq, dtype=torch.float32)
+        g.nodes['n2'].data[f'k{suffix}'] = torch.tensor(self.bond_k, dtype=torch.float32)
+        g.nodes['n2'].data[f'eq{suffix}'] = torch.tensor(self.bond_eq, dtype=torch.float32)
 
-        g.nodes['n3'].data['k_ref'] = torch.tensor(self.angle_k, dtype=torch.float32)
-        g.nodes['n3'].data['eq_ref'] = torch.tensor(self.angle_eq, dtype=torch.float32)
+        g.nodes['n3'].data[f'k{suffix}'] = torch.tensor(self.angle_k, dtype=torch.float32)
+        g.nodes['n3'].data[f'eq{suffix}'] = torch.tensor(self.angle_eq, dtype=torch.float32)
 
         assert np.all(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2)), "The proper torsion phases must be either 0 or pi or 2pi"
 
@@ -437,7 +442,23 @@ class Parameters():
         proper_ks = np.where(
             np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
             self.proper_ks, -self.proper_ks)
-        g.nodes['n4'].data['k_ref'] = torch.tensor(proper_ks, dtype=torch.float32)
+        
+
+        def correct_shape(x, shape1):
+            """
+            Helper for bringing the torsion parameters into the correct shape. Adds zeros or cuts off the end if necessary.
+            """
+            if x.shape[1] < shape1:
+                # concat shape1 - x.shape[1] zeros to the right
+                return torch.cat([x, torch.zeros_like(x[:,:(shape1 - x.shape[1])])], dim=1)
+            elif x.shape[1] > shape1:
+                w = Warning(f"n_periodicity ({shape1}) is smaller than the highest torsion periodicity found ({x.shape[1]}).")
+                warnings.warn(w)
+                return x[:,:shape1]
+            else:
+                return x
+        
+        g.nodes['n4'].data['k_ref'] = correct_shape(torch.tensor(proper_ks, dtype=torch.float32), n_periodicity_proper)
 
         assert np.all(np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, np.pi, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2)), "The improper torsion phases must be either 0 or pi or 2pi"
 
@@ -446,6 +467,7 @@ class Parameters():
         improper_ks = np.where(
             np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
             self.improper_ks, -self.improper_ks)
-        g.nodes['n4_improper'].data['k_ref'] = torch.tensor(improper_ks, dtype=torch.float32)
+        
+        g.nodes['n4_improper'].data['k_ref'] = correct_shape(torch.tensor(improper_ks, dtype=torch.float32), n_periodicity_improper)
 
         return g

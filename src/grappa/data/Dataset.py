@@ -177,7 +177,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def calc_split_ids(self, partition:Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], seed:int=0):
         """
-        Returns a dictionary containing the molecule ids for train, validation and test sets. The ids are sampled such that smaller datasets also have a share approximate to the given partition.
+        Returns a dictionary containing the molecule ids for train, validation and test sets. The ids are sampled such that all (also smaller) datasets have a share approximate to the given partition.
         partition can be a tuple of floats or a dict of tuples of floats. If it is a tuple, the same partition is used for all datasets. If it is a dict, the keys must be the dataset names and the values must be tuples of floats.
         """
         return torch_utils.calc_split_ids(ids=self.mol_ids, partition=partition, seed=seed, ds_names=self.subdataset)
