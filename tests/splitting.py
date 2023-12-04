@@ -11,7 +11,7 @@ ds = Dataset.load(dspath/'spice-des-monomers')
 ds += Dataset.load(dspath/'spice-dipeptide')
 ds += Dataset.load(dspath/'protein-torsion')
 # %%
-split_dict = ds.calc_split_ids(partition={'spice-des-monomers':(0, 0, 1), 'spice-dipeptide':(0.8, 0.1, 0.1), 'protein-torsion':(0.8, 0.1, 0.1)}, seed=20)
+split_dict = ds.calc_split_ids(partition=[(0.8,0.1,0.1), {'spice-des-monomers':(0, 0, 1), 'spice-dipeptide':(0.8, 0.1, 0.1), 'protein-torsion':(0.8, 0.1, 0.1)}], seed=20)
 
 tr, vl, te = ds.split(train_ids=split_dict['train'], val_ids=split_dict['val'], test_ids=split_dict['test'], check_overlap=True)
 

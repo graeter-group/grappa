@@ -1,9 +1,10 @@
 #%%
 from grappa.data import Dataset, GraphDataLoader
 from grappa.training.evaluation import ExplicitEvaluator
-from grappa.utils.run_utils import get_data_path, load_yaml
+from grappa.utils.run_utils import load_yaml
+from grappa.utils.dataset_utils import get_data_path
 #%%
-dspath = get_data_path()/'peptides'/'dgl_datasets'/'tripeptides'
+dspath = get_data_path()/'dgl_datasets'/'tripeptides_amber99sbildn'
 
 # ds = Dataset.load(dspath)
 ds = Dataset.load(dspath)
@@ -81,8 +82,8 @@ unpooled_evaluator = copy.deepcopy(evaluator)
 d = evaluator.pool()
 d
 #%%
-energy_ref = evaluator.reference_energies['tripeptides']
-energy = evaluator.energies['tripeptides']
+energy_ref = evaluator.reference_energies['tripeptides_amber99sbildn']
+energy = evaluator.energies['tripeptides_amber99sbildn']
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -99,6 +100,7 @@ plt.show()
 # does not transfer to gaff charges:
 dspath = get_data_path()/'dgl_datasets'/'spice-dipeptide'
 
+evaluator = ExplicitEvaluator(suffix='', suffix_ref='_qm')
 # ds = Dataset.load(dspath)
 ds = Dataset.load(dspath)
 loader = GraphDataLoader(ds, batch_size=1, shuffle=False, num_workers=0)

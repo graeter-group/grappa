@@ -1,6 +1,6 @@
 #%%
 # Download a model if not present already:
-from grappa.utils.run_utils import load_model
+from grappa.utils.loading_utils import load_model
 
 url = 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release/protein_test_11302023.pth'
 

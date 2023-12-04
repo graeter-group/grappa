@@ -3,6 +3,8 @@
 #SBATCH -t 24:00:00
 #SBATCH --mem=16000
 #SBATCH --gres=gpu:1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
 
 
 #conda path to fast:
