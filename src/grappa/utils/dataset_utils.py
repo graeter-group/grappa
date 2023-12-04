@@ -99,3 +99,41 @@ def load_dataset(url:str, data_dir:Path=get_data_path()/'dgl_datasets', filename
         os.remove(zip_path)
 
     return dir_path
+
+
+def benchmark_data_config():
+    data_config = {
+        "datasets": [
+            str(get_data_path()/"dgl_datasets"/dsname) for dsname in
+            [
+                "spice-des-monomers",
+                "spice-dipeptide",
+                "spice-pubchem",
+                "gen2",
+                "gen2-torsion",
+                "pepconf-dlc",
+                "protein-torsion",
+                "rna-nucleoside",
+                "rna-diverse",
+            ]
+        ],
+        "conf_strategy": "mean",
+        "train_batch_size": 20,
+        "val_batch_size": 1,
+        "test_batch_size": 1,
+        "train_loader_workers": 1,
+        "val_loader_workers": 2,
+        "test_loader_workers": 2,
+        "pin_memory": True,
+        "splitpath": None,
+        "partition": [ # may either be a partition list or a list of a default partition list and a dictionary mapping dsname to partition
+            [0.8,0.1,0.1],
+            {
+                'rna-nucleoside': [1.,0.,0.],
+            }
+            ],
+        "pure_train_datasets": [],
+        "pure_val_datasets": [],
+        "pure_test_datasets": [str(get_data_path()/"dgl_datasets"/'rna-trinucleotide')], # this can be used to be independent of splitting. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
+    }
+    return data_config

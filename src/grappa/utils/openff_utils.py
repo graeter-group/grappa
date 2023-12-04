@@ -3,6 +3,7 @@ import numpy as np
 import pkgutil
 
 from typing import Tuple, Set, Dict, Union, List
+from pathlib import Path
 
 
 def get_sp_hybridization_encoding(openff_mol:"openff.toolkit.Molecule")->np.ndarray:
@@ -45,7 +46,7 @@ def get_is_aromatic(openff_mol:"openff.toolkit.Molecule")->np.ndarray:
             ]
         )
 
-def get_openmm_system(mapped_smiles:str, smiles:str=None, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[np.ndarray, list, int]=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
+def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstrained-1.2.0.offxml', partial_charges:Union[np.ndarray, list, int]=None, smiles:str=None, openff_mol=None, **system_kwargs)->Tuple["openmm.System", "openmm.Topology", "openff.toolkit.Molecule"]:
     """
     Returns system, topology, openff_molecule.
     Supported (tested) force fields:
@@ -59,15 +60,17 @@ def get_openmm_system(mapped_smiles:str, smiles:str=None, openff_forcefield:str=
     from openff.toolkit import ForceField, Topology
     from openff.toolkit.topology import Molecule
 
-    assert mapped_smiles is not None or smiles is not None, "Either mapped_smiles or smiles must be given."
-    assert mapped_smiles is None or smiles is None, "Either mapped_smiles or smiles must be given, but not both."
 
     if mapped_smiles is not None:
         assert isinstance(mapped_smiles, str), "mapped_smiles must be a string."
         mol = Molecule.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=True)
-    else:
+    elif smiles is not None:
         assert isinstance(smiles, str), "smiles must be a string."
         mol = Molecule.from_smiles(smiles, allow_undefined_stereo=True)
+    else:
+        assert openff_mol is not None, "Either mapped_smiles, smiles or openff_mol must be given."
+        assert isinstance(openff_mol, Molecule), "openff_mol must be an openff.toolkit.Molecule."
+        mol = openff_mol
 
     topology = Topology.from_molecules(mol)
     openmm_topology = topology.to_openmm()
@@ -113,8 +116,7 @@ def get_openmm_system(mapped_smiles:str, smiles:str=None, openff_forcefield:str=
 
         openmm_system = system_generator.create_system(
             topology=top,
-            molecules=mol,
-
+            molecules=[mol],
         )
         # NOTE: what about given charges and system kwargs in this case?
 
@@ -122,3 +124,34 @@ def get_openmm_system(mapped_smiles:str, smiles:str=None, openff_forcefield:str=
         raise NotImplementedError("Only openff and gaff force fields are supported.")
     
     return openmm_system, openmm_topology, mol
+
+
+def smiles_from_pdb(pdbstring:str, mapped=False)->str:
+    """
+    Returns the smiles string of an openff molecule initialized from a pdb string.
+    """
+    from openff.toolkit.topology import Molecule as OFFMol
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        pdbpath = str(Path(tmp)/'pep.pdb')
+        with open(pdbpath, "w") as pdb_file:
+            pdb_file.write(pdbstring)
+        openff_mol = OFFMol.from_polymer_pdb(pdbpath)
+
+    return openff_mol.to_smiles(mapped=mapped)
+
+def mol_from_pdb(pdbstring:str)->str:
+    """
+    Returns the openff molecule initialized from a pdb string.
+    """
+    from openff.toolkit.topology import Molecule as OFFMol
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        pdbpath = str(Path(tmp)/'pep.pdb')
+        with open(pdbpath, "w") as pdb_file:
+            pdb_file.write(pdbstring)
+        openff_mol = OFFMol.from_polymer_pdb(pdbpath)
+
+    return openff_mol
