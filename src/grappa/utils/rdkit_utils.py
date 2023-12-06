@@ -21,7 +21,7 @@ def get_ring_encoding(mol)->np.ndarray:
                 ]
                 for atom in mol.GetAtoms()
             ]
-        )
+        ).astype(np.float32)
 
 
 def rdkit_graph_from_bonds(bonds: List[Tuple[int, int]]):
