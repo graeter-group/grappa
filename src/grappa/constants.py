@@ -1,8 +1,9 @@
 IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion as used by grappa
 
-# MAX_ELEMENT = 26 # cover Iron
-
 MAX_ELEMENT = 53 # cover Iodine
+
+N_PERIODICITY_PROPER = 6
+N_PERIODICITY_IMPROPER = 6
 
 BONDED_CONTRIBUTIONS = [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]
 
