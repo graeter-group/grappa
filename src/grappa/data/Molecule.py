@@ -549,11 +549,11 @@ class Molecule():
         with open(filename, 'w') as f:
             json.dump(self.to_list_dict(), f, indent=4)
 
-
-    def from_json(self, filename:Union[Path,str]):
+    @classmethod
+    def from_json(cls, filename:Union[Path,str]):
         with open(filename, 'r') as f:
             list_dict = json.load(f)
-        return self.from_list_dict(list_dict)
+        return cls.from_list_dict(list_dict)
     
 
     @classmethod
@@ -563,3 +563,11 @@ class Molecule():
         """
         array_dict = {key:np.array(list_dict[key]) for key in list_dict.keys()}
         return cls.from_dict(array_dict)
+
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        features_str = ', '.join(self.additional_features.keys()) if self.additional_features else 'None'
+        return f"<grappa.data.Molecule ({len(self.atoms)} atoms, {len(self.bonds)} bonds, {len(self.angles) if self.angles else 0} angles, {len(self.propers) if self.propers else 0} propers, {len(self.impropers)//3 if self.impropers else 0} impropers, features: {features_str})>"

@@ -17,7 +17,7 @@ import pkgutil
 @dataclass
 class MolData():
     """
-    Dataclass for entries in datasets on which grappa can be trained.
+    Dataclass for entries in datasets on which grappa can be trained. Contains a molecule, qm energies and reference energies, that is qm minus nonbonded energy of a classical forcefield. Can be stored as npz files. A list of MolData objects is considered to be a 'grappa dataset'.
     """
     molecule: Molecule
     classical_parameters: Parameters # these are used for regularisation and to estimate the statistics of the reference energy and gradient
@@ -309,7 +309,7 @@ class MolData():
         smiles = data_dict.get('smiles', None)
         sequence = data_dict.get('sequence', None)
 
-        mol_id = data_dict.get('smiles', data_dict.get('sequence', None))
+        mol_id = data_dict.get(data_dict.get('mol_id', None), 'smiles', data_dict.get('sequence', None))
         if mol_id is None:
             raise ValueError("Either a smiles string or a sequence string must be provided as key 'smiles' or 'sequence' in the data dictionary.")
         if isinstance(mol_id, np.ndarray):

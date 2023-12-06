@@ -22,6 +22,7 @@ atomic_numbers = [6, 1, 1, 1, 1]
 
 methane = Molecule(atoms=atoms, bonds=bonds, impropers=impropers, partial_charges=partial_charges, atomic_numbers=atomic_numbers)
 
+print(methane) # informative string representation
 # %%
 # Now the molecule has angles and propers:
 print(methane.angles)
@@ -52,6 +53,9 @@ print('angle idxs: ', g.nodes['n3'].data['idxs'])
 # %%
 # we can save this as json or compressed npz file:
 methane.to_json('methane.json')
+# methane.save('methane.npz')
+
+loaded_mol = Molecule.from_json('methane.json')
 #%%
 
 """
