@@ -1,11 +1,117 @@
 """
-
+A collection of loss functions for training grappa models.
 """
 
 import dgl
 import torch
 from typing import Dict, List
 from grappa.utils import graph_utils
+
+
+class MolwiseLoss(torch.nn.Module):
+    """
+    Unbatch the graph and calculate the mse averaged over spatial dimension, conformation and atom. Then average these over the batch. Note: The averages do not commute because the number of atoms in the graph may differ. This way we assign the same weight to molecules with different amounts of atoms.
+    If skip_params_if_not_present is set to True, the parameters are only included in the loss if they are present in the graph. If a parameter is present but not a number, the loss contribution from these parameters is zero. Thus, if you have a dataset where some molecules have parameters and some don't, you can set the param values to nans in the correct shape to enable graph-batching.
+    """
+    def __init__(
+        self,
+        gradient_weight:float=10.0,
+        energy_weight:float=1.0,
+        param_weight:float=1e-3,
+        weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2},
+        skip_params_if_not_present:bool=True,
+        ):
+
+        super().__init__()
+        self.mse_loss = torch.nn.MSELoss()
+        self.gradient_weight = gradient_weight
+        self.energy_weight = energy_weight
+        self.param_weight = param_weight
+        self.weights = weights
+        self.skip_params_if_not_present = skip_params_if_not_present
+
+
+    def forward(self, g):
+        loss = 0
+        graphs = dgl.unbatch(g)
+
+        assert not (self.gradient_weight == 0 and self.energy_weight == 0 and self.param_weight == 0), "At least one of the weights must be non-zero."
+
+        for graph in graphs:
+            loss_term = 0
+
+            if self.gradient_weight != 0:
+                gradients = graph_utils.get_gradients(graph)
+                gradients_ref = graph_utils.get_gradients(graph, suffix="_ref")
+                loss_term = loss_term + self.mse_loss(gradients, gradients_ref) * self.gradient_weight
+
+            if self.energy_weight != 0:
+                energies = graph_utils.get_energies(graph)
+                energies_ref = graph_utils.get_energies(graph, suffix="_ref")
+                energy_contrib = self.mse_loss(energies, energies_ref) * self.energy_weight
+                loss_term = loss_term + energy_contrib
+
+            if self.param_weight != 0:
+                try:
+                    params_ref = graph_utils.get_parameters(graph, suffix="_ref")
+                except KeyError as e:
+                    if self.skip_params_if_not_present:
+                        params_ref = {} # if this is empty, we will iterate over an empty list later, effectively skipping this part
+                    else:
+                        raise e
+
+                params = graph_utils.get_parameters(graph)
+                # concat all parameters
+                param_tensor = []
+                param_ref_tensor = []
+                
+                for k in params_ref.keys():
+                    if 'improper' in k:
+                        continue
+                    fac = 1. if not k in self.weights.keys() else self.weights[k]
+                    these_params = params[k]
+                    these_params_ref = params_ref[k]
+                    if k == 'n4_k':
+                        # ensure that max_periodicity is that of the model, either by adding zeros or by removing columns
+                        these_params_ref = correct_torsion_shape(these_params_ref, shape1=these_params.shape[1])
+
+                    if these_params.shape != these_params_ref.shape:
+                        raise ValueError(f"Shape of parameters {k} and {k}_ref do not match: {these_params.shape} vs {these_params_ref.shape}")
+
+                    param_tensor.append(these_params.flatten()*fac)
+                    param_ref_tensor.append(these_params_ref.flatten()*fac)
+
+                if len(param_tensor) > 0:
+                    param_tensor = torch.cat(param_tensor)
+                    param_ref_tensor = torch.cat(param_ref_tensor)
+
+                    diffs = torch.where(torch.isnan(param_tensor), torch.zeros_like(param_tensor), param_tensor - param_ref_tensor)
+
+                    loss_contrib = torch.mean(torch.square(diffs))
+
+                    loss_term = loss_term + loss_contrib * self.param_weight
+
+
+            loss = loss + loss_term/len(graphs)
+    
+        return loss
+    
+
+def correct_torsion_shape(x, shape1):
+        """
+        Helper for bringing the torsion parameters into the correct shape. Adds zeros or cuts off the end if necessary.
+        """
+        if x.shape[1] < shape1:
+            # concat shape1 - x.shape[1] zeros to the right
+            return torch.cat([x, torch.zeros_like(x[:,:(shape1 - x.shape[1])])], dim=1)
+        elif x.shape[1] > shape1:
+            # w = Warning(f"n_periodicity ({shape1}) is smaller than the model torsion periodicity found ({x.shape[1]}).")
+            # warnings.warn(w)
+            return x[:,:shape1]
+        else:
+            return x
+        
+
 
 
 class ParameterLoss(torch.nn.Module):
@@ -171,65 +277,3 @@ class GradientLossMolwise(torch.nn.Module):
     
         return loss
     
-
-class MolwiseLoss(torch.nn.Module):
-    """
-    Unbatch the graph and calculate the mse averaged over spatial dimension, conformation and atom. Then average these over the batch. Note: The averages do not commute because the number of atoms in the graph may differ. This way we assign the same weight to molecules with different amounts of atoms.
-    """
-    def __init__(
-        self,
-        gradient_weight:float=10.0,
-        energy_weight:float=1.0,
-        param_weight:float=1e-3,
-        weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2},
-        ):
-
-        super().__init__()
-        self.mse_loss = torch.nn.MSELoss()
-        self.gradient_weight = gradient_weight
-        self.energy_weight = energy_weight
-        self.param_weight = param_weight
-        self.weights = weights
-
-    def forward(self, g):
-        loss = 0
-        graphs = dgl.unbatch(g)
-
-        assert not (self.gradient_weight == 0 and self.energy_weight == 0 and self.param_weight == 0), "At least one of the weights must be non-zero."
-
-        for graph in graphs:
-            loss_term = 0
-
-            if self.gradient_weight != 0:
-                gradients = graph_utils.get_gradients(graph)
-                gradients_ref = graph_utils.get_gradients(graph, suffix="_ref")
-                loss_term = loss_term + self.mse_loss(gradients, gradients_ref) * self.gradient_weight
-
-            if self.energy_weight != 0:
-                energies = graph_utils.get_energies(graph)
-                energies_ref = graph_utils.get_energies(graph, suffix="_ref")
-                energy_contrib = self.mse_loss(energies, energies_ref) * self.energy_weight
-                loss_term = loss_term + energy_contrib
-
-            if self.param_weight != 0:
-                params = graph_utils.get_parameters(graph)
-                params_ref = graph_utils.get_parameters(graph, suffix="_ref")
-                # concat all parameters
-                param_tensor = []
-                param_ref_tensor = []
-                for k in params.keys():
-                    if 'improper' in k:
-                        continue
-                    fac = 1. if not k in self.weights.keys() else self.weights[k]
-                    param_tensor.append(params[k].flatten()*fac)
-                    param_ref_tensor.append(params_ref[k].flatten()*fac)
-
-                param_tensor = torch.cat(param_tensor)
-                param_ref_tensor = torch.cat(param_ref_tensor)
-
-                loss_term = loss_term + self.mse_loss(param_tensor, param_ref_tensor) * self.param_weight
-
-
-            loss = loss + loss_term/len(graphs)
-    
-        return loss
