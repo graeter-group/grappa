@@ -50,6 +50,9 @@ g = methane.to_dgl()
 print('atom ids:', g.nodes['n1'].data['ids'])
 print('angle idxs: ', g.nodes['n3'].data['idxs'])
 # %%
+# we can save this as json or compressed npz file:
+methane.to_json('methane.json')
+#%%
 
 """
 CONSTRUCTION FROM OPENMM TOPOLOGY AND SYSTEM
