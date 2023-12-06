@@ -439,3 +439,15 @@ class MolData():
         self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic"], openff_mol=openff_mol)
 
         return self
+
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        n_confs = len(self.energy)
+        mol_id = self.mol_id
+        molecule_str = str(self.molecule)
+        forcefields = ', '.join(self.ff_energy.keys()) if self.ff_energy else 'None'
+
+        return f"<{self.__class__.__name__} (\nn_confs: {n_confs},\nmol_id: {mol_id},\nmolecule: {molecule_str},\nforcefields: {forcefields}\n)>"
