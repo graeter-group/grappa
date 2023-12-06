@@ -26,13 +26,13 @@ def model_from_config(config_path: Union[Path, str] = None, config: Dict = None,
     model_args = {
         "statistics": stat_dict,
         "rep_feats": args["rep_feats"],
-        "between_feats": args["width"],
+        "gnn_width": args["gnn_width"],
         "n_conv": args["n_conv"],
         "n_att": args["n_att"],
         "in_feat_name": args["in_feat_name"],
         "old": args["old_model"],
         "n_heads": args["n_heads"],
-        "readout_feats": args["readout_width"],
+        "readout_feats": args["gnn_width"],
         "use_improper": args["use_improper"],
         "dense_layers": args["dense_layers_readout"],
         "n_att_readout": args["n_att_readout"],
@@ -42,8 +42,9 @@ def model_from_config(config_path: Union[Path, str] = None, config: Dict = None,
         "positional_encoding": args["positional_encoding"],
         "layer_norm": args["layer_norm"],
         "dropout": args["dropout"],
-        "final_dropout": args["final_dropout"],
-        "rep_dropout": args["rep_dropout"],
+        "final_gnn_dropout": args["final_gnn_dropout"],
+        "conv_dropout": args["conv_dropout"],
+        "attention_dropout": args["attention_dropout"],
         "attentional": args["attentional"],
         "n_periodicity_proper": args["n_periodicity_proper"],
         "n_periodicity_improper": args["n_periodicity_improper"],
@@ -99,9 +100,9 @@ def get_default_model_config(tag:str="med", scale:float=1.0):
 
 def get_med_model_config():
     args = {
-        "width":64,
-        "rep_feats":512,
-        "readout_width":256,
+        # "width":64,
+        "rep_feats":256,
+        "gnn_width":256,
         "n_conv":2,
         "n_att":2,
         "n_heads":8,
@@ -109,9 +110,10 @@ def get_med_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
-        "final_dropout":False,
+        "final_gnn_dropout":0.0,
         "dropout":0,
-        "rep_dropout":0.,
+        "conv_dropout":0.,
+        "attention_dropout":0.,
         "n_att_readout":2,
         "dense_layers_readout":2,
         "n_heads_readout":16,
@@ -128,9 +130,9 @@ def get_med_model_config():
 
 def get_deep_model_config():
     args = {
-        "width":128,
+        # "width":128,
         "rep_feats":256,
-        "readout_width":128,
+        "gnn_width":128,
         "n_conv":0,
         "n_att":6,
         "n_heads":8,
@@ -138,9 +140,10 @@ def get_deep_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
-        "final_dropout":False,
+        "final_gnn_dropout":0.0,
         "dropout":0,
-        "rep_dropout":0.,
+        "conv_dropout":0.,
+        "attention_dropout":0.,
         "n_att_readout":3,
         "dense_layers_readout":2,
         "n_heads_readout":8,
@@ -157,9 +160,9 @@ def get_deep_model_config():
 
 def get_small_model_config():
     args = {
-        "width":128,
+        # "width":128,
         "rep_feats":256,
-        "readout_width":128,
+        "gnn_width":128,
         "n_conv":2,
         "n_att":2,
         "n_heads":8,
@@ -167,9 +170,10 @@ def get_small_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
-        "final_dropout":False,
+        "final_gnn_dropout":0.0,
         "dropout":0,
-        "rep_dropout":0.,
+        "conv_dropout":0.,
+        "attention_dropout":0.,
         "n_att_readout":2,
         "dense_layers_readout":2,
         "n_heads_readout":8,
@@ -188,9 +192,9 @@ def get_small_model_config():
 
 def get_large_model_config():
     args = {
-        "width":256,
+        # "width":256,
         "rep_feats":2048,
-        "readout_width":512,
+        "gnn_width":512,
         "n_conv":2,
         "n_att":2,
         "n_heads":16,
@@ -198,9 +202,10 @@ def get_large_model_config():
         "use_improper":True,
         "in_feat_name":["atomic_number", "in_ring", "q_ref", "is_radical"],
         "layer_norm":True,
-        "final_dropout":False,
+        "final_gnn_dropout":0.0,
         "dropout":0.,
-        "rep_dropout":0.,
+        "conv_dropout":0.,
+        "attention_dropout":0.,
         "n_att_readout":4,
         "dense_layers_readout":1,
         "n_heads_readout":32,
@@ -219,12 +224,12 @@ def scale_model_config(args, scale=1):
     """
     Scales a model by a factor. Only affects the widths.
     """
-    for key in ["width", "rep_feats", "reducer_feats", "attention_hidden_feats", "n_heads"]:
+    for key in ["rep_feats", "reducer_feats", "attention_hidden_feats", "n_heads"]:
         args[key] = int(args[key]*scale)
     
     # if scale is integer, also scale multihead attention parameters:
     if scale == float(int(scale)):
-        args["readout_width"] = int(args["readout_width"]*scale)
+        args["gnn_width"] = int(args["gnn_width"]*scale)
         args["n_heads_readout"] = int(args["n_heads_readout"]*scale)
 
 

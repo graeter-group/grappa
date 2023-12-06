@@ -293,3 +293,13 @@ def get_stat_dict(loader, suffix="_ref"):
     return stat_dict
 
 
+def get_default_statistics():
+    """
+    Just some example statistics obtained at some point in time from a peptide dataset. Better than nothing but not good.
+    """
+    DEFAULT_STATISTICS = {
+    'mean':
+        {'n2_k': torch.Tensor([763.2819]), 'n2_eq': torch.Tensor([1.2353]), 'n3_k': torch.Tensor([105.6576]), 'n3_eq': torch.Tensor([1.9750]), 'n4_k': torch.Tensor([ 1.5617e-01, -5.8312e-01,  7.0820e-02, -6.3840e-04,  4.7139e-04, -4.1655e-04]), 'n4_improper_k': torch.Tensor([ 0.0000, -2.3933,  0.0000])},
+    'std':
+        {'n2_k': torch.Tensor([161.2278]), 'n2_eq': torch.Tensor([0.1953]), 'n3_k': torch.Tensor([26.5965]), 'n3_eq': torch.Tensor([0.0917]), 'n4_k': torch.Tensor([0.4977, 1.2465, 0.1466, 0.0192, 0.0075, 0.0066]), 'n4_improper_k': torch.Tensor([0.0000, 4.0571, 0.0000])}}
+    return DEFAULT_STATISTICS

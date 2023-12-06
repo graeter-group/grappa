@@ -1,1 +1,1 @@
-from .Energy import Energy
+from .energy import Energy

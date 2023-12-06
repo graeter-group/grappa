@@ -30,13 +30,13 @@ config['data_config']['datasets'] += [
     # str(get_data_path()/'dgl_datasets'/'protein-torsion'),
 ]
 config['data_config']['train_batch_size'] = 10
-config['data_config']['val_batch_size'] = 100
+config['data_config']['val_batch_size'] = 10
 
 config['data_config']['partition'] = [[0.8, 0.1, 0.1], {
-    'pepconf-dlc': (0., 1., 0.),
+    # 'pepconf-dlc': (0., 1., 0.),
     'spice-des-monomers': (0., 1., 0.),
-    'gen2': (0., 1., 0.),
-    'gen2-torsion': (0., 1., 0.),
+    # 'gen2': (0., 1., 0.),
+    # 'gen2-torsion': (0., 1., 0.),
     'protein-torsion': (0., 1., 0.),
     'tripeptides_amber99sbildn': (0., 1., 0.),
     'rna-nucleoside': (1., 0., 0.),
@@ -51,7 +51,7 @@ config['lit_model_config']['start_qm_epochs'] = 1
 config['lit_model_config']['classical_epochs'] = 5
 config['lit_model_config']['energy_weight'] = 20
 config['lit_model_config']['gradient_weight'] = 1
-config['lit_model_config']['add_restart'] = []
+config['lit_model_config']['add_restarts'] = []
 
 config['trainer_config']['max_epochs'] = 10000
 

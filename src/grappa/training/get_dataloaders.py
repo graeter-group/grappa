@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List, Dict, Tuple, Union
 
 
-def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:str='mean', train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=2, test_loader_workers:int=2, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]]=(0.8,0.1,0.1))->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:str='mean', train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=2, test_loader_workers:int=2, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], subsample_train:Dict[str, int]={}, subsample_val:Dict[str, int]={}, subsample_test:Dict[str, int]={})->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
     """
     This function returns train, validation, and test dataloaders for a given list of datasets.
 
@@ -19,20 +19,28 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:str=
         pin_memory (bool, optional): Whether to pin memory for the dataloaders. Defaults to True.
         splitpath (Path, optional): Path to the split file. If provided, the function will load the split from this file. If not, it will generate a new split. Defaults to None.
         partition (Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], optional): Partition of the dataset into train, validation, and test. Can be a tuple of three floats or a dictionary with 'train', 'val', and 'test' keys. Defaults to (0.8,0.1,0.1).
+        pure_..._datasets: list of paths to datasets that are only for one specific set type, independent on which mol_ids occur. this can be used to be independent of the splitting by mol_ids. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
+        subsample_... : dictionary of dsname and a float between 0 and 1 specifying the subsampling factor (dsname is stem of the dspaths. subsampling is applied after splitting)
 
     Returns:
         Tuple[DataLoader, DataLoader, DataLoader]: A tuple containing the train, validation, and test dataloaders.
     """
+
+    paths = []
     # Get the dataset
     # NOTE: add configure total number of mols for each ds?
     for dataset in datasets:
         if isinstance(dataset, str):
             dataset = Path(dataset)
         if isinstance(dataset, Path):
+            paths.append(str(dataset))
             assert dataset.exists(), f"Dataset path {dataset} does not exist."
         elif not isinstance(dataset, Dataset):
             raise ValueError(f"Dataset must be a Path or Dataset, but got {type(dataset)}")
         
+    if not len(paths) == len(set(paths)):
+        raise ValueError(f"Duplicate paths in dataset list:\n{paths}")
+
     dataset = Dataset()
     for ds in datasets:
         if isinstance(ds, Dataset):
@@ -54,6 +62,54 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:str=
         split_ids = dataset.calc_split_ids(partition=partition)
 
     tr, vl, te = dataset.split(*split_ids.values())
+
+    # Add pure datasets
+    #########################################################
+    for ds in pure_train_datasets:
+        if isinstance(ds, Dataset):
+            tr += ds
+        elif isinstance(ds, Path) or isinstance(ds, str):
+            if str(ds) in paths:
+                raise ValueError(f"Pure train dataset {ds} already in datasets list.")
+            print(f"Loading dataset from {ds}...")
+            tr += Dataset.load(ds)
+        else:
+            raise ValueError(f"Unknown type for dataset: {type(ds)}")
+    
+    for ds in pure_val_datasets:
+        if isinstance(ds, Dataset):
+            vl += ds
+        elif isinstance(ds, Path) or isinstance(ds, str):
+            if str(ds) in paths:
+                raise ValueError(f"Pure val dataset {ds} already in datasets list.")
+            print(f"Loading dataset from {ds}...")
+            vl += Dataset.load(ds)
+        else:
+            raise ValueError(f"Unknown type for dataset: {type(ds)}")
+        
+    for ds in pure_test_datasets:
+        if isinstance(ds, Dataset):
+            te += ds
+        elif isinstance(ds, Path) or isinstance(ds, str):
+            if str(ds) in paths:
+                raise ValueError(f"Pure test dataset {ds} already in datasets list.")
+            print(f"Loading dataset from {ds}...")
+            te += Dataset.load(ds)
+        else:
+            raise ValueError(f"Unknown type for dataset: {type(ds)}")
+        
+    for ds, subsampling_dict in zip([tr, vl, te], [subsample_train, subsample_val, subsample_test]):
+        for dsname, subsampling_factor in subsampling_dict.items():
+            ds.subsample(subsampling_factor, dsname)
+        
+
+    if len(pure_train_datasets) > 0:
+        tr.remove_uncommon_features()
+    if len(pure_val_datasets) > 0:
+        vl.remove_uncommon_features()
+    if len(pure_test_datasets) > 0:
+        te.remove_uncommon_features()
+    #########################################################
 
     # Get the dataloaders
     train_loader = GraphDataLoader(tr, batch_size=train_batch_size, shuffle=True, num_workers=train_loader_workers, pin_memory=pin_memory, conf_strategy=conf_strategy)

@@ -7,7 +7,7 @@ url = 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release
 model = load_model(url)
 
 # add an energy calculation module:
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 import torch
 
 class ParamFixer(torch.nn.Module):

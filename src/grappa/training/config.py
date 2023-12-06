@@ -1,7 +1,8 @@
 from typing import Dict
 from pathlib import Path
 import yaml
-from grappa.utils.run_utils import load_yaml, write_yaml, get_data_path
+from grappa.utils.run_utils import write_yaml
+from grappa.utils.dataset_utils import get_data_path, benchmark_data_config
 
 
 def overwrite_config(kwargs, config):
@@ -25,7 +26,7 @@ def write_default_config(path:Path=Path.cwd(), model_tag='med'):
     write_yaml(config, path)
 
 
-def default_config(model_tag:str='small')->Dict:
+def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
     """
     Returns the default configuration.
     """
@@ -48,8 +49,8 @@ def default_config(model_tag:str='small')->Dict:
                 "protein-torsion",
                 "rna-nucleoside",
                 "rna-diverse",
-                "rna-trinucleotide",
-            ] 
+                "rna-trinucleotide"
+            ]
         ],
         "conf_strategy": "mean",
         "train_batch_size": 20,
@@ -58,10 +59,20 @@ def default_config(model_tag:str='small')->Dict:
         "train_loader_workers": 1,
         "val_loader_workers": 2,
         "test_loader_workers": 2,
+        "seed": 0,
         "pin_memory": True,
         "splitpath": None,
-        "partition": [0.8,0.1,0.1]
+        "partition": [], # may either be a partition list or a list of a default partition list and a dictionary mapping dsname to partition
+        "pure_train_datasets": [],
+        "pure_val_datasets": [],
+        "pure_test_datasets": [], # paths to datasets that are only for one specific set type, independent on which mol_ids occur. this can be used to be independent of the splitting by mol_ids. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
+        "subsample_train": {}, # dictionary of dsname and a float between 0 and 1 specifying the subsampling factor (that is applied after splitting).
+        "subsample_val": {},
+        "subsample_test": {},
     }
+
+    if benchmark:
+        data_config = benchmark_data_config()
 
     lit_model_config = {
         "lrs": {0: 1e-4, 3: 1e-5, 200: 1e-6, 400: 1e-7},

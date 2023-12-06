@@ -61,7 +61,7 @@ def parameter_loss(g):
     return loss
 
 # redefine parameter loss to act on tuple energy contributions
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 ref_writer = Energy(terms=['n2', 'n3', 'n4','n4_improper'], write_suffix="_classical", gradients=False, offset_torsion=False, suffix="_ref")
 
 pred_writer = Energy(terms=['n2', 'n3', 'n4','n4_improper'], write_suffix="", gradients=False, offset_torsion=True, suffix="")
@@ -154,7 +154,7 @@ print(dgl.readout_nodes(g, op='sum', ntype='n1', feat='gradient_ref').shape)
 #%%
 
 
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 
 ######################
 

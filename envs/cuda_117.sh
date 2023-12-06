@@ -11,7 +11,7 @@ fi
 
 # old openmm needs python 3.9 (current openmm does not work with cuda-11.7-torch)
 conda install python=3.9 openmm=7.7.0=py39hb10b54c_0 cuda-toolkit -c conda-forge -c "nvidia/label/cuda-11.7.1" -y
-pip install numpy matplotlib rdkit torch==2.0.0 torchvision==0.15.1 dgl -f https://data.dgl.ai/wheels/cu117/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
+pip install numpy matplotlib rdkit torch==2.0.0 torchvision==0.15.1 dgl -f https://data.dgl.ai/wheels/cu117/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html pytorch-lightning wandb pytorch_warmup
 
 # install grappa:
 THIS_FILE=$(readlink -f "${BASH_SOURCE[0]}")

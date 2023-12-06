@@ -2,10 +2,10 @@
 from grappa.models import readout
 from grappa.models import gated_torsion
 
-from grappa.models import attention_readout
+from grappa.models import perm_equiv_transformer
 
 from grappa.models.readout import get_default_statistics
-from grappa.models.graph_attention_model import Representation
+from grappa.models.graph_attention import GrappaGNN
 import torch
 from typing import Union, List, Tuple
 
@@ -28,21 +28,21 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
     assert "n2_k" in statistics["mean"].keys(), "statistics must contain at least the parameters for the bond term, keys are: " + str(list(statistics["mean"].keys()))
 
     if attentional:
-        bond = attention_readout.WriteBondParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
+        bond = perm_equiv_transformer.WriteBondParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
 
         # assume that the poitional encoding is of shape n_atoms_in_interaction x 1
         if positional_encoding:
             between_feats -= 1
 
-            angle = attention_readout.WriteAngleParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
+            angle = perm_equiv_transformer.WriteAngleParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding)
 
-            torsion = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=False, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity=n_periodicity_proper)
+            torsion = perm_equiv_transformer.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=False, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity=n_periodicity_proper)
 
 
         if use_improper:
-            improper = attention_readout.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=True, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity=n_periodicity_improper)
+            improper = perm_equiv_transformer.WriteTorsionParameters(rep_feats=rep_feats, between_feats=between_feats, stat_dict=statistics, improper=True, n_att=n_att, n_heads=n_heads, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity=n_periodicity_improper)
         else:
-            improper = attention_readout.Identity()
+            improper = perm_equiv_transformer.Identity()
 
     else:
 
@@ -74,7 +74,7 @@ def get_readout(statistics, rep_feats=512, between_feats=512, old=False, use_imp
 
 
 
-def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0., layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, rep_dropout=0, n_periodicity_proper=6, n_periodicity_improper=3, final_dropout=True):
+def get_full_model(statistics=None, rep_feats=512, gnn_width=512, readout_feats=512, n_conv=3, n_att=3, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], bonus_features=[], bonus_dims=[], old=False, n_heads=6, use_improper=True, attentional=True, n_att_readout=2, n_heads_readout=8, dense_layers=2, dropout=0., layer_norm=True, reducer_feats=None, attention_hidden_feats=None, positional_encoding=True, n_periodicity_proper=6, n_periodicity_improper=3, final_gnn_dropout=0.0, conv_dropout=0.0, attention_dropout=0.0):
     
     if statistics is None:
         statistics = get_default_statistics()
@@ -82,7 +82,7 @@ def get_full_model(statistics=None, rep_feats=512, between_feats=512, readout_fe
     if old:
         raise NotImplementedError("Old model not implemented.")
     else:
-        representation = Representation(h_feats=between_feats, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads, dropout=rep_dropout, final_dropout=final_dropout)
+        representation = GrappaGNN(node_feats=gnn_width, out_feats=rep_feats, n_conv=n_conv, n_att=n_att, in_feat_name=in_feat_name, bonus_features=bonus_features, bonus_dims=bonus_dims, n_heads=n_heads, final_dropout=final_gnn_dropout, conv_dropout=conv_dropout, attention_dropout=attention_dropout)
 
 
     readout = get_readout(statistics=statistics, rep_feats=rep_feats, between_feats=readout_feats, old=old, use_improper=use_improper, attentional=attentional, n_att=n_att_readout, n_heads=n_heads_readout, dense_layers=dense_layers, dropout=dropout, layer_norm=layer_norm, reducer_feats=reducer_feats, attention_hidden_feats=attention_hidden_feats, positional_encoding=positional_encoding, n_periodicity_proper=n_periodicity_proper, n_periodicity_improper=n_periodicity_improper)

@@ -2,7 +2,7 @@ import torch
 import dgl
 from grappa.utils.dgl_utils import grad_available
  
-from grappa.models.InternalCoordinates import InternalCoordinates
+from grappa.models.internal_coordinates import InternalCoordinates
 
 def torsion_energy(k, angle, offset=True):
     """

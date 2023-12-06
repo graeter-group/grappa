@@ -16,7 +16,7 @@ print(g.nodes['n1'].data.keys())
 
 
 from grappa.utils import openmm_utils, openff_utils
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 ref_writer = Energy(terms=['n2', 'n3', 'n4','n4_improper'], write_suffix="_classical", gradients=True, offset_torsion=True, suffix="_ref")
 
 

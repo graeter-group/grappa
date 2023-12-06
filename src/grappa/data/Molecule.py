@@ -246,8 +246,8 @@ class Molecule():
                 # transform bonds to indices:
                 bonds_by_idx = [(atom_idx[bond[0]], atom_idx[bond[1]]) for bond in self.bonds]
                 mol = rdkit_utils.rdkit_graph_from_bonds(bonds=bonds_by_idx)
-                ring_encoding = rdkit_utils.get_ring_encoding(mol)
-                self.additional_features['ring_encoding'] = ring_encoding
+                ring_encoding_ = rdkit_utils.get_ring_encoding(mol)
+                self.additional_features['ring_encoding'] = ring_encoding_
 
 
             elif feat_name == 'sp_hybridization':
@@ -569,5 +569,5 @@ class Molecule():
         return self.__str__()
 
     def __str__(self):
-        features_str = ', '.join(self.additional_features.keys()) if self.additional_features else 'None'
+        features_str = ', '.join(list(self.additional_features.keys()))
         return f"<grappa.data.Molecule ({len(self.atoms)} atoms, {len(self.bonds)} bonds, {len(self.angles) if self.angles else 0} angles, {len(self.propers) if self.propers else 0} propers, {len(self.impropers)//3 if self.impropers else 0} impropers, features: {features_str})>"

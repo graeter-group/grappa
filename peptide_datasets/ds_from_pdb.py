@@ -9,9 +9,9 @@ import numpy as np
 from openmm.app import ForceField
 import tempfile
 from openmm.app import PDBFile
-from grappa.utils import openmm_utils
+from grappa.utils import openmm_utils, openff_utils
 
-def main(source_path, target_path, forcefield):
+def main(source_path, target_path, forcefield, forcefield_type):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -43,16 +43,25 @@ def main(source_path, target_path, forcefield):
             pdbstring = ''.join(pdb)
             sequence = str(data['sequence'])
 
-            # get topology:
-            topology = openmm_utils.topology_from_pdb(pdbstring)
+            if forcefield_type == 'openmm':
+                # get topology:
+                topology = openmm_utils.topology_from_pdb(pdbstring)
+                # get smiles string:
+                smiles = openff_utils.smiles_from_pdb(pdbstring)
+                system = ForceField(forcefield).createSystem(topology)
 
-            system = ForceField(forcefield).createSystem(topology)
+            elif forcefield_type == 'openff' or forcefield_type == 'openmmforcefields':
+                openff_mol = openff_utils.mol_from_pdb(pdbstring)
+                smiles = openff_mol.to_smiles(mapped=False)
+                system, topology, _ = openff_utils.get_openmm_system(mapped_smiles=None, openff_forcefield=forcefield, openff_mol=openff_mol)
+            else:
+                raise ValueError(f"forcefield_type must be either openmm, openff or openmmforcefields but is {forcefield_type}")
 
             total_mols += 1
             total_confs += len(energy)
 
             # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
-            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=sequence, pdb=pdbstring)
+            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=smiles, pdb=pdbstring, smiles=smiles, sequence=sequence)
 
             moldata.molecule.add_features(['ring_encoding'])
 
@@ -89,5 +98,11 @@ if __name__ == "__main__":
         default='amber99sbildn.xml',
         help="Which forcefield to use for creating improper torsion and classical parameters. if no energy_ref and gradient_ref are given, the nonbonded parameters are used as reference.",
     )
+    parser.add_argument(
+        "--forcefield_type",
+        type=str,
+        default='openmm',
+        help="Which forcefield type to use for creating improper torsion and nonbonded parameters. Possible values: openmm, openff, openmmforcefields",
+    )
     args = parser.parse_args()
-    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield)
+    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield, forcefield_type=args.forcefield_type)

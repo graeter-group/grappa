@@ -84,7 +84,7 @@ system, topol, _ = openff_utils.get_openmm_system(smiles, openff_forcefield='ope
 system = openmm_utils.remove_forces_from_system(system, remove=['NonbondedForce'])
 b_energies, b_forces = openmm_utils.get_energies(openmm_system=system, xyz=xyz)
 # %%
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 
 
 writer = Energy(suffix='_ref', write_suffix='_val')

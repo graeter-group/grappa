@@ -37,7 +37,7 @@ config = Path('/hits/fast/mbm/seutelf/grappa/tests/experiments/wandb/run-2023112
 config = load_yaml(config/'files'/'grappa_config.yaml')
 # %%
 from grappa.models.deploy import model_from_config
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 
 def remove_module_prefix(state_dict):
     """ Remove the 'model.' prefix in the beginning of the keys from the state dict keys """

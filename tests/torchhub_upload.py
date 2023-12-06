@@ -3,7 +3,7 @@ from grappa.data import Dataset, GraphDataLoader
 from grappa.utils.run_utils import get_data_path, load_yaml
 import torch
 from grappa.models.deploy import model_from_config
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 from pathlib import Path
 
 def package_model(checkpoint_path, config, modelname):
