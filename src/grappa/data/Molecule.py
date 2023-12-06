@@ -570,4 +570,4 @@ class Molecule():
 
     def __str__(self):
         features_str = ', '.join(list(self.additional_features.keys()))
-        return f"<grappa.data.Molecule ({len(self.atoms)} atoms, {len(self.bonds)} bonds, {len(self.angles) if self.angles else 0} angles, {len(self.propers) if self.propers else 0} propers, {len(self.impropers)//3 if self.impropers else 0} impropers, features: {features_str})>"
+        return f"<grappa.data.Molecule ({len(self.atoms)} atoms, {len(self.bonds)} bonds, {len(self.angles)} angles, {len(self.propers)} propers, {len(self.impropers)//3} impropers, features: {features_str})>"
