@@ -12,6 +12,8 @@ import dgl.heterograph
 import torch
 from pathlib import Path
 import pkgutil
+import json
+
 
 
 class Molecule():
@@ -100,11 +102,10 @@ class Molecule():
     def _validate(self):
         # check the input for consistency
         # TODO: compare to current input validation
-
         pass
     
+    
     def  __post_init__(self):
-        #TODO: check whether this does what is is supposed to do
         if self.angles is None or self.propers is None:
             is_sorted = False
 
@@ -533,3 +534,32 @@ class Molecule():
             self.neighbor_dict = tuple_indices.get_neighbor_dict(bonds=self.bonds, sort=True)
 
         return tuple_indices.is_improper(ids=torsion, neighbor_dict=self.neighbor_dict, central_atom_position=None)
+    
+
+    def to_list_dict(self):
+        """
+        Returns a dictionary of lists describing the molecule. This is just a wrapper for the to_dict method that writes numpy arrays.
+        """
+        array_dict = self.to_dict()
+        list_dict = {key:array_dict[key].tolist() for key in array_dict.keys()}
+        return list_dict
+    
+
+    def to_json(self, filename:Union[Path,str]):
+        with open(filename, 'w') as f:
+            json.dump(self.to_list_dict(), f, indent=4)
+
+
+    def from_json(self, filename:Union[Path,str]):
+        with open(filename, 'r') as f:
+            list_dict = json.load(f)
+        return self.from_list_dict(list_dict)
+    
+
+    @classmethod
+    def from_list_dict(cls, list_dict:Dict):
+        """
+        Create a Molecule from a dictionary of lists. This method is just a wrapper for the from_dict method that expects arrays.
+        """
+        array_dict = {key:np.array(list_dict[key]) for key in list_dict.keys()}
+        return cls.from_dict(array_dict)
