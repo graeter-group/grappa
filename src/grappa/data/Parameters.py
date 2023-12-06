@@ -471,3 +471,43 @@ class Parameters():
         g.nodes['n4_improper'].data['k_ref'] = correct_shape(torch.tensor(improper_ks, dtype=torch.float32), n_periodicity_improper)
 
         return g
+    
+
+    @classmethod
+    def get_nan_params(cls, mol:Molecule):
+        """
+        Returns a Parameters object with all parameters set to nan but in the correct shape.
+        """
+        atoms = np.array(mol.atoms).astype(np.int32)
+        bonds = np.array(mol.bonds).astype(np.int32)
+        angles = np.array(mol.angles).astype(np.int32)
+        propers = np.array(mol.propers).astype(np.int32)
+        impropers = np.array(mol.impropers).astype(np.int32)
+
+        bond_k = np.full((len(bonds),), np.nan)
+        bond_eq = np.full((len(bonds),), np.nan)
+
+        angle_k = np.full((len(angles),), np.nan)
+        angle_eq = np.full((len(angles),), np.nan)
+
+        proper_ks = np.full((len(propers), constants.N_PERIODICITY_PROPER), np.nan)
+        proper_phases = np.full((len(propers), constants.N_PERIODICITY_PROPER), np.nan)
+
+        improper_ks = np.full((len(impropers), constants.N_PERIODICITY_IMPROPER), np.nan)
+        improper_phases = np.full((len(impropers), constants.N_PERIODICITY_IMPROPER), np.nan)
+
+        return cls(
+            atoms=atoms,
+            bonds=bonds,
+            bond_k=bond_k,
+            bond_eq=bond_eq,
+            angles=angles,
+            angle_k=angle_k,
+            angle_eq=angle_eq,
+            propers=propers,
+            proper_ks=proper_ks,
+            proper_phases=proper_phases,
+            impropers=impropers,
+            improper_ks=improper_ks,
+            improper_phases=improper_phases,
+        )

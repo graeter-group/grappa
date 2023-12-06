@@ -17,10 +17,15 @@ import pkgutil
 @dataclass
 class MolData():
     """
-    Dataclass for entries in datasets on which grappa can be trained. Contains a molecule, qm energies and reference energies, that is qm minus nonbonded energy of a classical forcefield. Can be stored as npz files. A list of MolData objects is considered to be a 'grappa dataset'.
+    Dataclass for entries in datasets on which grappa can be trained. Contains a set of states of a molecule, qm energies and reference energies (qm minus nonbonded energy of some classical forcefield). Can be stored as npz files. A list of MolData objects is considered to be a 'grappa dataset'.
+    Assumes the following shapes:
+        - energy: (n_confs,)
+        - xyz: (n_confs, n_atoms, 3)
+        - gradient: (n_confs, n_atoms, 3)
+        - energy_ref: (n_confs,)
+        - gradient_ref: (n_confs, n_atoms, 3)
     """
     molecule: Molecule
-    classical_parameters: Parameters # these are used for regularisation and to estimate the statistics of the reference energy and gradient
 
     # conformational data:
     xyz: np.ndarray
@@ -32,6 +37,8 @@ class MolData():
     gradient_ref: np.ndarray
 
     mol_id: str
+
+    classical_parameters: Parameters = None # these are used for regularisation and to estimate the statistics of the reference energy and gradient
 
     # mol_id is either a smiles string or a sequence string that is also stored
     sequence: Optional[str] = None
@@ -58,7 +65,8 @@ class MolData():
         for k,v in self.ff_energy.items():
             assert v.shape == self.energy.shape, f"Shape of ff_energy {k} does not match energy: {v.shape} vs {self.energy.shape}"
         for k,v in self.ff_gradient.items():
-            assert v.shape == self.gradient.shape, f"Shape of ff_gradient {k} does not match gradient: {v.shape} vs {self.gradient.shape}"
+            if not self.gradient is None:
+                assert v.shape == self.gradient.shape, f"Shape of ff_gradient {k} does not match gradient: {v.shape} vs {self.gradient.shape}"
 
 
     def  __post_init__(self):
@@ -75,12 +83,61 @@ class MolData():
 
         if not "qm" in self.ff_energy.keys():
             self.ff_energy["qm"] = self.energy
+
         if not "qm" in self.ff_gradient.keys():
             self.ff_gradient["qm"] = self.gradient
 
+        if self.classical_parameters is None:
+            # create parameters that are all nan but in the correct shape:
+            self.classical_parameters = Parameters.get_nan_params(mol=self.molecule)
+
         self._validate()
     
-    
+
+    @classmethod
+    def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None):
+        """
+        Construct moldata from 'raw' arrays of xyz, energies and nonbonded energies. Sets gradients to zeros if not provided and mol_id to '' if not provided. Note that without gradient or valid mol_id, the moldata cannot be used for training or evaluation on unseen test data since 'unseen' is defined via mol_id.
+        """
+        energy_ref = energy - nonbonded_energy
+        energy_ref -= energy_ref.mean()
+
+        if not gradient is None:
+            assert nonbonded_gradient is not None, "If gradient is provided, nonbonded_gradient must be provided as well."
+
+        if gradient is None:
+            gradient = np.zeros_like(xyz)
+            nonbonded_gradient = np.zeros_like(xyz)
+
+        gradient_ref = gradient - nonbonded_gradient
+
+        if mol_id is None:
+            if smiles is not None:
+                mol_id = smiles
+            elif sequence is not None:
+                mol_id = sequence
+            else:
+                mol_id = ''
+
+        ff_nonbonded_energy = {'reference_ff': nonbonded_energy}
+        ff_nonbonded_gradient = {'reference_ff': nonbonded_gradient}
+
+        return cls(
+            molecule=molecule,
+            xyz=xyz,
+            energy=energy,
+            gradient=gradient,
+            energy_ref=energy_ref,
+            gradient_ref=gradient_ref,
+            mol_id=mol_id,
+            smiles=smiles,
+            sequence=sequence,
+            ff_nonbonded_energy=ff_nonbonded_energy,
+            ff_nonbonded_gradient=ff_nonbonded_gradient,
+        )
+
+
+
     def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:list[str]=[])->DGLGraph:
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
