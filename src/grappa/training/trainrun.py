@@ -31,19 +31,6 @@ def do_trainrun(config:Dict, project:str='grappa'):
             for kk in config[k].keys():
                 if kk not in default_config_[k]:
                     raise KeyError(f"Key {k}-{kk} not an allowed config argument.")
-                
-
-    ###############################
-    class ParamFixer(torch.nn.Module):
-        def forward(self, g):
-            g.nodes['n2'].data['k'] = g.nodes['n2'].data['k'][:,0]
-            g.nodes['n2'].data['eq'] = g.nodes['n2'].data['eq'][:,0]
-            g.nodes['n3'].data['k'] = g.nodes['n3'].data['k'][:,0]
-            g.nodes['n3'].data['eq'] = g.nodes['n3'].data['eq'][:,0]
-            return g
-
-    ###############################
-
 
     # Get the dataloaders
     tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'])
@@ -54,7 +41,6 @@ def do_trainrun(config:Dict, project:str='grappa'):
     # add energy calculation
     model = torch.nn.Sequential(
         model,
-        ParamFixer(),
         Energy(suffix=''),
         Energy(suffix='_ref', write_suffix="_classical_ff")
     )

@@ -230,8 +230,8 @@ class WriteBondParameters(torch.nn.Module):
         coeffs[:,0] = self.to_eq(coeffs[:,0])
         coeffs[:,1] = self.to_k(coeffs[:,1])
 
-        g.nodes["n2"].data["eq"+self.suffix] = coeffs[:,0].unsqueeze(dim=-1)
-        g.nodes["n2"].data["k"+self.suffix] = coeffs[:,1].unsqueeze(dim=-1)
+        g.nodes["n2"].data["eq"+self.suffix] = coeffs[:,0]
+        g.nodes["n2"].data["k"+self.suffix] = coeffs[:,1]
 
         return g
 
@@ -311,8 +311,8 @@ class WriteAngleParameters(torch.nn.Module):
         coeffs[:,0] = self.to_eq(coeffs[:,0])
         coeffs[:,1] = self.to_k(coeffs[:,1])
 
-        g.nodes["n3"].data["eq"+self.suffix] = coeffs[:,0].unsqueeze(dim=-1)
-        g.nodes["n3"].data["k"+self.suffix] = coeffs[:,1].unsqueeze(dim=-1)
+        g.nodes["n3"].data["eq"+self.suffix] = coeffs[:,0]
+        g.nodes["n3"].data["k"+self.suffix] = coeffs[:,1]
 
         return g
 

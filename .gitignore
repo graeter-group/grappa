@@ -79,6 +79,7 @@ esp_data/
 data_backup/
 npy_charge_dicts/
 **/nohup.out
+**/nohup2.out
 **/.vscode
 **/.ipynb_checkpoints
 **/log.txt
