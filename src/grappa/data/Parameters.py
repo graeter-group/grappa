@@ -437,7 +437,7 @@ class Parameters():
 
         assert np.all(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2)), "The proper torsion phases must be either 0 or pi or 2pi"
 
-        assert np.all(self.proper_ks >= 0), "The proper torsion force constants must be positive."
+        assert np.all(self.proper_ks >= 0 + np.isnan(self.proper_ks)), "The proper torsion force constants must be positive."
 
         proper_ks = np.where(
             np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),

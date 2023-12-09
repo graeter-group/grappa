@@ -192,12 +192,12 @@ class MolData():
         """
         Create a Molecule from a dictionary of arrays.
         """
-        xyz = array_dict.get('xyz')
-        energy = array_dict.get('energy')
-        gradient = array_dict.get('gradient')
-        energy_ref = array_dict.get('energy_ref')
-        gradient_ref = array_dict.get('gradient_ref')
-        mol_id = array_dict.get('mol_id')
+        xyz = array_dict['xyz']
+        energy = array_dict['energy']
+        gradient = array_dict['gradient']
+        energy_ref = array_dict['energy_ref']
+        gradient_ref = array_dict['gradient_ref']
+        mol_id = array_dict['mol_id']
         if isinstance(mol_id, np.ndarray):
             mol_id = str(mol_id)
 
