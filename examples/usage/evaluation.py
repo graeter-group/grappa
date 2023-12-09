@@ -1,4 +1,7 @@
 #%%
+"""
+Evaluate a grappa dataset for a model.
+"""
 from grappa.data import Dataset
 
 # DOES NOT WORK IN THIS COMMIT
@@ -36,7 +39,7 @@ class ParamFixer(torch.nn.Module):
         return g
 
 # then, we can add the energy calculation module
-from grappa.models.energy import Energy
+from grappa.models.Energy import Energy
 
 model = torch.nn.Sequential(
     model,
