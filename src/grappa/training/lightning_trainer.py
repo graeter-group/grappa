@@ -4,7 +4,7 @@ import wandb
 from pathlib import Path
 
 
-def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='avg/val/rmse_gradients')->pl.Trainer:
+def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss')->pl.Trainer:
 
     # Generate a unique ID for the run
     run_id = wandb.util.generate_id()

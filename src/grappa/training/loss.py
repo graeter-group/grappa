@@ -20,6 +20,8 @@ class MolwiseLoss(torch.nn.Module):
         param_weight:float=1e-3,
         weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2},
         skip_params_if_not_present:bool=True,
+        proper_regularisation:float=0., # prefactor for L2 regularisation of proper torsion parameters
+        improper_regularisation:float=0.,
         ):
 
         super().__init__()
@@ -29,6 +31,8 @@ class MolwiseLoss(torch.nn.Module):
         self.param_weight = param_weight
         self.weights = weights
         self.skip_params_if_not_present = skip_params_if_not_present
+        self.proper_regularisation = proper_regularisation
+        self.improper_regularisation = improper_regularisation
 
 
     def forward(self, g):
@@ -38,18 +42,21 @@ class MolwiseLoss(torch.nn.Module):
         assert not (self.gradient_weight == 0 and self.energy_weight == 0 and self.param_weight == 0), "At least one of the weights must be non-zero."
 
         for graph in graphs:
-            loss_term = 0
+            
+            # loss per graph:
+            loss_term = 0.
 
-            if self.gradient_weight != 0:
+            if self.gradient_weight != 0.:
                 gradients = graph_utils.get_gradients(graph)
                 gradients_ref = graph_utils.get_gradients(graph, suffix="_ref")
                 loss_term = loss_term + self.mse_loss(gradients, gradients_ref) * self.gradient_weight
 
-            if self.energy_weight != 0:
+            if self.energy_weight != 0.:
                 energies = graph_utils.get_energies(graph)
                 energies_ref = graph_utils.get_energies(graph, suffix="_ref")
                 energy_contrib = self.mse_loss(energies, energies_ref) * self.energy_weight
                 loss_term = loss_term + energy_contrib
+
 
             if self.param_weight != 0:
                 try:
@@ -90,7 +97,18 @@ class MolwiseLoss(torch.nn.Module):
                     loss_contrib = torch.mean(torch.square(diffs))
 
                     loss_term = loss_term + loss_contrib * self.param_weight
+    
 
+            if self.proper_regularisation > 0.:
+                propers = graph_utils.get_parameters(graph)['n4_k']
+                if len(propers) > 0:
+                    loss_term = loss_term + self.proper_regularisation * torch.mean(torch.square(propers))
+
+            if self.improper_regularisation > 0.:
+                impropers = graph_utils.get_parameters(graph)['n4_improper_k']
+                if len(impropers) > 0:
+                    loss_term = loss_term + self.improper_regularisation * torch.mean(torch.square(impropers))
+                loss_term = loss_term + self.improper_regularisation * torch.mean(torch.square(impropers))
 
             loss = loss + loss_term/len(graphs)
     

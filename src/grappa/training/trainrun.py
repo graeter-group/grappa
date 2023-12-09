@@ -1,12 +1,8 @@
 #%%
-from grappa.data import Dataset, GraphDataLoader
 from grappa.models import Energy, deploy
-from grappa.training.loss import ParameterLoss, EnergyLoss, GradientLoss
 
 import torch
 from pathlib import Path
-from grappa.utils.torch_utils import root_mean_squared_error, mean_absolute_error, invariant_rmse, invariant_mae
-import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 import wandb
 from grappa.utils.run_utils import get_rundir, load_yaml
@@ -26,7 +22,7 @@ def do_trainrun(config:Dict, project:str='grappa'):
     Do a single training run with the given configuration.
     """
 
-    # check whether all config args are allowed:
+    # check whether all config args are allowed (they are allowed if they are in the default config)
     default_config_ = default_config()
     for k in config.keys():
         if k not in default_config_:
@@ -53,7 +49,7 @@ def do_trainrun(config:Dict, project:str='grappa'):
     tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'])
 
     # Get the model
-    model = deploy.model_from_config(config=config['model_config'], stat_dict=get_stat_dict(tr_loader))
+    model = deploy.model_from_config(model_config=config['model_config'], stat_dict=get_stat_dict(tr_loader))
 
     # add energy calculation
     model = torch.nn.Sequential(
@@ -62,6 +58,16 @@ def do_trainrun(config:Dict, project:str='grappa'):
         Energy(suffix=''),
         Energy(suffix='_ref', write_suffix="_classical_ff")
     )
+
+    model.train()
+
+    # test whether the model can be applied to some input of the train set:
+    if config['test_model']:
+        test_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        example, _ = next(iter(tr_loader))
+        example = example.to(test_device)
+        model = model.to(test_device)
+        model(example)
 
     # Get a pytorch lightning model
     lit_model = LitModel(model=model, tr_loader=tr_loader, vl_loader=val_loader, te_loader=test_loader, **config['lit_model_config'])

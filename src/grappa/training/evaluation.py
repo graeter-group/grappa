@@ -1,6 +1,5 @@
 from grappa.utils.torch_utils import mean_absolute_error, root_mean_squared_error, invariant_mae, invariant_rmse
 import numpy as np
-from grappa.training.loss import ParameterLoss, TuplewiseEnergyLoss, EnergyLoss, GradientLoss
 from grappa import utils
 from typing import List
 import torch

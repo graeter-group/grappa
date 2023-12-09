@@ -1,9 +1,3 @@
-from grappa.data import Dataset, GraphDataLoader
-from pathlib import Path
-from typing import List, Dict, Tuple, Union
-
-from grappa.data import Dataset, GraphDataLoader
-from grappa.models import Energy, get_models
 from grappa.training.loss import MolwiseLoss, TuplewiseEnergyLoss
 from grappa.training.evaluation import Evaluator
 import numpy as np
@@ -23,10 +17,12 @@ from grappa.training.get_dataloaders import get_dataloaders
 class LitModel(pl.LightningModule):
     def __init__(self, model, tr_loader, vl_loader, te_loader, 
                  lrs={0: 1e-4, 3: 1e-5, 200: 1e-6, 400: 1e-7}, 
-                 start_qm_epochs=5, add_restarts=[150, 350],
-                 warmup_steps=int(2e2), classical_epochs=20,
-                 energy_weight=1e-5, gradient_weight=1., tuplewise_weight=0.,
-                 log_train_interval=5, log_classical=False, log_params=False):
+                 start_qm_epochs=1, add_restarts=[150, 350],
+                 warmup_steps=int(2e2),
+                 energy_weight=1., gradient_weight=1e-1, tuplewise_weight=0.,
+                 param_weight=1e-4, proper_regularisation=1e-5, improper_regularisation=1e-5,
+                 log_train_interval=5, log_classical=False, log_params=False, weight_decay=0.,
+                 early_stopping_energy_weight=2.):
         """
         Initialize the LitModel with specific configurations.
 
@@ -40,28 +36,37 @@ class LitModel(pl.LightningModule):
             start_qm_epochs (int): The epoch number from which quantum mechanics based training starts.
             add_restarts (list): List of epochs at which to restart the training process.
             warmup_steps (int): The number of steps over which the learning rate is linearly increased.
-            classical_epochs (int): Number of epochs for classical training before switching to quantum mechanics based training.
             energy_weight (float): Weight of the energy component in the loss function.
             gradient_weight (float): Weight of the gradient component in the loss function.
             tuplewise_weight (float): Weight of the tuplewise component in the loss function.
+            param_weight (float): Weight of the parameter component in the loss function. Prefactor of per-mol average of each parameter in the loss. By default, bond and angle parameters are rewighted such that their std deviation is around O(1), thus this is comparable to mse of energy and gradient (averaged molecule-wise).
+            proper_regularisation (float): Weight of the proper L2 regularisation component in the loss function.
+            improper_regularisation (float): Weight of the improper L2 regularisation component in the loss function.
             log_train_interval (int): Interval (in epochs) at which training metrics are logged.
             log_classical (bool): Whether to log classical values during training.
             log_params (bool): Whether to log parameters during training.
+            weight_decay (float): Weight decay parameter for the optimizer.
+            early_stopping_energy_weight (float): Weight of the energy component in the early stopping criterion, which is given by the sum of the average gradient rmse per dataset (first average over mols and confs in the dataset for obtaining rmses and then over the datasets for obtaining a mean rmse) and the energy rmse per dataset (same average procedure) multiplied by this weight. (This way, each dataset contributes equally to the early stopping criterion, independent of the number of molecules in the dataset.)
         """
+
+        if tuplewise_weight > 0:
+            raise NotImplementedError("Tuplewise loss is not yet implemented.")
 
         super().__init__()
         
         self.model = model
         self.tuplewise_energy_loss = TuplewiseEnergyLoss()
-        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3) # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
+        
+        # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
+        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation)
 
         self.lrs = lrs
         self.lr = self.lrs[0]
+        self.weight_decay = weight_decay
 
         self.start_qm_epochs = start_qm_epochs
-        self.classical_epochs = classical_epochs
 
-        self.restarts = sorted(list(set([self.start_qm_epochs, self.classical_epochs] + add_restarts)))
+        self.restarts = sorted(list(set([self.start_qm_epochs] + add_restarts)))
         self.warmup_steps = warmup_steps
         self.warmup_step = None
         self.warmup = True
@@ -69,6 +74,7 @@ class LitModel(pl.LightningModule):
         self.energy_weight = energy_weight
         self.gradient_weight = gradient_weight
         self.tuplewise_weight = tuplewise_weight
+        self.param_weight = param_weight
 
         self.train_dataloader = lambda: tr_loader
         self.val_dataloader = lambda: vl_loader
@@ -78,6 +84,8 @@ class LitModel(pl.LightningModule):
 
         self.evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
         self.train_evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
+
+        self.early_stopping_energy_weight = early_stopping_energy_weight
 
 
     def forward(self, x):
@@ -137,6 +145,12 @@ class LitModel(pl.LightningModule):
                     else:
                         self.log(f'{dsname}/train/{key}', metrics[dsname][key], on_epoch=True)
         
+            # Early stopping criterion:
+            gradient_avg = metrics["avg"]["rmse_gradients"]
+            energy_avg = metrics["avg"]["rmse_energies"]
+            early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
+            self.log('train_early_stopping_loss', early_stopping_loss, on_epoch=True)
+
         return super().on_train_epoch_end()
         
 
@@ -145,13 +159,11 @@ class LitModel(pl.LightningModule):
 
         self.set_lr()
 
-        if self.current_epoch > self.classical_epochs:
-            self.loss.param_weight = 0
-
         if self.current_epoch > self.start_qm_epochs:
-            # print(f'setting the loss weights to\n  param_weight: {self.loss.param_weight}\n  gradient_weight: {self.gradient_weight}\n  energy_weight: {self.energy_weight}')
+            # reset the loss weights to the values specified in the config:
             self.loss.gradient_weight = float(self.gradient_weight)
             self.loss.energy_weight = float(self.energy_weight)
+            self.loss.param_weight = float(self.param_weight)
             
         return super().on_train_epoch_start()
 
@@ -205,6 +217,13 @@ class LitModel(pl.LightningModule):
                 else:
                     self.log(f'{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
 
+        # Early stopping criterion:
+        gradient_avg = metrics["avg"]["rmse_gradients"]
+        energy_avg = metrics["avg"]["rmse_energies"]
+        early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
+        self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
+
+
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lrs[0])
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lrs[0], weight_decay=self.weight_decay)
         return optimizer
