@@ -19,7 +19,7 @@ def internal_coordinates(g):
     Parameters
     ----------
     g : `dgl.DGLHeteroGraph`
-        Input graph.
+            Input graph.
 
     Returns
     -------
