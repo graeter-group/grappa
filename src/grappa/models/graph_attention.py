@@ -6,6 +6,171 @@ from typing import List, Tuple, Dict, Union, Callable
 import math
 from grappa.constants import MAX_ELEMENT
 
+
+class GrappaGNN(torch.nn.Module):
+    """
+    Implements a Graph Neural Network model, consisting of a sequence of graph convolutional and attention layers.
+
+    This model sequentially applies:
+    - A linear layer mapping input features to hidden features.
+    - A stack of graph convolutional blocks (ResidualConvBlocks) with self-interaction.
+    - A stack of graph attention blocks (ResidualAttentionBlocks) with self-interaction.
+    - A final linear layer mapping hidden features to output features.
+
+    ----------
+    Parameters:
+    ----------
+        out_feats (int): Number of output features.
+        in_feats (int): Number of input features. If None, inferred from `in_feat_name` and `in_feat_dims`.
+        node_feats (int): Number of hidden node features. If None, defaults to `out_feats`.
+        n_conv (int): Number of convolutional blocks.
+        n_att (int): Number of attention blocks.
+        n_heads (int): Number of attention heads in each attention block.
+        in_feat_name (Union[str, List[str]]): Names of input features. Defaults to a standard list of graph features.
+        in_feat_dims (Dict[str, int]): Dictionary mapping feature names to their dimensions. Used to override default feature dimensions.
+        conv_dropout (float): Dropout rate in convolutional layers. Defaults to 0.
+        attention_dropout (float): Dropout rate in attention layers. Defaults to 0.
+        final_dropout (float): Dropout rate in the final output layer. Defaults to 0.
+        initial_dropout (float): Dropout rate after the initial linear layer. Defaults to 0.
+
+    ----------
+    Returns:
+    ----------
+        dgl.DGLGraph: The input graph with node features stored in `g.nodes["n1"].data["h"]`.
+
+    ----------
+    Notes:
+    ----------
+    The input graph for the forward call must contain node features named as specified in `in_feat_name`.
+    """
+    def __init__(self, out_feats:int=512, in_feats:int=None, node_feats:int=None, n_conv:int=3, n_att:int=3, n_heads:int=8, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], in_feat_dims:Dict[str,int]={}, conv_dropout:float=0., attention_dropout:float=0., final_dropout:float=0., initial_dropout:float=0., layer_norm:bool=True, self_interaction:bool=True):
+
+        super().__init__()
+
+        if not isinstance(in_feat_name, list):
+            in_feat_name = [in_feat_name]
+
+        if in_feats is None:
+            # infer the input features from the in_feat_name
+            default_dims = {
+                "atomic_number": MAX_ELEMENT,
+                "ring_encoding": 7,
+                "partial_charge":1,
+                "sp_hybridization": 6,
+                "mass": 1,
+                "degree": 7,
+                "is_radical": 1,
+            }
+            # overwrite/append to these default values:
+            for key in in_feat_dims.keys():
+                default_dims[key] = in_feat_dims[key]
+            in_feat_dims = [default_dims[feat] for feat in in_feat_name]
+
+            
+        if in_feats is None:
+            in_feats = sum(in_feat_dims)
+
+        if node_feats is None:
+            node_feats = out_feats
+
+        self.in_feats = in_feats
+
+        self.in_feat_name = in_feat_name
+
+        # self.layer_norm = torch.nn.LayerNorm(normalized_shape=(out_feats,)) # normalize over the feature dimension, not the node dimension (since this is not of constant length) # not necessary, the blocks have normalization
+
+        self.initial_dropout = torch.nn.Dropout(initial_dropout)
+        self.final_dropout = torch.nn.Dropout(final_dropout)
+
+        self.pre_dense = torch.nn.Sequential(
+            torch.nn.Linear(in_feats, node_feats),
+            torch.nn.ELU(),
+        )
+        
+        if n_conv + n_att > 0:
+
+            self.no_convs = False
+
+            self.conv_blocks = torch.nn.ModuleList([
+                    ResidualConvBlock(in_feats=node_feats, out_feats=node_feats, activation=torch.nn.ELU(), self_interaction=self_interaction, dropout=conv_dropout, layer_norm=layer_norm)
+                    for i in range(n_conv)
+                ])
+
+            
+            self.att_blocks = torch.nn.ModuleList([
+                    ResidualAttentionBlock(in_feats=node_feats,
+                                           out_feats=node_feats,
+                                           num_heads=n_heads,
+                                           self_interaction=self_interaction,
+                                           dropout_behind_mha=attention_dropout,
+                                           dropout_behind_self_interaction=attention_dropout,
+                                           skip_connection=True, layer_norm=layer_norm)
+                    for i in range(n_conv, n_conv+n_att)
+                ])
+
+            
+            self.post_dense = torch.nn.Sequential(
+                torch.nn.Linear(node_feats, out_feats),
+            )
+
+            self.blocks = self.conv_blocks + self.att_blocks
+
+        # no convolutional blocks:
+        else:
+
+            self.no_convs = True
+
+            self.post_dense = torch.nn.Sequential(
+                torch.nn.Linear(node_feats, out_feats),
+            )
+
+
+
+    def forward(self, g, in_feature=None):
+        """
+        Processes the input graph through the GrappaGNN model.
+
+        Parameters:
+            g (dgl.DGLGraph): The input graph with node features of shape (n_nodes, out_feats).
+            in_feature (torch.Tensor, optional): Tensor of input features. If None, features are extracted from the graph `g`.
+
+        Returns:
+            dgl.DGLGraph: The graph `g` with output node features stored in `g.nodes["n1"].data["h"]`.
+
+        The function first concatenates the input features (handling different shapes), then applies the sequence of GNN layers, and finally updates the graph with the resulting node features.
+        """
+        if in_feature is None:
+            try:
+                # concatenate all the input features, allow the shape (n_nodes) and (n_nodes,n_feat)
+                in_feature = torch.cat([g.nodes["n1"].data[feat].float()
+                                        if len(g.nodes["n1"].data[feat].shape) >=2 else g.nodes["n1"].data[feat].unsqueeze(dim=-1).float()
+                                        for feat in self.in_feat_name], dim=-1)
+                assert len(in_feature.shape) == 2, f"the input features must be of shape (n_nodes, n_features), but got {in_feature.shape}"
+            except:
+                raise
+
+        h = self.pre_dense(in_feature)
+
+        h = self.initial_dropout(h)
+
+        g_ = dgl.to_homogeneous(g.node_type_subgraph(["n1"]))
+
+        if not self.no_convs:
+            # do message passing:
+            for block in self.blocks:
+                h = block(g_,h)
+
+        h = self.post_dense(h)
+
+        h = self.final_dropout(h)
+
+        g.nodes["n1"].data["h"] = h
+        
+        return g
+    
+
+
+
 class ResidualAttentionBlock(torch.nn.Module):
     """
     Implements one residual layer consisting of 1 multi-head-attention message passing step (mlp on the node features with shared weights), and a skip connection. The block has a nonlinearity at the end but not in the beginning.
@@ -235,159 +400,3 @@ class ResidualConvBlock(torch.nn.Module):
         
         return h
 
-
-
-class GrappaGNN(torch.nn.Module):
-    """
-    Implements a Graph Neural Network model, consisting of a sequence of graph convolutional and attention layers.
-
-    This model sequentially applies:
-    - A linear layer mapping input features to hidden features.
-    - A stack of graph convolutional blocks (ResidualConvBlocks) with self-interaction.
-    - A stack of graph attention blocks (ResidualAttentionBlocks) with self-interaction.
-    - A final linear layer mapping hidden features to output features.
-
-    Parameters:
-        out_feats (int): Number of output features.
-        in_feats (int): Number of input features. If None, inferred from `in_feat_name` and `in_feat_dims`.
-        node_feats (int): Number of hidden node features. If None, defaults to `out_feats`.
-        n_conv (int): Number of convolutional blocks.
-        n_att (int): Number of attention blocks.
-        n_heads (int): Number of attention heads in each attention block.
-        in_feat_name (Union[str, List[str]]): Names of input features. Defaults to a standard list of graph features.
-        in_feat_dims (Dict[str, int]): Dictionary mapping feature names to their dimensions. Used to override default feature dimensions.
-        conv_dropout (float): Dropout rate in convolutional layers. Defaults to 0.
-        attention_dropout (float): Dropout rate in attention layers. Defaults to 0.
-        final_dropout (float): Dropout rate in the final output layer. Defaults to 0.
-        initial_dropout (float): Dropout rate after the initial linear layer. Defaults to 0.
-
-    The input graph for the forward call must contain node features named as specified in `in_feat_name`.
-
-    The architecture is designed to allow flexibility in the feature dimensions and the number and type of layers used.
-    """
-    def __init__(self, out_feats:int=512, in_feats:int=None, node_feats:int=None, n_conv:int=3, n_att:int=3, n_heads:int=8, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], in_feat_dims:Dict[str,int]={}, conv_dropout:float=0., attention_dropout:float=0., final_dropout:float=0., initial_dropout:float=0.):
-
-        super().__init__()
-
-        if not isinstance(in_feat_name, list):
-            in_feat_name = [in_feat_name]
-
-        if in_feats is None:
-            # infer the input features from the in_feat_name
-            default_dims = {
-                "atomic_number": MAX_ELEMENT,
-                "ring_encoding": 7,
-                "partial_charge":1,
-                "sp_hybridization": 6,
-                "mass": 1,
-                "degree": 7,
-                "is_radical": 1,
-            }
-            # overwrite/append to these default values:
-            for key in in_feat_dims.keys():
-                default_dims[key] = in_feat_dims[key]
-            in_feat_dims = [default_dims[feat] for feat in in_feat_name]
-
-            
-        if in_feats is None:
-            in_feats = sum(in_feat_dims)
-
-        if node_feats is None:
-            node_feats = out_feats
-
-        self.in_feats = in_feats
-
-        self.in_feat_name = in_feat_name
-
-        # self.layer_norm = torch.nn.LayerNorm(normalized_shape=(out_feats,)) # normalize over the feature dimension, not the node dimension (since this is not of constant length) # not necessary, the blocks have normalization
-
-        self.initial_dropout = torch.nn.Dropout(initial_dropout)
-        self.final_dropout = torch.nn.Dropout(final_dropout)
-
-        self.pre_dense = torch.nn.Sequential(
-            torch.nn.Linear(in_feats, node_feats),
-            torch.nn.ELU(),
-        )
-        
-        if n_conv + n_att > 0:
-
-            self.no_convs = False
-
-            self.conv_blocks = torch.nn.ModuleList([
-                    ResidualConvBlock(in_feats=node_feats, out_feats=node_feats, activation=torch.nn.ELU(), self_interaction=True, dropout=conv_dropout)
-                    for i in range(n_conv)
-                ])
-
-            
-            self.att_blocks = torch.nn.ModuleList([
-                    ResidualAttentionBlock(in_feats=node_feats,
-                                           out_feats=node_feats,
-                                           num_heads=n_heads,
-                                           self_interaction=True,
-                                           dropout_behind_mha=attention_dropout,
-                                           dropout_behind_self_interaction=attention_dropout,
-                                           skip_connection=True)
-                    for i in range(n_conv, n_conv+n_att)
-                ])
-
-            
-            self.post_dense = torch.nn.Sequential(
-                torch.nn.Linear(node_feats, out_feats),
-            )
-
-            self.blocks = self.conv_blocks + self.att_blocks
-
-        # no convolutional blocks:
-        else:
-
-            self.no_convs = True
-
-            self.post_dense = torch.nn.Sequential(
-                torch.nn.Linear(node_feats, out_feats),
-            )
-
-
-
-    def forward(self, g, in_feature=None):
-        """
-        Processes the input graph through the GrappaGNN model.
-
-        Parameters:
-            g (dgl.DGLGraph): The input graph with node features of shape (n_nodes, out_feats).
-            in_feature (torch.Tensor, optional): Tensor of input features. If None, features are extracted from the graph `g`.
-
-        Returns:
-            dgl.DGLGraph: The graph `g` with output node features stored in `g.nodes["n1"].data["h"]`.
-
-        The function first concatenates the input features (handling different shapes), then applies the sequence of GNN layers, and finally updates the graph with the resulting node features.
-        """
-        if in_feature is None:
-            try:
-                # concatenate all the input features, allow the shape (n_nodes) and (n_nodes,n_feat)
-                in_feature = torch.cat([g.nodes["n1"].data[feat].float()
-                                        if len(g.nodes["n1"].data[feat].shape) >=2 else g.nodes["n1"].data[feat].unsqueeze(dim=-1).float()
-                                        for feat in self.in_feat_name], dim=-1)
-                assert len(in_feature.shape) == 2, f"the input features must be of shape (n_nodes, n_features), but got {in_feature.shape}"
-            except:
-                raise
-
-        h = self.pre_dense(in_feature)
-
-        h = self.initial_dropout(h)
-
-        g_ = dgl.to_homogeneous(g.node_type_subgraph(["n1"]))
-
-        if not self.no_convs:
-            # do message passing:
-            for block in self.blocks:
-                h = block(g_,h)
-
-        h = self.post_dense(h)
-
-        h = self.final_dropout(h)
-
-        g.nodes["n1"].data["h"] = h
-        
-        return g
-    
-# %%
