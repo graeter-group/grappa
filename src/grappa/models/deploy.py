@@ -1,16 +1,17 @@
 
 from typing import Union, List, Tuple, Dict
 from .grappa import GrappaModel
+from grappa.utils.graph_utils import get_default_statistics
 
 
 
-def model_from_config(model_config:Dict, stat_dict:Dict=None):
+def model_from_config(model_config:Dict, param_statistics:Dict=get_default_statistics()):
     """
     Initialize an untrained model from either a path to a config file or a config dict.
-    If you intend to train the model, it is recommended to provide a stat_dict, which is a dictionary containing the mean and std of classical ff parameters in a training set. This is not necessary if you intend to load model weights from a pretrained model.
+    If you intend to train the model, it is recommended to provide a param_statistics, which is a dictionary containing the mean and std of classical ff parameters in a training set. This is not necessary if you intend to load model weights from a pretrained model.
     """
 
-    model = GrappaModel(stat_dict=stat_dict, **model_config)
+    model = GrappaModel(param_statistics=param_statistics, **model_config)
 
     return model
 

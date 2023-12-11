@@ -268,7 +268,7 @@ def get_tuplewise_energies(g, suffix="", center=False):
     return energies
 
 
-def get_stat_dict(loader, suffix="_ref"):
+def get_param_statistics(loader, suffix="_ref"):
     '''
     Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}.
     '''
@@ -284,13 +284,13 @@ def get_stat_dict(loader, suffix="_ref"):
                     # remove the suffix from the key in the stat dict:
                     parameters[k.replace(suffix, "")] = torch.cat((parameters[k], v), dim=0)
         
-        stat_dict = {'mean':{}, 'std':{}}
+        param_statistics = {'mean':{}, 'std':{}}
 
         for k, v in parameters.items():
-            stat_dict['mean'][k] = torch.mean(v, dim=0)
-            stat_dict['std'][k] = torch.std(v, dim=0)
+            param_statistics['mean'][k] = torch.mean(v, dim=0)
+            param_statistics['std'][k] = torch.std(v, dim=0)
 
-    return stat_dict
+    return param_statistics
 
 
 def get_default_statistics():

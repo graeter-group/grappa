@@ -5,6 +5,7 @@ from grappa import constants
 from typing import Union, List, Tuple
 from grappa.models.perm_equiv_transformer import SymmetrisedTransformer
 import copy
+from grappa.utils.graph_utils import get_default_statistics
 
 
 class WriteParameters(torch.nn.Module):
@@ -29,11 +30,11 @@ class WriteParameters(torch.nn.Module):
         n_periodicity_improper (int, optional): Number of periodicity terms for improper torsions. Defaults to 3.
         gated_torsion (bool, optional): Flag indicating whether to a gate for torsions. Defaults to False.
         wrong_symmetry (bool, optional): Flag indicating whether to implement the wrong symmetry constraint for improper torsions. Defaults to False.
-        stat_dict (dict, optional): Dictionary containing statistics for parameter initialization.
+        param_statistics (dict, optional): Dictionary containing statistics for parameter initialization.
 
     The class initializes and holds four separate writers, each configured for their respective parameter type.
     """
-    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, stat_dict=None):
+    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, param_statistics=None):
         super().__init__()
 
 
@@ -42,7 +43,7 @@ class WriteParameters(torch.nn.Module):
             rep_feats=graph_node_features,
             between_feats=bond_transformer_width,
             suffix=suffix,
-            stat_dict=stat_dict,
+            param_statistics=param_statistics,
             n_att=bond_transformer_depth,
             n_heads=bond_n_heads,
             dense_layers=bond_symmetriser_depth,
@@ -57,7 +58,7 @@ class WriteParameters(torch.nn.Module):
             rep_feats=graph_node_features,
             between_feats=angle_transformer_width,
             suffix=suffix,
-            stat_dict=stat_dict,
+            param_statistics=param_statistics,
             n_att=angle_transformer_depth,
             n_heads=angle_n_heads,
             dense_layers=angle_symmetriser_depth,
@@ -82,7 +83,7 @@ class WriteParameters(torch.nn.Module):
             layer_norm=layer_norm,
             symmetriser_feats=proper_symmetriser_width,
             attention_hidden_feats=proper_transformer_width,
-            stat_dict=stat_dict,
+            param_statistics=param_statistics,
             positional_encoding=positional_encoding,
             gated=gated_torsion,
         )
@@ -101,7 +102,7 @@ class WriteParameters(torch.nn.Module):
             layer_norm=layer_norm,
             symmetriser_feats=improper_symmetriser_width,
             attention_hidden_feats=improper_transformer_width,
-            stat_dict=stat_dict,
+            param_statistics=param_statistics,
             positional_encoding=positional_encoding,
             gated=gated_torsion,
             wrong_symmetry=wrong_symmetry
@@ -175,7 +176,7 @@ class WriteBondParameters(torch.nn.Module):
         rep_feats (int): Number of features in the input representation.
         between_feats (int): Intermediate feature dimension used in the transformer model.
         suffix (str): Suffix for the parameter names in the graph, i.e. they will be written to g.nodes[...].data["k"+suffix].
-        stat_dict (dict, optional): Dictionary containing statistics for parameter initialization.
+        param_statistics (dict, optional): Dictionary containing statistics for parameter initialization.
         n_att (int): Number of attention layers in the transformer model.
         n_heads (int): Number of attention heads in each attention layer.
         dense_layers (int): Number of dense layers in the symmetrizer network.
@@ -189,17 +190,19 @@ class WriteBondParameters(torch.nn.Module):
     Consists of:
         - a single layer dense nn to project the two node features to dimension between_feats
         - a SymmetrisedTransformer that takes the output of the rep_projector and outputs the bond parameter scores
-        - a ToPositive layer that transforms the output of the SymmetrisedTransformer to positive values such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean stat_dict["mean"]["..."] and std stat_dict["std"]["..."]
-    For initialization of the model weights, a stat_dict containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
+        - a ToPositive layer that transforms the output of the SymmetrisedTransformer to positive values such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."]
+    For initialization of the model weights, a param_statistics containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
     """
-    def __init__(self, rep_feats, between_feats, suffix="", stat_dict=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True):
+    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True):
         super().__init__()
 
-        assert not stat_dict is None
-        k_mean=stat_dict["mean"]["n2_k"].item()
-        k_std=stat_dict["std"]["n2_k"].item()
-        eq_mean=stat_dict["mean"]["n2_eq"].item()
-        eq_std=stat_dict["std"]["n2_eq"].item()
+        if param_statistics is None:
+            param_statistics = get_default_statistics()
+
+        k_mean=param_statistics["mean"]["n2_k"].item()
+        k_std=param_statistics["std"]["n2_k"].item()
+        eq_mean=param_statistics["mean"]["n2_eq"].item()
+        eq_std=param_statistics["std"]["n2_eq"].item()
 
         self.suffix = suffix
 
@@ -249,7 +252,7 @@ class WriteAngleParameters(torch.nn.Module):
         rep_feats (int): Number of features in the input representation.
         between_feats (int): Intermediate feature dimension used in the transformer model.
         suffix (str): Suffix for the parameter names in the graph, i.e. they will be written to g.nodes[...].data["k"+suffix].
-        stat_dict (dict, optional): Dictionary containing statistics for parameter initialization.
+        param_statistics (dict, optional): Dictionary containing statistics for parameter initialization.
         n_att (int): Number of attention layers in the transformer model.
         n_heads (int): Number of attention heads in each attention layer.
         dense_layers (int): Number of dense layers in the symmetrizer network.
@@ -263,19 +266,20 @@ class WriteAngleParameters(torch.nn.Module):
     Consists of:
         - a single layer dense nn to project the two node features to dimension between_feats
         - a SymmetrisedTransformer that takes the output of the rep_projector and outputs the bond parameter scores
-        - a ToPositive layer for the force constant that transforms the output of the SymmetrisedTransformer to positive values such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean stat_dict["mean"]["..."] and std stat_dict["std"]["..."]
-        - a ToRange layer for the equilibrium angle that transforms the output of the SymmetrisedTransformer to values between 0 and pi such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean stat_dict["mean"]["..."] and std stat_dict["std"]["..."]
-    For initialization of the model weights, a stat_dict containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
+        - a ToPositive layer for the force constant that transforms the output of the SymmetrisedTransformer to positive values such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."]
+        - a ToRange layer for the equilibrium angle that transforms the output of the SymmetrisedTransformer to values between 0 and pi such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."]
+    For initialization of the model weights, a param_statistics containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
     """
 
-    def __init__(self, rep_feats, between_feats, suffix="", stat_dict=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True):
+    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True):
         super().__init__()
 
-        assert not stat_dict is None
-        k_mean=stat_dict["mean"]["n3_k"].item()
-        k_std=stat_dict["std"]["n3_k"].item()
-        # eq_mean=stat_dict["mean"]["n3_eq"].item()
-        eq_std=stat_dict["std"]["n3_eq"].item()
+        if param_statistics is None:
+            param_statistics = get_default_statistics()
+        k_mean=param_statistics["mean"]["n3_k"].item()
+        k_std=param_statistics["std"]["n3_k"].item()
+        # eq_mean=param_statistics["mean"]["n3_eq"].item()
+        eq_std=param_statistics["std"]["n3_eq"].item()
 
         self.suffix = suffix
 
@@ -348,9 +352,10 @@ class WriteTorsionParameters(torch.nn.Module):
         layer_norm (bool): Flag to apply layer normalization in the transformer model.
         symmetriser_feats (int, optional): Feature dimension for the symmetrizer network.
         attention_hidden_feats (int, optional): Hidden feature dimension in the transformer model.
-        stat_dict (dict, optional): Dictionary containing statistics for parameter initialization.
+        param_statistics (dict, optional): Dictionary containing statistics for parameter initialization.
         positional_encoding (bool): Flag to apply positional encoding. Defaults to True.
         gated (bool): Flag to apply a gating mechanism using sigmoid activation. Defaults to False.
+        learnable_statistics (bool): Flag to indicate whether to make the mean and std parameters provided by the param_statistics learnable. In this case, they would be initialised to the values provided by the param_statistics but would be updated during training. Defaults to False.
         wrong_symmetry (bool): Flag to indicate whether to implement the symmetry of the energy function the wrong way (as is done in espaloma. this is for ablation studies). Defaults to False.
 
     ----------
@@ -369,10 +374,13 @@ class WriteTorsionParameters(torch.nn.Module):
     For proper torsions, symmetry of the energy function is ensured by symmetrizing the torsion constants.
     For improper torsions, symmetry under permutation of outer atoms is enforced.
 
-    The parameter statistics are used to initialize the model weights such that a normally distributed output of the symmetriser network would lead to a Gaussian distribution with mean stat_dict["mean"]["..."] and std stat_dict["std"]["..."].
+    The parameter statistics are used to initialize the model weights such that a normally distributed output of the symmetriser network would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."].
     """
-    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, stat_dict=None, positional_encoding=True, gated:bool=False, wrong_symmetry:bool=False):
+    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False):
         super().__init__()
+
+        if param_statistics is None:
+            param_statistics = get_default_statistics()
 
         if improper:
             assert constants.IMPROPER_CENTRAL_IDX in [1,2] # make this more general later on
@@ -388,21 +396,21 @@ class WriteTorsionParameters(torch.nn.Module):
         self.register_buffer("n_periodicity", torch.tensor(n_periodicity).long())
 
         if not improper:
-            k_mean=stat_dict["mean"]["n4_k"]
-            k_std=stat_dict["std"]["n4_k"]
+            k_mean=param_statistics["mean"]["n4_k"]
+            k_std=param_statistics["std"]["n4_k"]
         else:
-            if not "n4_improper_k" in stat_dict["mean"]:
+            if not "n4_improper_k" in param_statistics["mean"]:
                 k_mean = torch.zeros(n_periodicity)
                 k_std = torch.ones(n_periodicity)
             else:
-                k_mean = stat_dict["mean"]["n4_improper_k"]
-                k_std = stat_dict["std"]["n4_improper_k"]
+                k_mean = param_statistics["mean"]["n4_improper_k"]
+                k_std = param_statistics["std"]["n4_improper_k"]
                 
                 if len(k_mean) < n_periodicity:
-                    raise ValueError(f"n_periodicity is {n_periodicity} but the stat_dict contains {len(k_mean)} values for the mean of the improper torsion parameters.")
+                    raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_mean)} values for the mean of the improper torsion parameters.")
                 
                 if len(k_std) < n_periodicity:
-                    raise ValueError(f"n_periodicity is {n_periodicity} but the stat_dict contains {len(k_std)} values for the std of the improper torsion parameters.")
+                    raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_std)} values for the std of the improper torsion parameters.")
                 
                 k_mean = k_mean[:n_periodicity]
                 k_std = k_std[:n_periodicity]

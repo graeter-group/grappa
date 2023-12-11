@@ -12,7 +12,7 @@ from grappa.training.get_dataloaders import get_dataloaders
 from grappa.training.lightning_model import LitModel
 from grappa.training.lightning_trainer import get_lightning_trainer
 from grappa.training.config import default_config
-from grappa.utils.graph_utils import get_stat_dict
+from grappa.utils.graph_utils import get_param_statistics
 
 #NOTE inint wandb before starting train run. write default oconfig there and provide cmds to overwrite it
 
@@ -36,7 +36,7 @@ def do_trainrun(config:Dict, project:str='grappa'):
     tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'])
 
     # Get the model
-    model = deploy.model_from_config(model_config=config['model_config'], stat_dict=get_stat_dict(tr_loader))
+    model = deploy.model_from_config(model_config=config['model_config'], param_statistics=get_param_statistics(tr_loader))
 
     # add energy calculation
     model = torch.nn.Sequential(

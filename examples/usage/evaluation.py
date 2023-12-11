@@ -30,20 +30,12 @@ model = load_model(url)
 
 import torch
 
-class ParamFixer(torch.nn.Module):
-    def forward(self, g):
-        g.nodes['n2'].data['k'] = g.nodes['n2'].data['k'][:,0]
-        g.nodes['n2'].data['eq'] = g.nodes['n2'].data['eq'][:,0]
-        g.nodes['n3'].data['k'] = g.nodes['n3'].data['k'][:,0]
-        g.nodes['n3'].data['eq'] = g.nodes['n3'].data['eq'][:,0]
-        return g
 
 # then, we can add the energy calculation module
-from grappa.models.Energy import Energy
+from grappa.models.energy import Energy
 
 model = torch.nn.Sequential(
     model,
-    ParamFixer(),
     Energy(),
 )
 

@@ -176,7 +176,7 @@ class ExplicitEvaluator:
     """
     Does the same as the Evaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref'):
+    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff'):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
@@ -186,6 +186,8 @@ class ExplicitEvaluator:
         self.device = device
         self.suffix = suffix
         self.suffix_ref = suffix_ref
+
+        self.suffix_classical = suffix_classical
 
         self.init_storage()
 
@@ -205,6 +207,7 @@ class ExplicitEvaluator:
             self.classical_energies = {}
             self.classical_gradients = {}
 
+
     def step(self, g, dsnames):
         # unbatch the graphs
         graphs = utils.dgl_utils.unbatch(g)
@@ -217,13 +220,13 @@ class ExplicitEvaluator:
             energies = utils.graph_utils.get_energies(g, suffix=self.suffix).detach().flatten().to(self.device)
             energies_ref = utils.graph_utils.get_energies(g, suffix=self.suffix_ref).detach().flatten().to(self.device)
             if self.log_classical_values:
-                energies_classical = utils.graph_utils.get_energies(g, suffix='_classical_ff').flatten().to(self.device)
+                energies_classical = utils.graph_utils.get_energies(g, suffix=self.suffix_classical).flatten().to(self.device)
 
             # get the gradients in shape (n_atoms*n_confs, 3)
             gradients = utils.graph_utils.get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
             gradients_ref = utils.graph_utils.get_gradients(g, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
             if self.log_classical_values:
-                gradients_classical = utils.graph_utils.get_gradients(g, suffix='_classical_ff').detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                gradients_classical = utils.graph_utils.get_gradients(g, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             if self.log_parameters:
                 parameters = utils.graph_utils.get_parameters(g, exclude=[('n4_improper', 'k')], suffix=self.suffix)
