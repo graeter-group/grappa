@@ -74,6 +74,7 @@ def get_small_model_config():
         "positional_encoding": True,  # Directly from "positional_encoding"
         "layer_norm": True,  # Directly from "layer_norm"
         "self_interaction": True,  # No direct counterpart, assuming True
+        "learnable_statistics": False,
     }
 
     return args
