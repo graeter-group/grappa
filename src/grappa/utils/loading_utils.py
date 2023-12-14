@@ -22,7 +22,7 @@ def load_model(url:str, filename:str=None):
     model_dict = load_weights_torchhub(url, filename)
     state_dict = model_dict['state_dict']
     config = model_dict['config']
-    model = model_from_config(config=config['model_config'])
+    model = model_from_config(model_config=config['model_config'])
     model.load_state_dict(state_dict)
     return model
 

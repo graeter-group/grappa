@@ -28,6 +28,8 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
 
     URLS = {
         'tripeptides_amber99sbildn': 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release/tripeptides_amber99sbildn.zip',
+        'dipeptide_rad': 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release_radicals/dipeptide_rad.zip',
+        'Capped_AA_break_breakpoint': 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release_radicals/Capped_AA_break_breakpoint.zip'
     }
 
     dir_path = Path(data_dir) / tag
