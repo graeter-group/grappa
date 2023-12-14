@@ -29,15 +29,15 @@ config = default_config(model_tag='small')
 #     # str(get_data_path()/'dgl_datasets'/'protein-torsion'),
 # ]
 
-# config['data_config']['datasets'] += [
-config['data_config']['datasets'] = [
+config['data_config']['datasets'] += [
+# config['data_config']['datasets'] = [
     # str(get_data_path()/'dgl_datasets'/'Capped_AA_break_breakpoint'),
     # # str(get_data_path()/'dgl_datasets'/'Capped_AA_break_average'),
     # # str(get_data_path()/'dgl_datasets'/'Capped_AA_break_keep'),
     # str(get_data_path()/'dgl_datasets'/'Capped_AA_opt_rad'),
     # str(get_data_path()/'dgl_datasets'/'Capped_AA_scan_rad'),
     # str(get_data_path()/'dgl_datasets'/'Capped_AA_rad'),
-    str(get_data_path()/'dgl_datasets'/'dipeptide_rad'),
+    # str(get_data_path()/'dgl_datasets'/'dipeptide_rad'),
     str(get_data_path()/'dgl_datasets'/'spice_dipeptide_amber99sbildn'),
     # str(get_data_path()/'dgl_datasets'/'tripeptides_amber99sbildn'),
 ]
@@ -69,7 +69,7 @@ config['lit_model_config']['add_restarts'] = []
 config['trainer_config']['max_epochs'] = 500
 config['test_model'] = True
 
-config["model_config"]["learnable_statistics"] = False
+config["model_config"]["learnable_statistics"] = True
 
 config['model_config']['gated_torsion'] = True
 
@@ -91,6 +91,6 @@ config['model_config']['angle_symmetriser_width'] = symmetriser_width
 config['model_config']['proper_symmetriser_width'] = symmetriser_width
 config['model_config']['improper_symmetriser_width'] = symmetriser_width
 
-config['model_config']['in_feat_name'] += ['is_radical']
+# config['model_config']['in_feat_name'] += ['is_radical']
 
-model = do_trainrun(config, project='test_new_models')
+model = do_trainrun(config, project='test_breakage')

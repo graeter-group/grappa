@@ -71,9 +71,9 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         data_config = benchmark_data_config()
 
     lit_model_config = {
-        "lrs": {0: 1e-4, 3: 1e-5, 200: 1e-6, 400: 1e-7},
+        "lrs": {0: 1e-4}#, 3: 1e-5},
         "start_qm_epochs": 1,
-        "add_restarts": [200, 400],
+        "add_restarts": [],
         "warmup_steps": int(2e2),
         "energy_weight": 1.,
         "gradient_weight": 1e-1,
@@ -87,6 +87,9 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "weight_decay": 0.,
         "early_stopping_energy_weight": 2., # weight of the energy rmse in the early stopping criterion
         "log_metrics":True,
+        "patience": 30,
+        "lr_decay": 0.8,
+        "time_limit": None,
     }
 
     trainer_config = {

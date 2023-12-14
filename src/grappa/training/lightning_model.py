@@ -12,18 +12,20 @@ import wandb
 from grappa import utils
 from typing import List, Dict
 from grappa.training.get_dataloaders import get_dataloaders
+import time
 
 
 class LitModel(pl.LightningModule):
     def __init__(self, model, tr_loader, vl_loader, te_loader, 
                  lrs={0: 1e-4, 3: 1e-5, 200: 1e-6, 400: 1e-7}, 
-                 start_qm_epochs=1, add_restarts=[150, 350],
+                 start_qm_epochs=1, add_restarts=[],
                  warmup_steps=int(2e2),
                  energy_weight=1., gradient_weight=1e-1, tuplewise_weight=0.,
                  param_weight=1e-4, proper_regularisation=1e-5, improper_regularisation=1e-5,
                  log_train_interval=5, log_classical=False, log_params=False, weight_decay=0.,
                  early_stopping_energy_weight=2.,
-                 log_metrics=True):
+                 log_metrics=True,
+                 patience:int=30, lr_decay:float=0.8, time_limit:float=None):
         """
         Initialize the LitModel with specific configurations.
 
@@ -48,6 +50,9 @@ class LitModel(pl.LightningModule):
             log_params (bool): Whether to log parameters during training.
             weight_decay (float): Weight decay parameter for the optimizer.
             early_stopping_energy_weight (float): Weight of the energy component in the early stopping criterion, which is given by the sum of the average gradient rmse per dataset (first average over mols and confs in the dataset for obtaining rmses and then over the datasets for obtaining a mean rmse) and the energy rmse per dataset (same average procedure) multiplied by this weight. (This way, each dataset contributes equally to the early stopping criterion, independent of the number of molecules in the dataset.)
+            patience (int): Number of epochs without increase of the early stopping criterion (i.e. the weighted sum of energy/force rmse averaged over the dataset types) after which the learning rate is decreased: The best early stopping criterion value is stored and if the current value is larger than the best value, the number of epochs without improvement is increased by 1, else set to zero. If the number of epochs without improvement is larger than the patience, the learning rate is decreased by a factor of decay.
+            lr_decay (float): Factor by which to decrease the learning rate if the early stopping criterion does not improve for patience epochs.
+            time_limit (float): Time limit in hours. If the training takes longer than this, the training is stopped.
         """
 
         if tuplewise_weight > 0:
@@ -72,6 +77,9 @@ class LitModel(pl.LightningModule):
         self.warmup_step = None
         self.warmup = True
 
+        self.patience = patience
+        self.lr_decay = lr_decay
+
         self.energy_weight = energy_weight
         self.gradient_weight = gradient_weight
         self.tuplewise_weight = tuplewise_weight
@@ -89,6 +97,16 @@ class LitModel(pl.LightningModule):
         self.early_stopping_energy_weight = early_stopping_energy_weight
 
         self.log_metrics = log_metrics
+
+        self.time_limit = time_limit
+
+
+        # helper variables:
+        self.best_early_stopping_loss = float("inf")
+        self.epochs_without_improvement = 0
+
+        self.time_start = time.time()
+
 
 
     def forward(self, x):
@@ -228,6 +246,24 @@ class LitModel(pl.LightningModule):
             energy_avg = metrics["avg"]["rmse_energies"]
             early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
             self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
+
+        if patience > 0:
+            assert self.log_metrics, "Early stopping criterion is only implemented if metrics are logged."
+
+            if early_stopping_loss < self.best_early_stopping_loss:
+                self.best_early_stopping_loss = float(early_stopping_loss)
+                self.epochs_without_improvement = 0
+            else:
+                self.epochs_without_improvement += 1
+
+            if self.epochs_without_improvement > self.patience:
+                self.lr *= self.lr_decay
+                self.epochs_without_improvement = 0
+
+        # stop training if time limit is exceeded:
+        if not self.time_limit is None:
+            if time.time() - self.time_start > self.time_limit*3600.:
+                self.trainer.should_stop = True
 
 
     def configure_optimizers(self):
