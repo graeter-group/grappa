@@ -1,3 +1,4 @@
+#%%
 """
 Final layers for models where we wish to restrict the output to a certain range. Current implementation is for the ranges (0, inf) [ToPositive] and (0, max) [ToRange].
 For the infinite case, we use the exponential linear unit (ELU) to map the output to (0, inf), without having vanishing (in the negative direction) or exploding (in the positive direction) gradients (as one would have when simply using the exponential function).
@@ -23,9 +24,20 @@ class ToPositive(torch.nn.Module):
         """
         super().__init__()
 
+
+        if not isinstance(mean/std, torch.Tensor):
+            mean_over_std = torch.tensor(float(mean/std)).float()
+        else:
+            mean_over_std = (mean/std).float()
+        
+        if not isinstance(std, torch.Tensor):
+            std = torch.tensor(float(std)).float()
+        else:
+            std = std.float()
+
         if learnable_statistics:
-            self.mean_over_std = torch.nn.Parameter(torch.tensor(float(mean/std)))
-            self.std = torch.nn.Parameter(torch.tensor(float(std)))
+            self.register_parameter("mean_over_std", torch.nn.Parameter(mean_over_std))
+            self.register_parameter("std", torch.nn.Parameter(std))
 
         else:
             self.register_buffer("mean_over_std", torch.tensor(float(mean/std)))
@@ -52,14 +64,64 @@ class ToRange(torch.nn.Module):
     def __init__(self, max_, std, learnable_statistics=False):
         super().__init__()
 
-        if learnable_statistics:
-            self.std_over_max = torch.nn.Parameter(torch.tensor(float(std/max_)))
+        if isinstance(std, torch.Tensor):
+            std = std.float().detach()
+
+        if isinstance(max_, torch.Tensor):
+            max_ = max_.float().detach()
+
+        if not isinstance(std/max_, torch.Tensor):
+            std_over_max_ = torch.tensor(float(std/max_)).float()
         else:
-            self.register_buffer("std_over_max", torch.tensor(float(std/max_)))
+            std_over_max_ = (std/max_).float()
+
+        if not isinstance(max_, torch.Tensor):
+            max_ = torch.tensor(float(max_)).float()
+        else:
+            max_ = max_.float()
+
+        if learnable_statistics:
+            self.register_parameter("std_over_max", torch.nn.Parameter(std_over_max_.clone()))
+        else:
+            self.register_buffer("std_over_max", std_over_max_)
             
-        self.register_buffer("max", torch.tensor(float(max_)))
+        self.register_buffer("max", max_)
+
 
     def forward(self, x):
-        # NOTE: thee is an error, it should be
-        # return self.max * torch.sigmoid(self.std_over_max*x)
-        return self.max * torch.sigmoid(self.std_over_max*x)
+        # Avoid inplace operations by cloning the input tensor. For some reason this is needed if gradients are computed several times (also with retain_graph=True)
+        x = x.clone()
+        scaled_x = self.std_over_max * x
+        sigmoid_x = torch.sigmoid(scaled_x)
+        output = self.max * sigmoid_x
+        return output
+    
+
+#%%
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    std = torch.tensor([1.]).item()
+    model = ToRange(1, std, True)
+
+    x = torch.randn(100)
+    y = torch.abs(torch.randn(100))/4.
+
+    plt.scatter(x,y)
+    plt.scatter(x, model(x).detach())
+    # %%
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    loss_fn = torch.nn.MSELoss()
+
+    for i in range(100):
+        optimizer.zero_grad()
+        y_pred = model(x)
+        loss = loss_fn(y_pred, y)
+        loss.backward()
+        optimizer.step()
+        if i%10==0:
+            print(loss.item())
+    # %%
+    plt.scatter(x,y)
+    plt.scatter(x, model(x).detach())
+    # %%

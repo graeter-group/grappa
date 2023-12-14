@@ -45,7 +45,7 @@ class GrappaModel(torch.nn.Module):
     The GrappaModel is a composite model combining the feature extraction capabilities of GrappaGNN with the parameter
     assignment capabilities of WriteParameter.
     """
-    def __init__(self, graph_node_features:int=512, in_feats:int=None, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], in_feat_dims:Dict[str,int]={}, gnn_width:int=None, gnn_attentional_layers:int=3, gnn_convolutions:int=3, gnn_attention_heads:int=8, gnn_dropout_attention:float=0., gnn_dropout_initial:float=0., gnn_dropout_conv:float=0., gnn_dropout_final:float=0., parameter_dropout:float=0., bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, wrong_symmetry=False, positional_encoding=True, layer_norm=True, self_interaction=True, param_statistics:dict=get_default_statistics()):
+    def __init__(self, graph_node_features:int=512, in_feats:int=None, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], in_feat_dims:Dict[str,int]={}, gnn_width:int=None, gnn_attentional_layers:int=3, gnn_convolutions:int=3, gnn_attention_heads:int=8, gnn_dropout_attention:float=0., gnn_dropout_initial:float=0., gnn_dropout_conv:float=0., gnn_dropout_final:float=0., parameter_dropout:float=0., bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, wrong_symmetry=False, positional_encoding=True, layer_norm=True, self_interaction=True, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics()):
         super().__init__()
 
         # Initialize GrappaGNN
@@ -96,7 +96,8 @@ class GrappaModel(torch.nn.Module):
             n_periodicity_improper=n_periodicity_improper,
             wrong_symmetry=wrong_symmetry,
             param_statistics=param_statistics,
-            gated_torsion=gated_torsion
+            gated_torsion=gated_torsion,
+            learnable_statistics=learnable_statistics
         )
 
     def forward(self, g):

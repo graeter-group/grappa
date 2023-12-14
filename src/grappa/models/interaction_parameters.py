@@ -38,6 +38,11 @@ class WriteParameters(torch.nn.Module):
     def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics()):
         super().__init__()
 
+        if param_statistics is not None:
+            for m in ['mean', 'std']:
+                for k, v in param_statistics[m].items():
+                    if torch.isnan(torch.tensor(v) if not isinstance(v, torch.Tensor) else v).any():
+                        param_statistics[m][k] = get_default_statistics()[m][k]
 
         # Initialize Bond Writer
         self.bond_writer = WriteBondParameters(
@@ -202,13 +207,16 @@ class WriteBondParameters(torch.nn.Module):
     def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False):
         super().__init__()
 
+        # the minimum std dviation to which the output of the symmetriser is scaled
+        EPSILON_STD = 1e-6
+
         if param_statistics is None:
             param_statistics = get_default_statistics()
 
         k_mean=param_statistics["mean"]["n2_k"].item()
-        k_std=param_statistics["std"]["n2_k"].item()
+        k_std=param_statistics["std"]["n2_k"].item() + EPSILON_STD
         eq_mean=param_statistics["mean"]["n2_eq"].item()
-        eq_std=param_statistics["std"]["n2_eq"].item()
+        eq_std=param_statistics["std"]["n2_eq"].item() + EPSILON_STD
 
         self.suffix = suffix
 
@@ -282,11 +290,14 @@ class WriteAngleParameters(torch.nn.Module):
     def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False):
         super().__init__()
 
+        # the minimum std dviation to which the output of the symmetriser is scaled
+        EPSILON_STD = 1e-6
+
         if param_statistics is None:
             param_statistics = get_default_statistics()
         k_mean=param_statistics["mean"]["n3_k"].item()
-        k_std=param_statistics["std"]["n3_k"].item()
-        eq_std=param_statistics["std"]["n3_eq"].item()
+        k_std=param_statistics["std"]["n3_k"].item() + EPSILON_STD
+        eq_std=param_statistics["std"]["n3_eq"].item() + EPSILON_STD
 
         self.suffix = suffix
 
@@ -386,6 +397,9 @@ class WriteTorsionParameters(torch.nn.Module):
     def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False):
         super().__init__()
 
+        # the minimum std dviation to which the output of the symmetriser is scaled
+        EPSILON_STD = 1e-6
+
         if param_statistics is None:
             param_statistics = get_default_statistics()
 
@@ -404,14 +418,14 @@ class WriteTorsionParameters(torch.nn.Module):
 
         if not improper:
             k_mean=param_statistics["mean"]["n4_k"]
-            k_std=param_statistics["std"]["n4_k"]
+            k_std=param_statistics["std"]["n4_k"] + EPSILON_STD
         else:
             if not "n4_improper_k" in param_statistics["mean"]:
                 k_mean = torch.zeros(n_periodicity)
                 k_std = torch.ones(n_periodicity)
             else:
                 k_mean = param_statistics["mean"]["n4_improper_k"]
-                k_std = param_statistics["std"]["n4_improper_k"]
+                k_std = param_statistics["std"]["n4_improper_k"] + EPSILON_STD
                 
                 if len(k_mean) < n_periodicity:
                     raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_mean)} values for the mean of the improper torsion parameters.")
