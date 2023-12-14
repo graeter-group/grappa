@@ -36,6 +36,7 @@ class MolwiseLoss(torch.nn.Module):
 
 
     def forward(self, g):
+
         loss = 0
         graphs = dgl.unbatch(g)
 
@@ -78,6 +79,11 @@ class MolwiseLoss(torch.nn.Module):
                     fac = 1. if not k in self.weights.keys() else self.weights[k]
                     these_params = params[k]
                     these_params_ref = params_ref[k]
+
+                    # set both parameters to zero where the ref params are nan. This enables batching graphs with params and without
+                    these_params = torch.where(torch.isnan(these_params_ref), torch.zeros_like(these_params), these_params)
+                    these_params_ref = torch.where(torch.isnan(these_params_ref), torch.zeros_like(these_params_ref), these_params_ref)
+
                     if k == 'n4_k':
                         # ensure that max_periodicity is that of the model, either by adding zeros or by removing columns
                         these_params_ref = correct_torsion_shape(these_params_ref, shape1=these_params.shape[1])
@@ -92,7 +98,7 @@ class MolwiseLoss(torch.nn.Module):
                     param_tensor = torch.cat(param_tensor)
                     param_ref_tensor = torch.cat(param_ref_tensor)
 
-                    diffs = torch.where(torch.isnan(param_tensor), torch.zeros_like(param_tensor), param_tensor - param_ref_tensor)
+                    diffs = param_tensor - param_ref_tensor
 
                     loss_contrib = torch.mean(torch.square(diffs))
 

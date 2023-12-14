@@ -22,7 +22,8 @@ class LitModel(pl.LightningModule):
                  energy_weight=1., gradient_weight=1e-1, tuplewise_weight=0.,
                  param_weight=1e-4, proper_regularisation=1e-5, improper_regularisation=1e-5,
                  log_train_interval=5, log_classical=False, log_params=False, weight_decay=0.,
-                 early_stopping_energy_weight=2.):
+                 early_stopping_energy_weight=2.,
+                 log_metrics=True):
         """
         Initialize the LitModel with specific configurations.
 
@@ -58,7 +59,7 @@ class LitModel(pl.LightningModule):
         self.tuplewise_energy_loss = TuplewiseEnergyLoss()
         
         # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
-        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation)
+        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3 if not param_weight==0 else 0, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation)
 
         self.lrs = lrs
         self.lr = self.lrs[0]
@@ -86,6 +87,8 @@ class LitModel(pl.LightningModule):
         self.train_evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
 
         self.early_stopping_energy_weight = early_stopping_energy_weight
+
+        self.log_metrics = log_metrics
 
 
     def forward(self, x):
@@ -135,21 +138,21 @@ class LitModel(pl.LightningModule):
 
     def on_train_epoch_end(self) -> None:
         # log the metrics every log_train_interval epochs:
-
-        if self.current_epoch % self.log_train_interval == 0:
-            metrics = self.train_evaluator.pool()
-            for dsname in metrics.keys():
-                for key in metrics[dsname].keys():
-                    if any([n in key for n in ["n2", "n3", "n4"]]):
-                        self.log(f'parameters/{dsname}/train/{key}', metrics[dsname][key], on_epoch=True)
-                    else:
-                        self.log(f'{dsname}/train/{key}', metrics[dsname][key], on_epoch=True)
-        
-            # Early stopping criterion:
-            gradient_avg = metrics["avg"]["rmse_gradients"]
-            energy_avg = metrics["avg"]["rmse_energies"]
-            early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
-            self.log('train_early_stopping_loss', early_stopping_loss, on_epoch=True)
+        if self.log_metrics:
+            if self.current_epoch % self.log_train_interval == 0:
+                metrics = self.train_evaluator.pool()
+                for dsname in metrics.keys():
+                    for key in metrics[dsname].keys():
+                        if any([n in key for n in ["n2", "n3", "n4"]]):
+                            self.log(f'parameters/{dsname}/train/{key}', metrics[dsname][key], on_epoch=True)
+                        else:
+                            self.log(f'{dsname}/train/{key}', metrics[dsname][key], on_epoch=True)
+            
+                # Early stopping criterion:
+                gradient_avg = metrics["avg"]["rmse_gradients"]
+                energy_avg = metrics["avg"]["rmse_energies"]
+                early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
+                self.log('train_early_stopping_loss', early_stopping_loss, on_epoch=True)
 
         return super().on_train_epoch_end()
         
@@ -173,7 +176,8 @@ class LitModel(pl.LightningModule):
 
         self.assign_lr()
 
-        self.log('lr', self.trainer.optimizers[0].param_groups[0]['lr'])
+        if self.log_metrics:
+            self.log('lr', self.trainer.optimizers[0].param_groups[0]['lr'])
 
         g, dsnames = batch
 
@@ -189,39 +193,41 @@ class LitModel(pl.LightningModule):
             self.log('losses/train_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
 
         if self.current_epoch%self.log_train_interval == 0:
-            with torch.no_grad():
-                self.train_evaluator.step(g, dsnames)
+            if self.log_metrics:
+                with torch.no_grad():
+                    self.train_evaluator.step(g, dsnames)
 
         return loss
 
 
     def validation_step(self, batch, batch_idx):
-        with torch.no_grad():
-            g, dsnames = batch
-            g = self(g)
+        if self.log_metrics:
+            with torch.no_grad():
+                g, dsnames = batch
+                g = self(g)
 
-            self.evaluator.step(g, dsnames)
+                self.evaluator.step(g, dsnames)
 
-            loss = self.loss(g)
-            if self.current_epoch > self.start_qm_epochs:
-                self.log('losses/val_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
+                loss = self.loss(g)
+                if self.current_epoch > self.start_qm_epochs:
+                        self.log('losses/val_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
 
 
     def on_validation_epoch_end(self):
+        if self.log_metrics:
+            metrics = self.evaluator.pool()
+            for dsname in metrics.keys():
+                for key in metrics[dsname].keys():
+                    if any([n in key for n in ["n2", "n3", "n4"]]):
+                        self.log(f'parameters/{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
+                    else:
+                        self.log(f'{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
 
-        metrics = self.evaluator.pool()
-        for dsname in metrics.keys():
-            for key in metrics[dsname].keys():
-                if any([n in key for n in ["n2", "n3", "n4"]]):
-                    self.log(f'parameters/{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
-                else:
-                    self.log(f'{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
-
-        # Early stopping criterion:
-        gradient_avg = metrics["avg"]["rmse_gradients"]
-        energy_avg = metrics["avg"]["rmse_energies"]
-        early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
-        self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
+            # Early stopping criterion:
+            gradient_avg = metrics["avg"]["rmse_gradients"]
+            energy_avg = metrics["avg"]["rmse_energies"]
+            early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
+            self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
 
 
     def configure_optimizers(self):

@@ -45,9 +45,7 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
                 "gen2-torsion",
                 "pepconf-dlc",
                 "protein-torsion",
-                "rna-nucleoside",
                 "rna-diverse",
-                "rna-trinucleotide"
             ]
         ],
         "conf_strategy": "mean",
@@ -61,10 +59,10 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "pin_memory": True,
         "splitpath": None,
         "partition": [0.8,0.1,0.1], # may either be a partition list or a list of a default partition list and a dictionary mapping dsname to partition
-        "pure_train_datasets": [],
-        "pure_val_datasets": [],
+        "pure_train_datasets": [str(get_data_path()/"dgl_datasets"/'rna-nucleoside')],
+        "pure_val_datasets": [str(get_data_path()/"dgl_datasets"/"rna-trinucleotide")], # currently val because we only look at the val errs and do no separate test
         "pure_test_datasets": [], # paths to datasets that are only for one specific set type, independent on which mol_ids occur. this can be used to be independent of the splitting by mol_ids. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
-        "subsample_train": {}, # dictionary of dsname and a float between 0 and 1 specifying the subsampling factor (that is applied after splitting).
+        "subsample_train": {}, # dictionary of dsname and a float between 0 and 1 specifying a subsampling factor (that is applied after splitting).
         "subsample_val": {},
         "subsample_test": {},
     }
@@ -88,6 +86,7 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "log_params": False,
         "weight_decay": 0.,
         "early_stopping_energy_weight": 2., # weight of the energy rmse in the early stopping criterion
+        "log_metrics":True,
     }
 
     trainer_config = {

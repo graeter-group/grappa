@@ -18,13 +18,15 @@ class Evaluator:
 
     the pool function returns a dictionary containing dictionaries for each dsname with the averaged metrics. For energies, this average is per conformation, for gradients it is per 3-vector, that is total number of atoms times conformations.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, metric_names:List[str]=None):
+    def __init__(self, log_parameters=False, log_classical_values=False, metric_names:List[str]=None, gradients:bool=True):
         """
         metric_names: list of strings for filtering metrics that should be logged. e.g. ['rmse_energies', 'rmse_gradients'] will only log these two metrics.
         """
         self.log_parameters = log_parameters
         self.log_classical_values = log_classical_values
         self.metric_names = metric_names
+
+        self.gradients = gradients
 
         self.init_storage()
 
@@ -55,20 +57,25 @@ class Evaluator:
         # get tensors of shape (n_batch) with squared errors and number of energies/gradients.
         # the number of gradients does not count the spatial dimension but the number of force vectors.
         energy_se, num_energies = utils.graph_utils.get_energy_se(g, l=2)
-        gradient_se, num_gradients = utils.graph_utils.get_gradient_se(g, l=2)
+
+        if self.gradients:
+            gradient_se, num_gradients = utils.graph_utils.get_gradient_se(g, l=2)
 
         energy_ae, _ = utils.graph_utils.get_energy_se(g, l=1)
-        gradient_ae, _ = utils.graph_utils.get_gradient_se(g, l=1)
+        if self.gradients:
+            gradient_ae, _ = utils.graph_utils.get_gradient_se(g, l=1)
 
-        if not len(num_energies) == len(num_gradients) == len(dsnames):
-            raise ValueError(f"Number of energies, gradients and dsnames must be equal but are {len(num_energies)}, {len(num_gradients)} and {len(dsnames)}")
+        if self.gradients:
+            if not len(num_energies) == len(num_gradients) == len(dsnames):
+                raise ValueError(f"Number of energies, gradients and dsnames must be equal but are {len(num_energies)}, {len(num_gradients)} and {len(dsnames)}")
 
-        if not all(len(t.shape) == 1 for t in [energy_se, gradient_se, energy_ae, gradient_ae, num_energies, num_gradients]):
-            raise ValueError(f"energy_se, gradient_se, energy_ae, gradient_ae, num_energies and num_gradients must be tensors of shape (n_batch) but are {[t.shape for t in [energy_se, gradient_se, energy_ae, gradient_ae, num_energies, num_gradients]]}")
+            if not all(len(t.shape) == 1 for t in [energy_se, gradient_se, energy_ae, gradient_ae, num_energies, num_gradients]):
+                raise ValueError(f"energy_se, gradient_se, energy_ae, gradient_ae, num_energies and num_gradients must be tensors of shape (n_batch) but are {[t.shape for t in [energy_se, gradient_se, energy_ae, gradient_ae, num_energies, num_gradients]]}")
 
         if self.log_classical_values:
             classical_energy_se, _ = utils.graph_utils.get_energy_se(g, suffix1='_classical_ff', suffix2='', l=2)
-            classical_gradient_se, _ = utils.graph_utils.get_gradient_se(g, suffix1='_classical_ff', suffix2='', l=2)
+            if self.gradients:
+                classical_gradient_se, _ = utils.graph_utils.get_gradient_se(g, suffix1='_classical_ff', suffix2='', l=2)
 
 
         if self.log_parameters:
@@ -96,11 +103,14 @@ class Evaluator:
             
 
             self.squared_error_energies[dsname] += energy_se[i].detach()
-            self.squared_error_gradients[dsname] += gradient_se[i].detach()
+            if self.gradients:
+                self.squared_error_gradients[dsname] += gradient_se[i].detach()
             self.abs_error_energies[dsname] += energy_ae[i].detach()
-            self.abs_error_gradients[dsname] += gradient_ae[i].detach()
+            if self.gradients:
+                self.abs_error_gradients[dsname] += gradient_ae[i].detach()
             self.num_energies[dsname] += num_energies[i].detach()
-            self.num_gradients[dsname] += num_gradients[i].detach()
+            if self.gradients:
+                self.num_gradients[dsname] += num_gradients[i].detach()
 
             if self.log_classical_values:
                 self.squared_error_classical_gradients[dsname] += classical_gradient_se[i].detach()
@@ -134,14 +144,14 @@ class Evaluator:
             metrics[dsname] = {}
 
             metrics[dsname]['rmse_energies'] = float(torch.sqrt(self.squared_error_energies[dsname].cpu() / self.num_energies[dsname].cpu()).item())
-            metrics[dsname]['rmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item())
-            metrics[dsname]['crmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu() / 3.).item())
+            metrics[dsname]['rmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item()) if self.gradients else None
+            metrics[dsname]['crmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu() / 3.).item()) if self.gradients else None
 
             metrics[dsname]['mae_energies'] = float((self.abs_error_energies[dsname].cpu() / self.num_energies[dsname].cpu()).item())
-            metrics[dsname]['mae_gradients'] = float((self.abs_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item())
+            metrics[dsname]['mae_gradients'] = float((self.abs_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item()) if self.gradients else None
 
             if self.log_classical_values:
-                metrics[dsname]['rmse_classical_gradients'] = float(torch.sqrt(self.squared_error_classical_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item())
+                metrics[dsname]['rmse_classical_gradients'] = float(torch.sqrt(self.squared_error_classical_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item()) if self.gradients else None
                 metrics[dsname]['rmse_classical_energies'] = float(torch.sqrt(self.squared_error_classical_energies[dsname].cpu() / self.num_energies[dsname].cpu()).item())
 
             if self.log_parameters:
@@ -161,8 +171,13 @@ class Evaluator:
             if not self.metric_names is None:
                 if key not in self.metric_names:
                     continue
+            
+            mlist = [metrics[dsname][key] for dsname in metrics.keys() if dsname not in ['avg', 'all'] and metrics[dsname][key] is not None]
 
-            metrics['avg'][key] = np.mean([metrics[dsname][key] for dsname in metrics.keys() if dsname not in ['avg', 'all']])
+            if len(mlist) == 0:
+                metrics['avg'][key] = None
+            else:
+                metrics['avg'][key] = np.mean(mlist)
 
 
         # reset the storage

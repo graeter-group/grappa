@@ -145,6 +145,10 @@ def get_energy_se(g, suffix1="", suffix2="_ref", l=2):
     energies = get_energies(g, suffix=suffix1, center=True)
     energies_ref = get_energies(g, suffix=suffix2, center=True)
 
+    assert energies.shape == energies_ref.shape
+    assert not torch.isnan(energies).any(), f"energies: {energies}"
+    assert not torch.isnan(energies_ref).any(), f"energies_ref: {energies_ref}"
+
     
     # sum over the conf dimension
     if l == 2:
@@ -270,7 +274,7 @@ def get_tuplewise_energies(g, suffix="", center=False):
 
 def get_param_statistics(loader, suffix="_ref"):
     '''
-    Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}.
+    Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}. Ignores nan parameters.
     '''
     parameters = None
 
@@ -282,13 +286,17 @@ def get_param_statistics(loader, suffix="_ref"):
                 these_params = get_parameters(g,suffix=suffix)
                 for k, v in these_params.items():
                     # remove the suffix from the key in the stat dict:
-                    parameters[k.replace(suffix, "")] = torch.cat((parameters[k], v), dim=0)
+                    parameters[k.replace(suffix, "")] = torch.cat((parameters[k.replace(suffix, "")], v), dim=0)
         
         param_statistics = {'mean':{}, 'std':{}}
 
         for k, v in parameters.items():
-            param_statistics['mean'][k] = torch.mean(v, dim=0)
-            param_statistics['std'][k] = torch.std(v, dim=0)
+            param_statistics['mean'][k] = torch.mean(v[torch.where(~torch.isnan(v))[0]], dim=0)
+            param_statistics['std'][k] = torch.std(v[torch.where(~torch.isnan(v))[0]], dim=0)
+
+            if len(v[torch.where(~torch.isnan(v))[0]]) > 0:
+                assert not torch.isnan(param_statistics['mean'][k]).any(), f"mean of {k} is nan"
+                assert not torch.isnan(param_statistics['std'][k]).any(), f"std of {k} is nan"
 
     return param_statistics
 
