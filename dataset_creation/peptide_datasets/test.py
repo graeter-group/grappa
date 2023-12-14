@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 #%%
 
-dspath = Path('/hits/fast/mbm/seutelf/old_data/datasets/PDBDatasets/spice/charge_default_ff_amber99sbildn_filtered')
+dspath = Path('/hits/fast/mbm/seutelf/old_data/datasets/PDBDatasets/AA_opt_rad/charge_heavy_col_ff_amber99sbildn_filtered')
 
 for molfile in dspath.iterdir():
     if molfile.is_dir():

@@ -18,6 +18,14 @@ def main(source_path, target_path):
         if molfile.is_dir():
             continue
 
+        if not molfile.name.endswith('.npz'):
+            continue
+
+        if molfile.name.endswith('.md') or molfile.name.endswith('.txt'):
+            # assume that there is some information written into a text file, copy the file:
+            target_file = target_path / molfile.name
+            molfile.copy(target_file)
+
         print(f"Processing {idx}", end='\r')
 
         moldata = MolData.load(str(molfile))
@@ -28,6 +36,8 @@ def main(source_path, target_path):
         total_confs += len(moldata.molecule.atoms)
 
         mols.append(moldata)
+
+    assert not len(mols) == 0, "No molecules found!"
 
     ds = Dataset.from_moldata(mols, subdataset=source_path.stem)
     

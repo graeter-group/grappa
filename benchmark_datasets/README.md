@@ -1,3 +1,0 @@
-The scripts in this folder enable the reproduction of the creation of our benchmark dataset (which is also available as direct download).
-
-The dataset is created from the dataset published along with espaloma. The form of the data points in the espaloma datasets are espaloma graphs. We store datasets mre genral, simply as npz files containing positions, energies, gradients, atomic numbers, partial charges and smiles strings.

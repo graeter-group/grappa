@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
 
-espaloma_ds_path="$SCRIPT_DIR/../data/esp_data"
+espaloma_ds_path="$SCRIPT_DIR/../../data/esp_data"
 
 mkdir -p $espaloma_ds_path
 

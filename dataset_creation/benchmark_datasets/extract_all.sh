@@ -4,7 +4,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # di
 
 
 
-espaloma_ds_path="$SCRIPT_DIR/../data/esp_data"
+espaloma_ds_path="$SCRIPT_DIR/../../data/esp_data"
 
 # stop upon error:
 set -e

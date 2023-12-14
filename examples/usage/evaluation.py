@@ -4,11 +4,16 @@ Evaluate a grappa dataset for a model.
 """
 from grappa.data import Dataset
 
-# DOES NOT WORK IN THIS COMMIT
-
 #%%
+DSNAME = 'tripeptides_amber99sbildn'
+DSNAME2 = 'dipeptide_rad'
+DSNAME3 = 'Capped_AA_break_breakpoint'
+
 # Download a dataset if not present already:
-dataset = Dataset.from_tag('tripeptides_amber99sbildn')
+dataset = Dataset.from_tag(DSNAME)
+# Download a second dataset and append it:
+dataset += Dataset.from_tag(DSNAME2)
+dataset += Dataset.from_tag(DSNAME3)
 
 # For more efficient data loading, we use a GraphDataLoader
 from grappa.data import GraphDataLoader
@@ -19,19 +24,13 @@ loader = GraphDataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 # Download a model if not present already:
 from grappa.utils.loading_utils import load_model
 
-url = 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release/protein_test_11302023.pth'
+url = 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release_radicals/radical_model_12142023.pth'
 
 model = load_model(url)
 
 #%%
 # add an energy calculation module
-
-# first, we have to add a module that fixes the output shape of the model (this will not be necessary in the future)
-
 import torch
-
-
-# then, we can add the energy calculation module
 from grappa.models.energy import Energy
 
 model = torch.nn.Sequential(
@@ -66,12 +65,34 @@ print(json.dumps(metrics, indent=4))
 # we can also plot the datapoints:
 import matplotlib.pyplot as plt
 
-dsname = 'tripeptides_amber99sbildn'
+fig, axs = plt.subplots(3, 2, figsize=(10, 15))
 
-plt.scatter(evaluator.gradients[dsname].cpu().numpy(), evaluator.reference_gradients[dsname].cpu().numpy())
-plt.xlabel('Grappa')
-plt.ylabel('QM')
-plt.title('Gradient Components [kcal/mol/Å]')
-plt.text(0.1, 0.9, f'Component RMSE: {metrics[dsname]["crmse_gradients"]:.1f} kcal/mol/Å', transform=plt.gca().transAxes)
+for i, dsname in enumerate([DSNAME, DSNAME2, DSNAME3]):
+    # Assuming evaluator and metrics objects are already defined and hold the necessary data for each dsname
+    grads = evaluator.gradients[dsname].cpu().numpy()
+    ref_grads = evaluator.reference_gradients[dsname].cpu().numpy()
+
+    energies = evaluator.energies[dsname].cpu().numpy()
+    ref_energies = evaluator.reference_energies[dsname].cpu().numpy()
+
+    # Gradient plot for the dataset
+    axs[i, 0].scatter(ref_grads, grads)
+    axs[i, 0].set_xlabel('QM')
+    axs[i, 0].set_ylabel('Grappa')
+    axs[i, 0].set_title(f'{dsname} Gradient Components [kcal/mol/Å]')
+    axs[i, 0].text(0.1, 0.9, f'Component RMSE: {metrics[dsname]["crmse_gradients"]:.1f} kcal/mol/Å', 
+                   transform=axs[i, 0].transAxes)
+
+    # Energy plot for the dataset
+    axs[i, 1].scatter(ref_energies, energies)
+    axs[i, 1].set_xlabel('QM')
+    axs[i, 1].set_ylabel('Grappa')
+    axs[i, 1].set_title(f'{dsname} Energies [kcal/mol]')
+    # Assuming you have a similar RMSE metric for energies
+    axs[i, 1].text(0.1, 0.9, f'RMSE: {metrics[dsname]["rmse_energies"]:.1f} kcal/mol', 
+                   transform=axs[i, 1].transAxes)
+
+plt.tight_layout()  # Adjust layout
+plt.savefig('evaluation.png')
 plt.show()
 # %%

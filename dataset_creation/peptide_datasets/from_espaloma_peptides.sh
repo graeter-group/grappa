@@ -5,7 +5,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
 
 source_path=""
-target_path="$SCRIPT_DIR/../data/peptides/grappa_datasets"
+target_path="$SCRIPT_DIR/../../data/peptides/grappa_datasets"
 
 
 # List of dataset names
