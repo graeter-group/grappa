@@ -56,7 +56,7 @@ class MolData():
     ff_nonbonded_energy: Dict[str, np.ndarray] = None
     ff_nonbonded_gradient: Dict[str, np.ndarray] = None
 
-    # classical forcefield energies: dictionaries mapping a force field name to an array of energies
+    # classical forcefield energies: dictionaries mapping a force field name to an array of bonded energies
     ff_energy: Dict[str, np.ndarray] = None
     ff_gradient: Dict[str, np.ndarray] = None
 
@@ -95,7 +95,7 @@ class MolData():
     
 
     @classmethod
-    def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None):
+    def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None, ff_energy:np.ndarray=None, ff_gradient:np.ndarray=None):
         """
         Construct moldata from 'raw' arrays of xyz, energies and nonbonded energies. Sets gradients to zeros if not provided and mol_id to '' if not provided. Note that without gradient or valid mol_id, the moldata cannot be used for training or evaluation on unseen test data since 'unseen' is defined via mol_id.
         """
@@ -122,6 +122,11 @@ class MolData():
         ff_nonbonded_energy = {'reference_ff': nonbonded_energy}
         ff_nonbonded_gradient = {'reference_ff': nonbonded_gradient}
 
+        if not ff_energy is None:
+            ff_energy = {'reference_ff': ff_energy}
+        if not ff_gradient is None:
+            ff_gradient = {'reference_ff': ff_gradient}
+
         return cls(
             molecule=molecule,
             xyz=xyz,
@@ -134,6 +139,8 @@ class MolData():
             sequence=sequence,
             ff_nonbonded_energy=ff_nonbonded_energy,
             ff_nonbonded_gradient=ff_nonbonded_gradient,
+            ff_energy=ff_energy,
+            ff_gradient=ff_gradient,
         )
 
 
@@ -366,7 +373,7 @@ class MolData():
         smiles = data_dict.get('smiles', None)
         sequence = data_dict.get('sequence', None)
 
-        mol_id = data_dict.get(data_dict.get('mol_id', None), 'smiles', data_dict.get('sequence', None))
+        mol_id = data_dict.get('mol_id', data_dict.get('smiles', data_dict.get('sequence', None)))
         if mol_id is None:
             raise ValueError("Either a smiles string or a sequence string must be provided as key 'smiles' or 'sequence' in the data dictionary.")
         if isinstance(mol_id, np.ndarray):
@@ -461,7 +468,7 @@ class MolData():
     
 
     @classmethod
-    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff'):
+    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to initialize the interaction tuples, classical parameters and, if partial_charges is None, to obtain the partial charges.
         The forcefield_type can be either openff, openmm or openmmforcefields.
@@ -484,8 +491,9 @@ class MolData():
             raise NotImplementedError("openmmforcefields is not supported yet.")
         else:
             raise ValueError(f"forcefield_type must be either openff, openmm or openmmforcefields, not {forcefield_type}")
-
-        smiles = openff_mol.to_smiles(mapped=False)
+        
+        if not smiles is None:
+            smiles = openff_mol.to_smiles(mapped=False)
 
         if mol_id is None:
             mol_id = smiles

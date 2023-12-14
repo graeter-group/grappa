@@ -435,9 +435,9 @@ class Parameters():
         g.nodes['n3'].data[f'k{suffix}'] = torch.tensor(self.angle_k, dtype=torch.float32)
         g.nodes['n3'].data[f'eq{suffix}'] = torch.tensor(self.angle_eq, dtype=torch.float32)
 
-        assert np.all(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2)), "The proper torsion phases must be either 0 or pi or 2pi"
+        assert np.all(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.proper_phases)), f"The proper torsion phases must be either 0 or pi or 2pi but found the following values: {self.proper_phases[np.logical_not(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.proper_phases))]}"
 
-        assert np.all(self.proper_ks >= 0 + np.isnan(self.proper_ks)), "The proper torsion force constants must be positive."
+        assert np.all((self.proper_ks >= 0) + np.isnan(self.proper_ks)), f"The proper torsion force constants must be positive but found the following values: {self.proper_ks[np.logical_not((self.proper_ks >= 0) + np.isnan(self.proper_ks))]}"
 
         proper_ks = np.where(
             np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
@@ -460,9 +460,9 @@ class Parameters():
         
         g.nodes['n4'].data['k_ref'] = correct_shape(torch.tensor(proper_ks, dtype=torch.float32), n_periodicity_proper)
 
-        assert np.all(np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, np.pi, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2)), "The improper torsion phases must be either 0 or pi or 2pi"
+        assert np.all(np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, np.pi, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.improper_phases)), "The improper torsion phases must be either 0 or pi or 2pi"
 
-        assert np.all(self.improper_ks >= 0), "The improper torsion force constants must be positive."
+        assert np.all((self.improper_ks >= 0) + np.isnan(self.improper_ks)), f"The improper torsion force constants must be positive."
 
         improper_ks = np.where(
             np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),

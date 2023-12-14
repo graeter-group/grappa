@@ -158,17 +158,42 @@ class Dataset(torch.utils.data.Dataset):
         return Dataset(graphs, mol_ids, subdataset)
 
 
-    def remove_uncommon_features(self):
+    def remove_uncommon_features(self, create_feats:Dict[str, Union[float,torch.Tensor]]={'is_radical':0.}):
         """
         Removes features that are not present in all graphs. This is necessary for batching.
+        ----------
+        Parameters
+        ----------
+        create_feats : Dict[str, torch.Tensor], optional
+            Dictionary of features that should be created for all graphs if not already present in the graph. The key is the name of the feature and the value is the default value per node for the feature. For example, if some graphs have the is_radical feature as onedimensional onehot encoding, create_feats={'is_radical':torch.tensor((0))} will make all molecules without this feature have torch.zeros((n_atoms, 1)) as is_radical feature.
         """
+        for v in create_feats.values():
+            if isinstance(v, torch.Tensor):  
+                v.to(self.graphs[0].nodes['n1'].data['xyz'].device)
+
+        def add_feats(graph):
+            for k, v in create_feats.items():
+                if not k in graph.nodes['n1'].data.keys():
+                    if isinstance(v, torch.Tensor):
+                        graph.nodes['n1'].data[k] = torch.repeat_interleave(v, graph.num_nodes('n1'), dim=0)
+                    else:
+                        graph.nodes['n1'].data[k] = torch.ones((graph.num_nodes('n1'), 1))*v
+            return graph
+        
+        # add feats to first graph so that they are included in keep
+        self.graphs[0] = add_feats(self.graphs[0])
+
         removed = set()
-        features = set(self.graphs[0].ndata.keys())
+        keep = set(self.graphs[0].ndata.keys())
+
+        # iterate twice, first to collect all feats that are to be kept, then to remove all feats that are not to be kept
+        for i in range(len(self.graphs)):
+            self.graphs[i] = add_feats(self.graphs[i])
+            keep = keep.intersection(set(self.graphs[i].ndata.keys()))
+
         for graph in self.graphs:
-            features = features.intersection(set(graph.ndata.keys()))
-        for graph in self.graphs:
-            removed = removed.union(set(graph.ndata.keys()).difference(features))
-            for feature in set(graph.ndata.keys()).difference(features):
+            removed = removed.union(set(graph.ndata.keys()).difference(keep))
+            for feature in set(graph.ndata.keys()).difference(keep):
                 del graph.ndata[feature]
 
         if len(removed) > 0:

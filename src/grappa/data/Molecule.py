@@ -370,6 +370,7 @@ class Molecule():
             - n4_improper: impropers        
         The node type n1 carries the feature 'ids', which are the identifiers in self.atoms. The other interaction levels (n{>1}) carry the idxs (not ids) of the atoms as ordered in self.atoms as feature 'idxs'. These are not the identifiers but must be translated back to the identifiers using ids = self.atoms[idxs] after the forward pass.
         """
+        assert max_element > 0, f"max_element must be larger than 0 but is {max_element}"
         assert not any([ids is None for ids in [self.angles, self.propers]]), f"atoms, bonds, angles, propers and impropers must not be None"
         
         # initialize empty dictionary
@@ -431,9 +432,17 @@ class Molecule():
         assert len(self.bonds)*2 == hg.num_edges('n1_edge'), f"number of n1_edges in graph ({hg.num_edges('n1_edge')}) does not match 2 times number of bonds ({len(self.bonds)})"
 
         # add standard features (atomic number and partial charge):
-        if max(self.atomic_numbers) > max_element:
-            raise ValueError(f"max_element ({max_element}) must be larger than the largest atomic number ({max(self.atomic_numbers)})")
-        
+        if isinstance(self.atomic_numbers, list):
+            if max(self.atomic_numbers) > max_element:
+                raise ValueError(f"max_element ({max_element}) must be larger than the largest atomic number ({max(self.atomic_numbers)})")
+            if min(self.atomic_numbers) < 1:
+                raise ValueError(f"min_element must be larger than 0 but is {min(self.atomic_numbers)}")
+        else:
+            if np.any(self.atomic_numbers > max_element):
+                raise ValueError(f"max_element ({max_element}) must be larger than the largest atomic number ({np.max(self.atomic_numbers)})")
+            if np.any(self.atomic_numbers < 1):
+                raise ValueError(f"min_element must be larger than 0 but is {np.min(self.atomic_numbers)}")
+
         # we have no atomic number 0, so we can safely subtract 1 from all atomic numbers:
         atom_onehot = torch.nn.functional.one_hot(torch.tensor(self.atomic_numbers)-1, num_classes=max_element).float()
 
