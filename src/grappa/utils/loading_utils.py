@@ -27,3 +27,19 @@ def load_model(url:str, filename:str=None):
     return model
 
 
+def model_from_tag(tag:str):
+    """
+    Loads a model from a tag. With each release, the mapping tag to url of model weights is updated such that models returned by this function are always at a version that works in the repective release.
+    Possible tags:
+    - latest
+    - latest_radicals
+    - latest_proteins
+    """
+    one_url_as_of_now = "https://github.com/LeifSeute/test_torchhub/releases/download/test_release_radicals/radical_model_12142023.pth"
+    tag_to_url = {
+        "latest": one_url_as_of_now,
+        "latest_radicals": one_url_as_of_now,
+        "latest_proteins": one_url_as_of_now,
+    }
+    url = tag_to_url[tag]
+    return load_model(url)

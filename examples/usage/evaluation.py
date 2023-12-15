@@ -22,11 +22,9 @@ loader = GraphDataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
 # %%
 
 # Download a model if not present already:
-from grappa.utils.loading_utils import load_model
+from grappa.utils.loading_utils import model_from_tag
 
-url = 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release_radicals/radical_model_12142023.pth'
-
-model = load_model(url)
+model = model_from_tag('latest')
 
 #%%
 # add an energy calculation module
