@@ -2,6 +2,7 @@
 from grappa.data import MolData
 from pathlib import Path
 import numpy as np
+import traceback
 
 def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml'):
     print(f"Converting\n{source_path}\nto\n{target_path}")
@@ -18,6 +19,8 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
     total_mols = 0
     total_confs = 0
 
+    num_nan_params = 0
+
     for idx, molfile in enumerate(source_path.iterdir()):
         if molfile.is_dir():
             continue
@@ -27,8 +30,12 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
             data = np.load(molfile)
             # ransform to actual dictionary
             data = {k:v for k,v in data.items()}
+            try:
+                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield)
+            except:
+                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield, allow_nan_params=True)
+                num_nan_params += 1
 
-            moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield)
             moldata.molecule.add_features(['ring_encoding'])
 
             total_mols += 1
@@ -39,12 +46,13 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
             num_success += 1
         except Exception as e:
             num_err += 1
-            raise
-            # print(f"Failed to process {molpath}: {e}")
+            # get traceback:
+            tb = traceback.format_exc()
+            print(f"\nError processing {molfile} with smiles {data['smiles']}: {e}\n{tb}\n")
             continue
     
     print("\nDone!")
-    print(f"Processed {num_total} molecules, {num_success} successfully, {num_err} with errors")
+    print(f"Processed {num_total} molecules, {num_success} successfully, {num_err} with errors, {num_nan_params} with nan params.")
 
     print(f"Total mols: {total_mols}, total confs: {total_confs}")
 

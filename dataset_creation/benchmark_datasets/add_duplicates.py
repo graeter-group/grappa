@@ -21,7 +21,7 @@ def main(dspath, targetpath):
     dsnames = [p.name for p in targetpath.iterdir() if p.is_dir()]
     assert len(list(set(dsnames))) == len(dsnames), f"Duplicate dataset names in targetpath: {dsnames}"
 
-    # iterate over all child directories of dspath (this is the duplicates path)
+    # iterate over all child directories of the duplicates path
     num_total = 0
     num_success = 0
     num_err = 0
