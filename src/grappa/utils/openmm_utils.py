@@ -3,6 +3,11 @@ from typing import Union, Dict, List
 from pathlib import Path
 import tempfile
 
+from openmm.app.forcefield import NoCutoff
+from openmm.unit.constants import amu
+from openmm.unit.unit_definitions import amu
+from openmm.unit.unit_math import amu
+
 
 def get_energies(openmm_system, xyz):
     """
@@ -16,6 +21,9 @@ def get_energies(openmm_system, xyz):
     assert len(xyz.shape) == 3
     assert xyz.shape[1] == openmm_system.getNumParticles()
     assert xyz.shape[2] == 3
+
+    if xyz.shape[0] == 0:
+        return np.array([]).astype(np.float32), np.zeros(xyz.shape).astype(np.float32)
 
     # create a context:
     integrator = openmm.VerletIntegrator(1.0 * unit.femtoseconds)
@@ -242,3 +250,40 @@ def topology_from_pdb(pdbstring:str)->'openmm.Topology':
         openmm_pdb = PDBFile(pdbpath)
 
     return openmm_pdb.topology
+
+
+def get_openmm_forcefield(name):
+    """
+    The name can be given either with or without .xml ending. Possible names are all openmm forcefield names and:
+    - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP)
+    """
+    from openmm.app import ForceField
+
+    if name.endswith('.xml'):
+        name = name[:-4]
+    
+    if name == 'amber99sbildn*' or name == 'amber99sbildn-star':
+        from grappa.utils import hyp_dop_utility
+
+        ff_path = Path(__file__).parent / Path("amber99sbildn-star_.xml")
+
+        class HypDopOpenmmForceField:
+            """
+            Modify the createSystem method because openmm.PDBFile cannot read HYP and DOP residues properly.
+            """
+            def __init__(self, ff_path:Union[Path, str], *args, **kwargs):
+                self.ff = ForceField(str(ff_path), *args, **kwargs)
+            
+            def createSystem(self, topology, *args, **kwargs):
+                """
+                Create the system. This method is overwritten because openmm.PDBFile cannot read HYP and DOP residues properly.
+                """
+                # add bonds that were not written to the topology yet:
+
+                topology = hyp_dop_utility.add_bonds(topology)
+                return self.ff.createSystem(topology, *args, **kwargs)
+                
+        return HypDopOpenmmForceField(str(ff_path))
+
+    else:
+        return ForceField(name+'.xml')
