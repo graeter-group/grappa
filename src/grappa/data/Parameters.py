@@ -315,10 +315,16 @@ class Parameters():
                     raise ValueError(f"The torsion {torsion} is not included in the proper torsion list of the molecule.")
                 
                 if proper_ks[proper_idx, periodicity-1] != 0.:
-                    raise ValueError(f"The torsion {torsion} appears twice.")
+                    # raise ValueError(f"The torsion {torsion} appears twice.")
+                    if phase != proper_phases[proper_idx, periodicity-1]:
+                        raise RuntimeError(f"The torsion {torsion} with n_periodicity={periodicity} appears twice with different phases: {phase} and {proper_phases[proper_idx, periodicity-1]}.")
                 
-                proper_ks[proper_idx, periodicity-1] = torsion_k # this is already made positive
-                proper_phases[proper_idx, periodicity-1] = phase
+                    # now we can simply add the ks since the energy is linear in k:
+                    proper_ks[proper_idx, periodicity-1] += torsion_k
+
+                else:
+                    proper_ks[proper_idx, periodicity-1] = torsion_k # this is already made positive
+                    proper_phases[proper_idx, periodicity-1] = phase
 
             ############################
             else:

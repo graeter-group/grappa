@@ -177,7 +177,7 @@ class Dataset(torch.utils.data.Dataset):
                     if isinstance(v, torch.Tensor):
                         graph.nodes['n1'].data[k] = torch.repeat_interleave(v, graph.num_nodes('n1'), dim=0)
                     else:
-                        graph.nodes['n1'].data[k] = torch.ones((graph.num_nodes('n1'), 1))*v
+                        graph.nodes['n1'].data[k] = torch.ones((graph.num_nodes('n1')))*v
             return graph
         
         # add feats to first graph so that they are included in keep
@@ -213,6 +213,16 @@ class Dataset(torch.utils.data.Dataset):
         sliced_graphs = self.graphs[start:stop]
         sliced_mol_ids = self.mol_ids[start:stop]
         sliced_subdataset = self.subdataset[start:stop]
+
+        return Dataset(graphs=sliced_graphs, mol_ids=sliced_mol_ids, subdataset=sliced_subdataset)
+    
+    def where(self, condition=List[bool]):
+        """
+        Returns a new dataset instance with only the data at those indices where the condition is True.
+        """
+        sliced_graphs = [self.graphs[i] for i in range(len(self.graphs)) if condition[i]]
+        sliced_mol_ids = [self.mol_ids[i] for i in range(len(self.mol_ids)) if condition[i]]
+        sliced_subdataset = [self.subdataset[i] for i in range(len(self.subdataset)) if condition[i]]
 
         return Dataset(graphs=sliced_graphs, mol_ids=sliced_mol_ids, subdataset=sliced_subdataset)
     

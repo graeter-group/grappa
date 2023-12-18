@@ -10,6 +10,8 @@ from grappa.utils import openff_utils, openmm_utils
 import torch
 from dgl import DGLGraph
 from grappa import constants
+from grappa import units as grappa_units
+import traceback
 
 import pkgutil
 
@@ -50,7 +52,7 @@ class MolData():
     
     # additional characterizations:
     mapped_smiles: Optional[str] = None
-    pdb: Optional[str] = None
+    pdb: Optional[str] = None # pdb file as string. openmm topology can be recovered via openmm_utils.get_topology_from_pdb
 
     # nonbonded contributions:
     ff_nonbonded_energy: Dict[str, np.ndarray] = None
@@ -62,6 +64,9 @@ class MolData():
 
 
     def _validate(self):
+        # if not self.energy.shape[0] > 0:
+        #     raise ValueError(f"Energy must have at least one entry, but has shape {self.energy.shape}")
+        
         for k,v in self.ff_energy.items():
             assert v.shape == self.energy.shape, f"Shape of ff_energy {k} does not match energy: {v.shape} vs {self.energy.shape}"
         for k,v in self.ff_gradient.items():
@@ -346,7 +351,7 @@ class MolData():
 
 
     @classmethod
-    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges'):
+    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False):
         """
         Create a MolData object from a dictionary containing a mapped_smiles string or pdb and arrays of conformations, energies and gradients, but not necessarily the interaction tuples and classical parameters.
         The forcefield is used to obtain the interaction tuples and classical parameters. If a smiles string is used, the forcefield refers to an openff forcefield. If a pdb file is used, the forcefield refers to an openmm forcefield.
@@ -356,6 +361,12 @@ class MolData():
             - xyz: (n_confs, n_atoms, 3)
             - energy: (n_confs,)
             - gradient: (n_confs, n_atoms, 3)
+        ----------
+        Parameters:
+            - data_dict: Dict[str, Union[np.ndarray, str]]
+            - forcefield: str
+            - partial_charge_key: str
+            - allow_nan_params: bool: If True, the parameters are set to nans if they cannot be obtained from the forcefield. If False, an error is raised.
         """
         mapped_smiles = None
         if 'mapped_smiles' in data_dict.keys():
@@ -388,7 +399,7 @@ class MolData():
         
 
         if mapped_smiles is not None:
-            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles)
+            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles, allow_nan_params=allow_nan_params)
         else:
             raise NotImplementedError("pdb files are not supported yet.")
 
@@ -404,19 +415,44 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=False):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.
         If energy_ref and gradient_ref are None, they are also calculated from the openmm system.
         mapped_smiles and pdb have no effect on the system, are optional and only required for reproducibility.
         If the improper parameters are incompatible with the openmm system, the improper torsion parameters are all set to zero.
+        ----------
+        Parameters:
+            - openmm_system: openmm.System
+            - openmm_topology: openmm.Topology
+            - xyz: (n_confs, n_atoms, 3)
+            - energy: (n_confs,)
+            - gradient: (n_confs, n_atoms, 3)
+            - mol_id: str
+            - partial_charges: (n_atoms,)
+            - energy_ref: (n_confs,)
+            - gradient_ref: (n_confs, n_atoms, 3)
+            - mapped_smiles: str
+            - pdb: str
+            - ff_name: str
+            - sequence: str
+            - smiles: str
+            - allow_nan_params: bool
         """
         import openmm
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges)
-        params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
 
-        self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id)
+        try:        
+            params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
+        except Exception as e:
+            if allow_nan_params:
+                params = Parameters.get_nan_params(mol=mol)
+            else:
+                tb = traceback.format_exc()
+                raise ValueError(f"Could not obtain parameters from openmm system: {e}\n{tb}. Consider setting allow_nan_params=True, then the parameters for this molecule will be set to nans and ignored during training.")
+
+        self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id, sequence=sequence, smiles=smiles)
 
         if not partial_charges is None:
             # set the partial charges in the openmm system
@@ -468,10 +504,25 @@ class MolData():
     
 
     @classmethod
-    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None):
+    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None, allow_nan_params:bool=False):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to initialize the interaction tuples, classical parameters and, if partial_charges is None, to obtain the partial charges.
         The forcefield_type can be either openff, openmm or openmmforcefields.
+        ----------
+        Parameters:
+            - mapped_smiles: str
+            - xyz: (n_confs, n_atoms, 3)
+            - energy: (n_confs,)
+            - gradient: (n_confs, n_atoms, 3)
+            - partial_charges: (n_atoms,)
+            - energy_ref: (n_confs,)
+            - gradient_ref: (n_confs, n_atoms, 3)
+            - forcefield: str
+            - mol_id: str
+            - forcefield_type: str
+            - smiles: str
+            - allow_nan_params: bool: If True, the parameters are set to nans if they cannot be obtained from the forcefield. If False, an error is raised.
+        
         """
         if forcefield_type == 'openff':
             system, topology, openff_mol = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=forcefield, partial_charges=partial_charges)
@@ -499,7 +550,7 @@ class MolData():
             mol_id = smiles
         
 
-        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles)
+        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles, allow_nan_params=allow_nan_params)
 
         self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic"], openff_mol=openff_mol)
 
@@ -516,3 +567,39 @@ class MolData():
         forcefields = ', '.join(self.ff_energy.keys()) if self.ff_energy else 'None'
 
         return f"<{self.__class__.__name__} (\nn_confs: {n_confs},\nmol_id: {mol_id},\nmolecule: {molecule_str},\nforcefields: {forcefields}\n)>"
+
+
+    def calc_energies_openmm(self, openmm_forcefield, forcefield_name:str, partial_charges:np.ndarray=None):
+        """
+        Calculate the energies and gradients of the molecule using an openmm forcefield.
+        If partial_charges is None, the charges are obtained from the openmm forcefield.
+        """
+        assert self.pdb is not None, "MolData.pdb must be provided to calculate energies with openmm."
+        import openmm
+        import openmm.unit as unit
+
+        openmm_top = openmm_utils.topology_from_pdb(self.pdb)
+        openmm_sys = openmm_forcefield.createSystem(topology=openmm_top)
+
+        if partial_charges is not None:
+            openmm_sys = openmm_utils.set_partial_charges(openmm_sys, partial_charges)
+
+        self.write_energies(openmm_system=openmm_sys, forcefield_name=forcefield_name)
+
+
+
+    def write_energies(self, openmm_system, forcefield_name:str):
+        """
+        Write the energies and forces of the molecule to the ff_energy and ff_gradient dicts.
+        Assumes that the openmm_system has the correct order of atoms.
+        """
+        import openmm.unit as unit
+
+        xyz = unit.Quantity(self.xyz, grappa_units.DISTANCE_UNIT).value_in_unit(unit.angstrom)
+
+        # get the energies and forces from openmm
+        total_energy, total_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
+        total_gradient = -total_gradient
+
+        self.ff_energy[forcefield_name] = unit.Quantity(total_energy, unit.kilocalorie_per_mole).value_in_unit(grappa_units.ENERGY_UNIT)
+        self.ff_gradient[forcefield_name] = unit.Quantity(total_gradient, unit.kilocalorie_per_mole/unit.angstrom).value_in_unit(grappa_units.FORCE_UNIT)
