@@ -1,17 +1,11 @@
 from grappa.training.loss import MolwiseLoss, TuplewiseEnergyLoss
 from grappa.training.evaluation import Evaluator
-import numpy as np
 import json
 
 import torch
-from pathlib import Path
-from grappa.utils.torch_utils import root_mean_squared_error, mean_absolute_error, invariant_rmse, invariant_mae
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
-import wandb
 from grappa import utils
 from typing import List, Dict
-from grappa.training.get_dataloaders import get_dataloaders
 import time
 
 
@@ -50,7 +44,7 @@ class LitModel(pl.LightningModule):
             log_params (bool): Whether to log parameters during training.
             weight_decay (float): Weight decay parameter for the optimizer.
             early_stopping_energy_weight (float): Weight of the energy component in the early stopping criterion, which is given by the sum of the average gradient rmse per dataset (first average over mols and confs in the dataset for obtaining rmses and then over the datasets for obtaining a mean rmse) and the energy rmse per dataset (same average procedure) multiplied by this weight. (This way, each dataset contributes equally to the early stopping criterion, independent of the number of molecules in the dataset.)
-            patience (int): Number of epochs without increase of the early stopping criterion (i.e. the weighted sum of energy/force rmse averaged over the dataset types) after which the learning rate is decreased: The best early stopping criterion value is stored and if the current value is larger than the best value, the number of epochs without improvement is increased by 1, else set to zero. If the number of epochs without improvement is larger than the patience, the learning rate is decreased by a factor of decay.
+            patience (int): Number of epochs without increase of the early stopping criterion (i.e. the weighted sum of energy/force rmse averaged over the dataset types) after which the learning rate is decreased: The best early stopping criterion value is stored and if the current value is larger than the best value, the number of epochs without improvement is increased by 1, else set to zero. If the number of epochs without improvement is larger than the patience, the learning rate is decreased by a factor of decay, the number of epochs without improvement is set to zero and the best early stopping criterion value is updated to the current value.
             lr_decay (float): Factor by which to decrease the learning rate if the early stopping criterion does not improve for patience epochs.
             time_limit (float): Time limit in hours. If the training takes longer than this, the training is stopped.
         """
@@ -117,6 +111,9 @@ class LitModel(pl.LightningModule):
 
 
     def get_lr(self):
+        """
+        Manages warmup, slowly increases from zero to self.lr linearly.
+        """
         if not self.warmup_step is None:
 
             if self.warmup_step >= self.warmup_steps:
@@ -247,7 +244,8 @@ class LitModel(pl.LightningModule):
             early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
             self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
 
-        if patience > 0:
+
+        if self.patience > 0:
             assert self.log_metrics, "Early stopping criterion is only implemented if metrics are logged."
 
             if early_stopping_loss < self.best_early_stopping_loss:
@@ -259,6 +257,7 @@ class LitModel(pl.LightningModule):
             if self.epochs_without_improvement > self.patience:
                 self.lr *= self.lr_decay
                 self.epochs_without_improvement = 0
+                self.best_early_stopping_loss = float(early_stopping_loss)
 
         # stop training if time limit is exceeded:
         if not self.time_limit is None:

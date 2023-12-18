@@ -191,7 +191,7 @@ class ExplicitEvaluator:
     """
     Does the same as the Evaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff'):
+    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
@@ -203,6 +203,8 @@ class ExplicitEvaluator:
         self.suffix_ref = suffix_ref
 
         self.suffix_classical = suffix_classical
+
+        self.ref_suffix_classical = ref_suffix_classical
 
         self.init_storage()
 
@@ -222,6 +224,9 @@ class ExplicitEvaluator:
             self.classical_energies = {}
             self.classical_gradients = {}
 
+            self.ref_classical_energies = {}
+            self.ref_classical_gradients = {}
+
 
     def step(self, g, dsnames):
         # unbatch the graphs
@@ -237,11 +242,17 @@ class ExplicitEvaluator:
             if self.log_classical_values:
                 energies_classical = utils.graph_utils.get_energies(g, suffix=self.suffix_classical).flatten().to(self.device)
 
+                if self.ref_suffix_classical is not None:
+                    energies_ref_classical = utils.graph_utils.get_energies(g, suffix=self.ref_suffix_classical).flatten().to(self.device)
+
             # get the gradients in shape (n_atoms*n_confs, 3)
             gradients = utils.graph_utils.get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
             gradients_ref = utils.graph_utils.get_gradients(g, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
             if self.log_classical_values:
                 gradients_classical = utils.graph_utils.get_gradients(g, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+
+                if self.ref_suffix_classical is not None:
+                    gradients_ref_classical = utils.graph_utils.get_gradients(g, suffix=self.ref_suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             if self.log_parameters:
                 parameters = utils.graph_utils.get_parameters(g, exclude=[('n4_improper', 'k')], suffix=self.suffix)
@@ -262,6 +273,10 @@ class ExplicitEvaluator:
             if self.log_classical_values:
                 self.classical_energies.setdefault(dsname, []).append(energies_classical)
                 self.classical_gradients.setdefault(dsname, []).append(gradients_classical)
+                
+                if self.ref_suffix_classical is not None:
+                    self.ref_classical_energies.setdefault(dsname, []).append(energies_ref_classical)
+                    self.ref_classical_gradients.setdefault(dsname, []).append(gradients_ref_classical)
 
             if self.log_parameters:
                 for ptype, params in parameters.items():
@@ -283,6 +298,10 @@ class ExplicitEvaluator:
             if self.log_classical_values:
                 self.classical_energies[dsname] = torch.cat(self.classical_energies[dsname], dim=0)
                 self.classical_gradients[dsname] = torch.cat(self.classical_gradients[dsname], dim=0)
+
+                if self.ref_suffix_classical is not None:
+                    self.ref_classical_energies[dsname] = torch.cat(self.ref_classical_energies[dsname], dim=0)
+                    self.ref_classical_gradients[dsname] = torch.cat(self.ref_classical_gradients[dsname], dim=0)
 
             if self.log_parameters:
                 for ptype in self.parameters[dsname].keys():
@@ -314,6 +333,10 @@ class ExplicitEvaluator:
             if self.log_classical_values:
                 metrics[dsname]['rmse_classical_energies'] = float(root_mean_squared_error(self.energies[dsname], self.classical_energies[dsname]).item())
                 metrics[dsname]['rmse_classical_gradients'] = float(invariant_rmse(self.gradients[dsname], self.classical_gradients[dsname]).item())
+
+                if self.ref_suffix_classical is not None:
+                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.reference_energies[dsname], self.ref_classical_energies[dsname]).item())
+                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.reference_gradients[dsname], self.ref_classical_gradients[dsname]).item())
 
             if self.log_parameters:
                 for ptype in self.parameters[dsname].keys():

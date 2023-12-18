@@ -7,16 +7,16 @@ from grappa.models.energy import Energy
 from grappa.models.grappa import GrappaModel
 
 
-def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={})->pl.Trainer:
+def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, sweep_config=None)->pl.Trainer:
 
     # Generate a unique ID for the run
     run_id = wandb.util.generate_id()
 
     # Initialize Wandb with a custom name (using the generated ID)
-    wandb.init(name=run_id)
+    wandb.init(name=run_id) if sweep_config is None else wandb.init(config=sweep_config, name=run_id, notes=notes)
 
     # Initialize WandbLogger with the existing run
-    wandb_logger = WandbLogger(experiment=wandb.run)
+    wandb_logger = WandbLogger(experiment=wandb.run, name=name, notes=notes)
 
     ###############################
     # CHECKPOINTING MODIFICATIONS:

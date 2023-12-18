@@ -14,7 +14,6 @@ from grappa.training.lightning_trainer import get_lightning_trainer
 from grappa.training.config import default_config
 from grappa.utils.graph_utils import get_param_statistics, get_default_statistics
 
-#NOTE inint wandb before starting train run. write default oconfig there and provide cmds to overwrite it
 
 #%%
 def do_trainrun(config:Dict, project:str='grappa'):

@@ -65,13 +65,14 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "subsample_train": {}, # dictionary of dsname and a float between 0 and 1 specifying a subsampling factor (that is applied after splitting).
         "subsample_val": {},
         "subsample_test": {},
+        "weights": {}, # sample from certain train subsets more often than from others. If no entry, the weight of the subset is one.
     }
 
     if benchmark:
         data_config = benchmark_data_config()
 
     lit_model_config = {
-        "lrs": {0: 1e-4}#, 3: 1e-5},
+        "lrs": {0: 1e-4},# 3: 1e-5},
         "start_qm_epochs": 1,
         "add_restarts": [],
         "warmup_steps": int(2e2),
@@ -97,6 +98,9 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "gradient_clip_val": 1e1,
         "profiler": "simple",
         'early_stopping_criterion': 'early_stopping_loss',
+        'name': None,
+        'notes': None,
+        'sweep_config': None, # dict, used for hyperparameter sweeps. this entry in the config is just for passing the sweep config to wandb. mapping sweep_config to actual config has to be done externally.
     }
 
     config = {
