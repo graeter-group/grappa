@@ -22,7 +22,9 @@ class Evaluator:
         """
         metric_names: list of strings for filtering metrics that should be logged. e.g. ['rmse_energies', 'rmse_gradients'] will only log these two metrics.
         """
-        self.log_parameters = log_parameters
+        if log_parameters:
+            raise NotImplementedError("Logging of parameters is not supported anymore.")
+        
         self.log_classical_values = log_classical_values
         self.metric_names = metric_names
 
@@ -35,14 +37,8 @@ class Evaluator:
         self.squared_error_energies = {}
         self.squared_error_gradients = {}
 
-        self.abs_error_energies = {}
-        self.abs_error_gradients = {}
-
         self.num_energies = {}
         self.num_gradients = {}
-
-        if self.log_parameters:
-            self.parameter_squarred_error = {}
 
         if self.log_classical_values:
             self.squared_error_classical_gradients = {}
@@ -54,47 +50,42 @@ class Evaluator:
         # calculate the squared error and number of energies and gradients for each dataset
         ############################
 
-        # get tensors of shape (n_batch) with squared errors and number of energies/gradients.
-        # the number of gradients does not count the spatial dimension but the number of force vectors.
-        energy_se, num_energies = utils.graph_utils.get_energy_se(g, l=2)
+        graphs = utils.dgl_utils.unbatch(g)
+        for graph, dsname in zip(graphs, dsnames):
+            
+            energies_ref = utils.graph_utils.get_energies(graph, suffix='_ref').detach()
+            energies = utils.graph_utils.get_energies(graph, suffix='').detach()
+            assert len(energies.shape) == 1, f"energies must be a tensor of shape (n_confs) but is {energies.shape}"
+            assert energies.shape[0] > 0, f"energies must be a tensor of shape (n_confs) but found n_conf = {energies.shape[0]}"
+            assert energies.shape == energies_ref.shape, f"energies and energies_ref must have the same shape but are {energies.shape} and {energies_ref.shape}"
+            energy_se = torch.sum(torch.square(energies - energies_ref))
+            num_energies = energies.shape[0]
 
-        if self.gradients:
-            gradient_se, num_gradients = utils.graph_utils.get_gradient_se(g, l=2)
-
-        energy_ae, _ = utils.graph_utils.get_energy_se(g, l=1)
-        if self.gradients:
-            gradient_ae, _ = utils.graph_utils.get_gradient_se(g, l=1)
-
-        if self.gradients:
-            if not len(num_energies) == len(num_gradients) == len(dsnames):
-                raise ValueError(f"Number of energies, gradients and dsnames must be equal but are {len(num_energies)}, {len(num_gradients)} and {len(dsnames)}")
-
-            if not all(len(t.shape) == 1 for t in [energy_se, gradient_se, energy_ae, gradient_ae, num_energies, num_gradients]):
-                raise ValueError(f"energy_se, gradient_se, energy_ae, gradient_ae, num_energies and num_gradients must be tensors of shape (n_batch) but are {[t.shape for t in [energy_se, gradient_se, energy_ae, gradient_ae, num_energies, num_gradients]]}")
-
-        if self.log_classical_values:
-            classical_energy_se, _ = utils.graph_utils.get_energy_se(g, suffix1='_classical_ff', suffix2='', l=2)
             if self.gradients:
-                classical_gradient_se, _ = utils.graph_utils.get_gradient_se(g, suffix1='_classical_ff', suffix2='', l=2)
+                gradients = utils.graph_utils.get_gradients(graph, suffix='').detach()
+                gradients_ref = utils.graph_utils.get_gradients(graph, suffix='_ref').detach()
+                assert len(gradients.shape) == 3, f"gradients must be a tensor of shape (n_atoms,n_confs, 3) but is {gradients.shape}"
+                assert gradients.shape[1] > 0, f"gradients must be a tensor of shape (n_atoms,n_confs, 3) but found n_conf = {gradients.shape[1]}"
+                assert gradients.shape == gradients_ref.shape, f"gradients and gradients_ref must have the same shape but are {gradients.shape} and {gradients_ref.shape}"
+                gradient_se = torch.sum(torch.square(gradients - gradients_ref))
+                num_gradients = gradients.shape[0] * gradients.shape[1] # number of gradient vectors, not number of components
 
 
-        if self.log_parameters:
-            parameter_se = utils.graph_utils.get_parameter_se(g, l=2)
-            for ses, nums in parameter_se.values():
-                if not len(ses.shape) == len(nums.shape) == 1:
-                    raise ValueError(f"parameter squared errors and numbers must be tensors of shape (n_batch) but are {[t.shape for t in [ses, nums]]}")
-                if not len(ses) == len(nums) == len(dsnames):
-                    raise ValueError(f"Number of parameter squared errors and numbers must be equal but are {len(ses)}, {len(nums)} and {len(dsnames)}")
+            if self.log_classical_values:
+                classical_energies = utils.graph_utils.get_energies(graph, suffix='_classical_ff').detach()
+                classical_energy_se = torch.sum(torch.square(classical_energies - energies))
+
+                if self.gradients:
+                    classical_gradients = utils.graph_utils.get_gradients(graph, suffix='_classical_ff').detach()
+                    classical_gradient_se = torch.sum(torch.square(classical_gradients - gradients))     
 
 
-        # add the squared errors and number of energies and gradients to the storage
-        ############################
-        for i, dsname in enumerate(dsnames):
+
+            # add the squared errors and number of energies and gradients to the storage
+            ############################
             if dsname not in self.squared_error_energies.keys():
                 self.squared_error_energies[dsname] = 0
                 self.squared_error_gradients[dsname] = 0
-                self.abs_error_energies[dsname] = 0
-                self.abs_error_gradients[dsname] = 0
                 self.num_energies[dsname] = 0
                 self.num_gradients[dsname] = 0
                 if self.log_classical_values:
@@ -102,35 +93,16 @@ class Evaluator:
                     self.squared_error_classical_energies[dsname] = 0
             
 
-            self.squared_error_energies[dsname] += energy_se[i].detach()
+            self.squared_error_energies[dsname] += energy_se.detach()
             if self.gradients:
-                self.squared_error_gradients[dsname] += gradient_se[i].detach()
-            self.abs_error_energies[dsname] += energy_ae[i].detach()
+                self.squared_error_gradients[dsname] += gradient_se.detach()
+            self.num_energies[dsname] += num_energies
             if self.gradients:
-                self.abs_error_gradients[dsname] += gradient_ae[i].detach()
-            self.num_energies[dsname] += num_energies[i].detach()
-            if self.gradients:
-                self.num_gradients[dsname] += num_gradients[i].detach()
+                self.num_gradients[dsname] += num_gradients
 
             if self.log_classical_values:
-                self.squared_error_classical_gradients[dsname] += classical_gradient_se[i].detach()
-                self.squared_error_classical_energies[dsname] += classical_energy_se[i].detach()
-
-
-            if self.log_parameters:
-                if dsname not in self.parameter_squarred_error:
-                    # initialize the dict but first detach all tensors
-                    for ptype in parameter_se.keys():
-                        parameter_se[ptype] = parameter_se[ptype][0].detach(), parameter_se[ptype][1].detach()
-
-                    self.parameter_squarred_error[dsname] = {ptype: (ses[i], nums[i]) for ptype, (ses, nums) in parameter_se.items()}
-                else:
-                    for ptype in parameter_se.keys():
-                        # add the se and number of parameters
-                        self.parameter_squarred_error[dsname][ptype] = (
-                            self.parameter_squarred_error[dsname][ptype][0] + parameter_se[ptype][0][i].detach(),
-                            self.parameter_squarred_error[dsname][ptype][1] + parameter_se[ptype][1][i].detach()
-                        )
+                self.squared_error_classical_gradients[dsname] += classical_gradient_se.detach()
+                self.squared_error_classical_energies[dsname] += classical_energy_se.detach()
 
 
     def pool(self):
@@ -143,20 +115,14 @@ class Evaluator:
         for dsname in self.squared_error_energies.keys():
             metrics[dsname] = {}
 
-            metrics[dsname]['rmse_energies'] = float(torch.sqrt(self.squared_error_energies[dsname].cpu() / self.num_energies[dsname].cpu()).item())
-            metrics[dsname]['rmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item()) if self.gradients else None
-            metrics[dsname]['crmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu() / 3.).item()) if self.gradients else None
+            metrics[dsname]['rmse_energies'] = float(torch.sqrt(self.squared_error_energies[dsname].cpu() / self.num_energies[dsname]).item())
+            metrics[dsname]['rmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname]).item()) if self.gradients else None
+            metrics[dsname]['crmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname] / 3.).item()) if self.gradients else None
 
-            metrics[dsname]['mae_energies'] = float((self.abs_error_energies[dsname].cpu() / self.num_energies[dsname].cpu()).item())
-            metrics[dsname]['mae_gradients'] = float((self.abs_error_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item()) if self.gradients else None
 
             if self.log_classical_values:
-                metrics[dsname]['rmse_classical_gradients'] = float(torch.sqrt(self.squared_error_classical_gradients[dsname].cpu() / self.num_gradients[dsname].cpu()).item()) if self.gradients else None
-                metrics[dsname]['rmse_classical_energies'] = float(torch.sqrt(self.squared_error_classical_energies[dsname].cpu() / self.num_energies[dsname].cpu()).item())
-
-            if self.log_parameters:
-                for ptype in self.parameter_squarred_error[dsname].keys():
-                    metrics[dsname][f'rmse_{ptype}'] = float(torch.sqrt(self.parameter_squarred_error[dsname][ptype][0].cpu() / self.parameter_squarred_error[dsname][ptype][1].cpu()).item())
+                metrics[dsname]['rmse_classical_gradients'] = float(torch.sqrt(self.squared_error_classical_gradients[dsname].cpu() / self.num_gradients[dsname]).item()) if self.gradients else None
+                metrics[dsname]['rmse_classical_energies'] = float(torch.sqrt(self.squared_error_classical_energies[dsname].cpu() / self.num_energies[dsname]).item())
 
 
             # filter the metrics if necessary (lazy and inefficient)
@@ -167,7 +133,7 @@ class Evaluator:
 
         # now calculate an averaged metric for the different datasets where each dataset gets the same weight, i.e. just form the average along the datasets:
         metrics['avg'] = {}
-        for key in ['mae_energies', 'mae_gradients', 'rmse_energies', 'rmse_gradients']:
+        for key in ['rmse_energies', 'rmse_gradients']:
             if not self.metric_names is None:
                 if key not in self.metric_names:
                     continue
