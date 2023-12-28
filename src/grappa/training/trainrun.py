@@ -1,11 +1,12 @@
 #%%
 from grappa.models import Energy, deploy
 
+from grappa.utils.run_utils import write_yaml
 import torch
 from pathlib import Path
-from pytorch_lightning.loggers import WandbLogger
 import wandb
 from grappa.utils.run_utils import get_rundir, load_yaml
+from grappa.utils import graph_utils, dgl_utils
 from grappa import utils
 from typing import List, Dict
 from grappa.training.get_dataloaders import get_dataloaders
@@ -13,12 +14,26 @@ from grappa.training.lightning_model import LitModel
 from grappa.training.lightning_trainer import get_lightning_trainer
 from grappa.training.config import default_config
 from grappa.utils.graph_utils import get_param_statistics, get_default_statistics
-
+from typing import Callable
 
 #%%
-def do_trainrun(config:Dict, project:str='grappa'):
+def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, sweep_config=None): # NOTE: remove sweep_config
     """
     Do a single training run with the given configuration.
+
+    config_from_sweep: function that takes the wandb.config and returns a dict that can be used to update the grappa config. This can be used for updating several config parameters from one sweep param (e.g. global dropout rates) or for applying transformations to the sweep config (e.g. converting a sweep parameter like the learning rate from linear to log scale). This can be e.g.:
+        def config_from_sweep(wandb_config):
+            config = {}
+            config['lit_model_config'] = {}
+            config['lit_model_config']['lr'] = wandb_config.lr
+
+            config['model_config'] = {}
+            config['model_config']['param_dropout'] = wandb_config.dropout
+            config['model_config']['gnn_conv_dropout'] = wandb_config.dropout
+
+            return config
+
+    manual_sweep_config: function that sets wandb.config parameters specified in the sweep to some manual values defined in the function. This can be used for setting the sweep parameters to some known good starting values. Use eg wandb.config.update({'lr': 0.001}, allow_val_change=True) to set the learning rate to 0.001. In this case, the sweep config must be None.
     """
 
     # check whether all config args are allowed (they are allowed if they are in the default config)
@@ -31,8 +46,37 @@ def do_trainrun(config:Dict, project:str='grappa'):
                 if kk not in default_config_[k]:
                     raise KeyError(f"Key {k}-{kk} not an allowed config argument.")
 
+
+    # Get the trainer  and initialize wandb
+    trainer = get_lightning_trainer(**config['trainer_config'], config=config, project=project)
+
+    experiment_dir = trainer.logger.experiment.dir
+
+    if manual_sweep_config is not None:
+        manual_sweep_config()
+
+    # update the config according to the config stored at wandb
+    if not config_from_sweep is None:
+        # get the hp values that were assigned by wandb sweep:
+        wandb_stored_config = wandb.config
+        updated_config = config_from_sweep(wandb_stored_config)
+        assert len(list(updated_config.keys())) > 0
+
+        # overwrite the config values that correspond to them:
+        for k in updated_config.keys():
+            if not k in config.keys():
+                raise ValueError(f'The sweep config provides a key that is not part of the config: {k}')
+            for kk in updated_config[k].keys():
+                if not kk in config[k].keys():
+                    raise ValueError(f'The sweep config provides a key that is not part of the config: {k}/{kk}')
+                config[k][kk] = updated_config[k][kk]
+
+
+    # write the current config to the run directory.
+    write_yaml(config, Path(experiment_dir)/"grappa_config.yaml")
+
     # Get the dataloaders
-    tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'])
+    tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'], classical_needed=config['lit_model_config']['log_classical'], in_feat_names=config['model_config']['in_feat_name'], save_splits=Path(experiment_dir)/'split.json')
 
     param_statistics = get_param_statistics(tr_loader)
     for m in ['mean', 'std']:
@@ -48,7 +92,7 @@ def do_trainrun(config:Dict, project:str='grappa'):
     model = torch.nn.Sequential(
         model,
         Energy(suffix='', gradients=gradient_needed),
-        Energy(suffix='_ref', write_suffix="_classical_ff", gradients=gradient_needed)
+        # Energy(suffix='_ref', write_suffix="_classical_ff", gradients=gradient_needed)
     )
 
     model.train()
@@ -60,20 +104,14 @@ def do_trainrun(config:Dict, project:str='grappa'):
         example = example.to(test_device)
         model = model.to(test_device)
         example = model(example)
-        energies_example = example.nodes['g'].data['energy']
+        example_ = dgl_utils.unbatch(example)[0]
+        energies_example = graph_utils.get_energies(example_)
         assert not torch.isnan(energies_example).any(), "Model predicts NaN energies."
+        assert not torch.isinf(energies_example).any(), "Model predicts inf energies."
+        assert len(energies_example) > 0, "Model predicts no energies."
 
     # Get a pytorch lightning model
     lit_model = LitModel(model=model, tr_loader=tr_loader, vl_loader=val_loader, te_loader=test_loader, **config['lit_model_config'])
-
-    # Initialize wandb
-    wandb.init(project=project, config=config)
-
-    # Get the trainer
-    trainer = get_lightning_trainer(**config['trainer_config'], config=config)
-
-    # write the current config to the run directory. NOTE: initialize a logging dir for the trainer first!
-    utils.run_utils.write_yaml(config, Path(trainer.logger.experiment.dir)/"grappa_config.yaml")
 
     print(f"\nStarting training run {wandb.run.name}...\nSaving logs to {wandb.run.dir}...\n")
 

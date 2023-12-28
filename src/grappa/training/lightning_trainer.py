@@ -5,27 +5,47 @@ from pathlib import Path
 import torch
 from grappa.models.energy import Energy
 from grappa.models.grappa import GrappaModel
+import os
 
 
-def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, sweep_config=None)->pl.Trainer:
+def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, project='grappa', resume_id:str=None)->pl.Trainer:
+    """
+    Returns a pytorch lightning trainer with a wandb logger.
+    Initializes wandb.
+    """
 
     # Generate a unique ID for the run
-    run_id = wandb.util.generate_id()
+    # run_id = wandb.util.generate_id()
 
-    # Initialize Wandb with a custom name (using the generated ID)
-    wandb.init(name=run_id) if sweep_config is None else wandb.init(config=sweep_config, name=run_id, notes=notes)
+    # Initialize Wandb
+    if resume_id is None:
+        wandb.init(project=project, notes=notes)
+        # get the run name:
+        if name is not None:
+            wandb.run.name += f'-{name}'
+
+    else:
+        # check whether the run is running:
+        api = wandb.Api()
+        run = api.run(f"{project}/{resume_id}")
+        if run.state == 'running':
+            raise ValueError(f"Run {resume_id} is still running. Please wait until it is finished.")
+        
+        wandb.init(id=resume_id, resume=True, project=project, notes=notes)
+
+
 
     # Initialize WandbLogger with the existing run
-    wandb_logger = WandbLogger(experiment=wandb.run, name=name, notes=notes)
-
-    ###############################
-    # CHECKPOINTING MODIFICATIONS:
-    # SVAVE MODEL WITHOUT ENERGY MODULE
-    # WRITE CONFIG DICT IN THE CHECKPOINT
+    wandb_logger = WandbLogger(experiment=wandb.run, notes=notes, project=project, name=wandb.run.name)
 
     # Checkpoint directory in the run directory
     wandb_run_dir = wandb_logger.experiment.dir
     checkpoint_dir = str(Path(wandb_run_dir) / "checkpoints")
+
+    ###############################
+    # CHECKPOINTING MODIFICATIONS:
+    # SAVE MODEL WITHOUT ENERGY MODULE
+    # WRITE CONFIG DICT IN THE CHECKPOINT
 
 
     class CustomModelCheckpoint(pl.callbacks.ModelCheckpoint):
@@ -54,10 +74,13 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
         save_top_k=1,
         mode='min',
         save_last=True,
-        every_n_epochs=10,
+        every_n_epochs=5,
         config=config
     )
 
-    trainer = pl.Trainer(logger=wandb_logger, gradient_clip_val=gradient_clip_val, max_epochs=max_epochs, profiler=profiler, callbacks=[checkpoint_callback])
+    # deactivate the progress bar in slurm jobs to prevent huge log files
+    is_slurm = os.environ.get('SLURM_JOB_ID') is not None
+
+    trainer = pl.Trainer(logger=wandb_logger, gradient_clip_val=gradient_clip_val, max_epochs=max_epochs, profiler=profiler, callbacks=[checkpoint_callback], enable_progress_bar=not is_slurm)
 
     return trainer

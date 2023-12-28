@@ -48,7 +48,7 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
                 "rna-diverse",
             ]
         ],
-        "conf_strategy": "mean",
+        "conf_strategy": "all",
         "train_batch_size": 20,
         "val_batch_size": 1,
         "test_batch_size": 1,
@@ -66,19 +66,20 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "subsample_val": {},
         "subsample_test": {},
         "weights": {}, # sample from certain train subsets more often than from others. If no entry, the weight of the subset is one.
+        "balance_factor": 0., # parameter between 0 and 1 that balances sampling of the datasets: 0 means that the molecules are sampled uniformly across all datasets, 1 means that the probabilities are re-weighted such that the sampled number of molecules per epoch is the same for all datasets. The weights assigned in 'weights' are multiplied by the weight factor obtained from balancing.
     }
 
     if benchmark:
         data_config = benchmark_data_config()
 
     lit_model_config = {
-        "lrs": {0: 1e-4},# 3: 1e-5},
+        "lr": 1e-5,
         "start_qm_epochs": 1,
         "add_restarts": [],
         "warmup_steps": int(2e2),
         "energy_weight": 1.,
-        "gradient_weight": 1e-1,
-        "tuplewise_weight": 0.,
+        "gradient_weight": 0.5,
+        "tuplewise_weight": 1e-4,
         "param_weight": 1e-4,
         "proper_regularisation": 1e-5,
         "improper_regularisation": 1e-5,
@@ -91,6 +92,8 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "patience": 30,
         "lr_decay": 0.8,
         "time_limit": None,
+        "finish_criterion": {},
+        "param_loss_epochs": None,
     }
 
     trainer_config = {
@@ -100,7 +103,6 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         'early_stopping_criterion': 'early_stopping_loss',
         'name': None,
         'notes': None,
-        'sweep_config': None, # dict, used for hyperparameter sweeps. this entry in the config is just for passing the sweep config to wandb. mapping sweep_config to actual config has to be done externally.
     }
 
     config = {

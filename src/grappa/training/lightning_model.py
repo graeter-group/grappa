@@ -1,25 +1,26 @@
-from grappa.training.loss import MolwiseLoss, TuplewiseEnergyLoss
+from grappa.training.loss import MolwiseLoss
 from grappa.training.evaluation import Evaluator
 import json
 
 import torch
 import pytorch_lightning as pl
-from grappa import utils
 from typing import List, Dict
 import time
+import sys
+import traceback
 
 
 class LitModel(pl.LightningModule):
     def __init__(self, model, tr_loader, vl_loader, te_loader, 
-                 lrs={0: 1e-4, 3: 1e-5, 200: 1e-6, 400: 1e-7}, 
+                 lr=1e-4, 
                  start_qm_epochs=1, add_restarts=[],
                  warmup_steps=int(2e2),
-                 energy_weight=1., gradient_weight=1e-1, tuplewise_weight=0.,
+                 energy_weight=1., gradient_weight=1e-1, tuplewise_weight=1e-4,
                  param_weight=1e-4, proper_regularisation=1e-5, improper_regularisation=1e-5,
                  log_train_interval=5, log_classical=False, log_params=False, weight_decay=0.,
                  early_stopping_energy_weight=2.,
                  log_metrics=True,
-                 patience:int=30, lr_decay:float=0.8, time_limit:float=None):
+                 patience:int=30, lr_decay:float=0.8, time_limit:float=None, finish_criterion:Dict[int, float]={}, param_loss_epochs:int=None):
         """
         Initialize the LitModel with specific configurations.
 
@@ -47,26 +48,23 @@ class LitModel(pl.LightningModule):
             patience (int): Number of epochs without increase of the early stopping criterion (i.e. the weighted sum of energy/force rmse averaged over the dataset types) after which the learning rate is decreased: The best early stopping criterion value is stored and if the current value is larger than the best value, the number of epochs without improvement is increased by 1, else set to zero. If the number of epochs without improvement is larger than the patience, the learning rate is decreased by a factor of decay, the number of epochs without improvement is set to zero and the best early stopping criterion value is updated to the current value.
             lr_decay (float): Factor by which to decrease the learning rate if the early stopping criterion does not improve for patience epochs.
             time_limit (float): Time limit in hours. If the training takes longer than this, the training is stopped.
+            finish_criterion (dict): Dictionary mapping from time in hours to maximum early stopping criterion value. If the early stopping criterion is larger than the maximum value for the given time, the training is stopped. This is useful for sweep runs, where the training should be stopped if it is not promising.
+            param_loss_epochs (int): Epoch number from which the parameter and tuplewise loss weights are set to zero and the optimizer is restarted.
         """
-
-        if tuplewise_weight > 0:
-            raise NotImplementedError("Tuplewise loss is not yet implemented.")
-
         super().__init__()
         
         self.model = model
-        self.tuplewise_energy_loss = TuplewiseEnergyLoss()
         
         # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
-        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3 if not param_weight==0 else 0, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation)
+        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, tuplewise_weight=1e-3, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation) if start_qm_epochs > 0 else MolwiseLoss(gradient_weight=gradient_weight, energy_weight=energy_weight, param_weight=param_weight, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation)
 
-        self.lrs = lrs
-        self.lr = self.lrs[0]
+        self.lr = lr
         self.weight_decay = weight_decay
 
         self.start_qm_epochs = start_qm_epochs
 
         self.restarts = sorted(list(set([self.start_qm_epochs] + add_restarts)))
+
         self.warmup_steps = warmup_steps
         self.warmup_step = None
         self.warmup = True
@@ -79,11 +77,17 @@ class LitModel(pl.LightningModule):
         self.tuplewise_weight = tuplewise_weight
         self.param_weight = param_weight
 
+        self.param_loss_epochs = param_loss_epochs
+        if not self.param_loss_epochs is None:
+            self.restarts = sorted(list(set(self.restarts + [self.param_loss_epochs])))
+
         self.train_dataloader = lambda: tr_loader
         self.val_dataloader = lambda: vl_loader
         self.test_dataloader = lambda: te_loader
 
         self.log_train_interval = log_train_interval
+
+        self.finish_criterion = finish_criterion
 
         self.evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
         self.train_evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
@@ -94,6 +98,8 @@ class LitModel(pl.LightningModule):
 
         self.time_limit = time_limit
 
+        self.elapsed_time = 0 # time from a previous run, if the training is restarted.  it is checked whether time.time() - start_time + elaped_time > time_limit in on_validation_epoch_end
+
 
         # helper variables:
         self.best_early_stopping_loss = float("inf")
@@ -101,6 +107,9 @@ class LitModel(pl.LightningModule):
 
         self.time_start = time.time()
 
+
+        self.val_failed = False
+        self.val_fail_counter = 0
 
 
     def forward(self, x):
@@ -134,10 +143,6 @@ class LitModel(pl.LightningModule):
         Sets the learning rate of the optimizer to self.lr. Resets the learning rate (self.lr) and the optimizer after restarts. To be called once per train epoch.
         """
 
-        if self.current_epoch in self.lrs.keys():
-            self.lr = self.lrs[self.current_epoch]        
-        
-
         if self.current_epoch in self.restarts:
             self.trainer.optimizers[0] = torch.optim.Adam(self.parameters(), lr=self.lr)
             self.warmup_step = 0
@@ -154,7 +159,7 @@ class LitModel(pl.LightningModule):
     def on_train_epoch_end(self) -> None:
         # log the metrics every log_train_interval epochs:
         if self.log_metrics:
-            if self.current_epoch % self.log_train_interval == 0:
+            if self.current_epoch % self.log_train_interval == 0 and self.current_epoch > self.start_qm_epochs:
                 metrics = self.train_evaluator.pool()
                 for dsname in metrics.keys():
                     for key in metrics[dsname].keys():
@@ -173,15 +178,24 @@ class LitModel(pl.LightningModule):
         
 
     def on_train_epoch_start(self) -> None:
+
         # Update epoch-dependent hyperparameters such as lr and loss weights.
 
         self.set_lr()
 
-        if self.current_epoch > self.start_qm_epochs:
+        if self.param_loss_epochs is not None:
+            if self.current_epoch >= self.param_loss_epochs:
+                self.param_weight = 0.
+                self.tuplewise_weight = 0.
+
+
+        if self.current_epoch >= self.start_qm_epochs:
             # reset the loss weights to the values specified in the config:
             self.loss.gradient_weight = float(self.gradient_weight)
             self.loss.energy_weight = float(self.energy_weight)
             self.loss.param_weight = float(self.param_weight)
+            self.loss.tuplewise_weight = float(self.tuplewise_weight)
+
             
         return super().on_train_epoch_start()
 
@@ -207,64 +221,113 @@ class LitModel(pl.LightningModule):
         if self.current_epoch > self.start_qm_epochs:
             self.log('losses/train_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
 
-        if self.current_epoch%self.log_train_interval == 0:
-            if self.log_metrics:
-                with torch.no_grad():
-                    self.train_evaluator.step(g, dsnames)
+            if self.current_epoch%self.log_train_interval == 0:
+                if self.log_metrics:
+                    with torch.no_grad():
+                        self.train_evaluator.step(g, dsnames)
 
         return loss
 
+    def on_validation_epoch_start(self):
+        if not self.val_failed:
+            self.val_fail_counter = 0
+
+        self.val_failed = False
+        return super().on_validation_epoch_start()
+
 
     def validation_step(self, batch, batch_idx):
-        if self.log_metrics:
-            with torch.no_grad():
-                g, dsnames = batch
-                g = self(g)
+        if not self.val_failed:
+            try:
+                # allow errors in validation step
+                if self.log_metrics:
+                    with torch.no_grad():
+                        g, dsnames = batch
+                        g = self(g)
 
-                self.evaluator.step(g, dsnames)
+                        self.evaluator.step(g, dsnames)
 
-                loss = self.loss(g)
-                if self.current_epoch > self.start_qm_epochs:
-                        self.log('losses/val_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
+                        loss = self.loss(g)
+                        if self.current_epoch > self.start_qm_epochs:
+                                self.log('losses/val_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
+            except Exception as e:
+                self.val_failed = True
+                self.evaluator.init_storage()
+                self.val_fail_counter += 1
+                if self.val_fail_counter > 3:
+                    raise ValueError(f"Validation failed 3 times in a row. Stopping validation.") from e
+                # print e with traceback to std err:
+                tb = traceback.format_exc()
+                err_msg = e.__class__.__name__ + ": " + str(e) + "\n" + tb
+                print(err_msg, file=sys.stderr)
 
 
     def on_validation_epoch_end(self):
-        if self.log_metrics:
-            metrics = self.evaluator.pool()
-            for dsname in metrics.keys():
-                for key in metrics[dsname].keys():
-                    if any([n in key for n in ["n2", "n3", "n4"]]):
-                        self.log(f'parameters/{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
+        if not self.val_failed:
+            if self.log_metrics:
+                metrics = self.evaluator.pool()
+                for dsname in metrics.keys():
+                    for key in metrics[dsname].keys():
+                        if any([n in key for n in ["n2", "n3", "n4"]]):
+                            self.log(f'parameters/{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
+                        elif self.current_epoch > self.start_qm_epochs:
+                            self.log(f'{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
+
+                if self.current_epoch > self.start_qm_epochs:
+                    # Calculate early stopping criterion as weighted sum of energy and gradient rmse of the individual datasets:
+                    gradient_avg = metrics["avg"]["rmse_gradients"]
+                    energy_avg = metrics["avg"]["rmse_energies"]
+                    early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
+                    self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
+
+                    # Check whether the training should be stopped according to the finish criterion:
+                    elapsed_time = (time.time() - self.time_start + self.elapsed_time)/3600.
+                    relevant_finish_criterion = {k: v for k, v in self.finish_criterion.items() if k < elapsed_time}
+                    finish_criterion = min(relevant_finish_criterion.values()) if len(relevant_finish_criterion) > 0 else float("inf")
+                    if early_stopping_loss > finish_criterion:
+                        self.trainer.should_stop = True
+                        print(f"\nStopping training because early stopping criterion {early_stopping_loss} is larger than finish criterion {finish_criterion} after {elapsed_time} hours.\n", file=sys.stderr)
+
+
+            if self.patience > 0:
+                assert self.log_metrics, "Early stopping criterion is only implemented if metrics are logged."
+
+                if self.current_epoch > self.start_qm_epochs:
+                    if early_stopping_loss < self.best_early_stopping_loss:
+                        self.best_early_stopping_loss = float(early_stopping_loss)
+                        self.epochs_without_improvement = 0
                     else:
-                        self.log(f'{dsname}/val/{key}', metrics[dsname][key], on_epoch=True)
+                        self.epochs_without_improvement += 1
 
-            # Early stopping criterion:
-            gradient_avg = metrics["avg"]["rmse_gradients"]
-            energy_avg = metrics["avg"]["rmse_energies"]
-            early_stopping_loss = self.early_stopping_energy_weight * energy_avg + gradient_avg
-            self.log('early_stopping_loss', early_stopping_loss, on_epoch=True)
+                    if self.epochs_without_improvement > self.patience:
+                        self.lr *= self.lr_decay
+                        self.epochs_without_improvement = 0
+                        self.best_early_stopping_loss = float(early_stopping_loss)
 
-
-        if self.patience > 0:
-            assert self.log_metrics, "Early stopping criterion is only implemented if metrics are logged."
-
-            if early_stopping_loss < self.best_early_stopping_loss:
-                self.best_early_stopping_loss = float(early_stopping_loss)
-                self.epochs_without_improvement = 0
-            else:
-                self.epochs_without_improvement += 1
-
-            if self.epochs_without_improvement > self.patience:
-                self.lr *= self.lr_decay
-                self.epochs_without_improvement = 0
-                self.best_early_stopping_loss = float(early_stopping_loss)
 
         # stop training if time limit is exceeded:
         if not self.time_limit is None:
-            if time.time() - self.time_start > self.time_limit*3600.:
+            if time.time() - self.time_start + self.elapsed_time > self.time_limit*3600.:
                 self.trainer.should_stop = True
+                print(f"\nStopping training because time limit {self.time_limit} hours is exceeded.\n", file=sys.stderr)
+
+        
+
+        # manually clear the cache:
+        # torch.cuda.empty_cache()
+                
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lrs[0], weight_decay=self.weight_decay)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         return optimizer
+    
+    def on_save_checkpoint(self, checkpoint):
+        # Add elapsed time to the checkpoint
+        checkpoint['elapsed_time'] = self.elapsed_time + time.time() - self.time_start
+
+    
+    def on_load_checkpoint(self, checkpoint):
+        # Load elapsed time from checkpoint. it is checked whether time.time() - start_time + elaped_time > time_limit in on_validation_epoch_end
+        self.elapsed_time = checkpoint.get('elapsed_time', 0)
+        self.start_time = time.time()
