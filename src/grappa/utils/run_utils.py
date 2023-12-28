@@ -18,6 +18,9 @@ def load_yaml(path:Union[str,Path])->Dict:
     return d
 
 def write_yaml(d:dict, path:Union[str,Path])->None:
+    """
+    Stores a dictionary as a yaml file. All pathlib.Path are converted to strings.
+    """
     # recursively redefine all paths to strings:
     d = d.copy()
     def path_to_str(d):

@@ -1,6 +1,7 @@
 import torch
 import dgl
 from typing import Tuple, List, Dict, Union
+import copy
 
 from grappa.constants import BONDED_CONTRIBUTIONS
 
@@ -33,7 +34,7 @@ def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
 
 def get_energies(g, suffix="", center=True):
     """
-    Get the energies of a graph in shape (n_batch, n_conf) assuming that they are stored at g.nodes[lvl].data[energy+suffix] with subtracted mean along conformations for each batch.
+    Get the energies of a non-batched graph in shape (n_conf) assuming that they are stored at g.nodes['g'].data[energy+suffix] with subtracted mean along conformations for each batch.
 
     Parameters
     ----------
@@ -48,17 +49,24 @@ def get_energies(g, suffix="", center=True):
         Dictionary of energies.
     """
     # subtract mean along conformations for each batch and each tuple:
+    if not g.nodes['g'].data[f'energy{suffix}'].shape[0] == 1:
+        raise RuntimeError(f"Expecting shape (1, n_confs). energies may not be batched! encountered shape {en.shape}")
+
     en = g.nodes['g'].data[f'energy{suffix}']
+
+    if torch.isnan(en).any():
+        raise RuntimeError(f"energies are nan: {en.shape}, {en}")
+    
     if center:
         en = en - en.mean(dim=1, keepdim=True)
-    
-    return en
+
+    return en[0]
 
 
 
 def get_gradients(g, suffix=""):
     """
-    Get the gradients of a graph in shape (n_atoms_batch, n_confs, 3) assuming that they are stored at g.nodes[lvl].data[gradient+suffix]
+    Get the gradients of a graph in shape (n_atoms, n_confs, 3) assuming that they are stored at g.nodes[lvl].data[gradient+suffix]. The graph sghould not be batched if it contains nans.
 
     Parameters
     ----------
@@ -69,97 +77,14 @@ def get_gradients(g, suffix=""):
 
     Returns
     -------
-    tensor of shape (n_atoms_batch, n_confs, 3)
+    tensor of shape (n_atoms, n_confs, 3)
     """
+    grads = g.nodes['n1'].data[f'gradient{suffix}']
 
-    return g.nodes['n1'].data[f'gradient{suffix}']
+    if torch.isnan(grads).any():
+        raise RuntimeError(f"gradients are nan: {grads.shape}, {grads}")
+    return grads
 
-
-def get_gradient_se(g, suffix1="", suffix2="_ref", l=2):
-    """
-    Get a tensor of errors. For the spatial dimension, the 2-norm is used, for the atom dimension the l-norm. It is summed over the atoms of the subgraphs that were used for batching. The shape thus is (n_batch).
-
-    implements:
-    \sum_{i=1}^{n_batch} \sum_{j=1}^{n_atoms_batch_i} | \sum_{d=1}^3 (f_{ijd}^{(1)} - f_{ijd}^{(2)})^2 |^l
-
-    Parameters
-    ----------
-    g : dgl.DGLGraph
-        The graph.
-    suffix1 : str, optional
-        Suffix of the gradient name, by default ""
-    suffix2 : str, optional
-    l : int, optional
-        The l-norm to use, by default 2
-
-    Returns
-    -------
-    force_se : tensor of shape (n_batch)
-    num_forces : tensor of shape (n_batch)
-    """
-
-    num_confs = int(g.nodes['n1'].data[f'gradient{suffix2}'].shape[1])
-    num_atoms = g.batch_num_nodes('n1') # list of number of atoms in each batch
-    num_forces = num_atoms * num_confs
-
-    diffs = g.nodes['n1'].data[f'gradient{suffix1}'] - g.nodes['n1'].data[f'gradient{suffix2}']
-
-    # the squared diffs (sum over spatial dimension):
-    diffs = torch.sum(torch.square(diffs), dim=-1)
-
-    # take the root (spatial 2-norm) and then ^l before summing over the atoms, thus we have ||f1 - f2||_2^l
-    if l != 2:
-        diffs = torch.pow(diffs, l/2)
-    
-    g.nodes['n1'].data[f'gradient_se{suffix1}{suffix2}'] = diffs
-
-    # implicitly unbatch the graph, then pool along the atom dimension
-    force_se = dgl.readout_nodes(g, op='sum', ntype='n1', feat=f'gradient_se{suffix1}{suffix2}')
-
-    # now also pool the conformation dimension
-    force_se = torch.sum(force_se, dim=-1)
-
-    return force_se.double(), num_forces.long()
-
-
-def get_energy_se(g, suffix1="", suffix2="_ref", l=2):
-    """
-    Get a tensor of squared errors, summed over the atoms of the subgraphs that were used for batching. The shape thus is (n_batch).
-
-    Parameters
-    ----------
-    g : dgl.DGLGraph
-        The graph.
-    suffix1 : str, optional
-        Suffix of the gradient name, by default ""
-    suffix2 : str, optional
-    l : int, optional
-        The l-norm to use, by default 2
-
-    Returns
-    -------
-    energy_se : tensor of shape (n_batch)
-    num_confs : tensor of shape (n_batch)
-    """
-
-    energies = get_energies(g, suffix=suffix1, center=True)
-    energies_ref = get_energies(g, suffix=suffix2, center=True)
-
-    assert energies.shape == energies_ref.shape
-    assert not torch.isnan(energies).any(), f"energies: {energies}"
-    assert not torch.isnan(energies_ref).any(), f"energies_ref: {energies_ref}"
-
-    
-    # sum over the conf dimension
-    if l == 2:
-        energy_se = torch.sum(torch.square(energies - energies_ref), dim=-1)
-    else:
-        energy_se = torch.sum(torch.pow(torch.abs(energies - energies_ref), l), dim=-1)
-
-    # num confs is the same for all batches:
-    num_confs = torch.full_like(energy_se, fill_value=energies.shape[-1])
-                                
-    return energy_se.double(), num_confs.long()
 
 
 def get_parameter_se(g, suffix1="", suffix2="_ref", l=2):
@@ -265,6 +190,7 @@ def get_tuplewise_energies(g, suffix="", center=False):
     energies = {}
     for lvl in ["n2", "n3", "n4", "n4_improper"]:
         energies[lvl] = g.nodes[lvl].data[f'energy{suffix}']
+
         if center:
             # subtract mean along conformations for each batch and each tuple:
             energies[lvl] = energies[lvl] - energies[lvl].mean(dim=1, keepdim=True)
