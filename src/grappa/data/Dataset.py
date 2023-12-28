@@ -200,6 +200,26 @@ class Dataset(torch.utils.data.Dataset):
             print(f"Removed features:\n  {removed}")
     
 
+    def clean(self, keep_feats:List[str]=None):
+        """
+        Assumes that all graphs have the same node features, i.e. that Dataset.remove_uncommon_features() has been called before.
+        Remove all n1 feats with name that is not in keep_feats. This is for speeding up transfer of data to gpu.
+        """
+        if keep_feats is None:
+            return
+        remove = []
+        graph = self.graphs[0]
+        for feature in graph.nodes['n1'].data.keys():
+            if not feature in keep_feats + ['xyz', 'atomic_number', 'partial_charge', 'ring_encoding']:
+                remove.append(feature)
+
+        for graph in self.graphs:
+            for feature in remove:
+                del graph.nodes['n1'].data[feature]
+
+        
+
+
     def calc_split_ids(self, partition:Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], seed:int=0):
         """
         Returns a dictionary containing the molecule ids for train, validation and test sets. The ids are sampled such that all (also smaller) datasets have a share approximate to the given partition.

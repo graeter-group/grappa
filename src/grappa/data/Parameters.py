@@ -429,7 +429,7 @@ class Parameters():
         return cls(**array_dict)
     
 
-    def write_to_dgl(self, g:DGLGraph, n_periodicity_proper=constants.N_PERIODICITY_PROPER, n_periodicity_improper=constants.N_PERIODICITY_IMPROPER, suffix:str='_ref')->DGLGraph:
+    def write_to_dgl(self, g:DGLGraph, n_periodicity_proper=constants.N_PERIODICITY_PROPER, n_periodicity_improper=constants.N_PERIODICITY_IMPROPER, suffix:str='_ref', allow_nan=True)->DGLGraph:
         """
         Write the parameters to a dgl graph.
         For torsion, we assume (and assert) that phases are only 0 or pi.
@@ -441,13 +441,18 @@ class Parameters():
         g.nodes['n3'].data[f'k{suffix}'] = torch.tensor(self.angle_k, dtype=torch.float32)
         g.nodes['n3'].data[f'eq{suffix}'] = torch.tensor(self.angle_eq, dtype=torch.float32)
 
-        assert np.all(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.proper_phases)), f"The proper torsion phases must be either 0 or pi or 2pi but found the following values: {self.proper_phases[np.logical_not(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.proper_phases))]}"
-
         assert np.all((self.proper_ks >= 0) + np.isnan(self.proper_ks)), f"The proper torsion force constants must be positive but found the following values: {self.proper_ks[np.logical_not((self.proper_ks >= 0) + np.isnan(self.proper_ks))]}"
 
-        proper_ks = np.where(
-            np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
-            self.proper_ks, -self.proper_ks)
+        if not np.all(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.proper_phases)):
+            if not allow_nan:
+                raise ValueError(f"The proper torsion phases must be either 0 or pi or 2pi but found the following values: {self.proper_phases[np.logical_not(np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, np.pi, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.proper_phases))]}")
+            else:
+                proper_ks = np.zeros_like(self.proper_ks) * np.nan
+
+        else:
+            proper_ks = np.where(
+                np.isclose(self.proper_phases, 0, atol=1e-2) + np.isclose(self.proper_phases, 2*np.pi, atol=1e-2),
+                self.proper_ks, -self.proper_ks)
         
 
         def correct_shape(x, shape1):
@@ -466,14 +471,19 @@ class Parameters():
         
         g.nodes['n4'].data['k_ref'] = correct_shape(torch.tensor(proper_ks, dtype=torch.float32), n_periodicity_proper)
 
-        assert np.all(np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, np.pi, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.improper_phases)), "The improper torsion phases must be either 0 or pi or 2pi"
-
         assert np.all((self.improper_ks >= 0) + np.isnan(self.improper_ks)), f"The improper torsion force constants must be positive."
+        if not np.all(np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, np.pi, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.improper_phases)):
+            if not allow_nan:
+                raise ValueError("The improper torsion phases must be either 0 or pi or 2pi")
+            else:
+                improper_ks = np.zeros_like(self.improper_ks)
+        else:
+            improper_ks = np.where(
+                np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
+                self.improper_ks, -self.improper_ks)
+            
 
-        improper_ks = np.where(
-            np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
-            self.improper_ks, -self.improper_ks)
-        
+
         g.nodes['n4_improper'].data['k_ref'] = correct_shape(torch.tensor(improper_ks, dtype=torch.float32), n_periodicity_improper)
 
         return g
