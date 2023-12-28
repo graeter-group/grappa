@@ -40,11 +40,17 @@ class SymmetrisedTransformer(nn.Module):
     def __init__(self, n_feats, n_heads, hidden_feats, n_layers, out_feats, permutations:Union[np.ndarray, torch.Tensor], layer_norm=True, dropout=0.0, symmetriser_layers=1, symmetriser_hidden_feats=None, permutation_prefactors=None, positional_encoding:Union[np.ndarray, torch.Tensor, bool]=None):
         super().__init__()
 
-        self.grappa_transformer = GrappaTransformer(n_feats=n_feats, n_heads=n_heads, hidden_feats=hidden_feats, n_layers=n_layers, out_feats=n_feats, permutations=permutations, layer_norm=layer_norm, dropout=dropout, positional_encoding=positional_encoding)
+        if n_layers > 0:
+            self.grappa_transformer = GrappaTransformer(n_feats=n_feats, n_heads=n_heads, hidden_feats=hidden_feats, n_layers=n_layers, out_feats=n_feats, permutations=permutations, layer_norm=layer_norm, dropout=dropout, positional_encoding=positional_encoding)
+
+            # the transformer 
+            trafo_out_feats = n_feats + self.grappa_transformer.positional_encoding.shape[1] if not self.grappa_transformer.positional_encoding is None else n_feats
+
+        else:
+            self.grappa_transformer = None
+            trafo_out_feats = n_feats
 
         assert symmetriser_layers >= 1, "symmetriser_layers must be >= 1"
-
-        trafo_out_feats = n_feats + self.grappa_transformer.positional_encoding.shape[1] if not self.grappa_transformer.positional_encoding is None else n_feats
 
         self.symmetriser = Symmetriser(in_feats=trafo_out_feats, out_feats=out_feats, permutations=permutations, permutation_prefactors=permutation_prefactors, hidden_feats=symmetriser_hidden_feats, n_layers=symmetriser_layers, layer_norm=layer_norm)
 
@@ -55,7 +61,8 @@ class SymmetrisedTransformer(nn.Module):
         The input is a tensor of shape (n_seq, n_batch, n_feats). This is fed to a permutation equivariant GrappaTransformer and then to a permutation invariant Symmetriser.
         """
 
-        x = self.grappa_transformer(x)
+        if not self.grappa_transformer is None:
+            x = self.grappa_transformer(x)
         
         # send x through the symmetriser:
         x = self.symmetriser(x)
@@ -73,7 +80,7 @@ class GrappaTransformer(nn.Module):
     ----------
     Parameters:
     ----------
-        n_feats (int): Number of features in the input, which must have shape (n_seq, n_batch, n_feats).
+        n_feats (int): Number of features in the input, which must have shape (n_seq, n_batch, n_feats). The number of input features for the attention layers is the sum of n_feats and the features of the positional encoding. Thus, n_feats must be chosen such that this sum is a multiple of the number of heads
         n_heads (int): Number of attention heads in the transformer.
         hidden_feats (int): Number of hidden features in the transformer.
         n_layers (int): Number of layers in the transformer.
@@ -106,6 +113,9 @@ class GrappaTransformer(nn.Module):
 
         if not self.positional_encoding is None:
             self.n_feats = n_feats + self.positional_encoding.shape[1]
+
+        if not (self.n_feats / n_heads).is_integer():
+            raise ValueError(f'The number of input features cannot be divided by the number of heads: Number of input features: {self.n_feats} = {n_feats} + {self.positional_encoding.shape[1]} (from positional encoding). Number of heads: {n_heads}')
 
         # the transformer is a sequence of n_layers with attentional and mlp layers
         self.transformer = nn.Sequential(*[

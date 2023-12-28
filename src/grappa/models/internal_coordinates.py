@@ -33,7 +33,7 @@ def internal_coordinates(g):
     """
 
     #==========================================================================
-    if not "x" in g.nodes["n2"].data.keys():
+    if not "x" in g.nodes["n2"].data.keys() or True:
         # bonds:
         pairs = g.nodes["n2"].data["idxs"]
         # this has shape num_pairs, 2
@@ -51,7 +51,7 @@ def internal_coordinates(g):
 
     #==========================================================================
     if "n3" in g.ntypes:
-        if not "x" in g.nodes["n3"].data.keys():
+        if not "x" in g.nodes["n3"].data.keys() or True:
 
             # compute bond angle
             pairs = g.nodes["n3"].data["idxs"]

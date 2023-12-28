@@ -31,7 +31,7 @@ class GrappaModel(torch.nn.Module):
 
         {bond, angle, proper, improper}_transformer_depth (int, optional): Depth of the transformer for each parameter writer.
         {bond, angle, proper, improper}_n_heads (int, optional): Number of attention heads for each parameter writer.
-        {bond, angle, proper, improper}_transformer_width (int, optional): Hidden feature dimension of the transformer for each parameter writer.
+        {bond, angle, proper, improper}_transformer_width (int, optional): Hidden feature dimension of the feed forward layers of the transformer for each parameter writer.
         {bond, angle, proper, improper}_symmetriser_depth (int, optional): Number of layers in the symmetriser for each parameter writer.
         {bond, angle, proper, improper}_symmetriser_width (int, optional): Feature dimension of the symmetriser for each parameter writer.
         n_periodicity_proper (int, optional): Number of periodicity terms for proper torsions. Defaults to 6.
@@ -69,9 +69,9 @@ class GrappaModel(torch.nn.Module):
         # Initialize WriteParameter
         self.parameter_writer = WriteParameters(
             graph_node_features=graph_node_features,
-            parameter_dropout=parameter_dropout,  # Assuming no dropout for parameter writer
-            layer_norm=layer_norm,      # Assuming layer normalization for parameter writer
-            positional_encoding=positional_encoding,  # Assuming positional encoding for parameter writer
+            parameter_dropout=parameter_dropout,
+            layer_norm=layer_norm,
+            positional_encoding=positional_encoding,
             bond_transformer_depth=bond_transformer_depth, 
             bond_n_heads=bond_n_heads, 
             bond_transformer_width=bond_transformer_width, 
