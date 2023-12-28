@@ -3,6 +3,7 @@ from pathlib import Path
 from grappa.models.deploy import model_from_config
 import torch
 from grappa.models.energy import Energy
+import json
 
 
 def get_grappa_model(checkpoint_path):
@@ -14,6 +15,8 @@ def get_grappa_model(checkpoint_path):
 
     config = load_yaml(config)
 
+    with open(Path(checkpoint_path).parent.parent.parent/'files'/'split.json', 'r') as f:
+        split_names = json.load(f)
 
     def remove_module_prefix(state_dict):
         """ Remove the 'model.' prefix in the beginning of the keys from the state dict keys """
@@ -30,24 +33,29 @@ def get_grappa_model(checkpoint_path):
     full_model = torch.nn.Sequential(
         model,
         Energy(suffix=''),
-        Energy(suffix='_ref', write_suffix="_classical_ff")
+        # Energy(suffix='_ref', write_suffix="_classical_ff")
     )
 
     state_dict = remove_module_prefix(state_dict)
     full_model.load_state_dict(state_dict)
     model = next(iter(full_model.children()))
 
-    return model, config
+    return model, config, split_names
+
 
 def store_model_dict(checkpoint_path, modelname, modelpath=Path(__file__).parent.parent.parent.parent/'models'):
+    """
+    Stores a dictionary {state_dict: state_dict, config: config, split_names: split_names} at modelpath/modelname.pth
+    The config entails a configuration of the training run that produced the checkpoint, the split names a list of identifiers for the train, validation and test molecules.
+    """
     modelpath = Path(modelpath)
-    model, config = get_grappa_model(checkpoint_path)
+    model, config, split_names = get_grappa_model(checkpoint_path)
     model = model.eval()
     model = model.cpu()
 
     state_dict = model.state_dict()
 
-    model_dict = {'state_dict': state_dict, 'config': config}
+    model_dict = {'state_dict': state_dict, 'config': config, 'split_names': split_names}
 
     if not modelpath.exists():
         modelpath.mkdir()

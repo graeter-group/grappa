@@ -56,6 +56,7 @@ tmp/
 *.npz
 *.png
 *.out
+*.err
 *.json
 
 
@@ -64,6 +65,7 @@ tmp/
 
 models/
 wandb/
+old_wandb/
 checkpoints/
 lightning_logs/
 

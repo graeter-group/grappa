@@ -1,0 +1,95 @@
+program: hpo_run.py
+
+method: bayes
+
+metric:
+  name: early_stopping_loss
+  goal: minimize
+
+parameters:
+
+  lr:
+    distribution: uniform
+    min: -6.
+    max: -3.
+
+  batch_size:
+    values:
+      - 8
+      - 16
+      - 32
+
+  atom_typing_features:
+    distribution: int_uniform
+    min: 6
+    max: 9
+
+  gnn_width:
+    distribution: int_uniform
+    min: 6
+    max: 9
+
+  attentional_layers:
+    distribution: int_uniform
+    min: 1
+    max: 5
+
+  convolutions:
+    values:
+      - 1
+      - 2
+
+  gnn_attention_heads:
+    values:
+      - 8
+      - 16
+
+  parameter_width:
+    distribution: int_uniform
+    min: 6
+    max: 8
+
+  parameter_trafo_factor:
+    values:
+      - 1
+      - 2
+
+  symmetriser_depth:
+    distribution: int_uniform
+    min: 1
+    max: 3
+
+  transformer_depth:
+    distribution: int_uniform
+    min: 1
+    max: 3
+
+  interaction_heads:
+    values:
+      - 8
+      - 16
+
+  gnn_dropout:
+    distribution: uniform
+    min: 0.
+    max: 0.2
+  
+  param_dropout:
+    distribution: uniform
+    min: 0.2
+    max: 0.6
+
+  gradient_weight:
+    distribution: uniform
+    min: -1.5
+    max: 0.5
+
+  weight_decay:
+    values:
+      - 0
+      - 1e-4
+
+  balance_factor:
+    distribution: uniform
+    min: 0.
+    max: 1.

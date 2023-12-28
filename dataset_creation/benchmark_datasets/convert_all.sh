@@ -10,9 +10,9 @@ target_path="$SCRIPT_DIR/../../data/datasets"
 # List of dataset names
 datasets=("rna-nucleoside" "gen2" "spice-des-monomers" "spice-dipeptide" "rna-diverse" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem")
 
-# # Loop through each dataset name
-# for ds in "${datasets[@]}"; do
-#   python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds"
-# done
+# Loop through each dataset name
+for ds in "${datasets[@]}"; do
+  python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds"
+done
 
 python add_duplicates.py --duplpath "$espaloma_ds_path/duplicated-isomeric-smiles-merge" --targetpath "$target_path"
