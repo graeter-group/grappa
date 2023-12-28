@@ -133,7 +133,7 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:str=
 
     # Get the dataloaders
     train_loader = GraphDataLoader(tr, batch_size=train_batch_size, shuffle=True, num_workers=train_loader_workers, pin_memory=pin_memory, conf_strategy=conf_strategy, weights=weights, balance_factor=balance_factor)
-    val_loader = GraphDataLoader(vl, batch_size=val_batch_size, shuffle=False, num_workers=val_loader_workers, pin_memory=pin_memory, conf_strategy='all')
-    test_loader = GraphDataLoader(te, batch_size=test_batch_size, shuffle=False, num_workers=test_loader_workers, pin_memory=pin_memory, conf_strategy='all')
+    val_loader = GraphDataLoader(vl, batch_size=val_batch_size, shuffle=False, num_workers=val_loader_workers, pin_memory=pin_memory, conf_strategy='max')
+    test_loader = GraphDataLoader(te, batch_size=test_batch_size, shuffle=False, num_workers=test_loader_workers, pin_memory=pin_memory, conf_strategy='max')
 
     return train_loader, val_loader, test_loader

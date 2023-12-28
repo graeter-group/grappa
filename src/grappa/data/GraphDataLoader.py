@@ -53,11 +53,11 @@ def get_collate_fn(conf_strategy:Union[str,int]='min', deep_copies_of_same_graph
             n_confs = min(conf_strategy, max([g.nodes['n1'].data['xyz'].shape[1] for g in graphs]))
         elif conf_strategy == 'min':
             n_confs = min([g.nodes['n1'].data['xyz'].shape[1] for g in graphs])
-        elif conf_strategy == 'max':
+        elif conf_strategy == 'max' or conf_strategy == 'all':
             n_confs = max([g.nodes['n1'].data['xyz'].shape[1] for g in graphs])
-        elif conf_strategy == 'all':
-            n_confs = graphs[0].nodes['n1'].data['xyz'].shape[1]
-            assert all([n_confs == graphs[0].nodes['n1'].data['xyz'].shape[1] for g in graphs]), "All graphs must have the same number of conformations if conf_strategy='all'"
+        # elif conf_strategy == 'all':
+        #     n_confs = graphs[0].nodes['n1'].data['xyz'].shape[1]
+        #     assert all([n_confs == g.nodes['n1'].data['xyz'].shape[1] for g in graphs]), "All graphs must have the same number of conformations if conf_strategy='all'"
         elif conf_strategy == 'mean':
             n_confs = int(np.mean([g.nodes['n1'].data['xyz'].shape[1] for g in graphs]))
         else:
@@ -83,7 +83,7 @@ class GraphDataLoader(DataLoader):
             dataset: A Dataset object.
             shuffle: Whether to shuffle the data in each epoch.
             weights: Dictionary mapping subdataset names to weights. If a subdataset name is not in the dictionary, it is assigned a weight of 1.0. If a subdataset has e.g. weight factor 2, it is sampled 2 times more often per epoch than it would be with factor 1. The total number of molecules sampled per epoch is unaffected, i.e. some molecules will not be sampled at all if the weight of other datasets is > 1.
-            conf_strategy: Strategy for batching conformations, where conformations can be randomly chosen to be copied or deleted. If int, then all graphs will have at most this number of conformations. Available: 'min', 'max', 'mean'.
+            conf_strategy: Strategy for batching conformations, where conformations can be randomly chosen to be copied or deleted. If int, then all graphs will have at most this number of conformations. Available: 'min', 'max', 'mean', 'all' (which is the same as max)
             balance_factor: Parameter between 0 and 1 that balances sampling of the datasets: 0 means that the molecules are sampled uniformly across all datasets, 1 means that the probabilities are re-weighted such that the sampled number of molecules per epoch is the same for all datasets. The weights assigned in 'weights' are multiplied by the weight factor obtained from balancing.
             
             *args, **kwargs: Arguments passed to the torch DataLoader.

@@ -1,42 +1,26 @@
 #%%
-from grappa.data import Dataset
+from grappa.data import Dataset, GraphDataLoader
+from grappa.training.evaluation import ExplicitEvaluator
+import json
 
 #%%
-DSNAME = 'spice-dipeptide'
-# Download a dataset if not present already:
-dataset = Dataset.from_tag(DSNAME)
+ds = Dataset.from_tag('spice-des-monomers')
 
-dataset = dataset.slice(0, 2)
+#%%
+metric_dicts = []
+for batchsize in [1,128]:
+    loader = GraphDataLoader(ds, batch_size=batchsize, shuffle=True, conf_strategy='all')
 
-# For more efficient data loading, we use a GraphDataLoader
-from grappa.data import GraphDataLoader
-from grappa.utils.dgl_utils import unbatch
+    evaluator = ExplicitEvaluator(suffix='_gaff-2.11', suffix_ref='_qm')
+    
+    for batch, dsnames in loader:
+        evaluator.step(batch, dsnames)
 
-loader = GraphDataLoader(dataset, batch_size=2, shuffle=False, num_workers=1, conf_strategy='all')
+    d = evaluator.pool()
 
-from grappa.models.energy import Energy
-from grappa.models.grappa import GrappaModel
-import torch
+    print(json.dumps(d, indent=2))
 
-model = torch.nn.Sequential(GrappaModel(), Energy())
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
-# %%
-for g, dsname in loader:
-    loss = 0
-    optimizer.zero_grad()
-    g = model(g)
-    # print(g.nodes['g'].data['energy_ref'])
-    graphs = unbatch(g)
-    for graph in graphs:
-        energy_ref = graph.nodes['g'].data['energy_ref']
-        energy = graph.nodes['g'].data['energy']
-
-        loss += torch.nn.MSELoss()(energy, energy_ref)
-
-        print(graph.nodes['g'].data['energy_ref'])
-        print(graph.nodes['g'].data['energy'])
+    metric_dicts.append(d)
 
 
-    loss.backward()
-    optimizer.step()
 # %%

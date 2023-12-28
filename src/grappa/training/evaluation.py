@@ -1,8 +1,10 @@
 from grappa.utils.torch_utils import mean_absolute_error, root_mean_squared_error, invariant_mae, invariant_rmse
 import numpy as np
-from grappa import utils
+from grappa.utils.graph_utils import get_energies, get_gradients, get_parameters
+from grappa.utils import dgl_utils
 from typing import List
 import torch
+
 
 
 
@@ -50,11 +52,11 @@ class Evaluator:
         # calculate the squared error and number of energies and gradients for each dataset
         ############################
 
-        graphs = utils.dgl_utils.unbatch(g)
+        graphs = dgl_utils.unbatch(g)
         for graph, dsname in zip(graphs, dsnames):
             
-            energies_ref = utils.graph_utils.get_energies(graph, suffix='_ref').detach()
-            energies = utils.graph_utils.get_energies(graph, suffix='').detach()
+            energies_ref = get_energies(graph, suffix='_ref').detach()
+            energies = get_energies(graph, suffix='').detach()
             assert len(energies.shape) == 1, f"energies must be a tensor of shape (n_confs) but is {energies.shape}"
             assert energies.shape[0] > 0, f"energies must be a tensor of shape (n_confs) but found n_conf = {energies.shape[0]}"
             assert energies.shape == energies_ref.shape, f"energies and energies_ref must have the same shape but are {energies.shape} and {energies_ref.shape}"
@@ -62,8 +64,8 @@ class Evaluator:
             num_energies = energies.shape[0]
 
             if self.gradients:
-                gradients = utils.graph_utils.get_gradients(graph, suffix='').detach()
-                gradients_ref = utils.graph_utils.get_gradients(graph, suffix='_ref').detach()
+                gradients = get_gradients(graph, suffix='').detach()
+                gradients_ref = get_gradients(graph, suffix='_ref').detach()
                 assert len(gradients.shape) == 3, f"gradients must be a tensor of shape (n_atoms,n_confs, 3) but is {gradients.shape}"
                 assert gradients.shape[1] > 0, f"gradients must be a tensor of shape (n_atoms,n_confs, 3) but found n_conf = {gradients.shape[1]}"
                 assert gradients.shape == gradients_ref.shape, f"gradients and gradients_ref must have the same shape but are {gradients.shape} and {gradients_ref.shape}"
@@ -72,11 +74,11 @@ class Evaluator:
 
 
             if self.log_classical_values:
-                classical_energies = utils.graph_utils.get_energies(graph, suffix='_classical_ff').detach()
+                classical_energies = get_energies(graph, suffix='_classical_ff').detach()
                 classical_energy_se = torch.sum(torch.square(classical_energies - energies))
 
                 if self.gradients:
-                    classical_gradients = utils.graph_utils.get_gradients(graph, suffix='_classical_ff').detach()
+                    classical_gradients = get_gradients(graph, suffix='_classical_ff').detach()
                     classical_gradient_se = torch.sum(torch.square(classical_gradients - gradients))     
 
 
@@ -196,36 +198,36 @@ class ExplicitEvaluator:
 
     def step(self, g, dsnames):
         # unbatch the graphs
-        graphs = utils.dgl_utils.unbatch(g)
+        graphs = dgl_utils.unbatch(g)
 
         if not len(graphs) == len(dsnames):
             raise ValueError(f"Number of graphs and dsnames must be equal but are {len(graphs)} and {len(dsnames)}")
 
         # get the energies and gradients
         for g, dsname in zip(graphs, dsnames):
-            energies = utils.graph_utils.get_energies(g, suffix=self.suffix).detach().flatten().to(self.device)
-            energies_ref = utils.graph_utils.get_energies(g, suffix=self.suffix_ref).detach().flatten().to(self.device)
+            energies = get_energies(g, suffix=self.suffix).detach().flatten().to(self.device)
+            energies_ref = get_energies(g, suffix=self.suffix_ref).detach().flatten().to(self.device)
             if self.log_classical_values:
-                energies_classical = utils.graph_utils.get_energies(g, suffix=self.suffix_classical).flatten().to(self.device)
+                energies_classical = get_energies(g, suffix=self.suffix_classical).flatten().to(self.device)
 
                 if self.ref_suffix_classical is not None:
-                    energies_ref_classical = utils.graph_utils.get_energies(g, suffix=self.ref_suffix_classical).flatten().to(self.device)
+                    energies_ref_classical = get_energies(g, suffix=self.ref_suffix_classical).flatten().to(self.device)
 
             # get the gradients in shape (n_atoms*n_confs, 3)
-            gradients = utils.graph_utils.get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
-            gradients_ref = utils.graph_utils.get_gradients(g, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+            gradients = get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+            gradients_ref = get_gradients(g, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
             if self.log_classical_values:
-                gradients_classical = utils.graph_utils.get_gradients(g, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                gradients_classical = get_gradients(g, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
                 if self.ref_suffix_classical is not None:
-                    gradients_ref_classical = utils.graph_utils.get_gradients(g, suffix=self.ref_suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                    gradients_ref_classical = get_gradients(g, suffix=self.ref_suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             if self.log_parameters:
-                parameters = utils.graph_utils.get_parameters(g, exclude=[('n4_improper', 'k')], suffix=self.suffix)
+                parameters = get_parameters(g, exclude=[('n4_improper', 'k')], suffix=self.suffix)
                 for p in parameters.values():
                     p = p.detach().flatten().to(self.device)
 
-                ref_parameters = utils.graph_utils.get_parameters(g, suffix=self.suffix_ref, exclude=[('n4_improper', 'k')])
+                ref_parameters = get_parameters(g, suffix=self.suffix_ref, exclude=[('n4_improper', 'k')])
                 for p in ref_parameters.values():
                     p = p.detach().flatten().to(self.device)
 
@@ -253,6 +255,8 @@ class ExplicitEvaluator:
 
     def collect(self):
         for dsname in self.energies.keys():
+
+            self.n_mols = len(self.energies[dsname])
 
             # concatenate the tensors
             self.energies[dsname] = torch.cat(self.energies[dsname], dim=0)
@@ -284,6 +288,8 @@ class ExplicitEvaluator:
             metrics[dsname] = {}
 
             metrics[dsname]['n_confs'] = self.energies[dsname].shape[0]
+
+            metrics[dsname]['n_mols'] = self.n_mols
 
             metrics[dsname]['std_energies'] = float(self.energies[dsname].std().item())
             metrics[dsname]['std_gradients'] = float(self.gradients[dsname].std().item() * np.sqrt(3))
