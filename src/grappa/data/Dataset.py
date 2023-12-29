@@ -165,7 +165,7 @@ class Dataset(torch.utils.data.Dataset):
         Parameters
         ----------
         create_feats : Dict[str, torch.Tensor], optional
-            Dictionary of features that should be created for all graphs if not already present in the graph. The key is the name of the feature and the value is the default value per node for the feature. For example, if some graphs have the is_radical feature as onedimensional onehot encoding, create_feats={'is_radical':torch.tensor((0))} will make all molecules without this feature have torch.zeros((n_atoms, 1)) as is_radical feature.
+            Dictionary of features that should be created for all graphs if not already present in the graph. The key is the name of the feature and the value is the default value per node for the feature. For example, if some graphs have the is_radical feature as onedimensional onehot encoding, create_feats={'is_radical':0} will make all molecules without this feature have torch.zeros((n_atoms, 1)) as is_radical feature.
         """
         for v in create_feats.values():
             if isinstance(v, torch.Tensor):  
@@ -177,7 +177,7 @@ class Dataset(torch.utils.data.Dataset):
                     if isinstance(v, torch.Tensor):
                         graph.nodes['n1'].data[k] = torch.repeat_interleave(v, graph.num_nodes('n1'), dim=0)
                     else:
-                        graph.nodes['n1'].data[k] = torch.ones((graph.num_nodes('n1')))*v
+                        graph.nodes['n1'].data[k] = torch.ones(graph.num_nodes('n1'))*v
             return graph
         
         # add feats to first graph so that they are included in keep

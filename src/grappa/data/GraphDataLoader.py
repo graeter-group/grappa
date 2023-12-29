@@ -102,7 +102,6 @@ class GraphDataLoader(DataLoader):
                 all_names = [dsname for _, dsname in dataset]
                 occurence_ratios = {name: all_names.count(name)/len(all_names) for name in set(all_names)}
 
-
             sample_weights = [1. if subdataset_name not in weights.keys() else weights[subdataset_name] for _, subdataset_name in dataset]
 
 
@@ -116,7 +115,8 @@ class GraphDataLoader(DataLoader):
 
                 sample_weights = np.array(sample_weights)*balancing_weights
 
-                percentage_dict = {name: occurence_ratios[name]/ratio_used[name] for name in occurence_ratios.keys()}
+                # just for printing:
+                percentage_dict = {name: occurence_ratios[name]/ratio_used[name]*(1. if name not in weights.keys() else weights[name]) for name in occurence_ratios.keys()}
                 normalization = sum(list(percentage_dict.values()))
                 percentage_dict = {name: percentage_dict[name]/normalization*100. for name in percentage_dict.keys()}
 

@@ -52,6 +52,15 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
         def __init__(self, config, **kwargs):
             super().__init__(**kwargs)
             self.config = config
+            self.make_initial_checkpoint = not resume_id is None
+
+
+        def on_train_start(self, trainer, pl_module):
+            # Save a checkpoint before the first epoch begins
+            if self.make_initial_checkpoint:
+                self.make_initial_checkpoint = False
+                self.on_epoch_end(trainer, pl_module)
+
 
         def on_epoch_end(self, trainer, pl_module):
             # Save the first part of the sequential model's state_dict
