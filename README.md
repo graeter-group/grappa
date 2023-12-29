@@ -4,11 +4,26 @@ Collection of models and utilities for protein force fields with parameters lear
 
 
 ## Installation
+
+Unfortunately, openmm is not available on pip and has to be install via conda. It is recommended to use the openmm=7.7.0=py39hb10b54c_0 version.
+
+DGL has to be installed separately since index files are needed ([dgl installation](https://www.dgl.ai/pages/start.html)). Modify the cu117 in the index file below to your needs as explained in the dgl installation guide.
+
 ```
-conda create -n grappa python=3.9 -y
+git clone git@github.com:hits-mbm-dev/grappa.git
+cd grappa
+
+conda create -n grappa python=3.9 openmm=7.7.0=py39hb10b54c_0 -c conda-forge -y
 conda activate grappa
-bash envs/cuda_117.sh
+
+pip install -r requirements.txt
+
+pip install dgl -f https://data.dgl.ai/wheels/cu117/repo.html
+pip install dglgo -f https://data.dgl.ai/wheels-test/repo.html
+
+pip install -e .
 ```
+
 
 
 ## Pretrained Models

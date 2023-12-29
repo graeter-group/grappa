@@ -1,15 +1,11 @@
 #%%
 # USAGE
 
-# DOES NOT WORK IN THIS COMMIT
-
 # Download a model if not present already:
 import torch
-from grappa.utils.loading_utils import load_model
+from grappa.utils.loading_utils import model_from_tag
 
-url = 'https://github.com/LeifSeute/test_torchhub/releases/download/test_release/protein_test_11302023.pth'
-
-model = load_model(url)
+model = model_from_tag('latest')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
@@ -19,13 +15,17 @@ model = model.to(device)
 from grappa.wrappers.openmm_wrapper import openmm_Grappa
 from openmm.app import PDBFile, ForceField
 from copy import deepcopy
+from pathlib import Path
 #%%
 
-pdb = PDBFile('T4.pdb')
+pdb = PDBFile(str(Path(__file__).parent/'T4.pdb'))
+
+print(f'Loaded a protein with {pdb.topology.getNumAtoms()} atoms.')
+
 ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
 system = ff.createSystem(pdb.topology)
 
-orig_system = deepcopy(system)
+orig_system = deepcopy(system) # create a deep copy of the system to compare it to the grappa-parametrized one later
 
 # %%
 
