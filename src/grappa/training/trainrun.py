@@ -5,10 +5,10 @@ from grappa.utils.run_utils import write_yaml
 import torch
 from pathlib import Path
 import wandb
-from grappa.utils.run_utils import get_rundir, load_yaml
+from grappa.utils.run_utils import load_yaml
+from grappa.training.torchhub_upload import remove_module_prefix
 from grappa.utils import graph_utils, dgl_utils
-from grappa import utils
-from typing import List, Dict
+from typing import List, Dict, Union
 from grappa.training.get_dataloaders import get_dataloaders
 from grappa.training.lightning_model import LitModel
 from grappa.training.lightning_trainer import get_lightning_trainer
@@ -17,7 +17,7 @@ from grappa.utils.graph_utils import get_param_statistics, get_default_statistic
 from typing import Callable
 
 #%%
-def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, sweep_config=None): # NOTE: remove sweep_config
+def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, sweep_config=None, pretrain_path:Union[Path,str]=None): # NOTE: remove sweep_config
     """
     Do a single training run with the given configuration.
 
@@ -34,6 +34,7 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
             return config
 
     manual_sweep_config: function that sets wandb.config parameters specified in the sweep to some manual values defined in the function. This can be used for setting the sweep parameters to some known good starting values. Use eg wandb.config.update({'lr': 0.001}, allow_val_change=True) to set the learning rate to 0.001. In this case, the sweep config must be None.
+    pretrain_path: path to a checkpoint that is used to initialize the model weights. This can be a lightning checkpoint or the state dict directly.
     """
 
     # check whether all config args are allowed (they are allowed if they are in the default config)
@@ -85,7 +86,7 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
                 param_statistics[m][k] = get_default_statistics()[m][k]
 
     # Get the model
-    model = deploy.model_from_config(model_config=config['model_config'], param_statistics=param_statistics)
+    model = deploy.model_from_config(model_config=config['model_config'], param_statistics=param_statistics)     
 
     gradient_needed = config['lit_model_config']['gradient_weight'] != 0.
     # add energy calculation
@@ -94,6 +95,16 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
         Energy(suffix='', gradients=gradient_needed),
         # Energy(suffix='_ref', write_suffix="_classical_ff", gradients=gradient_needed)
     )
+
+    if pretrain_path is not None:
+        d = torch.load(str(pretrain_path))
+        if 'state_dict' in d.keys():
+            state_dict = d['state_dict']
+            state_dict = remove_module_prefix(state_dict)
+        else:
+            state_dict = d
+
+        model.load_state_dict(state_dict)
 
     model.train()
 

@@ -5,6 +5,15 @@ import torch
 from grappa.models.energy import Energy
 import json
 
+def remove_module_prefix(state_dict):
+    """ Remove the 'model.' prefix in the beginning of the keys from the state dict keys """
+    new_state_dict = {}
+    for k,v in state_dict.items():
+        if k.startswith('model.'):
+            new_state_dict[k[6:]] = v
+        else:
+            new_state_dict[k] = v
+    return new_state_dict
 
 def get_grappa_model(checkpoint_path):
 
@@ -17,16 +26,6 @@ def get_grappa_model(checkpoint_path):
 
     with open(Path(checkpoint_path).parent.parent.parent/'files'/'split.json', 'r') as f:
         split_names = json.load(f)
-
-    def remove_module_prefix(state_dict):
-        """ Remove the 'model.' prefix in the beginning of the keys from the state dict keys """
-        new_state_dict = {}
-        for k,v in state_dict.items():
-            if k.startswith('model.'):
-                new_state_dict[k[6:]] = v
-            else:
-                new_state_dict[k] = v
-        return new_state_dict
 
     model = model_from_config(config['model_config'])
 

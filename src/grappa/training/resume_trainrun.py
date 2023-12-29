@@ -72,7 +72,7 @@ def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.
         for kk in overwrite_config[k].keys():
             if not kk in config[k].keys():
                 raise ValueError(f'The sweep config provides a key that is not part of the config: {k}/{kk}')
-            print(f'Setting {k}/{kk} from {config[k][kk]} to overwrite_config[k][kk]')
+            print(f'Setting {k}/{kk} from {config[k][kk]} to {overwrite_config[k][kk]}')
             config[k][kk] = overwrite_config[k][kk]
 
 
