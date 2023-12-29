@@ -84,5 +84,5 @@ if __name__ == '__main__':
             return out_runs
 
 
-        resume_agent(project='hpo_grappa', time_limit=23, overwrite_config={'lit_model_config':{'time_limit':30}}, get_crashed_runs=continue_good_runs) # continue runs that were terminated after 15 hours due to the old time limit of 15 hours
+        resume_agent(project='hpo_grappa', time_limit=23, overwrite_config={'lit_model_config':{'time_limit':30, "finish_criterion": {1:50, 2:30, 4:20, 10:17, 15:16, 24:15.5}}}, get_crashed_runs=continue_good_runs) # continue runs that were terminated after 15 hours due to the old time limit of 15 hours
 

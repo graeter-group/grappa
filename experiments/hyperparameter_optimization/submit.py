@@ -2,8 +2,10 @@ import time
 from pathlib import Path
 import os
 
-AGENT_CMD = 'wandb agent leif-seute/hpo_grappa/4falur8f'
-N_JOBS = 10
+SWEEP_ID = 'el38p94o'
+
+AGENT_CMD = f'wandb agent leif-seute/hpo_grappa/{SWEEP_ID}'
+N_JOBS = 20
 
 SLEEP_SECONDS = 0.01
 # submit jobs using bash job.sh AGENT_CMD and wait a short time in between to avoid same-time communication with the wandb server

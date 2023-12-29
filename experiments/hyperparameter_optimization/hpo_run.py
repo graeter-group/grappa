@@ -10,17 +10,7 @@ MANUAL = False
 
 NAME = None
 PROJECT = 'hpo_grappa'
-RESTRICTED = False
 
-
-# load sweep config:
-if not MANUAL:
-    if RESTRICTED:
-        with open("./sweep_config_restricted.yaml") as file:
-            sweep_config = yaml.load(file, Loader=yaml.FullLoader)
-    else:
-        with open("./sweep_config.yaml") as file:
-            sweep_config = yaml.load(file, Loader=yaml.FullLoader)
 
 def config_from_sweep(sweep_config):
     config = defaultdict(dict)
@@ -183,7 +173,7 @@ lit_model_config = {
     "patience": 30,
     "lr_decay": 0.8,
     "time_limit": 30,
-    "finish_criterion": {1:50, 2:30, 4:20, 10:17, 15:16}, # {hours: max_early_stopping_val_loss} finishes sweep runs that are not promising
+    "finish_criterion": {1:50, 2:30, 4:20, 10:17, 15:16, 24:15.5}, # {hours: max_early_stopping_val_loss} finishes sweep runs that are not promising
     "param_loss_epochs": 100,
 }
 
@@ -229,5 +219,5 @@ def default_sweep_config():
 if MANUAL:
     do_trainrun(config=config, project=PROJECT, config_from_sweep=config_from_sweep, manual_sweep_config=default_sweep_config)
 else:
-    do_trainrun(config=config, project=PROJECT, sweep_config=sweep_config, config_from_sweep=config_from_sweep)
+    do_trainrun(config=config, project=PROJECT, config_from_sweep=config_from_sweep)
 

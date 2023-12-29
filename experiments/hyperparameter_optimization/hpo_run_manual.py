@@ -10,17 +10,7 @@ MANUAL = True
 
 NAME = None
 PROJECT = 'hpo_grappa'
-RESTRICTED = False
 
-
-# load sweep config:
-if not MANUAL:
-    if RESTRICTED:
-        with open("./sweep_config_restricted.yaml") as file:
-            sweep_config = yaml.load(file, Loader=yaml.FullLoader)
-    else:
-        with open("./sweep_config.yaml") as file:
-            sweep_config = yaml.load(file, Loader=yaml.FullLoader)
 
 def config_from_sweep(sweep_config):
     config = defaultdict(dict)
@@ -229,5 +219,5 @@ def default_sweep_config():
 if MANUAL:
     do_trainrun(config=config, project=PROJECT, config_from_sweep=config_from_sweep, manual_sweep_config=default_sweep_config)
 else:
-    do_trainrun(config=config, project=PROJECT, sweep_config=sweep_config, config_from_sweep=config_from_sweep)
+    do_trainrun(config=config, project=PROJECT, config_from_sweep=config_from_sweep)
 

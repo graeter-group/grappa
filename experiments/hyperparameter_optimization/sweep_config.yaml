@@ -11,7 +11,7 @@ parameters:
   lr:
     distribution: uniform
     min: -6.
-    max: -3.
+    max: -4.
 
   batch_size:
     values:
@@ -71,7 +71,7 @@ parameters:
 
   gnn_dropout:
     min: 0
-    max: 0.2
+    max: 0.4
   
   param_dropout:
     min: 0.2
@@ -85,8 +85,11 @@ parameters:
   weight_decay:
     values:
       - 0
+      - 1e-2
       - 1e-4
+      - 1e-6
 
   balance_factor:
-    min: 0
-    max: 1
+    distribution: uniform
+    min: 0.
+    max: 1.
