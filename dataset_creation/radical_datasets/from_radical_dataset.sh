@@ -10,14 +10,19 @@ target_path="$SCRIPT_DIR/../../data/grappa_datasets"
 
 # List of dataset names
 datasets=("AA_opt_rad" "AA_scan_rad" 'radical_AAs' 'radical_dipeptides')
+datasets=('radical_dipeptides')
 
 target_ds_names=('Capped_AA_opt_rad' 'Capped_AA_scan_rad' 'Capped_AA_rad' 'dipeptide_rad')
+target_ds_names=('dipeptide_rad')
 
 # Define the string for README.md
+# readme_content=(
+#     'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states are opt trajectories.'
+#     'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states are torsion scan trajectories.'
+#     'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
+#     'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
+#     )
 readme_content=(
-    'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states are opt trajectories.'
-    'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states are torsion scan trajectories.'
-    'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
     'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
     )
 

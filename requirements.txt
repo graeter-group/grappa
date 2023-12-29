@@ -2,6 +2,7 @@ torch==2.0.0
 torchvision==0.15.1
 numpy
 pyyaml
-rdkit
-matplotlib
-wandb
+rdkit==2023.9.1
+matplotlib==3.8.2
+wandb==0.16.1
+lightning==2.1.0

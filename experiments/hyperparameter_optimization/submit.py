@@ -1,11 +1,19 @@
 import time
 from pathlib import Path
 import os
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-n", "--n_jobs", type=int, help="Number of jobs to submit", default=5
+    )
+
+args = parser.parse_args()
 
 SWEEP_ID = 'el38p94o'
 
 AGENT_CMD = f'wandb agent leif-seute/hpo_grappa/{SWEEP_ID}'
-N_JOBS = 20
+N_JOBS = args.n_jobs
 
 SLEEP_SECONDS = 0.01
 # submit jobs using bash job.sh AGENT_CMD and wait a short time in between to avoid same-time communication with the wandb server
@@ -18,5 +26,5 @@ assert Path.cwd() == Path(__file__).parent
 for i in range(N_JOBS):
     print(f'Job {i+1}/{N_JOBS}')
     print(f'Command: {AGENT_CMD}')
-    os.system(f'sbatch job.sh "{AGENT_CMD}"')
+    os.system(f'sbatch job_hpo.sh "{AGENT_CMD}"')
     time.sleep(SLEEP_SECONDS)

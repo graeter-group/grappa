@@ -8,7 +8,7 @@ import argparse
 
 MANUAL = True
 
-NAME = None
+NAME = "manual"
 PROJECT = 'hpo_grappa'
 
 
@@ -173,7 +173,7 @@ lit_model_config = {
     "patience": 30,
     "lr_decay": 0.8,
     "time_limit": 30,
-    "finish_criterion": {1:50, 2:30, 4:20, 10:17, 15:16}, # {hours: max_early_stopping_val_loss} finishes sweep runs that are not promising
+    "finish_criterion": {1:50, 2:30, 4:20, 10:17, 15:16, 24:15.5}, # {hours: max_early_stopping_val_loss} finishes sweep runs that are not promising
     "param_loss_epochs": 100,
 }
 
@@ -196,23 +196,23 @@ config = {
 
 def default_sweep_config():
     wandb.config.update({
-        "lr": -5,
+        "lr": -4.8,
         "batch_size": 16,
         "atom_typing_features": 8,
-        "gnn_width": 7,
-        "attentional_layers": 3,
-        "convolutions": 2,
-        "gnn_attention_heads": 8,
-        "param_dropout": 0.6,
-        "gnn_dropout": 0.2,
-        "parameter_width": 7,
+        "gnn_width": 9,
+        "attentional_layers": 5,
+        "convolutions": 1,
+        "gnn_attention_heads": 16,
+        "param_dropout": 0.5,
+        "gnn_dropout": 0.1,
+        "parameter_width": 8,
         "parameter_trafo_factor": 2,
         "symmetriser_depth": 2,
         "transformer_depth": 3,
         "interaction_heads": 8,
-        "gradient_weight": -0.5,
-        "weight_decay": 1e-4,
-        "balance_factor": 0.2,
+        "gradient_weight": -0.2,
+        "weight_decay": 0,
+        "balance_factor": 0.9,
     })
 
 

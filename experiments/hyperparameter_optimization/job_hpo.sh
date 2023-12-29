@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --output=/hits/fast/mbm/seutelf/grappa/experiments/hyperparameter_optimization/logs/%j.out
 #SBATCH --error=/hits/fast/mbm/seutelf/grappa/experiments/hyperparameter_optimization/logs/%j.err
-#SBATCH --job-name=grappa_hpo
+#SBATCH --job-name=hpo_grappa
 
 #conda path to fast:
 CONDA_PREFIX="/hits/fast/mbm/seutelf/software/conda"

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# NOTE: OUTEDATED
+
 # set -e # exit on first error
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies

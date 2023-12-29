@@ -34,6 +34,8 @@ def resume_agent(project:str, time_limit:float=23, overwrite_config={}, get_cras
         # get all runs that are in a crashed or failed state:
         stopped_runs = get_crashed_runs(project=project)
 
+        print(f"encountered {len(stopped_runs)} stopped runs:\n{stopped_runs}")
+
         if len(stopped_runs) == 0:
             time.sleep(5*60)
             continue
@@ -52,7 +54,10 @@ def resume_agent(project:str, time_limit:float=23, overwrite_config={}, get_cras
             break
         except:
             print(f"Resuming run {run_id} failed.")
+            print(f"Resuming run {run_id} failed.", file=sys.stderr)
             continue
+        print(f"Resuming run {run_id} succeeded.")
+        print(f"Resuming run {run_id} succeeded.", file=sys.stderr)
 
 
 if __name__ == '__main__':
