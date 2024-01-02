@@ -5,14 +5,13 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-n", "--n_jobs", type=int, help="Number of jobs to submit", default=5
+    "-n", "--n_jobs", type=int, help="Number of jobs to submit", default=1
     )
 
 args = parser.parse_args()
+SWEEP_ID = 'yclwtfuo'
 
-SWEEP_ID = 'el38p94o'
-
-AGENT_CMD = f'wandb agent leif-seute/hpo_grappa/{SWEEP_ID}'
+AGENT_CMD = f'wandb agent leif-seute/hpo_grappa_final/{SWEEP_ID}'
 N_JOBS = args.n_jobs
 
 SLEEP_SECONDS = 0.01

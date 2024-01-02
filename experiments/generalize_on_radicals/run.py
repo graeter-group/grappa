@@ -10,15 +10,15 @@ data_config = {
     "datasets": [
         str(get_data_path()/"dgl_datasets"/dsname) for dsname in
         [
-            "spice-dipeptide",
-            "spice-des-monomers",
-            "spice-pubchem",
-            "gen2",
-            "gen2-torsion",
-            "pepconf-dlc",
-            "protein-torsion",
-            "rna-nucleoside",
-            "rna-diverse",
+            # "spice-dipeptide",
+            # "spice-des-monomers",
+            # "spice-pubchem",
+            # "gen2",
+            # "gen2-torsion",
+            # "pepconf-dlc",
+            # "protein-torsion",
+            # "rna-nucleoside",
+            # "rna-diverse",
             'dipeptide_rad',
             'tripeptides_amber99sbildn',
             'spice_dipeptide_amber99sbildn',
@@ -30,25 +30,26 @@ data_config = {
     "partition": [ # may either be a partition list or a list of a default partition list and a dictionary mapping dsname to partition
         [0.8,0.1,0.1],
         {
-            'rna-nucleoside': [1.,0.,0.],
+            # 'rna-nucleoside': [1.,0.,0.],
         }
         ],
     "pure_train_datasets": [],
     "pure_val_datasets": [
         # str(get_data_path()/"dgl_datasets"/'tripeptides_amber99sbildn'),
         str(get_data_path()/"dgl_datasets"/'AA_natural'),
+        # str(get_data_path()/"dgl_datasets"/'spice_dipeptide_amber99sbildn'),
     ],
     "pure_test_datasets": [
         # str(get_data_path()/"dgl_datasets"/'rna-trinucleotide')
     ],
     "weights": {
-        'gen2': 0.5, # empirical, makes training more stable
-        'pepconf': 2, # empirical, harder to fit apparently
-        'AA_radical': 2,
-        'dipeptide_rad': 5,
-        'spice_dipeptide_amber99sbildn': 5,
+        # 'gen2': 0.5, # empirical, makes training more stable
+        # 'pepconf': 2, # empirical, harder to fit apparently
+        # 'AA_radical': 2,
+        # 'dipeptide_rad': 5,
+        # 'spice_dipeptide_amber99sbildn': 5,
     },
-    "balance_factor": 0.8,
+    "balance_factor": 0.,
 }
 
 lit_model_config = {
@@ -57,7 +58,7 @@ lit_model_config = {
 }
 
 trainer_config = {
-    'name': 'with_is_rad',
+    'name': 'only_peptide_amber99sbildn',
     'notes': None,
 }
 
