@@ -11,9 +11,11 @@ from grappa.utils.run_utils import write_yaml
 from typing import Union, Dict
 
 
-def get_dir_from_id(wandb_folder:str, run_id:str)->Path:
+def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=3)->Path:
     """
     Find the local run directory for a given run id.
+
+    max_existing_dirs: The maximum number of directories that may exist for a given run id. Set this to a finite value to prevent starting runs that are constantly failing.
     """
 
     # iterate over all files in the wandb folder and find the one that contains the run id, a last.cpkt file and the latest starting time.
@@ -26,12 +28,17 @@ def get_dir_from_id(wandb_folder:str, run_id:str)->Path:
     # Regular expression to match the directory pattern and extract the datetime
     pattern = re.compile(r'run-(\d{8}_\d{6})-' + re.escape(run_id))
 
+    match_counter = 0
+
     # Iterate over directories in the wandb folder
     for dir in Path(wandb_folder).iterdir():
         if dir.is_dir():
             # Match the pattern
             match = pattern.match(dir.name)
             if match:
+                match_counter += 1
+                if match_counter > max_existing_dirs:
+                    raise RuntimeError(f"More than {max_existing_dirs} directories found for run {run_id}. Aborting...")
                 # check whether the directory contains a last.ckpt file
                 if not (dir / 'files/checkpoints/last.ckpt').exists():
                     print(f"Directory {dir} does not contain a last.ckpt file. Skipping...")

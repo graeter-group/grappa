@@ -5,13 +5,13 @@ import torch
 import json
 
 
-def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:str='mean', train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=1, test_loader_workers:int=1, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], subsample_train:Dict[str, int]={}, subsample_val:Dict[str, int]={}, subsample_test:Dict[str, int]={}, weights:Dict[str,str]={}, balance_factor:float=0., classical_needed:bool=False, in_feat_names:List[str]=None, save_splits:Union[str,Path]=None, val_conf_strategy=200)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Union[str, int]=100, train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=1, test_loader_workers:int=1, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], subsample_train:Dict[str, int]={}, subsample_val:Dict[str, int]={}, subsample_test:Dict[str, int]={}, weights:Dict[str,str]={}, balance_factor:float=0., classical_needed:bool=False, in_feat_names:List[str]=None, save_splits:Union[str,Path]=None, val_conf_strategy=200)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
     """
     This function returns train, validation, and test dataloaders for a given list of datasets.
 
     Args:
         datasets (List[Path]): List of paths to the datasets.
-        conf_strategy (str, optional): Strategy for configuration. Defaults to 'mean'.
+        conf_strategy (str, optional): Strategy for sampling conformations when batching. Defaults to 'mean'.
         train_batch_size (int, optional): Batch size for the training dataloader. Defaults to 1.
         val_batch_size (int, optional): Batch size for the validation dataloader. Defaults to 1.
         test_batch_size (int, optional): Batch size for the test dataloader. Defaults to 1.

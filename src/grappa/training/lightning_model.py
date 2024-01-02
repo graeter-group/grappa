@@ -228,38 +228,18 @@ class LitModel(pl.LightningModule):
 
         return loss
 
-    def on_validation_epoch_start(self):
-        if not self.val_failed:
-            self.val_fail_counter = 0
-
-        self.val_failed = False
-        return super().on_validation_epoch_start()
-
 
     def validation_step(self, batch, batch_idx):
-        if not self.val_failed:
-            try:
-                # allow errors in validation step
-                if self.log_metrics:
-                    with torch.no_grad():
-                        g, dsnames = batch
-                        g = self(g)
+            if self.log_metrics:
+                with torch.no_grad():
+                    g, dsnames = batch
+                    g = self(g)
 
-                        self.evaluator.step(g, dsnames)
+                    self.evaluator.step(g, dsnames)
 
-                        loss = self.loss(g)
-                        if self.current_epoch > self.start_qm_epochs:
-                                self.log('losses/val_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
-            except Exception as e:
-                self.val_failed = True
-                self.evaluator.init_storage()
-                self.val_fail_counter += 1
-                if self.val_fail_counter > 3:
-                    raise ValueError(f"Validation failed 3 times in a row. Stopping validation.") from e
-                # print e with traceback to std err:
-                tb = traceback.format_exc()
-                err_msg = e.__class__.__name__ + ": " + str(e) + "\n" + tb
-                print(err_msg, file=sys.stderr)
+                    loss = self.loss(g)
+                    if self.current_epoch > self.start_qm_epochs:
+                            self.log('losses/val_loss', loss, batch_size=self.batch_size(g), on_epoch=True)
 
 
     def on_validation_epoch_end(self):
