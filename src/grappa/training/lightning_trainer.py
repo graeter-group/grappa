@@ -93,3 +93,9 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
     trainer = pl.Trainer(logger=wandb_logger, gradient_clip_val=gradient_clip_val, max_epochs=max_epochs, profiler=profiler, callbacks=[checkpoint_callback], enable_progress_bar=not is_slurm)
 
     return trainer
+
+
+# own exception class for when a run has failed:
+class pl_RunFailed(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

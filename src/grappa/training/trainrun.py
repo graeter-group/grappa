@@ -5,19 +5,20 @@ from grappa.utils.run_utils import write_yaml
 import torch
 from pathlib import Path
 import wandb
-from grappa.utils.run_utils import load_yaml
+import sys
 from grappa.training.torchhub_upload import remove_module_prefix
 from grappa.utils import graph_utils, dgl_utils
 from typing import List, Dict, Union
 from grappa.training.get_dataloaders import get_dataloaders
 from grappa.training.lightning_model import LitModel
-from grappa.training.lightning_trainer import get_lightning_trainer
+from grappa.training.lightning_trainer import get_lightning_trainer, pl_RunFailed
 from grappa.training.config import default_config
 from grappa.utils.graph_utils import get_param_statistics, get_default_statistics
 from typing import Callable
+from grappa.training.resume_trainrun import resume_trainrun
 
 #%%
-def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, sweep_config=None, pretrain_path:Union[Path,str]=None): # NOTE: remove sweep_config
+def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, pretrain_path:Union[Path,str]=None):
     """
     Do a single training run with the given configuration.
 
@@ -50,6 +51,8 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
 
     # Get the trainer  and initialize wandb
     trainer = get_lightning_trainer(**config['trainer_config'], config=config, project=project)
+
+    run_id = wandb.run.id
 
     experiment_dir = trainer.logger.experiment.dir
 
@@ -124,17 +127,29 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
     # Get a pytorch lightning model
     lit_model = LitModel(model=model, tr_loader=tr_loader, vl_loader=val_loader, te_loader=test_loader, **config['lit_model_config'])
 
-    print(f"\nStarting training run {wandb.run.name}...\nSaving logs to {wandb.run.dir}...\n")
+    print(f"\nStarting training run {wandb.run.name}...\nSaving logs to {run_id}...\n")
 
-    # Train the model
-    trainer.fit(model=lit_model, train_dataloaders=tr_loader, val_dataloaders=val_loader)
+    try:
+        # Train the model
+        trainer.fit(model=lit_model, train_dataloaders=tr_loader, val_dataloaders=val_loader)
+    except KeyboardInterrupt:
+        raise
+    except Exception as e:
+        custom_e = pl_RunFailed(f"Run {run_id} failed with exception {e}.")
+        custom_e._run_id = run_id
+        raise custom_e
 
     return model
 
 
-def trainrun_from_file(config_path:Path):
+def safe_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, pretrain_path:Union[Path,str]=None):
     """
-    Do a single training run with the configuration in the given file.
+    Like the above but exceptions are caught and the run is restarted (with new run id) from the last checkpoint. This is done only once.
     """
-    config = load_yaml(config_path)
-    do_trainrun(config)
+    
+    try:
+        do_trainrun(config=config, project=project, config_from_sweep=config_from_sweep, manual_sweep_config=manual_sweep_config, pretrain_path=pretrain_path)
+    except pl_RunFailed as e:
+        print(f"Exception {e} occured. Restarting training run...", file=sys.stderr)
+        run_id = e._run_id
+        resume_trainrun(run_id=run_id, project=project, wandb_folder=Path.cwd()/'wandb', new_wandb_run=True, overwrite_config=None)

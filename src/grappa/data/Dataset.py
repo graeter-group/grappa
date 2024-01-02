@@ -217,7 +217,14 @@ class Dataset(torch.utils.data.Dataset):
             for feature in remove:
                 del graph.nodes['n1'].data[feature]
 
-        
+
+    def get_k_fold_split_ids(self, k:int, seed:int=0, num_folds:int=None):
+        """
+        Returns a list of dictionaries containing the molecule ids for train, validation and test sets. The ids are sampled such that smaller datasets also have a share approximate to the given partition.
+        The ids are split into k_fold folds. The ids are split such that all test sets concatenated are the full set of ids. The train and val sets are split such that the val set is approximately the same size as the test set. E.g. for n=10, we split according to (0.8,0.1,0.1) 10 times.
+        """
+        return torch_utils.get_k_fold_split_ids(ids=self.mol_ids, ds_names=self.subdataset, k=k, seed=seed, num_folds=num_folds)
+
 
 
     def calc_split_ids(self, partition:Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], seed:int=0):

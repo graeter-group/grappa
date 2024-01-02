@@ -127,6 +127,7 @@ class DottedAttWithMLP(nn.Module):
 
         if x.isnan().any():
             raise ValueError('nan in attn output')
+        
         x = self.ff(x)
 
         return x
