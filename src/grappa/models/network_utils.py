@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class FeedForwardLayer(nn.Module):
     """
-    Simple MLP with one hidden layer and, optionally, a skip connection, dropout and layer normalization.
+    Simple MLP with one hidden layer and, optionally, a skip connection, dropout at the end and layer normalization.
     
     ----------
     Parameters:
@@ -82,6 +82,12 @@ class DottedAttWithMLP(nn.Module):
     Note:
     ----------
         The input and output feature dimension (n_feats) is the same.
+
+        In torch 2.1.0 the multihead attention layer seems to have bugs with eval mode:
+        In some cases, when we set need_weights=False, the output is nan in eval mode but not in train mode.
+        If we set need_weights=True, the weights are all the same in eval mode (but not in train mode).
+        This happens for trained models, not randomly initialized ones.
+        Thus, we do not use dropout in nn.MultiheadAttention but apply it manually.
     """
     def __init__(self, n_feats, num_heads, hidden_feats=None, layer_norm=True, dropout=0.):
         super().__init__()
@@ -96,7 +102,9 @@ class DottedAttWithMLP(nn.Module):
         # multihead attention layer with n_heads, each taking n_feats//n_heads features as input.
         # the updated values are returned, not the attention weights
         assert n_feats % num_heads == 0, f"Number of features ({n_feats}) must be divisible by the number of heads ({num_heads})."
-        self.attn = nn.MultiheadAttention(n_feats, num_heads, dropout=dropout)
+        self.attn = nn.MultiheadAttention(n_feats, num_heads, dropout=0)
+
+        self.dropout = nn.Dropout(dropout)
 
         self.ff = FeedForwardLayer(n_feats, hidden_feats, out_feats=n_feats, dropout=dropout, skip=True, layer_norm=layer_norm)
 
@@ -104,10 +112,21 @@ class DottedAttWithMLP(nn.Module):
     def forward(self, x):
         if self.layer_norm:
             x = self.norm1(x)
-        
+
+        # In torch 2.1.0 the multihead attention layer seems to have bugs with eval mode:
+        # In some cases, when we set need_weights=False, the output is nan in eval mode but not in train mode.
+        # If we set need_weights=True, the weights are all the same in eval mode (but not in train mode).
+        # This happens for trained models, not randomly initialized ones.
+        # Thus, we do not use dropout in nn.MultiheadAttention but apply it manually.
+            
         attn_output, _ = self.attn(x, x, x, need_weights=False)
-        x = attn_output + x
         
+        attn_output = self.dropout(attn_output)
+
+        x = attn_output + x
+
+        if x.isnan().any():
+            raise ValueError('nan in attn output')
         x = self.ff(x)
 
         return x

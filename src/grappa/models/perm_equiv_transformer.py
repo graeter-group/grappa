@@ -63,7 +63,7 @@ class SymmetrisedTransformer(nn.Module):
 
         if not self.grappa_transformer is None:
             x = self.grappa_transformer(x)
-        
+
         # send x through the symmetriser:
         x = self.symmetriser(x)
 

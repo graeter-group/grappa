@@ -1,5 +1,4 @@
 import torch
-import dgl
 from grappa.models.final_layer import ToPositive, ToRange
 from grappa import constants
 from typing import Union, List, Tuple
@@ -241,7 +240,7 @@ class WriteBondParameters(torch.nn.Module):
         # build a tuple of feature vectors from the representation.
         # inputs will have shape 2, num_pairs, rep_dim
         inputs = self.rep_projector(g)
-        
+
         coeffs = self.bond_model(inputs)
 
         coeffs[:,0] = self.to_eq(coeffs[:,0])
