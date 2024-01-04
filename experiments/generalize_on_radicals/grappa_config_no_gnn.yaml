@@ -65,8 +65,8 @@ model_config:
   bond_transformer_width: 512
   gated_torsion: true
   gnn_attention_heads: 16
-  gnn_attentional_layers: 5
-  gnn_convolutions: 2
+  gnn_attentional_layers: 0
+  gnn_convolutions: 0
   gnn_dropout_attention: 0.1
   gnn_dropout_conv: 0.1
   gnn_dropout_final: 0.1
@@ -83,6 +83,7 @@ model_config:
   - atomic_number
   - partial_charge
   - ring_encoding
+  - sp_hybridization
   in_feats: null
   layer_norm: true
   learnable_statistics: false
