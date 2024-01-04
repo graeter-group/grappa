@@ -78,22 +78,31 @@ class Dataset(torch.utils.data.Dataset):
         Returns:
             train, val, test (Dataset): Dataset objects containing the respective splits
         """
+        train_ids = set(train_ids)
+        val_ids = set(val_ids)
+        test_ids = set(test_ids)
         if check_overlap:
-            assert len(set(train_ids).intersection(set(val_ids))) == 0
-            assert len(set(train_ids).intersection(set(test_ids))) == 0
-            assert len(set(val_ids).intersection(set(test_ids))) == 0
-            assert len(set(train_ids).union(set(val_ids)).union(set(test_ids))) == len(set(self.mol_ids))
+            assert len(train_ids.intersection(val_ids)) == 0
+            assert len(train_ids.intersection(test_ids)) == 0
+            assert len(val_ids.intersection(test_ids)) == 0
+
+        assert all([mol_id in val_ids.union(train_ids).union(test_ids) for mol_id in self.mol_ids]), "Some molecule ids are not in the split"
 
         train_idx = [i for i in range(len(self.mol_ids)) if self.mol_ids[i] in train_ids]
         val_idx = [i for i in range(len(self.mol_ids)) if self.mol_ids[i] in val_ids]
         test_idx = [i for i in range(len(self.mol_ids)) if self.mol_ids[i] in test_ids]
 
-        train = Dataset([self.graphs[i] for i in train_idx], [self.mol_ids[i] for i in train_idx], [self.subdataset[i] for i in train_idx])
-        val = Dataset([self.graphs[i] for i in val_idx], [self.mol_ids[i] for i in val_idx], [self.subdataset[i] for i in val_idx])
-        test = Dataset([self.graphs[i] for i in test_idx], [self.mol_ids[i] for i in test_idx], [self.subdataset[i] for i in test_idx])
+        train_graphs, train_mol_ids, train_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in train_idx]))
+        val_graphs, val_mol_ids, val_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in val_idx]))
+        test_graphs, test_mol_ids, test_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in test_idx]))
+
+        train = Dataset(graphs=train_graphs, mol_ids=train_mol_ids, subdataset=train_subdataset)
+        val = Dataset(graphs=val_graphs, mol_ids=val_mol_ids, subdataset=val_subdataset)
+        test = Dataset(graphs=test_graphs, mol_ids=test_mol_ids, subdataset=test_subdataset)
         
         return train, val, test
     
+
     def save(self, path:Union[str, Path]):
         """
         Saves the dataset to disk at the given directoy. Saves the graphs at graphs.bin via dgl and mol_ids, subdataset as json lists.

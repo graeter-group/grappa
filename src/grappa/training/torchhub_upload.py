@@ -16,8 +16,13 @@ def get_grappa_model(checkpoint_path):
 
     config = load_yaml(config)
 
-    with open(Path(checkpoint_path).parent.parent.parent/'files'/'split.json', 'r') as f:
-        split_names = json.load(f)
+    splitpath = Path(checkpoint_path).parent.parent.parent/'files'/'split_names.json'
+    if not splitpath.exists():
+        print(f"Warning: split_names.json not found in {splitpath}.")
+        split_names = None
+    else:
+        with open(splitpath, 'r') as f:
+            split_names = json.load(f)
 
     model = model_from_config(config['model_config'])
 
