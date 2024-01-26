@@ -52,12 +52,7 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'protein-torsion_amber99sbildn'
         'pepconf-dlc_amber99sbildn'
         'tripeptides_amber99sbildn'
-        'tripeptides_openff120'
         'dipeptide_rad'
-    ]
-
-    urls = [
-        RELEASE_URL + tag + '.zip' for tag in URL_TAGS
     ]
 
     dir_path = Path(data_dir) / tag
@@ -67,8 +62,10 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
     
     # Download the file if it doesn't exist
     if not tag in URL_TAGS:
-        raise ValueError(f"Tag {tag} not recognized. Available tags for download are {urls}")
+        raise ValueError(f"Tag {tag} not recognized. Available tags for download are {URL_TAGS}")
     
+    url = RELEASE_URL + tag + '.zip'
+
     return load_dataset(url=urls[tag], data_dir=data_dir, filename=tag)
 
 
