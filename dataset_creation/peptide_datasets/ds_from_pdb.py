@@ -11,7 +11,7 @@ import tempfile
 from openmm.app import PDBFile
 from grappa.utils import openmm_utils, openff_utils
 
-def main(source_path, target_path, forcefield, forcefield_type):
+def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -42,6 +42,9 @@ def main(source_path, target_path, forcefield, forcefield_type):
             pdb = data['pdb'].tolist()
             pdbstring = ''.join(pdb)
             sequence = str(data['sequence'])
+            if any([res in sequence for res in skip_residues]):
+                print(f"Skipping {molfile} because it contains one of the residues {skip_residues}")
+                continue
 
             if forcefield_type == 'openmm':
                 # get topology:
@@ -63,7 +66,7 @@ def main(source_path, target_path, forcefield, forcefield_type):
             # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
             moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=smiles, pdb=pdbstring, smiles=smiles, sequence=sequence)
 
-            moldata.molecule.add_features(['ring_encoding'])
+            # moldata.molecule.add_features(['ring_encoding'])
 
             moldata.save(target_path/(molfile.stem+'.npz'))
 
@@ -104,5 +107,11 @@ if __name__ == "__main__":
         default='openmm',
         help="Which forcefield type to use for creating improper torsion and nonbonded parameters. Possible values: openmm, openff, openmmforcefields",
     )
+    parser.add_argument(
+        "--skip_residues",
+        nargs='+',
+        default=[],
+        help="Which residues to skip.",
+    )
     args = parser.parse_args()
-    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield, forcefield_type=args.forcefield_type)
+    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield, forcefield_type=args.forcefield_type, skip_residues=args.skip_residues)

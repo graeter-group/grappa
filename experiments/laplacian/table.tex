@@ -1,0 +1,42 @@
+\documentclass[varwidth]{standalone}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{adjustbox}
+
+\begin{document}
+
+\begin{adjustbox}{width=\textwidth,center}
+\centering
+
+\begin{tabular}{l c l c c c c c c}
+\hline
+\hline
+Dataset & Mols & & Grappa & Espaloma & Gaff-2.11 & ff14SB & RNA.OL3 \\
+\hline
+\multirow{2}{*}{SPICE-Pubchem} & \multirow{2}{*}{1411} & \textit{Energy} & 2.3 & \textbf{2.3} & 4.4 &  &  \\
+                             &                    & \textit{Force}  & \textbf{6.5} & 6.8 & 14.0 &  &  \\
+\hline
+\multirow{2}{*}{SPICE-DES-Monomers} & \multirow{2}{*}{39} & \textit{Energy} & \textbf{1.3} & 1.4 & 1.9 &  &  \\
+                             &                    & \textit{Force}  & \textbf{5.5} & 5.9 & 9.5 &  &  \\
+\hline
+\multirow{2}{*}{SPICE-Dipeptide} & \multirow{2}{*}{67} & \textit{Energy} & \textbf{2.3} & 3.1 & 4.2 & 4.4 &  \\
+                             &                    & \textit{Force}  & \textbf{5.7} & 7.8 & 11.9 & 11.6 &  \\
+\hline
+\multirow{2}{*}{RNA-Diverse} & \multirow{2}{*}{6} & \textit{Energy} & \textbf{3.6} & 4.2 & 5.7 &  & 6.1 \\
+                             &                    & \textit{Force}  & \textbf{4.0} & 4.4 & 17.2 &  & 19.4 \\
+\hline
+\multirow{2}{*}{RNA-Trinucleotide} & \multirow{2}{*}{64} & \textit{Energy} & \textbf{3.6} & 3.8 & 5.8 &  & 5.9 \\
+                             &                    & \textit{Force}  & \textbf{4.0} & 4.3 & 17.1 &  & 19.8 \\
+\hline
+\hline
+\hline
+\end{tabular}
+
+\end{adjustbox}
+
+\vspace{5pt}
+\small
+Energy and Force-component RMSE for Boltzmann-sampled conformations of unseen test molecules in [kcal/mol] and [kcal/mol/\AA{}] respectively.
+
+
+\end{document}

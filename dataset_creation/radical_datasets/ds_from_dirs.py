@@ -33,7 +33,8 @@ def main(sourcepath, targetpath, openmm_ff:str=None, skip:List[str]=[]):
 
             if moldata.pdb is not None and openmm_ff is not None:
                 if molname in skip:
-                    print(f"Skipping energy calculation of {molname}")
+                    print(f"Skipping {molname}")
+                    continue
                 else:
                     moldata.calc_energies_openmm(openmm_forcefield=openmm_ff, forcefield_name=openmm_ff_name)
         except:

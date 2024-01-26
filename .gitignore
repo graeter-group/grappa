@@ -114,8 +114,10 @@ mains/**.out
 **/trajectory.pdb
 **/traj.pdb
 
-*basement*
 *scratch*
 *info.out*
 
-summary/*.png
+
+# exceptions:
+!dataset_creation/get_espaloma_split/te_smiles.json
+!dataset_creation/get_espaloma_split/vl_smiles.json

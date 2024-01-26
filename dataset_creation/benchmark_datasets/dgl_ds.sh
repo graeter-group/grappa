@@ -10,7 +10,7 @@ target_path="$SCRIPT_DIR/../../data/dgl_datasets"
 
 
 # List of dataset names
-datasets=("rna-diverse" "rna-nucleoside" "spice-des-monomers" "spice-dipeptide" "gen2" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem")
+datasets=("rna-diverse" "rna-nucleoside" "spice-des-monomers" "spice-dipeptide" "gen2" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem" "spice-dipeptide_amber99sbildn" "pepconf-dlc_amber99sbildn" "protein-torsion_amber99sbildn")
 
 # Loop through each dataset name
 for ds in "${datasets[@]}"; do

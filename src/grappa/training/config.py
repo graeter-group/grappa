@@ -2,7 +2,7 @@ from typing import Dict
 from pathlib import Path
 import yaml
 from grappa.utils.run_utils import write_yaml
-from grappa.utils.dataset_utils import get_data_path, benchmark_data_config
+from grappa.utils.dataset_utils import get_data_path
 
 
 def overwrite_config(kwargs, config):
@@ -48,8 +48,9 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
                 "rna-diverse",
             ]
         ],
-        "conf_strategy": "all",
-        "train_batch_size": 20,
+        "conf_strategy": 50,
+        "val_conf_strategy": 500,
+        "train_batch_size": 16,
         "val_batch_size": 1,
         "test_batch_size": 1,
         "train_loader_workers": 1,
@@ -68,9 +69,6 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "weights": {}, # sample from certain train subsets more often than from others. If no entry, the weight of the subset is one.
         "balance_factor": 0., # parameter between 0 and 1 that balances sampling of the datasets: 0 means that the molecules are sampled uniformly across all datasets, 1 means that the probabilities are re-weighted such that the sampled number of molecules per epoch is the same for all datasets. The weights assigned in 'weights' are multiplied by the weight factor obtained from balancing.
     }
-
-    if benchmark:
-        data_config = benchmark_data_config()
 
     lit_model_config = {
         "lr": 1e-5,

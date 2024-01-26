@@ -5,6 +5,13 @@ import pkgutil
 from typing import Tuple, Set, Dict, Union, List
 from pathlib import Path
 
+def get_openff_molecule(mapped_smiles:str):
+    """
+    Returns an openff molecule initialized from a mapped smiles string.
+    """
+    from openff.toolkit.topology import Molecule as OFFMol
+    return OFFMol.from_mapped_smiles(mapped_smiles, allow_undefined_stereo=True)
+
 
 def get_sp_hybridization_encoding(openff_mol:"openff.toolkit.Molecule")->np.ndarray:
     """
@@ -155,3 +162,15 @@ def mol_from_pdb(pdbstring:str)->str:
         openff_mol = OFFMol.from_polymer_pdb(pdbpath)
 
     return openff_mol
+
+
+def get_peptide_system(mol:"openff.Molecule", ff="amber99sbildn.xml")->"openmm.System":
+    """
+    Assuming that residue information is stored in the openff molecule, returns a parameterized openmm system.
+    """
+    from openmmforcefields.generators import SystemGenerator
+
+    generator = SystemGenerator(forcefields=[ff], molecules=[mol], forcefield_kwargs={"constraints": None, "removeCMMotion": False},
+    )
+
+    return generator.create_system(mol.to_topology().to_openmm())

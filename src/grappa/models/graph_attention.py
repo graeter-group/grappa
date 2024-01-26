@@ -5,6 +5,7 @@ import dgl
 from typing import List, Tuple, Dict, Union, Callable
 import math
 from grappa.constants import MAX_ELEMENT
+import grappa.constants as constants
 
 
 class GrappaGNN(torch.nn.Module):
@@ -32,6 +33,7 @@ class GrappaGNN(torch.nn.Module):
         attention_dropout (float): Dropout rate in attention layers. Defaults to 0.
         final_dropout (float): Dropout rate in the final output layer. Defaults to 0.
         initial_dropout (float): Dropout rate after the initial linear layer. Defaults to 0.
+        charge_encoding (bool): If True, adds a positional encoding similar to the one used in transformers to describe partial charges. Defaults to True.
 
     ----------
     Returns:
@@ -43,9 +45,12 @@ class GrappaGNN(torch.nn.Module):
     ----------
     The input graph for the forward call must contain node features named as specified in `in_feat_name`.
     """
-    def __init__(self, out_feats:int=512, in_feats:int=None, node_feats:int=None, n_conv:int=3, n_att:int=3, n_heads:int=8, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], in_feat_dims:Dict[str,int]={}, conv_dropout:float=0., attention_dropout:float=0., final_dropout:float=0., initial_dropout:float=0., layer_norm:bool=True, self_interaction:bool=True):
+    def __init__(self, out_feats:int=512, in_feats:int=None, node_feats:int=None, n_conv:int=3, n_att:int=3, n_heads:int=8, in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge"], in_feat_dims:Dict[str,int]={}, conv_dropout:float=0., attention_dropout:float=0., final_dropout:float=0., initial_dropout:float=0., layer_norm:bool=True, self_interaction:bool=True, charge_encoding=True):
 
         super().__init__()
+
+        self.charge_encoding = charge_encoding
+        CHARGE_ENCODING_DIM = 16
 
         if not isinstance(in_feat_name, list):
             in_feat_name = [in_feat_name]
@@ -57,9 +62,11 @@ class GrappaGNN(torch.nn.Module):
                 "ring_encoding": 7,
                 "partial_charge":1,
                 "sp_hybridization": 6,
-                "mass": 1,
-                "degree": 7,
+                "mass": 2,
+                "degree": 6,
                 "is_radical": 1,
+                "laplacian_positional_encoding": 5,
+                "charge_model": len(constants.CHARGE_MODELS) 
             }
             # overwrite/append to these default values:
             for key in in_feat_dims.keys():
@@ -79,11 +86,17 @@ class GrappaGNN(torch.nn.Module):
 
         # self.layer_norm = torch.nn.LayerNorm(normalized_shape=(out_feats,)) # normalize over the feature dimension, not the node dimension (since this is not of constant length) # not necessary, the blocks have normalization
 
+        if charge_encoding:
+            self.in_feats += CHARGE_ENCODING_DIM
+            self.charge_encoder = PositionalEncoding(dimension=CHARGE_ENCODING_DIM, min_value=-2, max_value=2)
+        
+
+
         self.initial_dropout = torch.nn.Dropout(initial_dropout)
         self.final_dropout = torch.nn.Dropout(final_dropout)
 
         self.pre_dense = torch.nn.Sequential(
-            torch.nn.Linear(in_feats, node_feats),
+            torch.nn.Linear(self.in_feats, node_feats),
             torch.nn.ELU(),
         )
         
@@ -140,14 +153,15 @@ class GrappaGNN(torch.nn.Module):
         The function first concatenates the input features (handling different shapes), then applies the sequence of GNN layers, and finally updates the graph with the resulting node features.
         """
         if in_feature is None:
-            try:
-                # concatenate all the input features, allow the shape (n_nodes) and (n_nodes,n_feat)
-                in_feature = torch.cat([g.nodes["n1"].data[feat].float()
-                                        if len(g.nodes["n1"].data[feat].shape) >=2 else g.nodes["n1"].data[feat].unsqueeze(dim=-1).float()
-                                        for feat in self.in_feat_name], dim=-1)
-                assert len(in_feature.shape) == 2, f"the input features must be of shape (n_nodes, n_features), but got {in_feature.shape}"
-            except:
-                raise
+            # concatenate all the input features, allow the shape (n_nodes,n_feat) and (n_nodes)
+            in_feature = torch.cat([g.nodes["n1"].data[feat].float()
+                                    if len(g.nodes["n1"].data[feat].shape) >=2 else g.nodes["n1"].data[feat].unsqueeze(dim=-1).float()
+                                    for feat in self.in_feat_name], dim=-1)
+            assert len(in_feature.shape) == 2, f"the input features must be of shape (n_nodes, n_features), but got {in_feature.shape}"
+
+        if self.charge_encoding:
+            # add the charge encoding
+            in_feature = torch.cat([in_feature, self.charge_encoder(g.nodes["n1"].data["partial_charge"]).float()], dim=-1)
 
         h = self.pre_dense(in_feature)
 
@@ -400,3 +414,36 @@ class ResidualConvBlock(torch.nn.Module):
         
         return h
 
+
+class PositionalEncoding(torch.nn.Module):
+    """
+    Positional encoding similar to the one used in transformers, adapeted to a given range of values. In Grappa, this is used for partial charges.
+    """
+    def __init__(self, dimension=32, min_value=-2, max_value=2):
+        super().__init__()
+        self.dimension = dimension
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def forward(self, values):
+        # Ensure values are within the expected range
+        values = torch.clamp(values, self.min_value, self.max_value)
+
+        # Scale the values to be in range [0, 1]
+        scaled_values = (values + self.max_value) / (self.max_value - self.min_value)
+
+        # Calculate the frequencies for the encoding
+        freq_spacing = torch.log(torch.tensor(10000.0, device=values.device))
+        frequencies = torch.exp(torch.arange(0, self.dimension // 2, dtype=torch.float32, device=values.device) * -freq_spacing / (self.dimension // 2))
+
+        # Generate the positional encoding
+        encoding = torch.zeros(len(values), self.dimension, device=values.device)
+        encoding[:, 0::2] = torch.sin(scaled_values.unsqueeze(1) * frequencies)
+        encoding[:, 1::2] = torch.cos(scaled_values.unsqueeze(1) * frequencies)
+
+        return encoding
+
+# Example usage
+# values = torch.tensor([0.5, -1.5, 1.0])  # Example values
+# encoding = PositionalEncoding(8, -2, 2)(values)
+# print("Positional Encoding:", encoding)

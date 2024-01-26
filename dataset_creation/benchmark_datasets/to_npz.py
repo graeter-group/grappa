@@ -6,6 +6,10 @@ import openmm
 import openff.toolkit
 import json
 import numpy as np
+from grappa.utils.openmm_utils import get_energies, remove_forces_from_system
+from grappa.utils.openff_utils import get_peptide_system
+
+from grappa.data import MolData
 
 from openmm.unit import Quantity
 from openmm.unit import mole, hartree, bohr, angstrom, kilocalories_per_mole
@@ -36,6 +40,9 @@ def load_mol(molpath):
     return mol
 #%%
 def extract_data(g, mol):
+    """
+    Converts data to grappa units (kcal/mol, Angstrom, elementary charge).
+    """
 
     am1bcc_elf_charges = mol.partial_charges.to_openmm().value_in_unit(openmm.unit.elementary_charge)
 
@@ -100,7 +107,7 @@ def extract_data(g, mol):
 # %%
 
 
-def main(dspath, targetpath):
+def main(dspath, targetpath, with_amber99: bool = True):
     print(f"Converting\n{dspath}\nto\n{targetpath}")
     dspath = Path(dspath)
     targetpath = Path(targetpath)
@@ -124,6 +131,40 @@ def main(dspath, targetpath):
             g, mol = load_graph(molpath), load_mol(molpath)
             data = extract_data(g, mol)
 
+            if with_amber99:
+
+                system = get_peptide_system(mol=mol, ff='amber99sbildn.xml')
+
+                energy_amber99, force_amber99 = get_energies(openmm_system=system, xyz=data['xyz'])
+
+                system = remove_forces_from_system(system=system, keep='nonbonded')
+
+                energy_amber99_nonbonded, force_amber99_nonbonded = get_energies(openmm_system=system, xyz=data['xyz'])
+
+                data['energy_amber99'] = energy_amber99
+                data['gradient_amber99'] = -force_amber99
+                data['energy_amber99_nonbonded'] = energy_amber99_nonbonded
+                data['gradient_amber99_nonbonded'] = -force_amber99_nonbonded
+
+                data['energy_ref'] = data['energy_qm'] - data['energy_amber99_nonbonded']
+                data['gradient_ref'] = data['gradient_qm'] - data['gradient_amber99_nonbonded']
+
+                # create moldata from amber99sbildn system
+                moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=mol.to_topology().to_openmm(), mol_id=data['smiles'][0], partial_charges=None, xyz=data['xyz'], energy=data['energy_qm'], gradient=data['gradient_qm'], energy_ref=data['energy_ref'], gradient_ref=data['gradient_ref'], mapped_smiles=data['mapped_smiles'][0], smiles=data['smiles'][0], allow_nan_params=True)
+
+                # add classical ff information
+                moldata.ff_energy.update({k.split('_', 1)[1]: v for k, v in data.items() if k.startswith('energy_') and not k == 'energy_ref'})
+                moldata.ff_gradient.update({k.split('_', 1)[1]: v for k, v in data.items() if k.startswith('gradient_') and not k == 'gradient_ref'})
+                moldata.ff_nonbonded_energy.update({k.split('_', 2)[2]: v for k, v in data.items() if k.startswith('nonbonded_energy_')})
+                moldata.ff_nonbonded_gradient.update({k.split('_', 2)[2]: v for k, v in data.items()if k.startswith('nonbonded_gradient_')})
+
+
+                moldata.save(targetpath/(molpath.stem+'.npz'))
+                total_mols += 1
+                total_confs += data['xyz'].shape[0]
+                num_success += 1
+                continue
+
             total_mols += 1
             total_confs += data['xyz'].shape[0]
 
@@ -131,8 +172,9 @@ def main(dspath, targetpath):
             np.savez_compressed(targetpath/(molpath.stem+'.npz'), **data)
             num_success += 1
         except Exception as e:
+            raise
             num_err += 1
-            # print(f"Failed to process {molpath}: {e}")
+            print(f"Failed to process {molpath}: {e}")
             continue
     
     print("\nDone!")
@@ -155,5 +197,10 @@ if __name__ == "__main__":
         default="/hits/fast/mbm/seutelf/data/datasets/spice-dipeptide",
         help="Path to the target folder in which tha dataset is stored as collection of npz files.",
     )
+    parser.add_argument(
+        "--with_amber99",
+        action="store_true",
+        help="Whether to compute amber99sbildn energies and forces and rather use them as reference. Can only be done for peptides. If True, grappa.data.MolData objects will be created and stored directly!",
+    )
     args = parser.parse_args()
-    main(dspath=args.dspath, targetpath=args.targetpath)
+    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99)

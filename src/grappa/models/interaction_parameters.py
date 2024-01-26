@@ -167,7 +167,7 @@ class RepProjector(torch.nn.Module):
             # this has the shape num_pairs, dim_tuple, rep_dim
             tuples = atom_feats[pairs]
         except IndexError as err:
-            err.message += f"\nIt might be that g.nodes['n{self.dim_tupel}'].data['idxs'] has the wrong datatype. It should be a long, byte or bool but is {pairs.dtype}"
+            raise IndexError(f"\nIt might be that g.nodes['n{self.dim_tupel}'].data['idxs'] has the wrong datatype. It should be a long, byte or bool but is {pairs.dtype}") from err
 
         # transform the input to the shape 2, num_pairs, rep_dim
         tuples = tuples.transpose(0,1).contiguous()

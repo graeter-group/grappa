@@ -1,12 +1,15 @@
 #%%
+import torch
+torch.set_float32_matmul_precision('medium')
+torch.set_default_dtype(torch.float32)
+
 from grappa.models import Energy, deploy
 
 from grappa.utils.run_utils import write_yaml
-import torch
 from pathlib import Path
 import wandb
 import sys
-from grappa.training.torchhub_upload import remove_module_prefix
+from grappa.training.export_model import remove_module_prefix
 from grappa.utils import graph_utils, dgl_utils
 from typing import List, Dict, Union
 from grappa.training.get_dataloaders import get_dataloaders
@@ -35,6 +38,7 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
             return config
 
     manual_sweep_config: function that sets wandb.config parameters specified in the sweep to some manual values defined in the function. This can be used for setting the sweep parameters to some known good starting values. Use eg wandb.config.update({'lr': 0.001}, allow_val_change=True) to set the learning rate to 0.001. In this case, the sweep config must be None.
+    pretrain_path: path to a checkpoint that is used to initialize the model weights. This can be a lightning checkpoint or the state dict directly.
     pretrain_path: path to a checkpoint that is used to initialize the model weights. This can be a lightning checkpoint or the state dict directly.
     """
 
@@ -103,11 +107,18 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
         d = torch.load(str(pretrain_path))
         if 'state_dict' in d.keys():
             state_dict = d['state_dict']
-            state_dict = remove_module_prefix(state_dict)
+            # state_dict = remove_module_prefix(state_dict)
         else:
             state_dict = d
 
-        model.load_state_dict(state_dict)
+        try:
+            model.load_state_dict(state_dict)
+        except Exception as e:
+            try:
+                state_dict = remove_module_prefix(state_dict)
+                model.load_state_dict(state_dict)
+            except Exception as e2:
+                raise e2 from e
 
     model.train()
 
@@ -152,4 +163,8 @@ def safe_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=
     except pl_RunFailed as e:
         print(f"Exception {e} occured. Restarting training run...", file=sys.stderr)
         run_id = e._run_id
-        resume_trainrun(run_id=run_id, project=project, wandb_folder=Path.cwd()/'wandb', new_wandb_run=True, overwrite_config=None)
+        try:
+            resume_trainrun(run_id=run_id, project=project, wandb_folder=Path.cwd()/'wandb', new_wandb_run=True, overwrite_config=None)
+        except Exception as e2:
+            print(f"Exception {e2} occured. Restarting training run failed.", file=sys.stderr)
+            raise e2 from e

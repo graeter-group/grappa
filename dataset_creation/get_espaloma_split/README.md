@@ -1,0 +1,2 @@
+Here, we re-create the train, val, test split from espaloma. Run save_split.py. This will create a file espaloma_split.json containing smilestrings for train, val and test molecules as used in espaloma.
+We created the files te_smiles.json and vl_smiles.json by calling load_esp_ds.py.

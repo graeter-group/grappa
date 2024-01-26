@@ -5,6 +5,8 @@ import torch
 import copy
 import numpy as np
 import copy
+import scipy.sparse as sp
+import networkx as nx
 
 def batch(graphs: List[DGLGraph], deep_copies_of_same_n_atoms:bool=False) -> DGLGraph:
     """
@@ -161,3 +163,39 @@ def set_number_confs(g:DGLGraph, num_confs:int, seed:int=None):
     
 
     return g
+
+
+
+def laplacian_positional_encoding(g: DGLGraph, k: int = 5) -> np.ndarray:
+    """
+    Takes the first k non-trivial eigenvectors of the graph Laplacian and uses their entries as node embeddings.
+    The graph may not be batched since this embedding changes for batched graphs.
+
+    Args:
+    g (dgl.DGLGraph): The DGL graph.
+    k (int): The number of eigenvectors to compute.
+
+    Returns:
+    np.ndarray containing the first k eigenvectors in shape (n_atoms, k).
+    """
+    homgraph = dgl.node_type_subgraph(g, ['n1'])
+    nx_graph = homgraph.to_networkx().to_undirected()
+
+    num_nodes = len(nx_graph.nodes)
+
+    laplacian = nx.normalized_laplacian_matrix(nx_graph)
+    laplacian = sp.csr_matrix(laplacian)
+
+    if num_nodes <= k + 1:
+        # Calculate eigenvectors for all nodes except the first trivial one
+        _, eigenvectors = sp.linalg.eigsh(laplacian, k=num_nodes-1, which='SM')
+        # Pad the eigenvectors with zeros
+        eigenvectors_padded = np.zeros((num_nodes, k))
+        eigenvectors_padded[:, :num_nodes-1] = eigenvectors
+        return eigenvectors_padded
+    else:
+        # Compute the first k+1 smallest eigenvalues and eigenvectors
+        _, eigenvectors = sp.linalg.eigsh(laplacian, k=k+1, which='SM')
+        # Ignore the first eigenvector (trivial, corresponding to the eigenvalue 0)
+        eigenvectors = eigenvectors[:, 1:]
+        return eigenvectors

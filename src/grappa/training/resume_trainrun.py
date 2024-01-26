@@ -1,3 +1,7 @@
+import torch
+torch.set_float32_matmul_precision('medium')
+torch.set_default_dtype(torch.float32)
+
 from pathlib import Path
 import datetime
 import re
@@ -6,7 +10,7 @@ from grappa.training.get_dataloaders import get_dataloaders
 from grappa.training.lightning_model import LitModel
 from grappa.training.lightning_trainer import get_lightning_trainer
 from grappa.models import deploy, Energy
-import torch
+
 from grappa.utils.run_utils import write_yaml
 from typing import Union, Dict
 

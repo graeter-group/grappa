@@ -22,7 +22,7 @@ tar -xvzf "$espaloma_ds_path/spice-dipeptide.tar.gz" -C $espaloma_ds_path
 tar -xvzf "$espaloma_ds_path/spice-pubchem.tar.gz" -C $espaloma_ds_path
 
 # remove tar files:
-rm *.tar.gz
+# rm *.tar.gz
 
 cwd=$(pwd)
 cd $SCRIPT_DIR

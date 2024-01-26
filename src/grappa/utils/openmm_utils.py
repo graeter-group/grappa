@@ -46,7 +46,7 @@ def get_energies(openmm_system, xyz):
 def remove_forces_from_system(system, remove:Union[List[str], str]=None, keep=None, info=False)->'openmm.System':
     """
     Modifies the OpenMM system by removing forces according to the 'remove' and 'keep' lists.
-    Forces are identified by their class name.
+    Forces are identified by their class name. E.g. to remove all nonbonded forces, use remove='nonbonded', to only keep nonbonded forces, use keep='nonbonded'.
 
     Parameters:
     - system: The OpenMM System object to modify.

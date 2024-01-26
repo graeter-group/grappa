@@ -216,6 +216,9 @@ def get_param_statistics(loader, suffix="_ref"):
         
         param_statistics = {'mean':{}, 'std':{}}
 
+        if parameters is None:
+            return get_default_statistics()
+
         for k, v in parameters.items():
             param_statistics['mean'][k] = torch.mean(v[torch.where(~torch.isnan(v))[0]], dim=0)
             param_statistics['std'][k] = torch.std(v[torch.where(~torch.isnan(v))[0]], dim=0)

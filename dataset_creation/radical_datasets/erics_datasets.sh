@@ -12,7 +12,7 @@ dglpath="$SCRIPT_DIR/../../data/dgl_datasets"
 # List of dataset names
 datasets=("AA_natural" "AA_radical")
 
-target_ds_names=("AA_natural" "AA_radical")
+target_ds_names=("capped_peptide_amber99sbildn" "AA_radical")
 
 # Loop through each dataset name
 for i in "${!datasets[@]}"; do
@@ -24,7 +24,7 @@ for i in "${!datasets[@]}"; do
 
     # for AA_natural, parametrize with a forcefield, else
     if [ "$ds" == "AA_natural" ]; then
-        python ds_from_dirs.py --source_path "$source_path/$ds" --target_path "$target_path/$target_ds_name" --openmm_ff "amber99sbildn*" --skip J_zeta Y_deprotonated J_epsilon
+        python ds_from_dirs.py --source_path "$source_path/$ds" --target_path "$target_path/$target_ds_name" --openmm_ff "amber99sbildn*" --skip J_zeta Y_deprotonated J_epsilon E_standard D_standard
     else
         python ds_from_dirs.py --source_path "$source_path/$ds" --target_path "$target_path/$target_ds_name"
     fi

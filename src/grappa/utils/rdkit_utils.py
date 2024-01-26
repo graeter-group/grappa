@@ -52,70 +52,20 @@ def rdkit_graph_from_bonds(bonds: List[Tuple[int, int]]):
     return mol
 
 
-############################################################################################################
-# LEGACY RDKIT METHODS FOR TUPLES
-
-
-def atom_indices(mol) -> np.ndarray:
+def get_degree(mol) -> np.ndarray:
     """
-    Obtain the indices of atoms in the given molecule.
-
-    Parameters:
-    mol (rdkit.Chem.rdchem.Mol): The molecule to get atom indices from.
-
-    Returns:
-    np.ndarray: A numpy array containing the indices of atoms in the molecule.
+    Returns the degree of each atom in the molecule one hot encoded. Can be between 1 and 6, i.e. has shape (n_atoms, 6).
     """
-    return np.array([a.GetIdx() for a in mol.GetAtoms()]).astype(np.int64)
+    return np.array(
+            [
+                [
+                    atom.GetDegree() == i
+                    for i in range(1, 7)
+                ]
+                for atom in mol.GetAtoms()
+            ]
+        ).astype(np.float32)
 
-
-def bond_indices(mol) -> np.ndarray:
-    """
-    Obtain the indices of bonds in the given molecule.
-
-    Parameters:
-    mol (rdkit.Chem.rdchem.Mol): The molecule to get bond indices from.
-    reduce_symmetry (bool): If True, then index tuples that can be obtained by invariant permutations are removed. Default is True.
-
-    Returns:
-    np.ndarray: A numpy array containing the indices of bonds in the molecule.
-    """
-    bond_indices = construct_bonds(mol)
-    return np.array(list(bond_indices)).astype(np.int64)
-
-
-def angle_indices(mol) -> np.ndarray:
-    """
-    Obtain the indices of angles in the given molecule.
-
-    Parameters:
-    mol (rdkit.Chem.rdchem.Mol): The molecule to get angle indices from.
-    reduce_symmetry (bool): If True, then index tuples that can be obtained by invariant permutations are removed. Default is True.
-
-    Returns:
-    np.ndarray: A numpy array containing the indices of angles in the molecule.
-    """
-    angle_indices = construct_angles(mol)
-    return np.array(list(angle_indices)).astype(np.int64)
-
-
-def torsion_indices(mol) -> np.ndarray:
-    """
-    Obtain the indices of proper torsions in the given molecule.
-
-    Parameters:
-    mol (rdkit.Chem.rdchem.Mol): The molecule to get torsion indices from.
-    reduce_symmetry (bool): If True, then index tuples that can be obtained by invariant permutations are removed. Default is True.
-
-    Returns:
-    Tuple[np.ndarray, np.ndarray]: Two numpy arrays containing the indices of proper torsions in the molecule.
-    """
-    propers = construct_propers(mol)
-    return np.array(list(propers)).astype(np.int64)
-
-
-
-############################################################################################################
 
 
 def construct_bonds(mol) -> Set[Tuple]:

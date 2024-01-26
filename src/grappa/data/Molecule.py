@@ -2,17 +2,16 @@
 Contains the grappa input dataclass 'Molecule'.
 """
 
-from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
 from grappa import constants
 from grappa.utils import tuple_indices
-from dgl import DGLGraph
 import dgl.heterograph
 import torch
 from pathlib import Path
 import pkgutil
 import json
+from grappa.utils.dgl_utils import laplacian_positional_encoding
 
 
 
@@ -69,6 +68,11 @@ class Molecule():
         propers: Optional[Union[List[Tuple[int, int, int, int]], np.ndarray]] = None,
         improper_in_correct_format: bool = False,
         ring_encoding: bool = True,
+        degree: bool = True,
+        laplacian_encoding: bool = True,
+        mass_encoding: bool = True,
+        mapped_smiles: str = None,
+        charge_model: str = 'am1BCC',
     )->None:
         self.atoms = atoms
         self.bonds = bonds
@@ -78,7 +82,9 @@ class Molecule():
         self.additional_features = additional_features
         self.angles = angles
         self.propers = propers
-        self.neighbor_dict = None  # Calculated from bonds if needed
+        self.neighbor_dict = None  # Calculated from bonds if needed. key: atom id, value: list of neighbor atom ids
+
+        self.charge_model = charge_model
 
         if not improper_in_correct_format:
             self.process_impropers()
@@ -86,8 +92,24 @@ class Molecule():
         self.__post_init__()
         self._validate()
 
+
+        if mass_encoding:
+            self.add_features(feat_names=['mass'])
+
         if ring_encoding:
             self.add_features(feat_names=['ring_encoding'])
+
+        if degree:
+            self.add_features(feat_names=['degree'])
+
+        if laplacian_encoding:
+            self.add_features(feat_names=['laplacian_positional_encoding'])
+
+        if not mapped_smiles is None:
+            assert pkgutil.find_loader("openff.toolkit") is not None, "openff.toolkit must be installed if you pass a mapped_smiles string to this constructor."
+            from grappa.utils.openff_utils import get_openff_molecule
+            openff_mol = get_openff_molecule(mapped_smiles)
+            self.add_features(feat_names=['sp_hybridization'], openff_mol=openff_mol)
 
     def process_impropers(self):
         """
@@ -123,6 +145,16 @@ class Molecule():
         if self.additional_features is None:
             self.additional_features= {}
 
+        if not self.charge_model in constants.CHARGE_MODELS:
+            raise ValueError(f"charge_model must be one of {constants.CHARGE_MODELS} but is {self.charge_model}")
+        
+        if not 'charge_model' in self.additional_features.keys():
+            self.additional_features['charge_model'] = np.tile(np.array([cm == self.charge_model for cm in constants.CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
+
+
+        # initialize all mols to be not-radical if not overwritten later:
+        if not 'is_radical' in self.additional_features.keys():
+            self.additional_features['is_radical'] = np.zeros((len(self.atoms),), dtype=np.float32)
 
         self._validate()
 
@@ -145,7 +177,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None):
         """
         Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
@@ -154,7 +186,8 @@ class Molecule():
             - openmm_system: an openmm system
             - openmm_topology: an openmm topology
             - partial_charges: a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system.
-            - no_ring_encoding: if True, the ring encoding feature (for which rdkit is needd) is not added.
+            - ring_encoding: if False, the ring encoding feature (for which rdkit is needd) is not added.
+            - mapped_smiles: the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'.
 
         Args:
             openmm_system ([openmm.System]): an openmm system defining the improper torsions and, if partial_charges is None, the partial charges.
@@ -215,21 +248,23 @@ class Molecule():
             atomic_numbers.append(atom.element.atomic_number)
             atoms.append(atom.index)
 
-        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True)
+        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, laplacian_encoding=True, degree=True)
 
-        if ring_encoding:
-            self.add_features(feat_names=['ring_encoding'])
 
         return self
 
 
-    def add_features(self, feat_names:Union[str,List[str]]=['ring_encoding'], **kwargs):
+    def add_features(self, feat_names:Union[str,List[str]]=['ring_encoding', 'degree', 'mass', 'laplacian_positional_encoding'], **kwargs):
         """
         Add features to the molecule by keyword. Currently supported:
             - 'ring_encoding': a one-hot encoding of ring membership obtained from rdkit. feat dim: 7
             - 'sp_hybridization': a one-hot encoding of the hybridization of the atom. openff_mol must be passed as a keyword argument. feat dim: 6
             - 'is_aromatic': a one-hot encoding indicating whether the atom is aromatic or not. openff_mol must be passed as a keyword argument. feat dim: 1
             - 'is_radical': a one-hot encoding indicating whether the atom is a radical or not. feat dim: 1
+            - 'degree': the degree of the noe in the graph, i.e. the number of neighbors, one hot encoded. feat dim: 6
+            - 'laplacian_positional_encoding': the positional encoding of the atom in the graph using the laplacian eigenvectors. feat dim: 5
+            - 'mass': the mass and the nat log of the mass of the atom. openff_mol must be passed as a keyword argument. feat dim: 2
+            - 'partial_charge_encoding': 
         """
         if isinstance(feat_names, str):
             feat_names = [feat_names]
@@ -249,6 +284,26 @@ class Molecule():
                 ring_encoding_ = rdkit_utils.get_ring_encoding(mol)
                 self.additional_features['ring_encoding'] = ring_encoding_
 
+            elif feat_name == 'degree':
+                assert pkgutil.find_loader("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
+                from grappa.utils import rdkit_utils
+
+                # translate between atom ids and indices:
+                # atom_idx[atom_id] = idx
+                atom_idx = {id:idx for idx,id in enumerate(self.atoms)}
+                # transform bonds to indices:
+                bonds_by_idx = [(atom_idx[bond[0]], atom_idx[bond[1]]) for bond in self.bonds]
+                mol = rdkit_utils.rdkit_graph_from_bonds(bonds=bonds_by_idx)
+
+                degree_ = rdkit_utils.get_degree(mol)
+                self.additional_features[feat_name] = degree_
+
+
+            elif feat_name == 'mass':
+                masses = np.array([constants.ATOMIC_MASSES[atomic_number] for atomic_number in self.atomic_numbers], dtype=np.float32)
+                masses_log = np.log(masses)
+                self.additional_features[feat_name] = np.stack((masses, masses_log), axis=1)
+
 
             elif feat_name == 'sp_hybridization':
                 assert "openff_mol" in kwargs, f"openff_mol must be passed as a keyword argument to use the feature {feat_name}"
@@ -258,6 +313,8 @@ class Molecule():
                 openff_mol = kwargs['openff_mol']
                 sp_hybridization = openff_utils.get_sp_hybridization_encoding(openff_mol)
                 self.additional_features[feat_name] = sp_hybridization
+
+
 
 
             elif feat_name == 'is_aromatic':
@@ -273,6 +330,10 @@ class Molecule():
             elif feat_name == 'is_radical':
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")
             
+            elif feat_name == 'laplacian_positional_encoding':
+                g = self.to_dgl()
+                encodings = laplacian_positional_encoding(g, k=5)
+                self.additional_features[feat_name] = encodings
 
             else:
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")
@@ -580,3 +641,20 @@ class Molecule():
     def __str__(self):
         features_str = ', '.join(list(self.additional_features.keys()))
         return f"<grappa.data.Molecule ({len(self.atoms)} atoms, {len(self.bonds)} bonds, {len(self.angles)} angles, {len(self.propers)} propers, {len(self.impropers)//3} impropers, features: {features_str})>"
+
+    def set_radical_flag(self, atom_id:int, is_radical:bool=True):
+        """
+        Set the radical flag of an atom.
+        """
+        assert atom_id in self.atoms, f"atom_id {atom_id} not in molecule"
+        self.additional_features['is_radical'][self.atoms.index(atom_id)] = 1.0 if is_radical else 0.0
+
+    def set_radical_feature(self, is_radical:Union[List[bool], np.ndarray]):
+        """
+        Set the radical flag of atoms.
+        """
+        assert len(is_radical) == len(self.atoms), f"length of is_radical ({len(is_radical)}) must be equal to number of atoms ({len(self.atoms)})"
+        if isinstance(is_radical, np.ndarray):
+            assert len(is_radical.shape) == 1, f"is_radical must be a 1d array but has shape {is_radical.shape}"
+
+        self.additional_features['is_radical'] = np.array(is_radical, dtype=np.float32)

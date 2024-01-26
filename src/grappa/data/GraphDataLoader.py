@@ -5,6 +5,7 @@ from grappa.utils import dgl_utils
 import copy
 from typing import Dict, List, Union
 import torch
+from collections import defaultdict
 import numpy as np
 import json
 
@@ -116,10 +117,15 @@ class GraphDataLoader(DataLoader):
                 sample_weights = np.array(sample_weights)*balancing_weights
 
                 # just for printing:
-                percentage_dict = {name: occurence_ratios[name]/ratio_used[name]*(1. if name not in weights.keys() else weights[name]) for name in occurence_ratios.keys()}
-                normalization = sum(list(percentage_dict.values()))
-                percentage_dict = {name: percentage_dict[name]/normalization*100. for name in percentage_dict.keys()}
+                dsnames = [subdataset_name for _, subdataset_name in dataset]
+                total_mols_sampled = defaultdict(int)
+                for weights, name in zip(sample_weights, dsnames):
+                    total_mols_sampled[name] += weights
 
+                percentage_dict = {name: total_mols_sampled[name]/sum(list(total_mols_sampled.values()))*100. for name in occurence_ratios.keys()}
+                # percentage_dict = {name: occurence_ratios[name]/ratio_used[name]*(1. if name not in weights.keys() else weights[name]) for name in occurence_ratios.keys()}
+                # normalization = sum(list(percentage_dict.values()))
+                # percentage_dict = {name: percentage_dict[name]/normalization*100. for name in percentage_dict.keys()}
 
                 print(f"Balancing dataset sampling. Per epoch the loader will sample instances from the datasets with the following percentages: {json.dumps(percentage_dict, indent=4)}")
 

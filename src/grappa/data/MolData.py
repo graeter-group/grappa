@@ -398,6 +398,7 @@ class MolData():
         gradient_ref = data_dict.get('gradient_ref', None)
         
 
+
         if mapped_smiles is not None:
             self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles, allow_nan_params=allow_nan_params)
         else:
@@ -441,7 +442,7 @@ class MolData():
             - allow_nan_params: bool
         """
         import openmm
-        mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges)
+        mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles)
 
         try:        
             params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
@@ -458,7 +459,7 @@ class MolData():
             # set the partial charges in the openmm system
             openmm_system = openmm_utils.set_partial_charges(system=openmm_system, partial_charges=partial_charges)
 
-        # calculate the reference energy and gradient from the openmm system to (maybe?) include this in the training objective
+        # calculate the reference-forcefield's energy and gradient from the openmm system
         total_ref_energy, total_ref_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
         total_ref_gradient = -total_ref_gradient # the reference gradient is the negative of the force
 
@@ -475,9 +476,19 @@ class MolData():
             # create a deep copy of the system:
             system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
 
-            # remnove all but the nonbonded forces in this copy:
-            self.energy_ref, self.gradient_ref = openmm_utils.get_energies(openmm_system=system2, xyz=xyz)
-            self.gradient_ref = -self.gradient_ref # the reference gradient is the negative of the force
+            # remove all but the nonbonded forces in this copy:
+            system2 = openmm_utils.remove_forces_from_system(system2, keep=['NonbondedForce'])
+            
+            nonbonded_energy, nonbonded_gradient = openmm_utils.get_energies(openmm_system=system2, xyz=xyz)
+            nonbonded_gradient = -nonbonded_gradient # the reference gradient is the negative of the force
+
+            self.energy_ref = energy - nonbonded_energy
+            self.energy_ref -= self.energy_ref.mean()
+
+            self.gradient_ref = gradient - nonbonded_gradient
+
+            self.ff_nonbonded_energy[ff_name] = nonbonded_energy
+            self.ff_nonbonded_gradient[ff_name] = nonbonded_gradient
 
         # calculate the contribution from improper torsions in the system:
         # remove all forces but periodic torsions
@@ -552,7 +563,7 @@ class MolData():
 
         self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles, allow_nan_params=allow_nan_params)
 
-        self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic"], openff_mol=openff_mol)
+        self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic",'degree'], openff_mol=openff_mol)
 
         return self
 

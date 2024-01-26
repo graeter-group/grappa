@@ -154,12 +154,13 @@ class Evaluator:
         return metrics
 
 #%%
+# NOTE: ERROR IN RMSE_FROM_CLASSICAL. ONLY BONDED SHOULD BE USED THERE!!
 
 class ExplicitEvaluator:
     """
     Does the same as the Evaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None):
+    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None, molwise_rmse:bool=True):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
@@ -174,6 +175,8 @@ class ExplicitEvaluator:
 
         self.ref_suffix_classical = ref_suffix_classical
 
+        self.molwise_rmse = molwise_rmse
+
         self.init_storage()
 
     def init_storage(self):
@@ -183,6 +186,10 @@ class ExplicitEvaluator:
 
         self.reference_energies = {}
         self.reference_gradients = {}
+
+        if self.molwise_rmse:
+            self.energy_rmse_molwise = {}
+            self.gradient_crmse_molwise = {}
 
         if self.log_parameters:
             self.parameters = {}
@@ -238,6 +245,10 @@ class ExplicitEvaluator:
             self.reference_energies.setdefault(dsname, []).append(energies_ref)
             self.reference_gradients.setdefault(dsname, []).append(gradients_ref)
 
+            if self.molwise_rmse:
+                self.energy_rmse_molwise.setdefault(dsname, []).append(torch.sqrt(torch.mean(torch.square(energies - energies_ref))))
+                self.gradient_crmse_molwise.setdefault(dsname, []).append(torch.sqrt(torch.mean(torch.square(gradients - gradients_ref))))
+
             if self.log_classical_values:
                 self.classical_energies.setdefault(dsname, []).append(energies_classical)
                 self.classical_gradients.setdefault(dsname, []).append(gradients_classical)
@@ -254,9 +265,12 @@ class ExplicitEvaluator:
 
 
     def collect(self):
+
+        self.n_mols = {}
+
         for dsname in self.energies.keys():
 
-            self.n_mols = len(self.energies[dsname])
+            self.n_mols[dsname] = len(self.energies[dsname])
 
             # concatenate the tensors
             self.energies[dsname] = torch.cat(self.energies[dsname], dim=0)
@@ -264,6 +278,10 @@ class ExplicitEvaluator:
 
             self.reference_energies[dsname] = torch.cat(self.reference_energies[dsname], dim=0)
             self.reference_gradients[dsname] = torch.cat(self.reference_gradients[dsname], dim=0)
+
+            if self.molwise_rmse:
+                self.energy_rmse_molwise[dsname] = torch.tensor(self.energy_rmse_molwise[dsname]).cpu().tolist()
+                self.gradient_crmse_molwise[dsname] = torch.tensor(self.gradient_crmse_molwise[dsname]).cpu().tolist()
 
             if self.log_classical_values:
                 self.classical_energies[dsname] = torch.cat(self.classical_energies[dsname], dim=0)
@@ -280,8 +298,10 @@ class ExplicitEvaluator:
 
 
     def pool(self):
-
         self.collect()
+        return self.get_metrics()
+
+    def get_metrics(self):
 
         metrics = {}
         for dsname in self.energies.keys():
@@ -289,7 +309,7 @@ class ExplicitEvaluator:
 
             metrics[dsname]['n_confs'] = self.energies[dsname].shape[0]
 
-            metrics[dsname]['n_mols'] = self.n_mols
+            metrics[dsname]['n_mols'] = self.n_mols[dsname]
 
             metrics[dsname]['std_energies'] = float(self.energies[dsname].std().item())
             metrics[dsname]['std_gradients'] = float(self.gradients[dsname].std().item() * np.sqrt(3))
@@ -305,10 +325,12 @@ class ExplicitEvaluator:
             if self.log_classical_values:
                 metrics[dsname]['rmse_classical_energies'] = float(root_mean_squared_error(self.energies[dsname], self.classical_energies[dsname]).item())
                 metrics[dsname]['rmse_classical_gradients'] = float(invariant_rmse(self.gradients[dsname], self.classical_gradients[dsname]).item())
+                metrics[dsname]['crmse_classical_gradients'] = float(root_mean_squared_error(self.gradients[dsname], self.classical_gradients[dsname]).item())
 
                 if self.ref_suffix_classical is not None:
-                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.reference_energies[dsname], self.ref_classical_energies[dsname]).item())
-                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.reference_gradients[dsname], self.ref_classical_gradients[dsname]).item())
+                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.classical_energies[dsname], self.ref_classical_energies[dsname]).item())
+                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.classical_gradients[dsname], self.ref_classical_gradients[dsname]).item())
+                    metrics[dsname]['crmse_classical_gradients_from_ref'] = float(root_mean_squared_error(self.classical_gradients[dsname], self.ref_classical_gradients[dsname]).item())
 
             if self.log_parameters:
                 for ptype in self.parameters[dsname].keys():

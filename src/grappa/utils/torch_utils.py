@@ -138,13 +138,26 @@ def get_k_fold_split_ids(ids:list[str], ds_names:List[str], k:int=10, seed:int=0
     return out
 
 
-def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]], seed:int=0, duplicate_partition:Tuple[float,float,float]=(0.8,0.1,0.1)):
+def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]], seed:int=0, duplicate_partition:Tuple[float,float,float]=(0.8,0.1,0.1), existing_split:Dict[str, List[str]]=None):
     """
     Returns a dictionary containing the molecule ids for train, validation and test sets. The ids are sampled such that smaller datasets also have a share approximate to the given partition.
     partition can be a tuple of three floats or a tuple of a (default) tuple of 3 floats and a dict mapping dsnames to tuples of 3 floats. If it is a tuple, the same partition is used for all datasets. If it is a dict, the keys must be the dataset names and the values must be tuples of floats.
     It can be guaranteed that if one dsname partition is such that all molecules are in either train, val or test, then the same is true for molecules with the same id in other datasets.
     """
     random.seed(seed)
+
+    # first of all, remove all ids that are already in the existing split:
+    if existing_split is None:
+        ids_ = ids
+        ds_names_ = ds_names
+    else:
+        all_ids_in_existing_split = set(existing_split['train'] + existing_split['val'] + existing_split['test'])
+        filtered_data = [[id_, dsname] for id_, dsname in zip(ids, ds_names) if id_ not in all_ids_in_existing_split]
+        if len(filtered_data) == 0:
+            return existing_split
+        
+        else:
+            ids_, ds_names_ = zip(*filtered_data)
 
     def get_partition_tuple(dsname):
         out = None
@@ -168,16 +181,16 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     out = {"train":[], "val":[], "test":[]} # dict of lists of ids
 
     # indices of those ids that occur more than once
-    duplicate_indices = [i for i, x in enumerate(ids) if ids.count(x) > 1]
+    duplicate_indices = [i for i, x in enumerate(ids_) if ids_.count(x) > 1]
 
-    unique_indices = [i for i in range(len(ids)) if i not in duplicate_indices]
+    unique_indices = [i for i in range(len(ids_)) if i not in duplicate_indices]
 
-    duplicates = copy.deepcopy([ids[idx] for idx in duplicate_indices])
+    duplicates = copy.deepcopy([ids_[idx] for idx in duplicate_indices])
 
-    uniques = {ds_name:[] for ds_name in sorted(set(ds_names))}
+    uniques = {ds_name:[] for ds_name in sorted(set(ds_names_))}
     for idx in unique_indices:
-        dsname = ds_names[idx]
-        uniques[dsname].append(ids[idx])
+        dsname = ds_names_[idx]
+        uniques[dsname].append(ids_[idx])
 
     uniques = copy.deepcopy(uniques)
 
@@ -188,8 +201,8 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     # make each id appear once in duplicates without using set to preserve deterministic behaviour
     unique_duplicate_ids = []
     for idx in duplicate_indices:
-        if ids[idx] not in unique_duplicate_ids:
-            unique_duplicate_ids.append(ids[idx])
+        if ids_[idx] not in unique_duplicate_ids:
+            unique_duplicate_ids.append(ids_[idx])
     duplicates = unique_duplicate_ids
 
 
@@ -197,9 +210,9 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     #############################
     # now loop again over the duplicates, this time also considering the ds_names. If the individual partition of a dsname has a one at some place, we can remove the id from the duplicates list and directly assign it to the corresponding set since it must be there then.
     # first, create a dict of duplicate_id:dsnames:
-    duplicate_id_dsnames = {id:[] for id in duplicates}
+    duplicate_id_dsnames = {id_:[] for id_ in duplicates}
     for idx in duplicate_indices:
-        duplicate_id_dsnames[ids[idx]].append(ds_names[idx])
+        duplicate_id_dsnames[ids_[idx]].append(ds_names_[idx])
     
     # now loop over the duplicates, assert that there is no one at different positions for different ds_names and assign to the corresponding set
     for id in duplicates:
@@ -258,12 +271,12 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     # count how many duplicate ids are in each dataset
     ds_counts = {
         ds_name:{'train':0, 'val':0, 'test':0}
-        for ds_name in set(ds_names)
+        for ds_name in set(ds_names_)
     }
     for idx in duplicate_indices:
-        ds_counts[ds_names[idx]]['train'] += 1 if ids[idx] in dup_train else 0
-        ds_counts[ds_names[idx]]['val'] += 1 if ids[idx] in dup_val else 0
-        ds_counts[ds_names[idx]]['test'] += 1 if ids[idx] in dup_test else 0
+        ds_counts[ds_names_[idx]]['train'] += 1 if ids_[idx] in dup_train else 0
+        ds_counts[ds_names_[idx]]['val'] += 1 if ids_[idx] in dup_val else 0
+        ds_counts[ds_names_[idx]]['test'] += 1 if ids_[idx] in dup_test else 0
 
 
     # now split the uniques such that for each ds_name, the ratio of train, val and test is approx the same as in the partition dict
@@ -322,11 +335,19 @@ def calc_split_ids(ids:list[str], ds_names:List[str], partition:Union[Tuple[floa
     out['val'] += dup_val
     out['test'] += dup_test
 
-    assert len(out['train']) + len(out['val']) + len(out['test']) == len(set(list(ids))), f"Split failed, {len(out['train']) + len(out['val']) + len(out['test'])} != {len(ids)}"
+    assert len(out['train']) + len(out['val']) + len(out['test']) == len(set(list(ids_))), f"Split failed, {len(out['train']) + len(out['val']) + len(out['test'])} != {len(ids_)}"
 
     assert len(set(out['train']).intersection(set(out['val']))) == 0, "Train and val sets must not overlap"
     assert len(set(out['train']).intersection(set(out['test']))) == 0, "Train and test sets must not overlap"
     assert len(set(out['val']).intersection(set(out['test']))) == 0, "Val and test sets must not overlap"
+
+
+
+    if existing_split is not None:
+        out['train'] += existing_split['train']
+        out['val'] += existing_split['val']
+        out['test'] += existing_split['test']
+
 
     return out
 

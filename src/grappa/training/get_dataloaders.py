@@ -60,6 +60,7 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         elif isinstance(ds, Path) or isinstance(ds, str):
             print(f"Loading dataset from {ds}...")
             dataset += Dataset.load(ds)
+                
         else:
             raise ValueError(f"Unknown type for dataset: {type(ds)}")
 
@@ -78,15 +79,17 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
     if splitpath is not None:
         split_ids = json.load(open(splitpath, 'r'))
         print(f'Using split ids from {splitpath}')
+        split_ids = dataset.calc_split_ids(partition=partition, seed=seed, existing_split=split_ids)
     else:
         split_ids = dataset.calc_split_ids(partition=partition, seed=seed)
-        if not save_splits is None:
-            if isinstance(save_splits, str):
-                save_splits = Path(save_splits)
-            assert isinstance(save_splits, Path)
-            save_splits.parent.mkdir(parents=True, exist_ok=True)
-            with open(save_splits, 'w') as f:
-                json.dump(split_ids, f, indent=4)
+
+    if not save_splits is None:
+        if isinstance(save_splits, str):
+            save_splits = Path(save_splits)
+        assert isinstance(save_splits, Path)
+        save_splits.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_splits, 'w') as f:
+            json.dump(split_ids, f, indent=4)
 
     tr, vl, te = dataset.split(*split_ids.values())
 
@@ -96,7 +99,13 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         if isinstance(ds, Dataset):
             tr += ds
         elif isinstance(ds, Path) or isinstance(ds, str):
-            if str(ds) in paths:
+            try:
+                # if it is a valid tag, intialize from tag
+                ds = get_path_from_tag(tag=ds)
+            except ValueError:
+                # assume that it is a path
+                ds = Path(ds)
+            if ds in paths:
                 raise ValueError(f"Pure train dataset {ds} already in datasets list.")
             print(f"Loading dataset from {ds}...")
             tr += Dataset.load(ds)
@@ -107,8 +116,14 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         if isinstance(ds, Dataset):
             vl += ds
         elif isinstance(ds, Path) or isinstance(ds, str):
-            if str(ds) in paths:
-                raise ValueError(f"Pure val dataset {ds} already in datasets list.")
+            try:
+                # if it is a valid tag, intialize from tag
+                ds = get_path_from_tag(tag=ds)
+            except ValueError:
+                # assume that it is a path
+                ds = Path(ds)
+            if ds in paths:
+                raise ValueError(f"Pure train dataset {ds} already in datasets list.")
             print(f"Loading dataset from {ds}...")
             vl += Dataset.load(ds)
         else:
@@ -118,8 +133,14 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         if isinstance(ds, Dataset):
             te += ds
         elif isinstance(ds, Path) or isinstance(ds, str):
-            if str(ds) in paths:
-                raise ValueError(f"Pure test dataset {ds} already in datasets list.")
+            try:
+                # if it is a valid tag, intialize from tag
+                ds = get_path_from_tag(tag=ds)
+            except ValueError:
+                # assume that it is a path
+                ds = Path(ds)
+            if ds in paths:
+                raise ValueError(f"Pure train dataset {ds} already in datasets list.")
             print(f"Loading dataset from {ds}...")
             te += Dataset.load(ds)
         else:
@@ -138,6 +159,70 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         vl.clean(keep_feats=keep_feats)
     if len(pure_test_datasets) > 0:
         te.remove_uncommon_features()
+    #########################################################
+
+    #########################################################
+    REPLACE_HYBRIDIZATION = False
+    if REPLACE_HYBRIDIZATION:
+        # load a Hybridization predictor:
+        from grappa.models.graph_attention import GrappaGNN
+        class GraphModel(torch.nn.Module):
+            def __init__(self, n_classes=6):
+                super().__init__()
+                
+                self.gnn = GrappaGNN(in_feat_name=['partial_charge', 'atomic_number', 'degree', 'ring_encoding'], out_feats=32, n_conv=0, n_att=1)
+                self.lin_1 = torch.nn.Linear(32, 32)
+                self.lin_out = torch.nn.Linear(32, n_classes)
+
+            def forward(self, g):
+                # Forward pass through the model
+                g = self.gnn(g)
+                scores = g.nodes['n1'].data['h']
+                scores = torch.nn.functional.elu(scores)
+                scores = self.lin_1(scores)
+                scores = torch.nn.functional.elu(scores)
+                scores = self.lin_out(scores)
+                return scores
+
+        # load the state dict:
+        checkpoint_path = '/hits/fast/mbm/seutelf/grappa/tests/hybridization_feature/checkpoints/best-model-v3.ckpt'
+        state_dict = torch.load(checkpoint_path)['state_dict']
+        # remove the prefix:
+        state_dict = {k.replace('model.', ''): v for k, v in state_dict.items()}
+        # load the model:
+        model = GraphModel()
+        model.load_state_dict(state_dict)
+
+        print('Loaded Hybridization predictor from:', checkpoint_path)
+
+        model = torch.nn.Sequential(
+            GraphModel(),
+            torch.nn.Softmax(dim=1)
+        )
+
+        model.eval()
+
+        model = model.to('cpu')
+
+        import copy
+
+        # now overwrite the sp_hybridization feature with the predicted one:
+        def overwrite_sp_hybridization(ds):
+            print('Overwriting sp_hybridization feature with predicted one...')
+            for i, _ in enumerate(ds):
+                print(i, end='\r')
+                with torch.no_grad():
+                    new_hybrid = model(ds[i][0]).detach().clone().cpu()
+                    new_hybrid = copy.deepcopy(new_hybrid)
+                ds[i][0].nodes['n1'].data['sp_hybridization'] = new_hybrid
+            print()
+            return ds
+
+        print('Overwriting sp_hybridization feature with predicted one...')
+        tr = overwrite_sp_hybridization(tr)
+        vl = overwrite_sp_hybridization(vl)
+        te = overwrite_sp_hybridization(te)
+
     #########################################################
 
     # Get the dataloaders

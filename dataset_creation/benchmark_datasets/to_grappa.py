@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import traceback
 
-def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml'):
+def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml', partial_charge_key='am1bcc_elf_charges'):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -31,12 +31,12 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
             # ransform to actual dictionary
             data = {k:v for k,v in data.items()}
             try:
-                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield)
+                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key=partial_charge_key, forcefield=forcefield)
             except:
-                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key='am1bcc_elf_charges', forcefield=forcefield, allow_nan_params=True)
+                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key=partial_charge_key, forcefield=forcefield, allow_nan_params=True)
                 num_nan_params += 1
 
-            moldata.molecule.add_features(['ring_encoding'])
+            # moldata.molecule.add_features(['ring_encoding'])
 
             total_mols += 1
             total_confs += data['xyz'].shape[0]
@@ -75,5 +75,14 @@ if __name__ == "__main__":
         default='openff_unconstrained-2.0.0.offxml',
         help="Which forcefield to use for creating improper torsion and classical parameters. if no energy_ref and gradient_ref are given, the nonbonded parameters are used as reference.",
     )
+    parser.add_argument(
+        "--partial_charge_key",
+        type=str,
+        default='am1bcc_elf_charges',
+        help="Which partial charge key to use for creating improper torsion and classical parameters. if no energy_ref and gradient_ref are given, the nonbonded parameters are used as reference.",
+    )
     args = parser.parse_args()
-    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield)
+    if args.partial_charge_key in ['None', 'none', '']:
+        args.partial_charge_key = None
+        
+    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield, partial_charge_key=args.partial_charge_key)

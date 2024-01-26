@@ -10,7 +10,7 @@ target_path="$SCRIPT_DIR/../../data/dgl_datasets"
 
 
 # List of dataset names
-datasets=("spice_dipeptide_amber99sbildn" "tripeptides_amber99sbildn" "tripeptides_openff210")
+datasets=("tripeptides_amber99sbildn") # "tripeptides_openff120")
 
 # Loop through each dataset name
 for ds in "${datasets[@]}"; do

@@ -7,13 +7,15 @@ from grappa.data import Dataset
 #%%
 DSNAME = 'tripeptides_amber99sbildn'
 DSNAME2 = 'dipeptide_rad'
-DSNAME3 = 'Capped_AA_break_breakpoint'
+DSNAME3 = 'spice-des-monomers'
 
 # Download a dataset if not present already:
 dataset = Dataset.from_tag(DSNAME)
 # Download a second dataset and append it:
 dataset += Dataset.from_tag(DSNAME2)
 dataset += Dataset.from_tag(DSNAME3)
+
+dataset.remove_uncommon_features()
 
 # For more efficient data loading, we use a GraphDataLoader
 from grappa.data import GraphDataLoader
