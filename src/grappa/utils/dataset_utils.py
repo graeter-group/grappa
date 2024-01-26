@@ -40,19 +40,19 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
     RELEASE_URL = 'https://github.com/LeifSeute/test_torchhub/releases/download/dataset_release/'
 
     URL_TAGS = [
-        'spice-des-monomers'
-        'spice-pubchem'
-        'gen2'
-        'gen2-torsion'
-        'rna-diverse'
-        'spice-dipeptide'
-        'protein-torsion'
-        'pepconf-dlc'
-        'spice-dipeptide_amber99sbildn'
-        'protein-torsion_amber99sbildn'
-        'pepconf-dlc_amber99sbildn'
-        'tripeptides_amber99sbildn'
-        'dipeptide_rad'
+        'spice-des-monomers',
+        'spice-pubchem',
+        'gen2',
+        'gen2-torsion',
+        'rna-diverse',
+        'spice-dipeptide',
+        'protein-torsion',
+        'pepconf-dlc',
+        'spice-dipeptide_amber99sbildn',
+        'protein-torsion_amber99sbildn',
+        'pepconf-dlc_amber99sbildn',
+        'tripeptides_amber99sbildn',
+        'dipeptide_rad',
     ]
 
     dir_path = Path(data_dir) / tag
