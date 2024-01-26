@@ -66,7 +66,7 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         return dir_path
     
     # Download the file if it doesn't exist
-    if not tag in urls:
+    if not tag in URL_TAGS:
         raise ValueError(f"Tag {tag} not recognized. Available tags for download are {urls}")
     
     return load_dataset(url=urls[tag], data_dir=data_dir, filename=tag)
