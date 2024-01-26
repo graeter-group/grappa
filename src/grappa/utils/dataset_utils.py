@@ -66,7 +66,7 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
     
     url = RELEASE_URL + tag + '.zip'
 
-    return load_dataset(url=urls[tag], data_dir=data_dir, filename=tag)
+    return load_dataset(url=url, data_dir=data_dir, filename=tag)
 
 
 
