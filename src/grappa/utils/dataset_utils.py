@@ -21,10 +21,11 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'spice-pubchem'
         'gen2'
         'gen2-torsion'
-        'rna-diverse'
         'spice-dipeptide'
         'protein-torsion'
         'pepconf-dlc'
+        'rna-diverse'
+        'rna-trinucleotide'
 
     PEPTIDE DATASET:
         'spice-dipeptide_amber99sbildn'
@@ -45,6 +46,7 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'gen2',
         'gen2-torsion',
         'rna-diverse',
+        'rna-trinucleotide',
         'spice-dipeptide',
         'protein-torsion',
         'pepconf-dlc',

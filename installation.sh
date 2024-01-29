@@ -20,8 +20,8 @@ fi
 
 
 # if 12.1, warn user that it is not recommended:
-if [ "$cuda_version" == "12.1" ]; then
-    echo "Installing with CUDA version 12.1 is not recommended.\n\tIt could not be verified that the dgl installation works due to problems finding the libcusparse.so.12 shared object file."
+if [[ ! $cuda_version =~ ^(11.8|12.1)$ ]]; then
+    echo "Installing with CUDA version 12.1/11.8 is not recommended.\n\tIt could not be verified that the dgl installation works due to problems finding the libcusparse.so.12 / libcusparse.so.11 shared object file."
     read -p "Continue? (y/n) " choice
     case "$choice" in 
         y|Y ) echo "Continuing installation...";;

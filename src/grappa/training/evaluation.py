@@ -4,6 +4,7 @@ from grappa.utils.graph_utils import get_energies, get_gradients, get_parameters
 from grappa.utils import dgl_utils
 from typing import List
 import torch
+from collections import defaultdict
 
 
 
@@ -160,7 +161,7 @@ class Evaluator:
     """
     Does the same as the FastEvaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None, molwise_rmse:bool=True):
+    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
@@ -175,7 +176,6 @@ class Evaluator:
 
         self.ref_suffix_classical = ref_suffix_classical
 
-        self.molwise_rmse = molwise_rmse
 
         self.init_storage()
 
@@ -186,10 +186,6 @@ class Evaluator:
 
         self.reference_energies = {}
         self.reference_gradients = {}
-
-        if self.molwise_rmse:
-            self.energy_rmse_molwise = {}
-            self.gradient_crmse_molwise = {}
 
         if self.log_parameters:
             self.parameters = {}
@@ -245,9 +241,6 @@ class Evaluator:
             self.reference_energies.setdefault(dsname, []).append(energies_ref)
             self.reference_gradients.setdefault(dsname, []).append(gradients_ref)
 
-            if self.molwise_rmse:
-                self.energy_rmse_molwise.setdefault(dsname, []).append(torch.sqrt(torch.mean(torch.square(energies - energies_ref))))
-                self.gradient_crmse_molwise.setdefault(dsname, []).append(torch.sqrt(torch.mean(torch.square(gradients - gradients_ref))))
 
             if self.log_classical_values:
                 self.classical_energies.setdefault(dsname, []).append(energies_classical)
@@ -264,42 +257,97 @@ class Evaluator:
                     self.reference_parameters.setdefault(dsname, {}).setdefault(ptype, []).append(params)
 
 
-    def collect(self):
+    def collect(self, bootstrap_seed=None):
+
+        if bootstrap_seed is not None:
+            # choose with replacement:
+            np.random.seed(bootstrap_seed)
+            mol_indices = {
+                dsname:
+                np.random.choice(len(self.energies[dsname]), size=len(self.energies[dsname]), replace=True).tolist()
+                for dsname in self.energies.keys()
+            }
+        else:
+            mol_indices = {dsname: range(len(self.energies[dsname])) for dsname in self.energies.keys()}
 
         self.n_mols = {}
+
+        self.all_energies = {}
+        self.all_gradients = {}
+
+        self.all_reference_energies = {}
+        self.all_reference_gradients = {}
+
+        if self.log_classical_values:
+            self.all_classical_energies = {}
+            self.all_classical_gradients = {}
+
+            if self.ref_suffix_classical is not None:
+                self.all_ref_classical_energies = {}
+                self.all_ref_classical_gradients = {}
+
+        if self.log_parameters:
+            self.all_parameters = {}
+            self.all_reference_parameters = {}
+
 
         for dsname in self.energies.keys():
 
             self.n_mols[dsname] = len(self.energies[dsname])
 
             # concatenate the tensors
-            self.energies[dsname] = torch.cat(self.energies[dsname], dim=0)
-            self.gradients[dsname] = torch.cat(self.gradients[dsname], dim=0)
+            self.all_energies[dsname] = torch.cat([self.energies[dsname][i] for i in mol_indices[dsname]], dim=0)
+            self.all_gradients[dsname] = torch.cat([self.gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
-            self.reference_energies[dsname] = torch.cat(self.reference_energies[dsname], dim=0)
-            self.reference_gradients[dsname] = torch.cat(self.reference_gradients[dsname], dim=0)
-
-            if self.molwise_rmse:
-                self.energy_rmse_molwise[dsname] = torch.tensor(self.energy_rmse_molwise[dsname]).cpu().tolist()
-                self.gradient_crmse_molwise[dsname] = torch.tensor(self.gradient_crmse_molwise[dsname]).cpu().tolist()
+            self.all_reference_energies[dsname] = torch.cat([self.reference_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
+            self.all_reference_gradients[dsname] = torch.cat([self.reference_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
             if self.log_classical_values:
-                self.classical_energies[dsname] = torch.cat(self.classical_energies[dsname], dim=0)
-                self.classical_gradients[dsname] = torch.cat(self.classical_gradients[dsname], dim=0)
+                self.all_classical_energies[dsname] = torch.cat([self.classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
+                self.all_classical_gradients[dsname] = torch.cat([self.classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
                 if self.ref_suffix_classical is not None:
-                    self.ref_classical_energies[dsname] = torch.cat(self.ref_classical_energies[dsname], dim=0)
-                    self.ref_classical_gradients[dsname] = torch.cat(self.ref_classical_gradients[dsname], dim=0)
+                    self.all_ref_classical_energies[dsname] = torch.cat([self.ref_classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
+                    self.all_ref_classical_gradients[dsname] = torch.cat([self.ref_classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
             if self.log_parameters:
                 for ptype in self.parameters[dsname].keys():
-                    self.parameters[dsname][ptype] = torch.cat(self.parameters[dsname][ptype], dim=0)
-                    self.reference_parameters[dsname][ptype] = torch.cat(self.reference_parameters[dsname][ptype], dim=0)
+                    self.all_parameters[dsname][ptype] = torch.cat([self.parameters[dsname][ptype][i] for i in mol_indices[dsname]], dim=0)
+                    self.all_reference_parameters[dsname][ptype] = torch.cat([self.reference_parameters[dsname][ptype][i] for i in mol_indices[dsname]], dim=0)
 
 
-    def pool(self):
-        self.collect()
-        return self.get_metrics()
+    def pool(self, n_bootstrap=0, seed=0):
+        """
+        If n_bootstrap == 0, the metrics are calculated once and returned.
+        If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as mean = pool()[]
+        """
+        if n_bootstrap > 0:
+            np.random.seed(seed)
+            bootstrap_seeds = np.random.randint(0, 2**32, size=n_bootstrap).tolist()
+            metrics = []
+            for i, bootstrap_seed in enumerate(bootstrap_seeds):
+                self.collect(bootstrap_seed=bootstrap_seed)
+                metrics.append(self.get_metrics())
+
+            # now collect all values in a single dictionary, allowing theat a dataset may not occur in one of the bootstrapped versions.
+            all_metrics = {}
+
+            all_ds_names = set()
+            for i in range(len(metrics)):
+                all_ds_names.update(metrics[i].keys())
+
+            for dsname in all_ds_names:
+                all_metrics[dsname] = [metrics[i][dsname] for i in range(len(metrics)) if dsname in metrics[i].keys()]
+
+            # now calculate the mean and std for each metric
+            for dsname in all_ds_names:
+                all_metrics[dsname] = {key: {'mean': np.mean([m[key] for m in all_metrics[dsname]]), 'std': np.std([m[key] for m in all_metrics[dsname]])} for key in all_metrics[dsname][0].keys()}
+
+            return all_metrics
+
+        else:
+            self.collect()
+            return self.get_metrics()
 
     def get_metrics(self):
 
@@ -307,37 +355,33 @@ class Evaluator:
         for dsname in self.energies.keys():
             metrics[dsname] = {}
 
-            metrics[dsname]['n_confs'] = self.energies[dsname].shape[0]
+            metrics[dsname]['n_confs'] = self.all_energies[dsname].shape[0]
 
             metrics[dsname]['n_mols'] = self.n_mols[dsname]
 
-            metrics[dsname]['std_energies'] = float(self.energies[dsname].std().item())
-            metrics[dsname]['std_gradients'] = float(self.gradients[dsname].std().item() * np.sqrt(3))
+            metrics[dsname]['std_energies'] = float(self.all_energies[dsname].std().item())
+            metrics[dsname]['std_gradients'] = float(self.all_gradients[dsname].std().item() * np.sqrt(3))
 
             # calculate the metrics
-            metrics[dsname]['rmse_energies'] = float(root_mean_squared_error(self.energies[dsname], self.reference_energies[dsname]).item())
-            metrics[dsname]['mae_energies'] = float(mean_absolute_error(self.energies[dsname], self.reference_energies[dsname]).item())
+            metrics[dsname]['rmse_energies'] = float(root_mean_squared_error(self.all_energies[dsname], self.all_reference_energies[dsname]).item())
+            metrics[dsname]['mae_energies'] = float(mean_absolute_error(self.all_energies[dsname], self.all_reference_energies[dsname]).item())
 
-            metrics[dsname]['rmse_gradients'] = float(invariant_rmse(self.gradients[dsname], self.reference_gradients[dsname]).item())
-            metrics[dsname]['crmse_gradients'] = float(root_mean_squared_error(self.gradients[dsname], self.reference_gradients[dsname]).item())
-            metrics[dsname]['mae_gradients'] = float(invariant_mae(self.gradients[dsname], self.reference_gradients[dsname]).item())
+            metrics[dsname]['rmse_gradients'] = float(invariant_rmse(self.all_gradients[dsname], self.all_reference_gradients[dsname]).item())
+            metrics[dsname]['crmse_gradients'] = float(root_mean_squared_error(self.all_gradients[dsname], self.all_reference_gradients[dsname]).item())
+            metrics[dsname]['mae_gradients'] = float(invariant_mae(self.all_gradients[dsname], self.all_reference_gradients[dsname]).item())
 
             if self.log_classical_values:
-                metrics[dsname]['rmse_classical_energies'] = float(root_mean_squared_error(self.energies[dsname], self.classical_energies[dsname]).item())
-                metrics[dsname]['rmse_classical_gradients'] = float(invariant_rmse(self.gradients[dsname], self.classical_gradients[dsname]).item())
-                metrics[dsname]['crmse_classical_gradients'] = float(root_mean_squared_error(self.gradients[dsname], self.classical_gradients[dsname]).item())
+                metrics[dsname]['rmse_classical_energies'] = float(root_mean_squared_error(self.all_energies[dsname], self.all_classical_energies[dsname]).item())
+                metrics[dsname]['rmse_classical_gradients'] = float(invariant_rmse(self.all_gradients[dsname], self.all_classical_gradients[dsname]).item())
+                metrics[dsname]['crmse_classical_gradients'] = float(root_mean_squared_error(self.all_gradients[dsname], self.all_classical_gradients[dsname]).item())
 
                 if self.ref_suffix_classical is not None:
-                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.classical_energies[dsname], self.ref_classical_energies[dsname]).item())
-                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.classical_gradients[dsname], self.ref_classical_gradients[dsname]).item())
-                    metrics[dsname]['crmse_classical_gradients_from_ref'] = float(root_mean_squared_error(self.classical_gradients[dsname], self.ref_classical_gradients[dsname]).item())
+                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.all_classical_energies[dsname], self.all_ref_classical_energies[dsname]).item())
+                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).item())
+                    metrics[dsname]['crmse_classical_gradients_from_ref'] = float(root_mean_squared_error(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).item())
 
             if self.log_parameters:
                 for ptype in self.parameters[dsname].keys():
-                    metrics[dsname][f'rmse_{ptype}'] = float(root_mean_squared_error(self.parameters[dsname][ptype], self.reference_parameters[dsname][ptype]).item())
-
-
-        if not self.keep_data:
-            self.init_storage()
+                    metrics[dsname][f'rmse_{ptype}'] = float(root_mean_squared_error(self.all_parameters[dsname][ptype], self.all_reference_parameters[dsname][ptype]).item())
 
         return metrics
