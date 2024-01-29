@@ -53,7 +53,11 @@ conda install python=3.9 openmm=7.7.0=py39hb10b54c_0 -c conda-forge -y
 
 # Install specific versions of torch and pytorch-cuda
 echo "Installing torch for CUDA version $cuda_version..."
-pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cu$cuda_version
+if [ "$cuda_version" == "117" ]; then
+    pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cu$cuda_version
+else
+    pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cu$cuda_version
+fi
 
 echo "Installing other requirements..."
 pip install -r requirements.txt
