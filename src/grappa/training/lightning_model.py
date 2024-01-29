@@ -1,5 +1,5 @@
 from grappa.training.loss import MolwiseLoss
-from grappa.training.evaluation import Evaluator
+from grappa.training.evaluation import FastEvaluator
 import json
 
 import torch
@@ -89,8 +89,8 @@ class LitModel(pl.LightningModule):
 
         self.finish_criterion = finish_criterion
 
-        self.evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
-        self.train_evaluator = Evaluator(log_parameters=log_params, log_classical_values=log_classical)
+        self.evaluator = FastEvaluator(log_parameters=log_params, log_classical_values=log_classical)
+        self.train_evaluator = FastEvaluator(log_parameters=log_params, log_classical_values=log_classical)
 
         self.early_stopping_energy_weight = early_stopping_energy_weight
 

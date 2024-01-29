@@ -18,6 +18,7 @@ class Grappa:
         self.model = model.to(device)
         self.model.eval()
         self.max_element = max_element
+        self.device = device
 
 
     def predict(self, molecule: Molecule) -> Parameters:
@@ -27,10 +28,13 @@ class Grappa:
 
         # transform the input to a dgl graph
         g = molecule.to_dgl(max_element=self.max_element, exclude_feats=[])
+        g = g.to(self.device)
 
         # write parameters in the graph
         with torch.no_grad():
             g = self.model(g)
+
+        g = g.to('cpu')
 
         # extract parameters from the graph
         parameters = Parameters.from_dgl(g)

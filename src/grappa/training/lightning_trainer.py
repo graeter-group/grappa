@@ -63,12 +63,8 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
 
 
         def on_epoch_end(self, trainer, pl_module):
-            # Save the first part of the sequential model's state_dict
-            grappa_model = next(iter(pl_module.sequential))
-            assert isinstance(grappa_model, GrappaModel), f"Expected model to be of type torch.nn.Sequential(GrappaModel, Energy) but zeroth part of the sequential is not GrappaModel but {type(grappa_model)}"
-
             torch.save({
-                'grappa_state_dict': grappa_model.state_dict(),
+                'state_dict': pl_module.state_dict(),
                 'config': self.config,
             }, self.filepath.format(epoch=trainer.current_epoch, **trainer.logged_metrics))
 

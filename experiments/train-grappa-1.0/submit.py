@@ -5,16 +5,13 @@ import argparse
 # assert current path is the parent directory of this file
 assert Path.cwd() == Path(__file__).parent
 
-(Path.cwd()/'logs').mkdir(exist_ok=True)
+this_dir = Path(__file__).parent
 
-# start three jobs: one for grappa without radicals, one for grappa with missing-hydogen-type radicals, and one for grappa with hybridization feature for comparison
-
-for i in range(3):
+for i in range(2):
     print(f'Job {i+1}')
-    CMD = f'python train.py --project grappa-1.0'
+    CMD_BASE = f"sbatch job.sh {this_dir}"
+    CMD = f'python train.py --project grappa-1.0 -r'
     if i==1:
-        CMD += ' -r'
-    if i==2:
-        CMD += ' --with_hybridization'
+        CMD += ' --rad-flag'
     print(f'Command: {CMD}')
-    os.system(f'sbatch job.sh "{CMD}"')
+    os.system(f'{CMD_BASE} {CMD}')

@@ -1,5 +1,4 @@
 from grappa.grappa import Grappa
-from grappa import constants
 from grappa.utils.openmm_utils import write_to_system
 from grappa.data import Molecule
 

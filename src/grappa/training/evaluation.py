@@ -8,7 +8,7 @@ import torch
 
 
 
-class Evaluator:
+class FastEvaluator:
     """
     Class that handles calculation of metrics for batched graphs and different datasets.
     Usage:
@@ -156,9 +156,9 @@ class Evaluator:
 #%%
 # NOTE: ERROR IN RMSE_FROM_CLASSICAL. ONLY BONDED SHOULD BE USED THERE!!
 
-class ExplicitEvaluator:
+class Evaluator:
     """
-    Does the same as the Evaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
+    Does the same as the FastEvaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
     def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None, molwise_rmse:bool=True):
         """

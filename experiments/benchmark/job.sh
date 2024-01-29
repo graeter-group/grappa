@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --output=/hits/fast/mbm/seutelf/logs/%j
 #SBATCH --error=/hits/fast/mbm/seutelf/logs/%j.err
-#SBATCH --job-name=grappa
+#SBATCH --job-name=bmrk-grappa
 
 # first arg is the directory to run in
 DIR=$1

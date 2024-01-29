@@ -10,11 +10,6 @@ data_config:
   - spice-dipeptide
   - protein-torsion
   - pepconf-dlc
-  - spice-dipeptide_amber99sbildn
-  - protein-torsion_amber99sbildn
-  - pepconf-dlc_amber99sbildn
-  - tripeptides_amber99sbildn
-  - dipeptide_rad
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
   pure_test_datasets:
@@ -29,7 +24,7 @@ data_config:
   train_loader_workers: 4
   val_batch_size: 32
   val_loader_workers: 2
-  val_conf_strategy: 1000
+  val_conf_strategy: 500
   weights:
     rna-diverse: 3
     rna-nucleoside: 5

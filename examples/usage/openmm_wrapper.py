@@ -16,6 +16,7 @@ from grappa.wrappers.openmm_wrapper import openmm_Grappa
 from openmm.app import PDBFile, ForceField
 from copy import deepcopy
 from pathlib import Path
+import time
 #%%
 
 pdb = PDBFile(str(Path(__file__).parent/'T4.pdb'))
@@ -23,17 +24,21 @@ pdb = PDBFile(str(Path(__file__).parent/'T4.pdb'))
 print(f'Loaded a protein with {pdb.topology.getNumAtoms()} atoms.')
 
 ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+start = time.time()
 system = ff.createSystem(pdb.topology)
+print(f'Created a system in {(time.time()-start)*1e3:.2f} milliseconds')
 
 orig_system = deepcopy(system) # create a deep copy of the system to compare it to the grappa-parametrized one later
 
 # %%
 
 # build a grappa model that handles the ML pipeline
-grappa = openmm_Grappa(model, device='cpu')
+grappa = openmm_Grappa(model, device=device)
 
 # write grappa parameters to the system:
+start = time.time()
 system = grappa.parametrize_system(system, pdb.topology)
+print(f'Parametrized the system in {(time.time()-start)*1e3:.2f} milliseconds')
 
 # %%
 

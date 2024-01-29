@@ -51,7 +51,7 @@ def store_model_dict(checkpoint_path, modelname, modelpath=Path(__file__).parent
 
     state_dict = model.state_dict()
 
-    model_dict = {'grappa_state_dict': state_dict, 'config': config, 'split_names': split_names}
+    model_dict = {'state_dict': state_dict, 'config': config, 'split_names': split_names}
 
     if not modelpath.exists():
         modelpath.mkdir()

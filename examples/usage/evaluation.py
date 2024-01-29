@@ -46,8 +46,8 @@ model = model.to(device)
 
 #%%
 # Grappa provides an evaluator class that collects data across batches and calculates metrics for the whole dataset.
-from grappa.training.evaluation import ExplicitEvaluator
-evaluator = ExplicitEvaluator(keep_data=True)
+from grappa.training.evaluation import Evaluator
+evaluator = Evaluator(keep_data=True)
 
 # Now, we can evaluate the model on the dataset:
 for g, dsname in loader:

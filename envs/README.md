@@ -1,1 +1,1 @@
-Not used anymore, just to keep track of former steps.
+Installing purely via conda takes a long time, so we recommend installing the dependencies via pip as in grappa/installation.sh

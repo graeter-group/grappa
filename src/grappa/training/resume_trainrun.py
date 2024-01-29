@@ -61,9 +61,10 @@ def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=3)->Path
     return latest_dir
 
 
-def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.cwd() / 'wandb', new_wandb_run:bool=False, overwrite_config:Dict[str,Dict]={}):
+def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.cwd() / 'wandb', new_wandb_run:bool=False, overwrite_config:Dict[str,Dict]={}, add_time_limit:float=23.5):
     """
     Loads the data, model and further setup from the directory of a previous run and either resumes training or starts a new wandb run from where the last run started.
+    add_time_limit: Adds this to the time limit of the previous run.
     """
 
     run_dir = get_dir_from_id(wandb_folder=wandb_folder, run_id=run_id)
@@ -71,6 +72,8 @@ def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.
     with open(run_dir / 'files/grappa_config.yaml', 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
+    # add the time limit:
+    config['lit_model_config']['time_limit'] += add_time_limit
 
     if config['data_config']['splitpath'] is None:
         config['data_config']['splitpath'] = run_dir / 'files/split.json'

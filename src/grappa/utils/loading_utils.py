@@ -18,7 +18,7 @@ def model_from_dict(model_dict:dict):
     """
     Loads a model from a dictionary that contains a state_dict and a config.
     """
-    state_dict = model_dict['grappa_state_dict']
+    state_dict = model_dict['state_dict']
     config = model_dict['config']
     model = model_from_config(model_config=config['model_config'])
     model.load_state_dict(state_dict)
@@ -39,8 +39,6 @@ def model_from_tag(tag:str):
     Loads a model from a tag. With each release, the mapping tag to url of model weights is updated such that models returned by this function are always at a version that works in the respective release.
     Possible tags:
     - latest
-    - latest_radicals
-    - latest_proteins
     """
     MODEL_NAMES = {
         'grappa-1.0-01-26-2024.pth': ['grappa-1.0', 'latest'],
@@ -48,14 +46,22 @@ def model_from_tag(tag:str):
 
     BASE_URL = 'https://github.com/LeifSeute/test_torchhub/releases/download/model_release/'
 
+    # first, go through the hard-coded dictionary above:
     filename = None
     for name in MODEL_NAMES.keys():
         if tag == name or tag in MODEL_NAMES[name]:
             filename = name
             break
 
+    # if not found, go through all models, a user could have exported:
     if filename is None:
-        raise ValueError(f"Tag {tag} not found in model names {MODEL_NAMES}")
+        for name in Path(__file__).parent.parent.parent.parent.glob('models/*.pth'):
+            if tag == name.stem:
+                filename = name.name
+                break
+
+    if filename is None:
+        raise ValueError(f"Tag {tag} not found in model names {MODEL_NAMES} and not found in the grappa/models directory.")
             
     url = BASE_URL + filename
 

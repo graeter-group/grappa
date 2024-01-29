@@ -89,7 +89,7 @@ model_config:
   - degree
   - laplacian_positional_encoding
   - charge_model
-  - mass
+  - is_radical
   in_feats: null
   layer_norm: true
   learnable_statistics: false
