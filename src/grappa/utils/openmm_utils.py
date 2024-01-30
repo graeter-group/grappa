@@ -252,7 +252,7 @@ def topology_from_pdb(pdbstring:str)->'openmm.Topology':
     return openmm_pdb.topology
 
 
-def get_openmm_forcefield(name):
+def get_openmm_forcefield(name, *args, **kwargs):
     """
     The name can be given either with or without .xml ending. Possible names are all openmm forcefield names and:
     - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP)
@@ -283,7 +283,7 @@ def get_openmm_forcefield(name):
                 topology = hyp_dop_utility.add_bonds(topology)
                 return self.ff.createSystem(topology, *args, **kwargs)
                 
-        return HypDopOpenmmForceField(str(ff_path))
+        return HypDopOpenmmForceField(str(ff_path), *args, **kwargs)
 
     else:
         return ForceField(name+'.xml')

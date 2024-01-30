@@ -469,26 +469,26 @@ class MolData():
         self.ff_energy[ff_name] = total_ref_energy
         self.ff_gradient[ff_name] = total_ref_gradient
         
+        # create a deep copy of the system:
+        system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
+
+        # remove all but the nonbonded forces in this copy:
+        system2 = openmm_utils.remove_forces_from_system(system2, keep=['NonbondedForce'])
+        
+        nonbonded_energy, nonbonded_gradient = openmm_utils.get_energies(openmm_system=system2, xyz=xyz)
+        nonbonded_gradient = -nonbonded_gradient # the reference gradient is the negative of the force
+
+        self.ff_nonbonded_energy[ff_name] = nonbonded_energy
+        self.ff_nonbonded_gradient[ff_name] = nonbonded_gradient
+
 
         if self.energy_ref is None:
             # calculate reference energy and gradient from the openmm system using the partial charges provided
-
-            # create a deep copy of the system:
-            system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
-
-            # remove all but the nonbonded forces in this copy:
-            system2 = openmm_utils.remove_forces_from_system(system2, keep=['NonbondedForce'])
-            
-            nonbonded_energy, nonbonded_gradient = openmm_utils.get_energies(openmm_system=system2, xyz=xyz)
-            nonbonded_gradient = -nonbonded_gradient # the reference gradient is the negative of the force
-
             self.energy_ref = energy - nonbonded_energy
             self.energy_ref -= self.energy_ref.mean()
 
             self.gradient_ref = gradient - nonbonded_gradient
 
-            self.ff_nonbonded_energy[ff_name] = nonbonded_energy
-            self.ff_nonbonded_gradient[ff_name] = nonbonded_gradient
 
         # calculate the contribution from improper torsions in the system:
         # remove all forces but periodic torsions

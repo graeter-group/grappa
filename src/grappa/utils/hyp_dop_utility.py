@@ -18,90 +18,97 @@ def add_bonds(top:Topology, allow_radicals=False):
         if r.name in _add_bonds_for_res.bond_dict.keys():
             name = r.name
             _add_bonds_for_res(r,top,name,allow_radicals=allow_radicals)
+
+    # check whether there is a double bond:
+    all_bonds = [tuple(sorted([a.index for a in b])) for b in top.bonds()]
+    if len(all_bonds) != len(set(all_bonds)):
+        raise RuntimeError("Double bond detected!")
+    
     return top
 
 
 # HELPERS:
 def add_external_bonds(r, top):
-        # check whether external bonds are present
-        is_start = r.index == 0
-        is_end = r.index == top.getNumResidues() - 1
-        ext_bonds = list(r.external_bonds())
-        search_ext_bonds = False
-        two_needed = not (is_start or is_end)
-        one_needed = (not (is_start and is_end)) and not two_needed
+    # check whether external bonds are present
+    is_start = r.index == 0
+    is_end = r.index == top.getNumResidues() - 1
+    ext_bonds = list(r.external_bonds())
+    search_ext_bonds = False
+    two_needed = not (is_start or is_end)
+    one_needed = (not (is_start and is_end)) and not two_needed
 
-        if two_needed and len(ext_bonds)<2:
-            search_ext_bonds = True
+    if two_needed and len(ext_bonds)<2:
+        search_ext_bonds = True
 
-        elif one_needed and len(ext_bonds)<1:
-            search_ext_bonds = True
+    elif one_needed and len(ext_bonds)<1:
+        search_ext_bonds = True
+    
+    prev_res_needed = is_start or two_needed
+    next_res_needed = is_end or two_needed
+
+    if not search_ext_bonds:
+        return
+    else:
+        prev_res = None
+        next_res = None
+        for res in top.residues():
+            if res.index == r.index - 1:
+                prev_res = res
+            if res.index == r.index + 1:
+                next_res = res
+
+            # break condition
+            if (not prev_res_needed) or prev_res is not None:
+                if (not next_res_needed) or next_res is not None:
+                    break
+
+        # find the N in the residue before
+        prev_C = None
+        next_N = None
+        if prev_res_needed:
+            assert prev_res is not None
+            for a in prev_res.atoms():
+                if a.name == "C":
+                    prev_C = a
+                    break
+            assert prev_C is not None
+
+        if next_res_needed:
+            assert next_res is not None
+            for a in next_res.atoms():
+                if a.name == "N":
+                    next_N = a
+                    break
+            assert next_N is not None
         
-        prev_res_needed = is_start or two_needed
-        next_res_needed = is_end or two_needed
+        existing_ext_bonds = [[b[0].index, b[1].index] for b in ext_bonds]
+        # flatten:
+        existing_ext_bonds = [i for sublist in existing_ext_bonds for i in sublist]
 
-        if not search_ext_bonds:
-            return
-        else:
-            prev_res = None
-            next_res = None
-            for res in top.residues():
-                if res.index == r.index - 1:
-                    prev_res = res
-                if res.index == r.index + 1:
-                    next_res = res
-
-                # break condition
-                if (not prev_res_needed) or prev_res is not None:
-                    if (not next_res_needed) or next_res is not None:
-                        break
-
-            # find the N in the residue before
-            prev_C = None
-            next_N = None
-            if prev_res_needed:
-                assert prev_res is not None
-                for a in prev_res.atoms():
-                    if a.name == "C":
-                        prev_C = a
-                        break
-                assert prev_C is not None
-
-            if next_res_needed:
-                assert next_res is not None
-                for a in next_res.atoms():
+        # add the external bond to the C in the previous residue:
+        if prev_C is not None:
+            if not prev_C.index in existing_ext_bonds:
+                # find N in r:
+                r_N = None
+                for a in r.atoms():
                     if a.name == "N":
-                        next_N = a
+                        r_N = a
                         break
-                assert next_N is not None
-            
-            existing_ext_bonds = [[b[0].index, b[1].index] for b in ext_bonds]
-            # flatten:
-            existing_ext_bonds = [i for sublist in existing_ext_bonds for i in sublist]
+                assert r_N is not None
+                top.addBond(prev_C, r_N)
 
-            # add the external bond to the C in the previous residue:
-            if prev_C is not None:
-                if not prev_C.index in existing_ext_bonds:
-                    # find N in r:
-                    r_N = None
-                    for a in r.atoms():
-                        if a.name == "N":
-                            r_N = a
-                            break
-                    assert r_N is not None
-                    top.addBond(prev_C, r_N)
-
-            # same thing for N:
-            if next_N is not None:
-                if not next_N.index in existing_ext_bonds:
-                    # find C in r:
-                    r_C = None
-                    for a in r.atoms():
-                        if a.name == "C":
-                            r_C = a
-                            break
-                    assert r_C is not None
-                    top.addBond(r_C, next_N)
+        # same thing for N:
+        if next_N is not None:
+            if not next_N.index in existing_ext_bonds:
+                # find C in r:
+                r_C = None
+                for a in r.atoms():
+                    if a.name == "C":
+                        r_C = a
+                        break
+                assert r_C is not None
+                top.addBond(r_C, next_N)
+                
 
 class DOPMatchError(Exception):
     def __init__(self, message):
@@ -132,9 +139,10 @@ def _add_bonds_for_res(r,top,name,allow_radicals=False):
             raise DOPMatchError(f"Could not match residue {name} with {len(atom_names)} atoms with those of the bond definitions in residue with {len(list(ref_names))} atoms. The residue encountered has {atom_names}.\nIn bond definitions but not in topology: {(ref_names - set(atom_names))}\nIn topology but not bond definitions: {(set(atom_names)-ref_names)}.\nThis function only supports standard versions of the variants {list(_add_bonds_for_res.bond_dict.keys())}.\nThis error could be due to wrong bond assignment by pymol. This cannot be fixed as of now. Just generate another sequence.\nIf this is a radical, set the allow_radical flag to True.")
         
     atoms = [a for a in r.atoms()]
-    # existing_bonds are both permutations of existing bonds:
+
+    # we define existing_bonds as both permutations of existing bonds:
     existing_bonds = [[b[0].name, b[1].name] for b in r.internal_bonds()]
-    existing_bonds += [[b[1].name, b[0].name] for b in r.external_bonds()]
+    existing_bonds += [[b[1].name, b[0].name] for b in r.internal_bonds()]
 
     missing_bonds = []
     for b in bond_list:
