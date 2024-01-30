@@ -31,7 +31,6 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
             continue
         num_total += 1
         try:
-            print(f"Processing {idx}", end='\r')
             data = np.load(molfile)
             # transform to actual dictionary
             data = {k:v for k,v in data.items()}
@@ -42,6 +41,9 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
             pdb = data['pdb'].tolist()
             pdbstring = ''.join(pdb)
             sequence = str(data['sequence'])
+
+            print(f"Processing {idx}, sequence {sequence}\t\t")#, end='\r')
+            
             if any([res in sequence for res in skip_residues]):
                 print(f"Skipping {molfile} because it contains one of the residues {skip_residues}")
                 continue
@@ -50,12 +52,16 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
                 # get topology:
                 topology = openmm_utils.topology_from_pdb(pdbstring)
                 # get smiles string:
-                smiles = openff_utils.smiles_from_pdb(pdbstring)
-                system = ForceField(forcefield).createSystem(topology)
+                # smiles = openff_utils.smiles_from_pdb(pdbstring)
+                smiles = None
+                ff = openmm_utils.get_openmm_forcefield(forcefield)
+                system = ff.createSystem(topology)
+                mol_id = sequence
 
             elif forcefield_type == 'openff' or forcefield_type == 'openmmforcefields':
                 openff_mol = openff_utils.mol_from_pdb(pdbstring)
                 smiles = openff_mol.to_smiles(mapped=False)
+                mol_id = smiles
                 system, topology, _ = openff_utils.get_openmm_system(mapped_smiles=None, openff_forcefield=forcefield, openff_mol=openff_mol)
             else:
                 raise ValueError(f"forcefield_type must be either openmm, openff or openmmforcefields but is {forcefield_type}")
@@ -64,7 +70,7 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
             total_confs += len(energy)
 
             # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
-            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=smiles, pdb=pdbstring, smiles=smiles, sequence=sequence)
+            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=mol_id, pdb=pdbstring, smiles=smiles, sequence=sequence, allow_nan_params=True)
 
             # moldata.molecule.add_features(['ring_encoding'])
 
