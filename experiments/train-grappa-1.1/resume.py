@@ -3,7 +3,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("run_id", type=str, help="Run id of the run to resume.")
-parser.add_argument("--project", type=str, default="benchmark-grappa-1.0", help="Project name for wandb.")
+parser.add_argument("--project", type=str, default="grappa-1.1", help="Project name for wandb.")
 
 args = parser.parse_args()
 

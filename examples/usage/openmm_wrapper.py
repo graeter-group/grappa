@@ -5,7 +5,7 @@
 import torch
 from grappa.utils.loading_utils import model_from_tag
 
-model = model_from_tag('latest')
+model = model_from_tag('grappa-1.0')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)

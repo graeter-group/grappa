@@ -3,14 +3,14 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--project", type=str, default="grappa-1.0", help="Project name for wandb.")
+    parser.add_argument("--project", type=str, default="grappa-1.1", help="Project name for wandb.")
     parser.add_argument("-r", "--radical", action="store_true", help="Use radical dataset.")
     parser.add_argument("-tb", "--train_batch", type=int, default=-1, help="Batch size for training.")
     parser.add_argument("-vb", "--val_batch", type=int, default=-1, help="Batch size for validation.")
     parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature.")
     parser.add_argument("--rad-flag", action="store_true", help="Use the is_radical feature.")
-    parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.") #NOTE
-    parser.add_argument("-p", "--param_weight", type=float, default=None, help="Weight for the param loss of the datasets with classical parameters from amber99sbildn. Default is None.")
+    parser.add_argument('-b', "--bond_breakage_radicals", action="store_true", help="Use the bond_breakage_radicals dataset.")
+    parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.")
 
     args = parser.parse_args()
 
@@ -18,7 +18,6 @@ if __name__ == "__main__":
     from grappa.training.trainrun import do_trainrun
     import yaml
     from pathlib import Path
-    import numpy as np
 
     # load the config:
     config_path = "grappa_config.yaml"
@@ -50,9 +49,10 @@ if __name__ == "__main__":
             config["model_config"]["in_feat_name"].append("is_radical")
             config["trainer_config"]["name"] += "_rad_flag"
 
-    if not args.param_weight is None:
-        config["trainer_config"]["name"] += f"_p{int(np.log10(args.param_weight))}"
-        config['lit_model_config']['param_weights_by_dataset'] = {ds: args.param_weight for ds in config['data_config']['datasets'] if 'amber99sbildn' in ds}
+    if args.bond_breakage_radicals:
+        if not 'AA_bondbreak_rad' in config["data_config"]["datasets"]:
+            config["data_config"]["datasets"].append("AA_bondbreak_rad")
+            config['data_config']['weights']['AA_bondbreak_rad'] = 2
 
     # train:
     do_trainrun(config=config, project=args.project)

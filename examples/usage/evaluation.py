@@ -42,6 +42,7 @@ model = torch.nn.Sequential(
 
 # Push the model to the GPU if available:
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 model = model.to(device)
 
 #%%

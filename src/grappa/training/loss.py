@@ -12,17 +12,20 @@ class MolwiseLoss(torch.nn.Module):
     """
     Unbatch the graph and calculate the mse averaged over spatial dimension, conformation and atom. Then average these over the batch. Note: The averages do not commute because the number of atoms in the graph may differ. This way we assign the same weight to molecules with different amounts of atoms.
     If skip_params_if_not_present is set to True, the parameters are only included in the loss if they are present in the graph. If a parameter is present but not a number, the loss contribution from these parameters is zero. Thus, if you have a dataset where some molecules have parameters and some don't, you can set the param values to nans in the correct shape to enable graph-batching.
+
+    param_weights_by_dataset: Dictionary with keys corresponding to the dataset names and values corresponding to the weight of the parameter loss for this dataset. This overwrites the value of param_weight for entries of the datasets occuring in the dictionary.
     """
     def __init__(
         self,
         gradient_weight:float=0.5,
         energy_weight:float=1.0,
-        param_weight:float=1e-4,
+        param_weight:float=1e-3,
         tuplewise_weight:float=1e-4,
         weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2},
         skip_params_if_not_present:bool=True,
         proper_regularisation:float=0., # prefactor for L2 regularisation of proper torsion parameters
         improper_regularisation:float=0.,
+        param_weights_by_dataset:Dict[str,float]={}
         ):
 
         super().__init__()
@@ -35,17 +38,19 @@ class MolwiseLoss(torch.nn.Module):
         self.skip_params_if_not_present = skip_params_if_not_present
         self.proper_regularisation = proper_regularisation
         self.improper_regularisation = improper_regularisation
+        self.param_weights_by_dataset = param_weights_by_dataset
 
 
-    def forward(self, g):
+
+    def forward(self, g, dsnames:List[str]=None):
 
         loss = 0
         graphs = dgl_utils.unbatch(g)
 
         assert not (self.gradient_weight == 0 and self.energy_weight == 0 and self.param_weight == 0), "At least one of the weights must be non-zero."
 
-        for graph in graphs:
-            
+        for i, graph in enumerate(graphs):
+
             # loss per graph:
             loss_term = 0.
 
@@ -62,8 +67,13 @@ class MolwiseLoss(torch.nn.Module):
                 assert gradients.shape == gradients_ref.shape, f"Shape of gradients and gradients_ref do not match: {gradients.shape} vs {gradients_ref.shape}"
                 loss_term = loss_term + self.mse_loss(gradients, gradients_ref) * self.gradient_weight
 
+            param_weight = self.param_weight
 
-            if self.param_weight != 0.:
+            if dsnames is not None:
+                if dsnames[i] in self.param_weights_by_dataset.keys():
+                    param_weight = self.param_weights_by_dataset[dsnames[i]]
+
+            if param_weight != 0.:
                 try:
                     params_ref = graph_utils.get_parameters(graph, suffix="_ref")
                 except KeyError as e:
@@ -106,7 +116,7 @@ class MolwiseLoss(torch.nn.Module):
 
                     loss_contrib = torch.mean(torch.square(diffs))
 
-                    loss_term = loss_term + loss_contrib * self.param_weight
+                    loss_term = loss_term + loss_contrib * param_weight
     
 
             if self.proper_regularisation > 0.:
@@ -120,6 +130,7 @@ class MolwiseLoss(torch.nn.Module):
                     loss_term = loss_term + self.improper_regularisation * torch.mean(torch.square(impropers))
                 loss_term = loss_term + self.improper_regularisation * torch.mean(torch.square(impropers))
 
+            # NOTE: this is currently not used
             # if self.tuplewise_weight != 0.:
             #     tuplewise_energies = graph_utils.get_tuplewise_energies(graph)
             #     tuplewise_energies_ref = graph_utils.get_tuplewise_energies(graph, suffix="_classical_ff")
@@ -167,4 +178,3 @@ def correct_torsion_shape(x, shape1):
             return x[:,:shape1]
         else:
             return x
-        

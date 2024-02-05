@@ -12,7 +12,7 @@ from grappa.training.lightning_trainer import get_lightning_trainer
 from grappa.models import deploy, Energy
 
 from grappa.utils.run_utils import write_yaml
-from typing import Union, Dict
+from typing import Union, Dict, Callable
 
 
 def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=3)->Path:
@@ -61,7 +61,7 @@ def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=3)->Path
     return latest_dir
 
 
-def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.cwd() / 'wandb', new_wandb_run:bool=False, overwrite_config:Dict[str,Dict]={}, add_time_limit:float=23.5):
+def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.cwd() / 'wandb', new_wandb_run:bool=False, overwrite_config:Dict[str,Dict]={}, add_time_limit:float=23.5, transform_config:Callable=None):
     """
     Loads the data, model and further setup from the directory of a previous run and either resumes training or starts a new wandb run from where the last run started.
     add_time_limit: Adds this to the time limit of the previous run.
@@ -90,6 +90,8 @@ def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.
             config[k][kk] = overwrite_config[k][kk]
 
 
+    if not transform_config is None:
+        config = transform_config(config)
 
 
     # get the model:

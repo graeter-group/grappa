@@ -4,9 +4,24 @@ Collection of models and utilities for protein force fields with parameters lear
 
 ## Installation
 
-### Install Script
+### Installation
 
-Simply activate the target conda environment and execute `./installation.sh 11.7` to install grappa for cuda version 11.7. If you want to install grappa for a different cuda version, replace 11.7 with the desired version. As of now, only `11.7` and `11.8` have been tested.
+Unfortunately, openmm is not available on pip and has to be installed via conda. Since openmm, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
+
+| CUDA | Python | Torch | OpenMM |
+|------|--------|-------|---------|
+| 11.7 | 3.9    | 2.0.1 | 7.7.0   |
+| 11.8 | 3.10   | 2.2.0 | 8.1.1   |
+| 12.1 | 3.10   | 2.2.0 | 8.1.1   |
+| cpu  | 3.10   | 2.2.0 | 8.1.1   |
+
+Simply activate the target conda environment and run the install script for the cuda version of choice, e.g. for 12.1:
+```{bash}
+conda create -n grappa -y
+conda activate grappa
+./installation_121.sh
+```
+
 
 ### Manual Installation
 

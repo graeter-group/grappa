@@ -92,6 +92,7 @@ def default_config(model_tag:str='small', benchmark:bool=False)->Dict:
         "time_limit": None,
         "finish_criterion": {},
         "param_loss_epochs": None,
+        "param_weights_by_dataset": {},
     }
 
     trainer_config = {

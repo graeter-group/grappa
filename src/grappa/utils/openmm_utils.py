@@ -3,11 +3,6 @@ from typing import Union, Dict, List
 from pathlib import Path
 import tempfile
 
-from openmm.app.forcefield import NoCutoff
-from openmm.unit.constants import amu
-from openmm.unit.unit_definitions import amu
-from openmm.unit.unit_math import amu
-
 
 def get_energies(openmm_system, xyz):
     """

@@ -20,7 +20,7 @@ class LitModel(pl.LightningModule):
                  log_train_interval=5, log_classical=False, log_params=False, weight_decay=0.,
                  early_stopping_energy_weight=2.,
                  log_metrics=True,
-                 patience:int=30, lr_decay:float=0.8, time_limit:float=None, finish_criterion:Dict[int, float]={}, param_loss_epochs:int=None):
+                 patience:int=30, lr_decay:float=0.8, time_limit:float=None, finish_criterion:Dict[int, float]={}, param_loss_epochs:int=None, param_weights_by_dataset:Dict[str,float]={}):
         """
         Initialize the LitModel with specific configurations.
 
@@ -49,14 +49,15 @@ class LitModel(pl.LightningModule):
             lr_decay (float): Factor by which to decrease the learning rate if the early stopping criterion does not improve for patience epochs.
             time_limit (float): Time limit in hours. If the training takes longer than this, the training is stopped.
             finish_criterion (dict): Dictionary mapping from time in hours to maximum early stopping criterion value. If the early stopping criterion is larger than the maximum value for the given time, the training is stopped. This is useful for sweep runs, where the training should be stopped if it is not promising.
-            param_loss_epochs (int): Epoch number from which the parameter and tuplewise loss weights are set to zero and the optimizer is restarted.
+            param_loss_epochs (int): Epoch number from which the parameter and tuplewise loss weights are set to zero and the optimizer is restarted. If None, has no effect. Default: None.
+            param_weights_by_dataset (dict): Dictionary mapping from dataset name to weight of the parameter loss for this dataset. This overwrites the value of param_weight for entries of the datasets occuring in the dictionary. Default: {}.
         """
         super().__init__()
         
         self.model = model
         
         # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
-        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, tuplewise_weight=1e-3, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation) if start_qm_epochs > 0 else MolwiseLoss(gradient_weight=gradient_weight, energy_weight=energy_weight, param_weight=param_weight, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation)
+        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, tuplewise_weight=1e-3, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset) if start_qm_epochs > 0 else MolwiseLoss(gradient_weight=gradient_weight, energy_weight=energy_weight, param_weight=param_weight, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset)
 
         self.lr = lr
         self.weight_decay = weight_decay
@@ -216,7 +217,7 @@ class LitModel(pl.LightningModule):
             shape_dict = {ntype: {feat: str(g.nodes[ntype].data[feat].shape) for feat in g.nodes[ntype].data.keys()} for ntype in g.ntypes}
             raise ValueError(f"Error in forward pass for batch {batch_idx}, dsnames {dsnames} and graph with feature shapes\n{json.dumps(shape_dict, indent=4)}:\n{e}") from e
 
-        loss = self.loss(g)
+        loss = self.loss(g, dsnames)
 
         if self.current_epoch > self.start_qm_epochs:
             self.log('losses/train_loss', loss, batch_size=self.batch_size(g), on_epoch=True)

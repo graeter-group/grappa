@@ -7,13 +7,13 @@ assert Path.cwd() == Path(__file__).parent
 
 this_dir = Path(__file__).parent
 
-param_weights = [1e5, 1e3, 1e1, 1e-1, 1e-3, 1e-5]
-param_weights = [1e1, 1e-1, 1e-3, 1e-5]
-
-for i, param_weight in enumerate(param_weights):
+for i in range(2):
     print(f'Job {i+1}')
     CMD_BASE = f"sbatch job.sh {this_dir}"
-    CMD = f'python train.py --project grappa-1.0 -r -p {param_weight}'
-
+    CMD = f'python train.py --project grappa-1.1 -r'
+    if i==1:
+        CMD += ' --rad-flag'
+    if i==2:
+        CMD += ' --AA_bondbreak_rad'
     print(f'Command: {CMD}')
     os.system(f'{CMD_BASE} {CMD}')

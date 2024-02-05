@@ -14,15 +14,25 @@ import pandas as pd
 from grappa.models.energy import Energy
 
 
-PROJECT = "benchmark_testrun_1"
+PROJECT = "benchmark-grappa-1.0"
 
-WANDPATH = Path(__file__).parent/'wandb'
+PROJECT_DIR = Path(__file__).parent.parent.parent/'benchmark'
 
-RUN_ID = "50122neg"
+WANDPATH = PROJECT_DIR/'wandb'
 
-DEVICE = "cpu"
+RUN_ID = "wwnmmbd1"
+
+DEVICE = "cuda"
 
 MODELNAME = 'best-model.ckpt'
+
+WITH_TRAIN = False
+
+FORCES_PER_BATCH = 2e3
+
+N_BOOTSTRAP = 1000
+
+CLASSICAL_FF = ['amber14', 'gaff-2.11']
 
 
 #%%
@@ -37,7 +47,7 @@ configpath = str(Path(rundir)/'files'/'grappa_config.yaml')
 #%%
 
 # load a model without weights:
-model = model_from_config(yaml.safe_load(open(configpath))["model_config"]).to(DEVICE)
+model = model_from_config(yaml.safe_load(open(configpath))["model_config"]).to(DEVICE).eval()
 
 # add the energy layer:
 model = torch.nn.Sequential(model, Energy())
@@ -48,61 +58,156 @@ model.load_state_dict(state_dict)
 
 #%%
 
+def get_ds_size(ds):
+    return {'n_mols': len(ds), 'n_confs': sum([len(entry.nodes['g'].data['energy_ref']) for entry, _ in ds])}
+
 # load the datasets:
 data_config = yaml.safe_load(open(configpath))["data_config"]
 datasets = data_config["datasets"]
 
-pure_test_datasets = data_config["pure_test_datasets"]
+ds_size = {}
 
-pure_testset = Dataset()
-for dataset in pure_test_datasets:
-    pure_testset += Dataset.from_tag(dataset)
+testsets = []
+for tag in data_config["pure_test_datasets"]:
+    ds = Dataset.from_tag(tag)
+    ds_size[tag] = get_ds_size(ds)
+    testsets.append(ds)
 
-print(f'loaded pure test set with {len(pure_testset)} molecules')
-
-ds = Dataset()
-
-for dataset in datasets:
-    ds += Dataset.from_tag(dataset)
-
-
-print(f'loaded ds with {len(ds)} molecules')
-
-#%%
+print(f'loaded pure test sets with {sum([len(ds) for ds in testsets])} molecules')
 
 splitpath = Path(configpath).parent / f"split.json"
 splitpath = splitpath if splitpath.exists() else data_config["splitpath"]
 
 splitnames = json.load(open(splitpath))
 
-_, _, test_set = ds.split(splitnames['train'], splitnames['val'], splitnames['test'])
+trainsets = []
 
-full_test_set = test_set + pure_testset
+# data_config["datasets"] = [data_config["datasets"][0]]
+ 
 
-full_test_set.remove_uncommon_features()
+for tag in data_config["datasets"]:
+    ds = Dataset.from_tag(tag)
+    ds_size[tag] = get_ds_size(ds)
+    if WITH_TRAIN:
+        train_set, _, test_set = ds.split(splitnames['train'], splitnames['val'], splitnames['test'])
+        trainsets.append(train_set)
+    else:
+        _, _, test_set = ds.split(splitnames['train'], splitnames['val'], splitnames['test'])
 
-print(f'loaded test set with {len(test_set)} molecules')
-
-# get the test loader:
-test_loader = GraphDataLoader(full_test_set, batch_size=8, conf_strategy="all")
-evaluator = Evaluator()
-
-
-for i, (g, dsnames) in enumerate(test_loader):
-    with torch.no_grad():
-        g = g.to(DEVICE)
-        g = model(g)
-        print(f'batch {i+1}/{len(test_loader)}', end='\r')
-        evaluator.step(g, dsnames)
+    testsets.append(test_set)
 
 
+if WITH_TRAIN:
+    pure_trainsets = []
+    for tag in data_config["pure_train_datasets"]:
+        ds = Dataset.from_tag(tag)
+        ds_size[tag] = get_ds_size(ds)
+        trainsets.append(ds)
+
+with open('ds_size.json', 'w') as f:
+    json.dump(ds_size, f, indent=4)
+#%%
+
+print(f'loaded full test set with {sum([len(ds) for ds in testsets])} molecules')
+result_dict = {'test': {}}
+
+if WITH_TRAIN:
+    print(f'loaded full test set with {sum([len(ds) for ds in trainsets])} molecules')
+    result_dict['train'] = {}
+
+datasets = [(True, ds) for ds in testsets]
+if WITH_TRAIN:
+    datasets += [(False, ds) for ds in trainsets]
+
+
+
+###################################
+for is_test, ds in datasets:
+    print(ds[0][1])
+    ds.remove_uncommon_features()
+    confs, atoms = zip(*[(len(entry.nodes['g'].data['energy_ref']), entry.num_nodes('n1')) for entry, _ in ds])
+    max_confs, max_atoms = max(confs), max(atoms)
+
+    batch_size = FORCES_PER_BATCH/max_confs/max_atoms
+    this_device = DEVICE
+    if batch_size < 1:
+        batch_size = 1
+        this_device = 'cpu'
+    batch_size = int(batch_size)
+
+    model = model.to(this_device)
+
+    loader = GraphDataLoader(ds, batch_size=batch_size, 
+    conf_strategy="all", drop_last=False)
+
+    evaluator = Evaluator()
+
+    energy_names = list(ds[0][0].nodes['g'].data.keys())
+
+    ff_evaluators = {}
+
+    for ff_name in CLASSICAL_FF:
+        keys_found = [k for k in energy_names if ff_name in k]
+        if len(keys_found) > 1:
+            raise RuntimeError(f'Found more than one key that fits ff: {keys_found}')
+        elif len(keys_found) == 1:
+            ff_name_in_graph = keys_found[0].replace('energy', '')
+            ff_evaluators[ff_name] = Evaluator(suffix=ff_name_in_graph, suffix_ref='_qm')
+
+    for i, (g, dsnames) in enumerate(loader):
+        with torch.no_grad():
+            g = g.to(this_device)
+            g = model(g)
+            g = g.cpu()
+            print(f'batch {i+1}/{len(loader)}', end='\r')
+            evaluator.step(g, dsnames)
+            for k in ff_evaluators.keys():
+                ff_evaluators[k].step(g, dsnames)
+
+    print()
+
+    d = evaluator.pool(n_bootstrap=N_BOOTSTRAP)
+    d.keys()
+    # d has the form {dsname:...} but since we separate all datasets, it has only one dsname:
+    assert len(list(d.keys())) == 1
+    dsname = list(d.keys())[0]
+    d = d[dsname]
+
+    ds_results = {
+        k: d[k] for k in ['n_mols', 'n_confs', 'std_energies', 'std_gradients']
+    }
+
+    METRIC_KEYS = ['rmse_energies', 'rmse_gradients', 'crmse_gradients', 'mae_energies', 'mae_gradients']
+
+    grappa_metrics = {
+        k: d[k] for k in METRIC_KEYS
+    }
+
+    ff_metrics = {}
+    for ff_name in ff_evaluators.keys():
+        d = ff_evaluators[ff_name].pool(n_bootstrap=N_BOOTSTRAP)
+        d = d[dsname]
+        ff_metrics[ff_name] = {
+            k: d[k] for k in METRIC_KEYS
+        }
+
+    # write these ff-specific results in the total dictionary:
+    ds_results['grappa'] = grappa_metrics
+    for k,v in ff_metrics.items():
+        ds_results[k] = v
+
+    if is_test:
+        result_dict['test'][dsname]= ds_results
+    else:
+        result_dict['train'][dsname]= ds_results
+
+    print(dsname, ' --- Test:' if is_test else ' --- Train:')
+
+    print(json.dumps(ds_results, indent=4))
+    print('--------------------------------------')
+################################
+
+with open('results.json', 'w') as f:
+    json.dump(result_dict, f, indent=4)
 # %%
-
-d = evaluator.pool()
-print(json.dumps(d, indent=4))
-
-
-with open('results_grappa.json', 'w') as f:
-    json.dump(d, f, indent=4)
-# %%
-
+    

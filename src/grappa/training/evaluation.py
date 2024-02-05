@@ -107,6 +107,8 @@ class FastEvaluator:
                 self.squared_error_classical_gradients[dsname] += classical_gradient_se.detach()
                 self.squared_error_classical_energies[dsname] += classical_energy_se.detach()
 
+        # re-batch the graphs:
+        g = dgl_utils.batch(graphs)
 
     def pool(self):
         """
@@ -322,14 +324,20 @@ class Evaluator:
         If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as mean = pool()[]
         """
         if n_bootstrap > 0:
+            # first take the full dataset:
+            self.collect()
+            metrics = [self.get_metrics()]
+
+            n_confs = {dsname: metrics[0][dsname]['n_confs'] for dsname in metrics[0].keys()}
+            n_mols = {dsname: metrics[0][dsname]['n_mols'] for dsname in metrics[0].keys()}
+
             np.random.seed(seed)
-            bootstrap_seeds = np.random.randint(0, 2**32, size=n_bootstrap).tolist()
-            metrics = []
+            bootstrap_seeds = np.random.randint(0, 2**32, size=n_bootstrap-1).tolist()
             for i, bootstrap_seed in enumerate(bootstrap_seeds):
                 self.collect(bootstrap_seed=bootstrap_seed)
                 metrics.append(self.get_metrics())
 
-            # now collect all values in a single dictionary, allowing theat a dataset may not occur in one of the bootstrapped versions.
+            # now collect all values in a single dictionary, allowing that a dataset may not occur in one of the bootstrapped versions.
             all_metrics = {}
 
             all_ds_names = set()
@@ -341,7 +349,10 @@ class Evaluator:
 
             # now calculate the mean and std for each metric
             for dsname in all_ds_names:
-                all_metrics[dsname] = {key: {'mean': np.mean([m[key] for m in all_metrics[dsname]]), 'std': np.std([m[key] for m in all_metrics[dsname]])} for key in all_metrics[dsname][0].keys()}
+                all_metrics[dsname] = {key: {'mean': np.mean([m[key] for m in all_metrics[dsname]]), 'std': np.std([m[key] for m in all_metrics[dsname]])} for key in all_metrics[dsname][0].keys() if not key in ['n_confs', 'n_mols']}
+
+                all_metrics[dsname]['n_confs'] = n_confs[dsname]
+                all_metrics[dsname]['n_mols'] = n_mols[dsname]
 
             return all_metrics
 

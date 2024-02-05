@@ -9,6 +9,8 @@ if __name__ == "__main__":
     parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature.")
     parser.add_argument("-o", "--opt-weight", type=float, default=1., help="Sampling factor for the opt-datasets (gen2/pepconf-dlc).")
     parser.add_argument("-s", "--scan-weight", type=float, default=1., help="Sampling factor for the torsion-scan-datasets (gen2-torsion/protein-torsion).")
+    parser.add_argument("-g", "--gradient-weight", type=float, default=None, help="Weight for the gradient loss. Default: 0.3")
+    parser.add_argument("-pd", "--gnn_dropout", type=float, default=None, help="Dropout rate for the model. Default: 0.1")
 
     args = parser.parse_args()
 
@@ -47,6 +49,14 @@ if __name__ == "__main__":
 
     if args.scan_weight != 1.:
         config["trainer_config"]["name"] += f"_scan{int(args.scan_weight)}"
+
+    if not args.gradient_weight is None:
+        config["lit_model_config"]["gradient_weight"] = args.gradient_weight
+        config["trainer_config"]["name"] += f"_g{args.gradient_weight}"
+
+    if not args.gnn_dropout is None:
+        config["model_config"]["gnn_dropout_attention"] = args.gnn_dropout
+        config["trainer_config"]["name"] += f"_d{args.gnn_dropout}"
     
 
     # train:
