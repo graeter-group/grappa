@@ -13,24 +13,22 @@ from grappa.models.energy import Energy
 import copy
 
 
-PROJECT = "benchmark-grappa-1.0"
+PROJECT = "grappa-1.0"
 
-PROJECT_DIR = Path(__file__).parent.parent.parent/'benchmark'
+PROJECT_DIR = Path(__file__).parent.parent.parent/'train-grappa-1.0'
 
 WANDPATH = PROJECT_DIR/'wandb'
 
-RUN_ID = "wwnmmbd1"
+RUN_ID = 'b44wfpbw'
 
-# RUN_ID = 'gyusjj5h'
-
-DEVICE = "cuda"
+DEVICE = "cpu"
 
 MODELNAME = 'best-model.ckpt'
 
 WITH_TRAIN = False
 
 FORCES_PER_BATCH = 2e3
-BATCH_SIZE = 1 # if None, it will be calculated from FORCES_PER_BATCH
+BATCH_SIZE = None # if None, it will be calculated from FORCES_PER_BATCH
 
 N_BOOTSTRAP = 1000
 
@@ -78,21 +76,29 @@ for tag in data_config["pure_test_datasets"]:
 print(f'loaded pure test sets with {sum([len(ds) for ds in testsets])} molecules')
 
 splitpath = Path(configpath).parent / f"split.json"
+if not splitpath.exists():
+    splitpath = Path(configpath).parent / f"files/split.json"
 splitpath = splitpath if splitpath.exists() else data_config["splitpath"]
 
 splitnames = json.load(open(splitpath))
 
+partition = data_config["partition"]
+
 trainsets = []
 
+seed = 0 # used in all splits in this project
 
 for tag in data_config["datasets"]:
     ds = Dataset.from_tag(tag)
     ds_size[tag] = get_ds_size(ds)
+
+    split_ids = ds.calc_split_ids(partition=partition, seed=seed, existing_split=splitnames)
+
     if WITH_TRAIN:
-        train_set, _, test_set = ds.split(splitnames['train'], splitnames['val'], splitnames['test'])
+        train_set, _, test_set = ds.split(split_ids['train'], split_ids['val'], split_ids['test'])
         trainsets.append(train_set)
     else:
-        _, _, test_set = ds.split(splitnames['train'], splitnames['val'], splitnames['test'])
+        _, _, test_set = ds.split(split_ids['train'], split_ids['val'], split_ids['test'])
 
     testsets.append(test_set)
 

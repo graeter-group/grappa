@@ -15,7 +15,7 @@ from grappa.utils.run_utils import write_yaml
 from typing import Union, Dict, Callable
 
 
-def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=3)->Path:
+def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=5)->Path:
     """
     Find the local run directory for a given run id.
 
@@ -42,7 +42,7 @@ def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=3)->Path
             if match:
                 match_counter += 1
                 if match_counter > max_existing_dirs:
-                    raise RuntimeError(f"More than {max_existing_dirs} directories found for run {run_id}. Aborting...")
+                    raise RuntimeError(f"More than {max_existing_dirs} directories found for run {run_id}. Found {match_counter}. Aborting...")
                 # check whether the directory contains a last.ckpt file
                 if not (dir / 'files/checkpoints/last.ckpt').exists():
                     print(f"Directory {dir} does not contain a last.ckpt file. Skipping...")

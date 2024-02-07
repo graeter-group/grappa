@@ -1,6 +1,32 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-Collection of models and utilities for protein force fields with parameters learned by deep graph neural networks. Usage: See `examples/usage`.
+A machine-learned molecular mechanics force field using deep graph attention networks.
+
+![](docs/grappa_overview.png)
+
+## Usage
+
+Currently, Grappa is compatible with GROMACS and OpenMM. To use Grappa in openmm, parametrize your system with a classical forcefield, from which the nnbonded parameters are taken, and then pass it to Grappas Openmm wrapper class:
+
+```{python}
+import openmm
+from grappa.utils.loading_utils import model_from_tag
+from grappa.wrappers.openmm_wrapper import openmm_Grappa
+
+model = model_from_tag('grappa-1.0')
+
+topology = ... # load your system as openmm.app.Topology
+
+classical_ff = openmm.app.ForceField('amber99sbildn.xml', 'tip3p.xml')
+system = classical_ff.createSystem(topology)
+
+grappa_ff = openmm_Grappa(model)
+
+system = grappa.parametrize_system(system, topology)
+```
+
+
+More: See `examples/usage`.
 
 ## Installation
 

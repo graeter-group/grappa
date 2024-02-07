@@ -113,7 +113,10 @@ class GrappaModel(torch.nn.Module):
         # first, check consistency of the graph:
         for lvl in ['n2', 'n3', 'n4', 'n4_improper']:
             if lvl in g.ntypes:
-                max_idx = torch.max(g.nodes[lvl].data['idxs'])
+                if len(g.nodes[lvl].data['idxs']) > 0:
+                    max_idx = torch.max(g.nodes[lvl].data['idxs'])
+                else:
+                    max_idx = 0
                 assert max_idx <= g.num_nodes('n1'), f'Encountered idxs up to {max_idx} at the level g.nodes[{lvl}].data["idxs"], but there are only {g.num_nodes("n1")} atom-level-nodes in the graph'
 
         g = self.gnn(g)
