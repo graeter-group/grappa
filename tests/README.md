@@ -1,1 +1,0 @@
-This needs a cleanup. formerly, these were actual tests, now just a collection of scripts to try things out.
