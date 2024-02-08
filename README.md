@@ -2,7 +2,12 @@
 
 A machine-learned molecular mechanics force field using deep graph attention networks.
 
-![](docs/grappa_overview.png)
+<p align="center">
+  <img src="docs/grappa_overview.png" width="50%" style="max-width: 200px;">
+</p>
+
+
+
 
 ## Usage
 
