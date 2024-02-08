@@ -25,6 +25,7 @@ grappa_ff = openmm_Grappa(model)
 system = grappa.parametrize_system(system, topology)
 ```
 
+Note that the current version of the OpenMM wrapper will parametrize the whole topology with Grappa, including the solvent. Grappa is not trained to parametrize water, the solvent should thus be removed from the topology before parametrization. In future versions, there will be the option to parametrize only a subset of the topology.
 
 More: See `examples/usage`.
 
