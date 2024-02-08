@@ -1,1 +1,3 @@
-Needs a cleanup. We only really need train-grappa-1.0 as of now.
+Scripts that were used during hyperparameter optimization of Grappa. These might nt be up-to-date and serve rather as a documentation of the hyperparameter optimization process.
+
+The optimization was done using a hand-crafted initial guess and wandb sweeps whose target it was to minimize the 'early stopping validation loss', which is the sum of force cRMSE and 3 * energy RMSE for each validation dataset.
