@@ -11,7 +11,6 @@ import torch
 from pathlib import Path
 import pkgutil
 import json
-from grappa.utils.dgl_utils import laplacian_positional_encoding
 
 
 
@@ -69,7 +68,6 @@ class Molecule():
         improper_in_correct_format: bool = False,
         ring_encoding: bool = True,
         degree: bool = True,
-        laplacian_encoding: bool = True,
         mass_encoding: bool = True,
         mapped_smiles: str = None,
         charge_model: str = 'am1BCC',
@@ -101,9 +99,6 @@ class Molecule():
 
         if degree:
             self.add_features(feat_names=['degree'])
-
-        if laplacian_encoding:
-            self.add_features(feat_names=['laplacian_positional_encoding'])
 
         if not mapped_smiles is None:
             assert pkgutil.find_loader("openff.toolkit") is not None, "openff.toolkit must be installed if you pass a mapped_smiles string to this constructor."
@@ -149,6 +144,7 @@ class Molecule():
             raise ValueError(f"charge_model must be one of {constants.CHARGE_MODELS} but is {self.charge_model}")
         
         if not 'charge_model' in self.additional_features.keys():
+            assert charge_model in constants.CHARGE_MODELS, f"charge_model must be one of {constants.CHARGE_MODELS} but is {charge_model}"
             self.additional_features['charge_model'] = np.tile(np.array([cm == self.charge_model for cm in constants.CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
 
 
@@ -248,13 +244,13 @@ class Molecule():
             atomic_numbers.append(atom.element.atomic_number)
             atoms.append(atom.index)
 
-        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, laplacian_encoding=True, degree=True)
+        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True)
 
 
         return self
 
 
-    def add_features(self, feat_names:Union[str,List[str]]=['ring_encoding', 'degree', 'mass', 'laplacian_positional_encoding'], **kwargs):
+    def add_features(self, feat_names:Union[str,List[str]]=['ring_encoding', 'degree', 'mass'], **kwargs):
         """
         Add features to the molecule by keyword. Currently supported:
             - 'ring_encoding': a one-hot encoding of ring membership obtained from rdkit. feat dim: 7
@@ -262,7 +258,6 @@ class Molecule():
             - 'is_aromatic': a one-hot encoding indicating whether the atom is aromatic or not. openff_mol must be passed as a keyword argument. feat dim: 1
             - 'is_radical': a one-hot encoding indicating whether the atom is a radical or not. feat dim: 1
             - 'degree': the degree of the noe in the graph, i.e. the number of neighbors, one hot encoded. feat dim: 6
-            - 'laplacian_positional_encoding': the positional encoding of the atom in the graph using the laplacian eigenvectors. feat dim: 5
             - 'mass': the mass and the nat log of the mass of the atom. openff_mol must be passed as a keyword argument. feat dim: 2
             - 'partial_charge_encoding': 
         """
@@ -329,11 +324,6 @@ class Molecule():
 
             elif feat_name == 'is_radical':
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")
-            
-            elif feat_name == 'laplacian_positional_encoding':
-                g = self.to_dgl()
-                encodings = laplacian_positional_encoding(g, k=5)
-                self.additional_features[feat_name] = encodings
 
             else:
                 raise NotImplementedError(f"Feature {feat_name} not implemented yet.")

@@ -107,8 +107,8 @@ class FastEvaluator:
                 self.squared_error_classical_gradients[dsname] += classical_gradient_se.detach()
                 self.squared_error_classical_energies[dsname] += classical_energy_se.detach()
 
-        # re-batch the graphs:
-        g = dgl_utils.batch(graphs)
+        # re-batch the graphs: (no! breaks something)
+        # g = dgl_utils.batch(graphs)
 
     def pool(self):
         """
