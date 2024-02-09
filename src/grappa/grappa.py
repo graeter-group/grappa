@@ -28,6 +28,7 @@ class Grappa:
 
         # transform the input to a dgl graph
         g = molecule.to_dgl(max_element=self.max_element, exclude_feats=[])
+
         g = g.to(self.device)
 
         # write parameters in the graph

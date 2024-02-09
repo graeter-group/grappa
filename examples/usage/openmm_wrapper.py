@@ -8,6 +8,7 @@ from grappa.utils.loading_utils import model_from_tag
 model = model_from_tag('grappa-1.0')
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cpu' # for the sake of this example, we will use the CPU
 model = model.to(device)
 
 #%%
@@ -37,7 +38,7 @@ grappa = openmm_Grappa(model, device=device)
 
 # write grappa parameters to the system:
 start = time.time()
-system = grappa.parametrize_system(system, pdb.topology)
+system = grappa.parametrize_system(system, pdb.topology, charge_model='classical')
 print(f'Parametrized the system in {(time.time()-start)*1e3:.2f} milliseconds')
 
 # %%

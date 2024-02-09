@@ -81,3 +81,23 @@ for ds in data_config["datasets"]:
 
         md.save(molpath)
 # %%
+
+# save the pure train/val/test sets as well:
+
+for dstype in ['train', 'val', 'test']:
+    for ds in data_config[f"pure_{dstype}_datasets"]:
+        print(ds)
+        (splitted_ds_path/dstype/ds).mkdir(parents=True, exist_ok=True)
+        for i, entry in enumerate((dspath/ds).glob('*.npz')):
+            print(f"processing {i}   : {entry.stem}", end='\r')
+            md = MolData.load(entry)
+
+            # add charge model feature by hand since it was only added to the dgl datasets so far:
+            charge_model = 'classical' if ('amber99' in ds or ds == 'dipeptide_rad') else 'am1BCC'
+            if not 'charge_model' in md.molecule.additional_features:
+                assert charge_model in constants.CHARGE_MODELS
+                md.molecule.additional_features['charge_model'] = np.tile(np.array([cm == charge_model for cm in constants.CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
+                
+            molpath = splitted_ds_path/dstype/f'{ds}/{entry.stem}.npz'
+            md.save(molpath)
+# %%

@@ -64,6 +64,7 @@ boltzmann = [
     'rna-trinucleotide',
     'tripeptides_amber99sbildn',
     'dipeptide_rad',
+    'hyp-dop_amber99sbildn',
 ]
 
 opts = [

@@ -6,8 +6,7 @@ if __name__ == "__main__":
     parser.add_argument("--project", type=str, default="grappa-1.0", help="Project name for wandb.")
     parser.add_argument("-tb", "--train_batch", type=int, default=-1, help="Batch size for training.")
     parser.add_argument("-vb", "--val_batch", type=int, default=-1, help="Batch size for validation.")
-    parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature. Default is False.")
-    # parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.") #NOTE
+    # parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.") #NOTE: include this arg
     parser.add_argument("-p", "--param_weight", type=float, default=None, help="Weight for the param loss of the datasets with classical parameters from amber99sbildn. Default is None.")
 
     args = parser.parse_args()
@@ -34,11 +33,6 @@ if __name__ == "__main__":
         config["data_config"]["train_batch_size"] = args.train_batch
     if args.val_batch > 0:
         config["data_config"]["val_batch_size"] = args.val_batch
-
-    if args.with_hybridization:
-        assert not args.radical, "Cannot use hybridization feature for radicals."
-        config["model_config"]["in_feat_name"] += ["sp_hybridization"]
-        config["trainer_config"]["name"] += "_hybrid"
 
     if not args.param_weight is None:
         config["trainer_config"]["name"] += f"_p{int(np.log10(args.param_weight))}"

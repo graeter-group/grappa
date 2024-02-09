@@ -5,7 +5,7 @@ Evaluate a grappa dataset for a model.
 from grappa.data import Dataset
 
 #%%
-DSNAME = 'tripeptides_amber99sbildn'
+DSNAME = 'spice-dipeptide_amber99sbildn'
 DSNAME2 = 'dipeptide_rad'
 DSNAME3 = 'spice-des-monomers'
 
@@ -70,11 +70,11 @@ fig, axs = plt.subplots(3, 2, figsize=(10, 15))
 
 for i, dsname in enumerate([DSNAME, DSNAME2, DSNAME3]):
     # Assuming evaluator and metrics objects are already defined and hold the necessary data for each dsname
-    grads = evaluator.gradients[dsname].cpu().numpy()
-    ref_grads = evaluator.reference_gradients[dsname].cpu().numpy()
+    grads = evaluator.all_gradients[dsname].cpu().numpy()
+    ref_grads = evaluator.all_reference_gradients[dsname].cpu().numpy()
 
-    energies = evaluator.energies[dsname].cpu().numpy()
-    ref_energies = evaluator.reference_energies[dsname].cpu().numpy()
+    energies = evaluator.all_energies[dsname].cpu().numpy()
+    ref_energies = evaluator.all_reference_energies[dsname].cpu().numpy()
 
     # Gradient plot for the dataset
     axs[i, 0].scatter(ref_grads, grads)
@@ -96,4 +96,33 @@ for i, dsname in enumerate([DSNAME, DSNAME2, DSNAME3]):
 plt.tight_layout()  # Adjust layout
 plt.savefig('evaluation.png')
 plt.show()
+# %%
+
+from grappa.data import MolData
+from grappa.data import Molecule
+
+md = MolData.load('/hits/fast/mbm/seutelf/grappa/data/grappa_datasets/tripeptides_amber99sbildn/0.npz')
+
+g = md.to_dgl()
+
+print(g.nodes['n1'].data['charge_model'])
+# %%
+out = model(g)
+
+grads = out.nodes['n1'].data['gradient'].flatten().detach().cpu().numpy()
+grads_ref = out.nodes['n1'].data['gradient_ref'].flatten().detach().cpu().numpy()
+
+plt.scatter(grads_ref, grads)
+# %%
+from openmm.app import PDBFile, ForceField
+
+pdb = PDBFile('T4.pdb')
+
+system = ForceField('amber99sbildn.xml', 'tip3p.xml').createSystem(pdb.topology)
+
+mol = Molecule.from_openmm_system(system, pdb.topology, charge_model='classical')
+
+molg = mol.to_dgl()
+
+print(molg.nodes['n1'].data['charge_model'][0:5])
 # %%

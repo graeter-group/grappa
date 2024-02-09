@@ -14,6 +14,7 @@ data_config:
   - protein-torsion_amber99sbildn
   - pepconf-dlc_amber99sbildn
   - tripeptides_amber99sbildn
+  - hyp-dop_amber99sbildn
   - dipeptide_rad
   partition: [0.8, 0.1, 0.1]
   pin_memory: true

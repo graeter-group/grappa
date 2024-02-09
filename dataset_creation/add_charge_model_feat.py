@@ -14,6 +14,7 @@ DATAPATH = Path(__file__).parent.parent/"data/dgl_datasets"
 
 def add_charge_model_feat(dgl_graphlist, charge_model='am1BCC'):
     # one-hot encode the charge model:
+    assert charge_model in CHARGE_MODELS, f"Charge model {charge_model} not in {CHARGE_MODELS}."
     v = [cm == charge_model for cm in CHARGE_MODELS]
 
     v = torch.tensor(v).float()

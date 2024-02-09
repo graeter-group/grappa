@@ -115,6 +115,7 @@ DSNAMES = {
     'protein-torsion_amber99sbildn': 'Protein-Torsion-Amber99',
     'tripeptides_amber99sbildn': 'Tripeptides-Amber99',
     'dipeptide_rad': 'Dipeptide-Radical',
+    'hyp-dop_amber99sbildn': 'HYP-DOP-Dipeptides',
 }
 
 

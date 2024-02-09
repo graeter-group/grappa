@@ -39,6 +39,9 @@ class Molecule():
         partial_charges (List[float]): A list of partial charges for each atom in units of the elementary charge.
         additional_features (Optional[Dict[str, List]]): A dictionary containing additional features associated with 
             atoms. The dictionary keys are feature names, and values are lists or arrays of shape (n_atoms, feat_dim).
+        charge_model: A tag defining the model from which the partial charges where obtained. can be
+            - 'classical': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+            - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.0.
 
     Optional Attributes:
         angles (Optional[Union[List[Tuple[int, int, int]], np.ndarray]]): A list or array of tuples, each representing 
@@ -70,7 +73,7 @@ class Molecule():
         degree: bool = True,
         mass_encoding: bool = True,
         mapped_smiles: str = None,
-        charge_model: str = 'am1BCC',
+        charge_model: str = 'classical',
     )->None:
         self.atoms = atoms
         self.bonds = bonds
@@ -144,7 +147,7 @@ class Molecule():
             raise ValueError(f"charge_model must be one of {constants.CHARGE_MODELS} but is {self.charge_model}")
         
         if not 'charge_model' in self.additional_features.keys():
-            assert charge_model in constants.CHARGE_MODELS, f"charge_model must be one of {constants.CHARGE_MODELS} but is {charge_model}"
+            assert self.charge_model in constants.CHARGE_MODELS, f"charge_model must be one of {constants.CHARGE_MODELS} but is {self.charge_model}"
             self.additional_features['charge_model'] = np.tile(np.array([cm == self.charge_model for cm in constants.CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
 
 
@@ -173,7 +176,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='classical'):
         """
         Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
@@ -244,7 +247,7 @@ class Molecule():
             atomic_numbers.append(atom.element.atomic_number)
             atoms.append(atom.index)
 
-        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True)
+        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True, charge_model=charge_model)
 
 
         return self
@@ -330,7 +333,7 @@ class Molecule():
             
 
     @classmethod
-    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:Union[np.ndarray, int]=None):
+    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:Union[np.ndarray, int]=None, charge_model:str='am1BCC'):
         """
         DEPRECATED, USE from_openff_molecule INSTEAD.
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to obtain improper torsions and, if partial_charges is None, to obtain the partial charges.
@@ -343,7 +346,7 @@ class Molecule():
         system, topol, openff_mol = openff_utils.get_openmm_system(mapped_smiles=mapped_smiles, openff_forcefield=openff_forcefield, partial_charges=partial_charges)
 
         # get the molecule from the openmm system and topology:
-        mol = cls.from_openmm_system(openmm_system=system, openmm_topology=topol, partial_charges=partial_charges)
+        mol = cls.from_openmm_system(openmm_system=system, openmm_topology=topol, partial_charges=partial_charges, charge_model=charge_model)
 
         # add features:
         mol.add_features(feat_names=['ring_encoding', 'sp_hybridization', 'is_aromatic'], openff_mol=openff_mol)
@@ -352,7 +355,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openff_molecule(cls, openff_mol, partial_charges:Union[np.ndarray, float, List[float]]=None, impropers:Union[str, List[Tuple[int,int,int,int]]]='smirnoff'):
+    def from_openff_molecule(cls, openff_mol, partial_charges:Union[np.ndarray, float, List[float]]=None, impropers:Union[str, List[Tuple[int,int,int,int]]]='smirnoff', charge_model:str='am1BCC'):
         """
         Creates a Molecule from an openff molecule. The openff molecule must have partial charges id partial_charges is None.
         impropers can either be a method, 'smirnoff' or 'amber', or a list of tuples of atom ids.
@@ -401,7 +404,7 @@ class Molecule():
             ))
             
         # initialize with the corresponding flag to covnert the impropers to grappa format:
-        mol = cls(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=False)
+        mol = cls(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=False, charge_model=charge_model)
 
         # add features:
         mol.add_features(feat_names=['ring_encoding', 'sp_hybridization', 'is_aromatic'], openff_mol=openff_mol)

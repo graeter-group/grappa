@@ -14,15 +14,15 @@ A machine-learned molecular mechanics force field using deep graph attention net
 Currently, Grappa is compatible with GROMACS and OpenMM. To use Grappa in openmm, parametrize your system with a classical forcefield, from which the nnbonded parameters are taken, and then pass it to Grappas Openmm wrapper class:
 
 ```{python}
-import openmm
+from openmm.app import ForceField, Topology
 from grappa.utils.loading_utils import model_from_tag
 from grappa.wrappers.openmm_wrapper import openmm_Grappa
 
 model = model_from_tag('grappa-1.0')
 
-topology = ... # load your system as openmm.app.Topology
+topology = ... # load your system as openmm.Topology
 
-classical_ff = openmm.app.ForceField('amber99sbildn.xml', 'tip3p.xml')
+classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
 system = classical_ff.createSystem(topology)
 
 grappa_ff = openmm_Grappa(model)

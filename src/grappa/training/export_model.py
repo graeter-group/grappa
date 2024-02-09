@@ -5,7 +5,7 @@ import torch
 from grappa.models.energy import Energy
 import json
 from grappa.utils.train_utils import remove_module_prefix
-
+import os
 
 def get_grappa_model(checkpoint_path):
 
@@ -39,7 +39,7 @@ def get_grappa_model(checkpoint_path):
     return model, config, split_names
 
 
-def store_model_dict(checkpoint_path, modelname, modelpath=Path(__file__).parent.parent.parent.parent/'models'):
+def store_model_dict(checkpoint_path, modelname, modelpath=Path(__file__).parent.parent.parent.parent/'models', release_tag=None):
     """
     Stores a dictionary {state_dict: state_dict, config: config, split_names: split_names} at modelpath/modelname.pth
     The config entails a configuration of the training run that produced the checkpoint, the split names a list of identifiers for the train, validation and test molecules.
@@ -57,8 +57,25 @@ def store_model_dict(checkpoint_path, modelname, modelpath=Path(__file__).parent
         modelpath.mkdir()
 
     if Path(modelpath/f'{modelname}.pth').exists():
-        raise FileExistsError(f"Model {modelname} already exists in {modelpath}")
+        # ask the user for confirmation:
+        print(f"Model {modelname} already exists at {modelpath/f'{modelname}.pth'}.")
+        if input("Do you want to overwrite it? (y/n): ") != 'y':
+            print("Aborting.")
+            return
+        else:
+            print("Overwriting.")
+            # remove the old model:
+            os.remove(modelpath/f'{modelname}.pth')
 
     print(f"Saving model {modelname} to {modelpath/f'{modelname}.pth'}")
 
     torch.save(model_dict, modelpath/f'{modelname}.pth')
+
+
+def release_model(release_tag:str, modelname:str, modelpath=Path(__file__).parent.parent.parent.parent/'models'):
+    """
+    Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already.
+    """
+
+    os.system(f"gh release upload {release_tag} {modelpath/f'{modelname}.pth'} --clobber")
+
