@@ -23,7 +23,7 @@ def url_from_tag(tag:str):
     - grappa-1.0
     """
     MODEL_NAMES = {
-        'https://github.com/LeifSeute/test_torchhub/releases/download/v.1.0.0/grappa-1.0-02092024.pth': ['grappa-1.0', 'latest'],
+        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.0.0/grappa-1.0-20240209.pth': ['grappa-1.0', 'latest'],
     }
 
     # first, go through the hard-coded dictionary above:

@@ -32,13 +32,13 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'protein-torsion_amber99sbildn'
         'pepconf-dlc_amber99sbildn'
         'tripeptides_amber99sbildn'
-        'tripeptides_openff120'
+        'hyp-dop_amber99sbildn'
 
     RADICAL DATASET:
         'dipeptide_rad'
     '''
 
-    RELEASE_URL = 'https://github.com/LeifSeute/test_torchhub/releases/download/dataset_release/'
+    RELEASE_URL = 'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.0.0/'
 
     URL_TAGS = [
         'spice-des-monomers',
@@ -55,6 +55,7 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'pepconf-dlc_amber99sbildn',
         'tripeptides_amber99sbildn',
         'dipeptide_rad',
+        'hyp-dop_amber99sbildn',
     ]
 
     dir_path = Path(data_dir) / tag

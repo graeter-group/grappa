@@ -71,6 +71,9 @@ def store_model_dict(checkpoint_path, modelname, modelpath=Path(__file__).parent
 
     torch.save(model_dict, modelpath/f'{modelname}.pth')
 
+    if not release_tag is None:
+        release_model(release_tag, modelname, modelpath=modelpath)
+
 
 def release_model(release_tag:str, modelname:str, modelpath=Path(__file__).parent.parent.parent.parent/'models'):
     """
