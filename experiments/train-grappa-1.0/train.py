@@ -4,12 +4,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", type=str, default="grappa-1.0", help="Project name for wandb.")
-    parser.add_argument("-r", "--radical", action="store_true", help="Use radical dataset.")
     parser.add_argument("-tb", "--train_batch", type=int, default=-1, help="Batch size for training.")
     parser.add_argument("-vb", "--val_batch", type=int, default=-1, help="Batch size for validation.")
-    parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature.")
-    parser.add_argument("--rad-flag", action="store_true", help="Use the is_radical feature.")
-    parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.") #NOTE
+    parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature. Default is False.")
+    # parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.") #NOTE
     parser.add_argument("-p", "--param_weight", type=float, default=None, help="Weight for the param loss of the datasets with classical parameters from amber99sbildn. Default is None.")
 
     args = parser.parse_args()
@@ -42,17 +40,10 @@ if __name__ == "__main__":
         config["model_config"]["in_feat_name"] += ["sp_hybridization"]
         config["trainer_config"]["name"] += "_hybrid"
 
-    if args.radical:
-        config["data_config"]["datasets"].append("dipeptide_rad")
-
-    if args.rad_flag:
-        if "is_radical" in config["model_config"]["in_feat_name"]:
-            config["model_config"]["in_feat_name"].append("is_radical")
-            config["trainer_config"]["name"] += "_rad_flag"
-
     if not args.param_weight is None:
         config["trainer_config"]["name"] += f"_p{int(np.log10(args.param_weight))}"
         config['lit_model_config']['param_weights_by_dataset'] = {ds: args.param_weight for ds in config['data_config']['datasets'] if 'amber99sbildn' in ds}
+
 
     # train:
     do_trainrun(config=config, project=args.project)

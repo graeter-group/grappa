@@ -1,5 +1,7 @@
 #%%
 
+# test whether the openmm wrapper works as expected by implementing the identity and comparing the results.
+
 from grappa.wrappers.openmm_wrapper import openmm_Grappa
 from openmm.app import PDBFile, ForceField
 

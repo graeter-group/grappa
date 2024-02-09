@@ -14,6 +14,7 @@ data_config:
   - protein-torsion_amber99sbildn
   - pepconf-dlc_amber99sbildn
   - tripeptides_amber99sbildn
+  - dipeptide_rad
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
   pure_test_datasets:
@@ -28,17 +29,18 @@ data_config:
   train_loader_workers: 4
   val_batch_size: 32
   val_loader_workers: 2
-  val_conf_strategy: 1000
+  val_conf_strategy: 500
   weights:
     rna-diverse: 3
     rna-nucleoside: 5
+    spice-pubchem: 0.8
 
 lit_model_config:
   add_restarts: []
   early_stopping_energy_weight: 3.0
   energy_weight: 1.0
   finish_criterion: {}
-  gradient_weight: 0.3
+  gradient_weight: 0.8
   improper_regularisation: 1.0e-03
   log_classical: false
   log_metrics: true
@@ -52,7 +54,7 @@ lit_model_config:
   proper_regularisation: 1.0e-03
   start_qm_epochs: 2
   time_limit: 23.5
-  tuplewise_weight: 1.0e-05
+  tuplewise_weight: 0
   warmup_steps: 500
   weight_decay: 0
 model_config:
@@ -70,7 +72,7 @@ model_config:
   gnn_attention_heads: 16
   gnn_attentional_layers: 5
   gnn_convolutions: 2
-  gnn_dropout_attention: 0.1
+  gnn_dropout_attention: 0.3
   gnn_dropout_conv: 0.1
   gnn_dropout_final: 0.1
   gnn_dropout_initial: 0.0
@@ -87,9 +89,7 @@ model_config:
   - partial_charge
   - ring_encoding
   - degree
-  - laplacian_positional_encoding
   - charge_model
-  - is_radical
   in_feats: null
   layer_norm: true
   learnable_statistics: false

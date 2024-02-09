@@ -11,26 +11,31 @@ from grappa.models.deploy import model_from_config
 from grappa.utils.train_utils import remove_module_prefix
 from grappa.models.energy import Energy
 import copy
+import argparse
 
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('run_id', required=True, help='The run id from wandb.')
+parser.add_argument('--project', default='benchmark-grappa-1.0', help='The project name')
+parser.add_argument('--device', default='cuda', help='The device to use')
 
-PROJECT = "benchmark-grappa-1.0"
+# Parse arguments
+args = parser.parse_args()
+
+PROJECT = args.project
+RUN_ID = args.run_id
+DEVICE = args.device
+
 
 PROJECT_DIR = Path(__file__).parent.parent.parent/'benchmark'
 
-WANDPATH = PROJECT_DIR/'wandb'
-
-RUN_ID = "wwnmmbd1"
-
-# RUN_ID = 'gyusjj5h'
-
-DEVICE = "cuda"
+WANDPATH = PROJECT_DIR/'wandb' 
 
 MODELNAME = 'best-model.ckpt'
 
 WITH_TRAIN = False
 
 FORCES_PER_BATCH = 2e3
-BATCH_SIZE = 1 # if None, it will be calculated from FORCES_PER_BATCH
+BATCH_SIZE = None # if None, it will be calculated from FORCES_PER_BATCH
 
 N_BOOTSTRAP = 1000
 

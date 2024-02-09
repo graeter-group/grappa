@@ -7,8 +7,7 @@ assert Path.cwd() == Path(__file__).parent
 
 this_dir = Path(__file__).parent
 
-param_weights = [1e5, 1e3, 1e1, 1e-1, 1e-3, 1e-5]
-param_weights = [1e1, 1e-1, 1e-3, 1e-5]
+param_weights = [1e3, 1e1, 1e-1, 1e-3, 1e-5]
 
 for i, param_weight in enumerate(param_weights):
     print(f'Job {i+1}')

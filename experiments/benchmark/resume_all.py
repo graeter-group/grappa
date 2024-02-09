@@ -7,6 +7,8 @@ this_dir = Path(__file__).parent
 
 PROJECT = 'benchmark-grappa-1.0'
 
+EXCEPT = []
+
 # get all run ids:
 api = wandb.Api()
 runs = api.runs(PROJECT)
@@ -14,6 +16,8 @@ run_ids = [run.id for run in runs]
 
 #%%
 for run_id in run_ids:
+    if run_id in EXCEPT:
+        continue
     print(f'Job {run_id}')
     CMD_BASE = f"sbatch job.sh {this_dir}"
     CMD = f'python resume.py {run_id} --project {PROJECT}'

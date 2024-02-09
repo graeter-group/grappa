@@ -7,7 +7,7 @@ this_dir = Path(__file__).parent
 
 PROJECT = 'grappa-1.0'
 
-EXCEPT = ['b44wfpbw']
+EXCEPT = []
 
 # get all run ids:
 api = wandb.Api()

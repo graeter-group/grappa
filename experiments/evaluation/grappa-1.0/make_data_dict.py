@@ -11,17 +11,24 @@ from grappa.models.deploy import model_from_config
 from grappa.utils.train_utils import remove_module_prefix
 from grappa.models.energy import Energy
 import copy
+import argparse
 
+# Set up argument parser
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('run_id', required=True, help='The run id from wandb.')
+parser.add_argument('--project', default='benchmark-grappa-1.0', help='The project name')
+parser.add_argument('--device', default='cuda', help='The device to use')
 
-PROJECT = "grappa-1.0"
+# Parse arguments
+args = parser.parse_args()
+
+PROJECT = args.project
+RUN_ID = args.run_id
+DEVICE = args.device
 
 PROJECT_DIR = Path(__file__).parent.parent.parent/'train-grappa-1.0'
 
 WANDPATH = PROJECT_DIR/'wandb'
-
-RUN_ID = 'b44wfpbw'
-
-DEVICE = "cpu"
 
 MODELNAME = 'best-model.ckpt'
 
