@@ -9,7 +9,7 @@ set -e
 # cd to /grappa:
 pushd $THISDIR/../..
 
-RUNDIR=$THISDIR/wandb/run-20240209_112055-atbogjqt
+RUNDIR=$THISDIR/wandb/run-20240210_010351-3nul7q1i
 
 MODELNAME=grappa-1.0-20240209
 
