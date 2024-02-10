@@ -13,12 +13,12 @@ RUNDIR=$THISDIR/wandb/run-20240209_112055-atbogjqt
 
 MODELNAME=grappa-1.0-20240209
 
-MODELPATH=$RUNDIR/files/checkpoints/best_model.ckpt
+MODELPATH=$RUNDIR/files/checkpoints/best-model.ckpt
 
 TAG='v.1.0.0'
 
 # create release
-# gh release create $TAG
+gh release create $TAG
 
 # upload the model:
 pushd 'models'
