@@ -6,7 +6,7 @@ import json
 from grappa.utils.dataset_utils import get_path_from_tag
 
 
-def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Union[str, int]=100, train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=1, test_loader_workers:int=1, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], subsample_train:Dict[str, int]={}, subsample_val:Dict[str, int]={}, subsample_test:Dict[str, int]={}, weights:Dict[str,str]={}, balance_factor:float=0., classical_needed:bool=False, in_feat_names:List[str]=None, save_splits:Union[str,Path]=None, val_conf_strategy:int=200)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Union[str, int]=100, train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=1, test_loader_workers:int=1, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], tr_subsampling_factor:float=None, weights:Dict[str,float]={}, balance_factor:float=0., classical_needed:bool=False, in_feat_names:List[str]=None, save_splits:Union[str,Path]=None, val_conf_strategy:int=200)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
     """
     This function returns train, validation, and test dataloaders for a given list of datasets.
 
@@ -23,7 +23,7 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         splitpath (Path, optional): Path to the split file. If provided, the function will load the split from this file. If not, it will generate a new split. Defaults to None.
         partition (Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], optional): Partition of the dataset into train, validation, and test. Can be a tuple of three floats or a dictionary with 'train', 'val', and 'test' keys. Defaults to (0.8,0.1,0.1).
         pure_..._datasets: list of paths to datasets that are only for one specific set type, independent on which mol_ids occur. this can be used to be independent of the splitting by mol_ids. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
-        subsample_... : dictionary of dsname and a float between 0 and 1 specifying the subsampling factor (dsname is stem of the dspaths. subsampling is applied after splitting)
+        subsample_tr : float between 0 and 1 specifying the subsampling factor (subsampling is applied after splitting)
         weights (Dict[str,str], optional): Dictionary mapping subdataset names to weights. If a subdataset name is not in the dictionary, it is assigned a weight of 1.0. If a subdataset has e.g. weight factor 2, it is sampled 2 times more often per epoch than it would be with factor 1. The total number of molecules sampled per epoch is unaffected, i.e. some molecules will not be sampled at all if the weight of other datasets is > 1. Defaults to {}.
         balance_factor (float, optional): parameter between 0 and 1 that balances sampling of the train datasets: 0 means that the molecules are sampled uniformly across all datasets, 1 means that the probabilities are re-weighted such that the sampled number of molecules per epoch is the same for all datasets. The weights assigned in 'weights' are multiplied by the weight factor obtained from balancing. Defaults to 0.
         save_splits (Union[str,Path], optional): Path to save the split file as json. If None, the split is not saved. Defaults to None.
@@ -145,11 +145,10 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
             te += Dataset.load(ds)
         else:
             raise ValueError(f"Unknown type for dataset: {type(ds)}")
-        
-    for ds, subsampling_dict in zip([tr, vl, te], [subsample_train, subsample_val, subsample_test]):
-        for dsname, subsampling_factor in subsampling_dict.items():
-            ds.subsample(subsampling_factor, dsname)
-        
+
+    if tr_subsampling_factor is not None:
+        tr = tr.subsampled(tr_subsampling_factor, seed=seed)
+                    
 
     if len(pure_train_datasets) > 0:
         tr.remove_uncommon_features()
@@ -159,70 +158,6 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         vl.clean(keep_feats=keep_feats)
     if len(pure_test_datasets) > 0:
         te.remove_uncommon_features()
-    #########################################################
-
-    #########################################################
-    REPLACE_HYBRIDIZATION = False
-    if REPLACE_HYBRIDIZATION:
-        # load a Hybridization predictor:
-        from grappa.models.graph_attention import GrappaGNN
-        class GraphModel(torch.nn.Module):
-            def __init__(self, n_classes=6):
-                super().__init__()
-                
-                self.gnn = GrappaGNN(in_feat_name=['partial_charge', 'atomic_number', 'degree', 'ring_encoding'], out_feats=32, n_conv=0, n_att=1)
-                self.lin_1 = torch.nn.Linear(32, 32)
-                self.lin_out = torch.nn.Linear(32, n_classes)
-
-            def forward(self, g):
-                # Forward pass through the model
-                g = self.gnn(g)
-                scores = g.nodes['n1'].data['h']
-                scores = torch.nn.functional.elu(scores)
-                scores = self.lin_1(scores)
-                scores = torch.nn.functional.elu(scores)
-                scores = self.lin_out(scores)
-                return scores
-
-        # load the state dict:
-        checkpoint_path = '/hits/fast/mbm/seutelf/grappa/tests/hybridization_feature/checkpoints/best-model-v3.ckpt'
-        state_dict = torch.load(checkpoint_path)['state_dict']
-        # remove the prefix:
-        state_dict = {k.replace('model.', ''): v for k, v in state_dict.items()}
-        # load the model:
-        model = GraphModel()
-        model.load_state_dict(state_dict)
-
-        print('Loaded Hybridization predictor from:', checkpoint_path)
-
-        model = torch.nn.Sequential(
-            GraphModel(),
-            torch.nn.Softmax(dim=1)
-        )
-
-        model.eval()
-
-        model = model.to('cpu')
-
-        import copy
-
-        # now overwrite the sp_hybridization feature with the predicted one:
-        def overwrite_sp_hybridization(ds):
-            print('Overwriting sp_hybridization feature with predicted one...')
-            for i, _ in enumerate(ds):
-                print(i, end='\r')
-                with torch.no_grad():
-                    new_hybrid = model(ds[i][0]).detach().clone().cpu()
-                    new_hybrid = copy.deepcopy(new_hybrid)
-                ds[i][0].nodes['n1'].data['sp_hybridization'] = new_hybrid
-            print()
-            return ds
-
-        print('Overwriting sp_hybridization feature with predicted one...')
-        tr = overwrite_sp_hybridization(tr)
-        vl = overwrite_sp_hybridization(vl)
-        te = overwrite_sp_hybridization(te)
-
     #########################################################
 
     # Get the dataloaders

@@ -273,3 +273,15 @@ class Dataset(torch.utils.data.Dataset):
         self.mol_ids[:] = [self.mol_ids[i] for i in perm]
         self.subdataset[:] = [self.subdataset[i] for i in perm]
         return self
+    
+
+    def subsampled(self, factor:float, seed:int=0):
+        """
+        Subsample the dataset by a factor. The subsampling is done in a deterministic way, i.e. the same subsample will be returned for the same seed.
+        """
+        print(f'Sampling {round(factor*100, 2)}% of the original dataset...')
+        np.random.seed(seed)
+        n = len(self.graphs)
+        perm = np.random.permutation(n)
+        subsample = perm[:int(n*factor)]
+        return self.where(condition=[i in subsample for i in range(n)])
