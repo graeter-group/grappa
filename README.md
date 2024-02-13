@@ -1,20 +1,18 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-A machine-learned molecular mechanics force field using deep graph attention networks.
+_A machine-learned molecular mechanics force field using deep graph attention networks._
 
 
 ## Abstract
 
 Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
-While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) while retaining high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
+While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) at high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
 
-Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [REF] significantly in terms of accuracy at the same computational cost.
-Our forcefield, Grappa (Graph Attentional Protein Parametrization), covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even exotic molecules like radical peptides.
+Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [REF] significantly in terms of accuracy, at the same computational cost.
+Our forcefield, Grappa, covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
 Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
 
-Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM paramaters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules with over 800,000 states, and is available for use with GROMACS and OpenMM.
-
-
+Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM paramaters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
 
 
 <p align="center">
@@ -27,7 +25,12 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
 2. [Installation](#installation)
 3. [Results](#results)
   - [Grappa is state-of-the-art](#grappa-is-state-of-the-art)
+  - [Grappa keeps large proteins stable](#grappa-keeps-ubiquitin-stable)
+  - [Grappa can fold small proteins](#grappa-can-fold-small-proteins)
+  - [Grappa can parametrize radicals](#grappa-can-parametrize-radicals)
 4. [Method](#method)
+5. [Pretrained Models](#pretrained-models)
+6. [Datasets](#datasets)
 
 
 
