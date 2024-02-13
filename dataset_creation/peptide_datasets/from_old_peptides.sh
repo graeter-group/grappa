@@ -38,7 +38,7 @@ for i in "${!datasets[@]}"; do
     forcefield_type="${forcefield_types[$i]}"
     echo "Processing $ds with forcefield ${forcefields[$i]}"
 
-    python ds_from_pdb.py --source_path "$source_path/$ds/charge_default_ff_amber99sbildn_filtered" --target_path "$target_path/$target_ds_name" --forcefield "$forcefield" --forcefield_type "$forcefield_type"
+    python ds_from_pdb.py --source_path "$source_path/$ds/charge_default_ff_amber99sbildn_filtered" --target_path "$target_path/$target_ds_name" --forcefield "$forcefield" --forcefield_type "$forcefield_type" --charge_method classical
     
     # Write to README.md in the target directory (create or overwrite)
     echo "${readme_content[$i]}" > "$target_path/$target_ds_name/README.md"

@@ -150,7 +150,7 @@ def main(dspath, targetpath, with_amber99: bool = True):
                 data['gradient_ref'] = data['gradient_qm'] - data['gradient_amber99_nonbonded']
 
                 # create moldata from amber99sbildn system
-                moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=mol.to_topology().to_openmm(), mol_id=data['smiles'][0], partial_charges=None, xyz=data['xyz'], energy=data['energy_qm'], gradient=data['gradient_qm'], energy_ref=data['energy_ref'], gradient_ref=data['gradient_ref'], mapped_smiles=data['mapped_smiles'][0], smiles=data['smiles'][0], allow_nan_params=True)
+                moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=mol.to_topology().to_openmm(), mol_id=data['smiles'][0], partial_charges=None, xyz=data['xyz'], energy=data['energy_qm'], gradient=data['gradient_qm'], energy_ref=data['energy_ref'], gradient_ref=data['gradient_ref'], mapped_smiles=data['mapped_smiles'][0], smiles=data['smiles'][0], allow_nan_params=True, charge_model='classical')
 
                 # add classical ff information
                 moldata.ff_energy.update({k.split('_', 1)[1]: v for k, v in data.items() if k.startswith('energy_') and not k == 'energy_ref'})

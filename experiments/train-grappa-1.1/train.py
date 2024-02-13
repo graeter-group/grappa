@@ -8,7 +8,8 @@ if __name__ == "__main__":
     parser.add_argument("-vb", "--val_batch", type=int, default=-1, help="Batch size for validation.")
     # parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model.") #NOTE: include this arg
     parser.add_argument("-p", "--param_weight", type=float, default=None, help="Weight for the param loss of the datasets with classical parameters from amber99sbildn. Default is None.")
-    parser.add_argument("-b", "--bondbreak_radicals", type=bool, default=False, help="Whether to include bond breaking radicals in the training set. Default is False.")
+    parser.add_argument("-b", "--bondbreak_radicals", action="store_true", default=False, help="Whether to include bond breaking radicals in the training set. Default is False.")
+    parser.add_argument("--shrink_train", type=float, default=None, help="Subsample factor for the training set (default: None).")
 
     args = parser.parse_args()
 
@@ -43,6 +44,9 @@ if __name__ == "__main__":
         config["trainer_config"]["name"] += "_bondbreak"
         config['data_config']['datasets'].append('AA_bondbreak_rad_amber99sbildn')
 
+    if args.shrink_train is not None:
+        config["data_config"]["tr_subsampling_factor"] = args.shrink_train
+        config["trainer_config"]["name"] += f"_shrink{int(args.shrink_train*100)}"
 
 
     # train:

@@ -31,9 +31,9 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
             # ransform to actual dictionary
             data = {k:v for k,v in data.items()}
             try:
-                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key=partial_charge_key, forcefield=forcefield)
+                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key=partial_charge_key, forcefield=forcefield, charge_model='am1BCC', allow_nan_params=True)
             except:
-                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key=partial_charge_key, forcefield=forcefield, allow_nan_params=True)
+                moldata = MolData.from_data_dict(data_dict=data, partial_charge_key=partial_charge_key, forcefield=forcefield, allow_nan_params=True, charge_model='am1BCC')
                 num_nan_params += 1
 
             # moldata.molecule.add_features(['ring_encoding'])

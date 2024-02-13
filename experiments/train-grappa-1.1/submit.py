@@ -14,7 +14,7 @@ assert Path.cwd() == Path(__file__).parent
 this_dir = Path(__file__).parent
 
 CMD_BASE = f"sbatch job.sh {this_dir}"
-CMD = f'python train.py --project grappa-1.1 -r'
+CMD = f'python train.py --project grappa-1.1'
 
 if not args.param_weight is None:
     CMD += f' --param_weight {args.param_weight}'
