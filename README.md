@@ -1,6 +1,6 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-_A machine-learned molecular mechanics force field using deep graph attention networks_
+_A machine-learned molecular mechanics force field using deep graph attention_
 
 
 ## Abstract
