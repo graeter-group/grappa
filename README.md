@@ -8,7 +8,7 @@ _A machine-learned molecular mechanics force field using deep graph attention ne
 Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
 While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) at high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
 
-Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4) significantly in terms of accuracy, at the same computational cost.
+Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [[Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4)] significantly in terms of accuracy, at the same computational cost.
 Our forcefield, Grappa, covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
 Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
 
