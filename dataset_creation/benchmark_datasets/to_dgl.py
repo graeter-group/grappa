@@ -30,7 +30,7 @@ def main(source_path, target_path):
 
         moldata = MolData.load(str(molfile))
 
-        moldata.molecule.add_features(['ring_encoding', 'degree', 'laplacian_positional_encoding'])
+        moldata.molecule.add_features(['ring_encoding', 'degree'])
 
         total_mols += 1
         total_confs += len(moldata.molecule.atoms)

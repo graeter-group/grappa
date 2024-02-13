@@ -4,7 +4,6 @@ Units used internally in grappa.
 
 from openmm import unit as openmm_unit
 
-from grappa.constants import RESIDUES
 
 DISTANCE_UNIT = openmm_unit.angstrom
 ENERGY_UNIT = openmm_unit.kilocalorie_per_mole

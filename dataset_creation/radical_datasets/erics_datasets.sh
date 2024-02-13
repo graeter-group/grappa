@@ -12,7 +12,7 @@ dglpath="$SCRIPT_DIR/../../data/dgl_datasets"
 # List of dataset names
 datasets=("AA_natural" "AA_radical")
 
-target_ds_names=("capped_peptide_amber99sbildn" "AA_bondbreak_rad")
+target_ds_names=("capped_peptide_amber99sbildn" "AA_bondbreak_rad_amber99sbildn")
 
 # Loop through each dataset name
 for i in "${!datasets[@]}"; do

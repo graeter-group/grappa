@@ -23,7 +23,7 @@ forcefield_types=("openmm" "openmm")
 
 readme_content=(
     'A dataset of randomly sampled tripeptides with states sampled from MD at 300K using the amber99sbildn forcefield. Charges and thus nonbonded energies are predicted from the amber99sbildn forcefield.'
-    'A dataset of all possible capped dipeptides containing hyp or dop with states sampled from MD at 300K using the amber99sbildn forcefield. Charges and thus nonbonded energies are predicted from the amber99sbildn forcefield.' 
+    'A dataset of all possible capped dipeptides containing hyp or dop with states sampled from MD at 300K using the amber99sbildn* forcefield. Charges and thus nonbonded energies are predicted from the amber99sbildn* forcefield.' 
     # 'A dataset of randomly sampled tripeptides with states sampled from MD at 300K using the amber99sbildn forcefield. Charges and thus nonbonded energies are predicted from the openff-1.2.0 unconstrained forcefield. The states are the same as in the tripeptides_amber99sbildn dataset.' 
     )
 
