@@ -16,12 +16,12 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
 
 
 <p align="center">
-  <img src="docs/grappa_overview.png" width="50%" style="max-width: 200px;">
+  <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px;">
     <i>Grappa Overview</i>
 </p>
 
 <p align="center">
-  <img src="docs/table.png" width="50%" style="max-width: 200px;">
+  <img src="docs/figures/table.png" width="50%" style="max-width: 200px;">
 </p>
 
 <details open><summary><b>Table of contents</b></summary>
