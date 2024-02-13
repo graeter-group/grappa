@@ -2,10 +2,32 @@
 
 A machine-learned molecular mechanics force field using deep graph attention networks.
 
+
+## Abstract
+
+Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
+While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) while retaining high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
+
+Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [REF] significantly in terms of accuracy at the same computational cost.
+Our forcefield, Grappa (Graph Attentional Protein Parametrization), covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even exotic molecules like radical peptides.
+Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
+
+Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM paramaters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules with over 800,000 states, and is available for use with GROMACS and OpenMM.
+
+
+
+
 <p align="center">
   <img src="docs/grappa_overview.png" width="50%" style="max-width: 200px;">
 </p>
 
+
+# Table of Contents
+1. [Usage](#usage)
+2. [Installation](#installation)
+3. [Results](#results)
+  - [Grappa is state-of-the-art](#grappa-is-state-of-the-art)
+4. [Method](#method)
 
 
 
@@ -36,8 +58,6 @@ More: See `examples/usage`.
 
 ## Installation
 
-### Installation
-
 Unfortunately, openmm is not available on pip and has to be installed via conda. Since openmm, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
 
 | CUDA | Python | Torch | OpenMM |
@@ -51,34 +71,13 @@ Simply activate the target conda environment and run the install script for the 
 ```{bash}
 conda create -n grappa -y
 conda activate grappa
-./installation_121.sh
+./installation.sh 12.1
 ```
 
+## Results
 
-### Manual Installation
-
-Alternatively, you can install grappa manually by the following steps:
-
-Unfortunately, openmm is not available on pip and has to be install via conda. It is recommended to use the openmm=7.7.0=py39hb10b54c_0 version.
-
-DGL has to be installed separately since index files are needed ([dgl installation](https://www.dgl.ai/pages/start.html)). Modify the cuda version in the script below to your needs.
-
-```{bash}
-git clone git@github.com:hits-mbm-dev/grappa.git
-cd grappa
-
-conda create -n grappa python=3.9 openmm=7.7.0=py39hb10b54c_0 -c conda-forge -y
-conda activate grappa
-
-pip install torch==2.1.0 pytorch-cuda=11.7
-
-pip install -r requirements.txt
-
-pip install dgl -f https://data.dgl.ai/wheels/cu117/repo.html
-pip install dglgo -f https://data.dgl.ai/wheels-test/repo.html
-
-pip install -e .
-```
+### Grappa is state-of-the-art
+table
 
 ## Pretrained Models
 
