@@ -1,6 +1,7 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-_A machine-learned molecular mechanics force field using deep graph attention networks._
+_A machine-learned molecular mechanics force field using deep graph attention networks_
+
 
 
 ## Abstract
@@ -29,8 +30,12 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
   - [Grappa can fold small proteins](#grappa-can-fold-small-proteins)
   - [Grappa can parametrize radicals](#grappa-can-parametrize-radicals)
 4. [Method](#method)
-5. [Pretrained Models](#pretrained-models)
+  - [Framework](#framework)
+  - [Permutation Symmetry](#permutation-symmetry)
+  - [Architecture](#architecture)
+7. [Training](#training)
 6. [Datasets](#datasets)
+5. [Pretrained Models](#pretrained-models)
 
 
 
@@ -82,9 +87,14 @@ conda activate grappa
 ### Grappa is state-of-the-art
 table
 
+
+
+
 ## Pretrained Models
 
 Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g.`latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`.
+
+
 
 ## Datasets
 
