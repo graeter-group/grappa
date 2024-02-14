@@ -19,13 +19,13 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
   <p align="center">
     <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>Grappa predicts node embeddings from the molecular graph. In a second step, it predicts MM parameters for each n-body interaction from the embeddings of the contributing nodes, respecting the necessary permutation symmetry.</i></p>
+  <p><i>Grappa first predicts node embeddings from the molecular graph. In a second step, it predicts MM parameters for each n-body interaction from the embeddings of the contributing nodes, respecting the necessary permutation symmetry.</i></p>
 </details>
 
 <details>
   <summary><b>Performance on MM Benchmark Datasets</b></summary>
   <p align="center">
-    <img src="docs/figures/table.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
 </details>
@@ -38,7 +38,7 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
 - [Installation](#installation)
 - [Results](#results)
   - [Grappa is state-of-the-art](#grappa-is-state-of-the-art)
-  - [Grappa keeps large proteins stable](#grappa-keeps-ubiquitin-stable)
+  - [Grappa keeps large proteins stable](#grappa-keeps-large-proteins-stable)
   - [Grappa can fold small proteins](#grappa-can-fold-small-proteins)
   - [Grappa can parametrize radicals](#grappa-can-parametrize-radicals)
 - [Method](#method)
@@ -61,7 +61,7 @@ from openmm.app import ForceField, Topology
 from grappa.utils.loading_utils import model_from_tag
 from grappa.wrappers.openmm_wrapper import openmm_Grappa
 
-model = model_from_tag('grappa-1.0')
+model = model_from_tag('grappa-1.1')
 
 topology = ... # load your system as openmm.Topology
 
@@ -100,11 +100,42 @@ conda activate grappa
 ### Grappa is state-of-the-art
 
 <p align="center">
-    <img src="docs/figures/table.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
 
 
+### Grappa keeps large proteins stable
+
+<p align="center">
+    <img src="docs/figures/rmsd.png" width="80%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>The mean RMSD between states with a given time difference during 40 ns of MD simulation of Ubiquitin [<a href="https://www.rcsb.org/structure/1UBQ">1UBQ</a> using Grappa and Amber99sbildn</i></p>
+
+
+## Method
+
+### Framework
+
+<p align="center">
+    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i></i></p>
+
+### Architecture
+
+<p align="center">
+    <img src="docs/figures/gnn.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>The architecture of Grappas Graph Neural Network</i></p>
+
+<p align="center">
+    <img src="docs/figures/symmetric_transformer.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>The architecture of Grappas Symmetric Transformer</i></p>
+
+
+### Permutation Symmetry
 
 
 ## Pretrained Models
