@@ -6,7 +6,7 @@ import torch, dgl
 from pathlib import Path
 from grappa.constants import CHARGE_MODELS
 
-CLASSICAL_CHARGES = ["AA_radical", "Capped_AA_opt_rad", "Capped_AA_rad", "Capped_AA_scan_rad", "dipeptide_rad"]
+CLASSICAL_CHARGES = ["AA_radical", "Capped_AA_opt_rad", "Capped_AA_rad", "Capped_AA_scan_rad", "dipeptide_rad", "hyp-dop_amber99sbildn", "AA_bondbreak_rad_amber99sbildn"]
 
 CLASSICAL_CHARGE_TAG = ['amber99']
 

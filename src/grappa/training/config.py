@@ -61,9 +61,7 @@ def default_config(benchmark_split:bool=False)->Dict:
         "pure_train_datasets": ['rna-nucleoside'],
         "pure_val_datasets": ["rna-trinucleotide"], # currently val because we only look at the val errs and do no separate test
         "pure_test_datasets": [], # paths to datasets that are only for one specific set type, independent on which mol_ids occur. this can be used to be independent of the splitting by mol_ids. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
-        "subsample_train": {}, # dictionary of dsname and a float between 0 and 1 specifying a subsampling factor (that is applied after splitting).
-        "subsample_val": {},
-        "subsample_test": {},
+        "tr_subsampling_factor": None, # float between 0 and 1 specifying the subsampling factor (subsampling is applied after splitting)
         "weights": {
             'rna-diverse': 3.,
             'rna-nucleoside': 5.,

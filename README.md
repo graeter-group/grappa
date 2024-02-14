@@ -1,12 +1,55 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-A machine-learned molecular mechanics force field using deep graph attention networks.
-
-<p align="center">
-  <img src="docs/grappa_overview.png" width="50%" style="max-width: 200px;">
-</p>
+_A machine-learned molecular mechanics force field using deep graph attention networks_
 
 
+## Abstract
+
+Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
+While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) at high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
+
+Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [[Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4)] significantly in terms of accuracy, at the same computational cost.
+Our forcefield, Grappa, covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
+Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
+
+Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM paramaters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
+
+<details open>
+  <summary>Grappa Overview</summary>
+  <p align="center">
+    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Grappa first predicts node embeddings from the molecular graph. In a second step, it predicts MM parameters for each n-body interaction from the embeddings of the contributing nodes, respecting the necessary permutation symmetry.</i></p>
+</details>
+
+<details>
+  <summary><b>Performance on MM Benchmark Datasets</b></summary>
+  <p align="center">
+    <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
+</details>
+
+
+
+<details open><summary><b>Table of contents</b></summary>
+  
+- [Usage](#usage)
+- [Installation](#installation)
+- [Results](#results)
+  - [Grappa is state-of-the-art](#grappa-is-state-of-the-art)
+  - [Grappa keeps large proteins stable](#grappa-keeps-large-proteins-stable)
+  - [Grappa can fold small proteins](#grappa-can-fold-small-proteins)
+  - [Grappa can parametrize radicals](#grappa-can-parametrize-radicals)
+- [Method](#method)
+  - [Framework](#framework)
+  - [Permutation Symmetry](#permutation-symmetry)
+  - [Architecture](#architecture)
+- [Training](#training)
+- [Datasets](#datasets)
+- [Pretrained Models](#pretrained-models)
+- 
+</details>
 
 
 ## Usage
@@ -18,7 +61,7 @@ from openmm.app import ForceField, Topology
 from grappa.utils.loading_utils import model_from_tag
 from grappa.wrappers.openmm_wrapper import openmm_Grappa
 
-model = model_from_tag('grappa-1.0')
+model = model_from_tag('grappa-1.1')
 
 topology = ... # load your system as openmm.Topology
 
@@ -36,8 +79,6 @@ More: See `examples/usage`.
 
 ## Installation
 
-### Installation
-
 Unfortunately, openmm is not available on pip and has to be installed via conda. Since openmm, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
 
 | CUDA | Python | Torch | OpenMM |
@@ -51,38 +92,57 @@ Simply activate the target conda environment and run the install script for the 
 ```{bash}
 conda create -n grappa -y
 conda activate grappa
-./installation_121.sh
+./installation.sh 12.1
 ```
 
+## Results
 
-### Manual Installation
+### Grappa is state-of-the-art
 
-Alternatively, you can install grappa manually by the following steps:
+<p align="center">
+    <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
 
-Unfortunately, openmm is not available on pip and has to be install via conda. It is recommended to use the openmm=7.7.0=py39hb10b54c_0 version.
 
-DGL has to be installed separately since index files are needed ([dgl installation](https://www.dgl.ai/pages/start.html)). Modify the cuda version in the script below to your needs.
+### Grappa keeps large proteins stable
 
-```{bash}
-git clone git@github.com:hits-mbm-dev/grappa.git
-cd grappa
+<p align="center">
+    <img src="docs/figures/rmsd.png" width="80%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>The mean RMSD between states with a given time difference during 40 ns of MD simulation of Ubiquitin [<a href="https://www.rcsb.org/structure/1UBQ">1UBQ</a> using Grappa and Amber99sbildn</i></p>
 
-conda create -n grappa python=3.9 openmm=7.7.0=py39hb10b54c_0 -c conda-forge -y
-conda activate grappa
 
-pip install torch==2.1.0 pytorch-cuda=11.7
+## Method
 
-pip install -r requirements.txt
+### Framework
 
-pip install dgl -f https://data.dgl.ai/wheels/cu117/repo.html
-pip install dglgo -f https://data.dgl.ai/wheels-test/repo.html
+<p align="center">
+    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i></i></p>
 
-pip install -e .
-```
+### Architecture
+
+<p align="center">
+    <img src="docs/figures/gnn.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>The architecture of Grappas Graph Neural Network</i></p>
+
+<p align="center">
+    <img src="docs/figures/symmetric_transformer.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>The architecture of Grappas Symmetric Transformer</i></p>
+
+
+### Permutation Symmetry
+
 
 ## Pretrained Models
 
 Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g.`latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`.
+
+
 
 ## Datasets
 

@@ -351,7 +351,7 @@ class MolData():
 
 
     @classmethod
-    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False):
+    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False, charge_model:str='classical'):
         """
         Create a MolData object from a dictionary containing a mapped_smiles string or pdb and arrays of conformations, energies and gradients, but not necessarily the interaction tuples and classical parameters.
         The forcefield is used to obtain the interaction tuples and classical parameters. If a smiles string is used, the forcefield refers to an openff forcefield. If a pdb file is used, the forcefield refers to an openmm forcefield.
@@ -400,7 +400,7 @@ class MolData():
 
 
         if mapped_smiles is not None:
-            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles, allow_nan_params=allow_nan_params)
+            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles, allow_nan_params=allow_nan_params, charge_model=charge_model)
         else:
             raise NotImplementedError("pdb files are not supported yet.")
 
@@ -416,7 +416,7 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=False):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=False, charge_model='classical'):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.
@@ -440,9 +440,10 @@ class MolData():
             - sequence: str
             - smiles: str
             - allow_nan_params: bool
+            - charge_model: str, A charge model tag that describes how the partial charges were obtained. See grappa.constants.CHARGE_MODELS for possible values.
         """
         import openmm
-        mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles)
+        mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles, charge_model=charge_model)
 
         try:        
             params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
@@ -515,7 +516,7 @@ class MolData():
     
 
     @classmethod
-    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None, allow_nan_params:bool=False):
+    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None, allow_nan_params:bool=False, charge_model:str='classical'):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to initialize the interaction tuples, classical parameters and, if partial_charges is None, to obtain the partial charges.
         The forcefield_type can be either openff, openmm or openmmforcefields.
@@ -539,7 +540,7 @@ class MolData():
             system, topology, openff_mol = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=forcefield, partial_charges=partial_charges)
         
         elif forcefield_type == 'openmm':
-            raise NotImplementedError("This does not work for openff molecules. The residues are needed.")
+            raise NotImplementedError("This does not work for openff molecules at the moment. The residues are needed!")
 
             from openmm.app import ForceField
             from openff.toolkit import Molecule as OFFMolecule
@@ -561,7 +562,7 @@ class MolData():
             mol_id = smiles
         
 
-        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles, allow_nan_params=allow_nan_params)
+        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles, allow_nan_params=allow_nan_params, charge_model=charge_model)
 
         self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic",'degree'], openff_mol=openff_mol)
 

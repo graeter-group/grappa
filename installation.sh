@@ -1,8 +1,22 @@
 #!/bin/bash
 
 # This script installs grappa and its dependencies in the current Conda environment based on the CUDA version specified.
-# call: ./installation.sh [cuda_version]
-# with cuda_version being one of the following: 11.7, 11.8, 12.1, cpu
+
+# Usage: ./installation.sh [-q] [cuda_version] [pkg_manager]
+# -q flag for quiet mode.
+# cuda_version: one of the following: 11.7, 11.8, 12.1, cpu
+# pkg_manager: one of the following: conda, mamba. by default: conda
+
+# Process the -q flag for quiet mode
+OUTPUT_TARGET="/dev/stdout"
+if [ "$1" == "-q" ]; then
+    OUTPUT_TARGET="/dev/null"
+    shift # Remove the first argument (the -q flag)
+fi
+
+PKGMANAGER=${2:-conda}
+echo "Using package manager $PKGMANAGER and pip for the installation."
+
 
 # throw upon error:
 set -e
@@ -17,32 +31,37 @@ fi
 
 # Function definitions for each installation procedure
 install_11_7() {
-    echo "Installing for CUDA version 11.7..."
-    conda install python=3.9 openmm=7.7.0=py39hb10b54c_0 cuda-toolkit -c conda-forge -c "nvidia/label/cuda-11.7.1" -y
-    pip install torch==2.0.1
-    pip install dgl -f "https://data.dgl.ai/wheels/cu117/repo.html"
-    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html"
+    echo "Installing and openmm for CUDA version 11.7..."
+    $PKGMANAGER install python=3.9 openmm=7.7.0=py39hb10b54c_0 cuda-toolkit -c conda-forge -c "nvidia/label/cuda-11.7.1" -y >$OUTPUT_TARGET
+    echo "Installing PyTorch 2.0.1..."
+    pip install torch==2.0.1 >$OUTPUT_TARGET
+    echo "Installing DGL..."
+    pip install dgl -f "https://data.dgl.ai/wheels/cu117/repo.html" >$OUTPUT_TARGET
+    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
 }
 
 install_11_8() {
-    echo "Installing for CUDA version 11.8..."
-    conda install python=3.10 openmm=8.1.1 pytorch=2.2.0 pytorch-cuda=11.8 cudatoolkit=11.8 -c nvidia -c pytorch -c conda-forge -y
-    pip install dgl -f "https://data.dgl.ai/wheels/cu118/repo.html"
-    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html"
+    echo "Installing openmm and pytorch for CUDA version 11.8..."
+    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.2.0 pytorch-cuda=11.8 cudatoolkit=11.8 -c nvidia -c pytorch -c conda-forge -y >$OUTPUT_TARGET
+    echo "Installing DGL..."
+    pip install dgl -f "https://data.dgl.ai/wheels/cu118/repo.html" >$OUTPUT_TARGET
+    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
 }
 
 install_12_1() {
-    echo "Installing for CUDA version 12.1..."
-    conda install python=3.10 openmm=8.1.1 pytorch=2.2.0 pytorch-cuda=12.1 -c nvidia -c pytorch -c conda-forge -y
-    pip install dgl -f "https://data.dgl.ai/wheels/cu121/repo.html"
-    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html"
+    echo "Installing openmm and pytorch for CUDA version 12.1..."
+    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.2.0 pytorch-cuda=12.1 -c nvidia -c pytorch -c conda-forge -y >$OUTPUT_TARGET
+    echo "Installing DGL..."
+    pip install dgl -f "https://data.dgl.ai/wheels/cu121/repo.html" >$OUTPUT_TARGET
+    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
 }
 
 install_cpu() {
-    echo "Installing for CPU mode..."
-    conda install python=3.10 openmm=8.1.1 pytorch=2.2.0 cpuonly -c pytorch -c conda-forge -y
-    pip install dgl -f https://data.dgl.ai/wheels/repo.html
-    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html"
+    echo "Installing openmm and pytorch in CPU mode..."
+    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.2.0 cpuonly -c pytorch -c conda-forge -y >$OUTPUT_TARGET
+    echo "Installing DGL..."
+    pip install dgl -f https://data.dgl.ai/wheels/repo.html >$OUTPUT_TARGET
+    pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
 }
 
 # Main installation process
@@ -76,17 +95,16 @@ case $cuda_version in
         install_cpu
         ;;
     *)
-        echo "Invalid argument. Please provide one of the following: 11.7, 11.8, 12.1, cpu. Defaulting to CPU mode."
-        install_cpu
+        echo "Invalid argument. Please provide one of the following: 11.7, 11.8, 12.1, cpu."
         ;;
 esac
 
 # Common steps for all installations
 echo "Installing other requirements..."
-pip install -r requirements.txt
+pip install -r requirements.txt >$OUTPUT_TARGET
 
 echo "Installing grappa..."
-pip install -e .
+pip install -e . >$OUTPUT_TARGET
 
 # Go back to the original directory
 cd - > /dev/null

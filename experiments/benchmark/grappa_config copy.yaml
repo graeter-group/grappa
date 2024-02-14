@@ -10,12 +10,6 @@ data_config:
   - spice-dipeptide
   - protein-torsion
   - pepconf-dlc
-  - spice-dipeptide_amber99sbildn
-  - protein-torsion_amber99sbildn
-  - pepconf-dlc_amber99sbildn
-  - dipeptide_rad
-  - hyp-dop_amber99sbildn
-  - tripeptides_amber99sbildn
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
   pure_test_datasets:
@@ -27,7 +21,7 @@ data_config:
   test_batch_size: 1
   test_loader_workers: 1
   train_batch_size: 32
-  train_loader_workers: 1
+  train_loader_workers: 4
   val_batch_size: 32
   val_loader_workers: 2
   val_conf_strategy: 500
@@ -90,10 +84,9 @@ model_config:
   - partial_charge
   - ring_encoding
   - degree
-  - charge_model
   in_feats: null
   layer_norm: true
-  learnable_statistics: false
+  learnable_statistics: true
   n_periodicity_improper: 3
   n_periodicity_proper: 6
   parameter_dropout: 0.5

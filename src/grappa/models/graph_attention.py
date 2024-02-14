@@ -210,7 +210,7 @@ class ResidualAttentionBlock(torch.nn.Module):
         skip_connection (bool): If True, adds skip connection, conditional on (D_out * H / D_in) being an integer. Defaults to True.
 
     The block structure is as follows:
-        1. LayerNorm: LayerNorm(h) where h ∈ ℝ^(N x D_in)
+        1. LayerNorm: h = LayerNorm(h) where h ∈ ℝ^(N x D_in)
         2. Multi-Head Attention: MultiHeadAttention(h) -> h' where h' ∈ ℝ^(N x H x D_out//H)
         3. Concatenate and Linear transform on h' -> h'' where h'' ∈ ℝ^(N x D_out)
         4. Dropout on h''

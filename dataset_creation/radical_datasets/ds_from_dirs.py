@@ -7,6 +7,10 @@ from grappa.data import MolData
 from grappa.utils import openmm_utils
 import shutil
 from typing import List
+import numpy as np
+from grappa.constants import CHARGE_MODELS
+
+charge_model = 'classical'
 
 def main(sourcepath, targetpath, openmm_ff:str=None, skip:List[str]=[]):
     if not openmm_ff is None:
@@ -19,7 +23,7 @@ def main(sourcepath, targetpath, openmm_ff:str=None, skip:List[str]=[]):
     targetpath.mkdir(parents=True, exist_ok=True)
     for i,moldir in enumerate(sourcepath.iterdir()):
         if not moldir.is_dir():
-            # copy file to target:
+            # copy file to target (can be README, etc.):
             shutil.copy(moldir, targetpath)
             continue
 
@@ -27,6 +31,8 @@ def main(sourcepath, targetpath, openmm_ff:str=None, skip:List[str]=[]):
         try:
             molname = moldir.name
             moldata = MolData.load(moldir/'moldata.npz')
+            assert charge_model in CHARGE_MODELS
+            moldata.molecule.additional_features['charge_model'] = np.tile(np.array([cm == charge_model for cm in CHARGE_MODELS], dtype=np.float32), (len(moldata.molecule.atoms),1))
             if moldata.xyz.shape[0] == 0:
                 print(f"Skipping {molname} because it has no conformers.")
                 continue
