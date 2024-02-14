@@ -8,23 +8,32 @@ _A machine-learned molecular mechanics force field using deep graph attention ne
 Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
 While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) at high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
 
-Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [Wang et al. ()] significantly in terms of accuracy, at the same computational cost.
+Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [[Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4)] significantly in terms of accuracy, at the same computational cost.
 Our forcefield, Grappa, covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
 Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
 
 Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM paramaters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
 
+<details open>
+  <summary>Grappa Overview</summary>
+  <p align="center">
+    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Grappa predicts node embeddings from the molecular graph. In a second step, it predicts MM parameters for each n-body interaction from the embeddings of the contributing nodes, respecting the necessary permutation symmetry.</i></p>
+</details>
 
-<p align="center">
-  <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px;">
-    <i>Grappa Overview</i>
-</p>
+<details>
+  <summary><b>Performance on MM Benchmark Datasets</b></summary>
+  <p align="center">
+    <img src="docs/figures/table.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
+</details>
 
-<p align="center">
-  <img src="docs/figures/table.png" width="50%" style="max-width: 200px;">
-</p>
+
 
 <details open><summary><b>Table of contents</b></summary>
+  
 - [Usage](#usage)
 - [Installation](#installation)
 - [Results](#results)
@@ -39,6 +48,7 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
 - [Training](#training)
 - [Datasets](#datasets)
 - [Pretrained Models](#pretrained-models)
+- 
 </details>
 
 
@@ -88,7 +98,11 @@ conda activate grappa
 ## Results
 
 ### Grappa is state-of-the-art
-table
+
+<p align="center">
+    <img src="docs/figures/table.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
 
 
 
