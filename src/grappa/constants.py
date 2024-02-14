@@ -6,7 +6,7 @@ MAX_ELEMENT = 53 # cover Iodine
 N_PERIODICITY_PROPER = 6
 N_PERIODICITY_IMPROPER = 6
 
-CHARGE_MODELS = ['classical', 'am1BCC'] # classical: amber99ffsbildn-charges for peptides. The idea is that the tag 'classical' can refer to different charge models for different types of molecules (which grappa can usually distinguish). e.g. one could train for rna on charges from some classical rna forcefield without introducing an additional tag.
+CHARGE_MODELS = ['am1BCC', 'classical'] # classical: amber99ffsbildn-charges for peptides. The idea is that the tag 'classical' can refer to different charge models for different types of molecules (which grappa can usually distinguish). e.g. one could train for rna on charges from some classical rna forcefield without introducing an additional tag.
 
 BONDED_CONTRIBUTIONS = [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]
 

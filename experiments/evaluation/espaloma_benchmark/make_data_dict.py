@@ -14,7 +14,7 @@ import copy
 import argparse
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('run_id', required=True, help='The run id from wandb.')
+parser.add_argument('run_id', help='The run id from wandb.')
 parser.add_argument('--project', default='benchmark-grappa-1.0', help='The project name')
 parser.add_argument('--device', default='cuda', help='The device to use')
 

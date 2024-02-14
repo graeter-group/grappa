@@ -4,7 +4,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--param_weight", type=float, default=None, help="Weight for the param loss of the datasets with classical parameters from amber99sbildn. Default is None.")
-parser.add_argument("--bondbreak_radicals", '-b', type=bool, default=False, help="Whether to include bond breaking radicals in the training set. Default is False.")
+parser.add_argument("--bondbreak_radicals", '-b', action='store_true', default=False, help="Whether to include bond breaking radicals in the training set. Default is False.")
 
 args = parser.parse_args()
 

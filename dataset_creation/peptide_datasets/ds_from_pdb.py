@@ -3,7 +3,7 @@ Parametrise the spice dipeptide dataset with the Amber 99SBildn forcefield and s
 """
 
 
-from grappa.data import MolData, Molecule
+from grappa.data import MolData, Molecule, Parameters
 from pathlib import Path
 import numpy as np
 from openmm.app import ForceField
@@ -11,7 +11,7 @@ import tempfile
 from openmm.app import PDBFile
 from grappa.utils import openmm_utils, openff_utils
 
-def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[], charge_model='classical'):
+def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[], charge_model='classical', with_params=False):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -72,6 +72,10 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
             # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
             moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=mol_id, pdb=pdbstring, smiles=smiles, sequence=sequence, allow_nan_params=True, charge_model=charge_model)
 
+            if not with_params:
+                moldata.classical_parameters = Parameters.get_nan_params(moldata.molecule)
+
+
             # moldata.molecule.add_features(['ring_encoding'])
 
             moldata.save(target_path/(molfile.stem+'.npz'))
@@ -126,5 +130,12 @@ if __name__ == "__main__":
         default='classical',
         help="Which charge model to use. Possible values: classical, am1bcc",
     )
+    parser.add_argument(
+        "--with_params",
+        action='store_true',
+        default=False,
+        help="Whether to store forcefield parameters",
+    )
+
     args = parser.parse_args()
-    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield, forcefield_type=args.forcefield_type, skip_residues=args.skip_residues, charge_model=args.charge_model)
+    main(source_path=args.source_path, target_path=args.target_path, forcefield=args.forcefield, forcefield_type=args.forcefield_type, skip_residues=args.skip_residues, charge_model=args.charge_model, with_params=args.with_params)

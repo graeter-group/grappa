@@ -67,7 +67,7 @@ def main(source_path, target_path):
             is_radical = np.array(is_radical).reshape(-1)
             partial_charge = data['n1 q_ref'].tolist()
 
-            mol = Molecule(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charge)
+            mol = Molecule(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charge, charge_model='classical')
 
             mol.additional_features.update({'is_radical': is_radical})
 

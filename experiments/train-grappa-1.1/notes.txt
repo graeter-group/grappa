@@ -1,1 +1,1 @@
-Now including bondbreak radicals and 7 graph attention layers instead of 2 convs + 5 graph attention layers.
+Now including bondbreak radicals and 7 graph attention layers instead of 2 convs + 5 graph attention layers. Removed tripeptides dataset for now. Had wrong charge_model feature!
