@@ -8,11 +8,11 @@ _A machine-learned molecular mechanics force field using deep graph attention ne
 Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
 While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) at high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
 
-Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM forcefields [[Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4)] significantly in terms of accuracy, at the same computational cost.
-Our forcefield, Grappa, covers a broad range of chemical space: The same forcefield can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
+Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM force fields [[Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4)] significantly in terms of accuracy, at the same computational cost.
+Our forcefield, Grappa, covers a broad range of chemical space: The same force field can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
 Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
 
-Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM paramaters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
+Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM parameters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
 
 <details open>
   <summary>Grappa Overview</summary>
@@ -27,7 +27,7 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
   <p align="center">
     <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
+  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the test dataset (trained with the same train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
 </details>
 
 
@@ -97,21 +97,30 @@ conda activate grappa
 
 ## Results
 
-### Grappa is state-of-the-art
+In this section, we show that Grappa outperforms established MM force fields and the recent machine-learned Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>] force field in terms of accuracy and that it can be transfered to large molecules.
+
+### Grappa is State-of-the-Art
+
+We trained Grappa on the dataset (and train-validation-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>] and compared with established MM force fields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>].
+
+The Espaloma dataset covers small molecules, peptides and RNA with states sampled from the Boltzmann distribution at 300K and 500K, from optimization trajectories and from torsion scans. For all types of molecules, Grappa outperforms established MM force fields and Espaloma in terms of force accuracy, and for Boltzmann-sampled states also in terms of energy accuracy. To the best of our knowledge, this makes it the most accurate MM force field currently available (as of February 2024).
 
 <p align="center">
     <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the dataset (and train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
+  <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å</i></p>
 
 
-### Grappa keeps large proteins stable
+### Grappa keeps large Proteins stable
+
+Grappa can not only accurately predict QM energies and forces, but also reproduces well-known behaviour of established protein force fields. Ubiquitin [<a href="https://www.rcsb.org/structure/1UBQ">1UBQ</a>] shows a similar magnitude of fluctuation when simulated with Grappa and <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a>.
 
 <p align="center">
     <img src="docs/figures/rmsd.png" width="80%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>The mean RMSD between states with a given time difference during 40 ns of MD simulation of Ubiquitin [<a href="https://www.rcsb.org/structure/1UBQ">1UBQ</a> using Grappa and Amber99sbildn</i></p>
+  <p><i>RMSD Distribution between states with a given time difference during 40 ns of MD simulation of Ubiquitin in solution at 300K. The shaded area corresponds to the range between the 25th and 75th percentile.<i></p>
 
+### Grappa can fold small Proteins
 
 ## Method
 
