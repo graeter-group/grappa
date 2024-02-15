@@ -12,7 +12,7 @@ Here, we present a state of the art machine-learned MM force field that outperfo
 Our forcefield, Grappa, covers a broad range of chemical space: The same force field can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
 Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
 
-Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM parameters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
+Grappa uses a novel machine learning architecture that combines a deep attentional graph neural network and a transformer with symmetry-preserving positional encoding to predict MM parameters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
 
 <details open>
   <summary>Grappa Overview</summary>
@@ -153,6 +153,15 @@ Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen a
 
 ## Method
 
+Grappa is a machine learning framework to predict MM parameters from the molecular graph. Since this prediction does not depend on the conformation of the molecule, it has to be done only once. Then, the prediction of energies and forces has the same computational speed as MM.
+
+<p align="center">
+    <img src="docs/figures/tradeoff_grappa.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Machine learning lifts the tension between accuracy and speed of force fields. E(3) equivariant neural networks offer highly accurate predictions at improved speed; machine-learned MM is capable of significantly more accurate predictions at the same speed as conventional MM.</i></p>
+
+In analogy to the atom-typing by hand-crafted rules in conventional MM force fields, Grappa first predicts atom embeddings from the molecular graph. These give the model the freedom to encode the local chemical environment of each atom in a high-dimensional feature vector. In a second step, Grappa predicts the parameters of each N-body MM-interaction from the N embeddings of the involved atoms.
+
 ### Architecture
 
 <p align="center">
@@ -165,8 +174,6 @@ Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen a
   </p>
   <p><i>The architecture of Grappas Symmetric Transformer</i></p>
 
-
-### Permutation Symmetry
 
 
 ## Pretrained Models
