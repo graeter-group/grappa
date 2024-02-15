@@ -54,23 +54,22 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
 
 ## Usage
 
-Currently, Grappa is compatible with GROMACS and OpenMM. To use Grappa in openmm, parametrize your system with a classical forcefield, from which the nnbonded parameters are taken, and then pass it to Grappas Openmm wrapper class:
+Currently, Grappa is compatible with GROMACS and OpenMM. To use Grappa in OpenMM, parametrize your system with a classical forcefield, from which the nonbonded parameters are taken, and then pass it to Grappas Openmm wrapper class:
 
 ```{python}
 from openmm.app import ForceField, Topology
-from grappa.utils.loading_utils import model_from_tag
-from grappa.wrappers.openmm_wrapper import openmm_Grappa
-
-model = model_from_tag('grappa-1.1')
+from grappa import OpenmmGrappa
 
 topology = ... # load your system as openmm.Topology
 
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
 system = classical_ff.createSystem(topology)
 
-grappa_ff = openmm_Grappa(model)
+# load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.0', grappa-1.1' and 'latest'
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.1')
 
-system = grappa.parametrize_system(system, topology)
+# parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'classical' and 'am1BCC'.
+system = grappa_ff.parametrize_system(system, topology, charge_model='classical')
 ```
 
 Note that the current version of the OpenMM wrapper will parametrize the whole topology with Grappa, including the solvent. Grappa is not trained to parametrize water, the solvent should thus be removed from the topology before parametrization. In future versions, there will be the option to parametrize only a subset of the topology.
@@ -106,30 +105,49 @@ We trained Grappa on the dataset (and train-validation-test partition) from Espa
 The Espaloma dataset covers small molecules, peptides and RNA with states sampled from the Boltzmann distribution at 300K and 500K, from optimization trajectories and from torsion scans. For all types of molecules, Grappa outperforms established MM force fields and Espaloma in terms of force accuracy, and for Boltzmann-sampled states also in terms of energy accuracy. To the best of our knowledge, this makes it the most accurate MM force field currently available (as of February 2024).
 
 <p align="center">
-    <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/table_benchmark.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å</i></p>
-
+  <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å. The dataset is split into 80% train, 10% validation and 10% test molecules, demonstrating not transferability not only in conformational but also in chemical space.</i></p>
+  
 
 ### Grappa keeps large Proteins stable
 
 Grappa can not only accurately predict QM energies and forces, but also reproduces well-known behaviour of established protein force fields. Ubiquitin [<a href="https://www.rcsb.org/structure/1UBQ">1UBQ</a>] shows a similar magnitude of fluctuation when simulated with Grappa and <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a>.
 
 <p align="center">
-    <img src="docs/figures/rmsd.png" width="80%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/rmsd.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>RMSD Distribution between states with a given time difference during 40 ns of MD simulation of Ubiquitin in solution at 300K. The shaded area corresponds to the range between the 25th and 75th percentile.</i>i></p>
+  <p><i>RMSD Distribution between states with a given time difference during 40 ns of MD simulation of Ubiquitin in solution at 300K. The shaded area corresponds to the range between the 25th and 75th percentile.</i></p>
 
 ### Grappa can fold small Proteins
 
-## Method
-
-### Framework
+We have simulated the small protein Chignolin in solution starting from an unfolded configuration and observed that it folds into the experimentally measured state [1UAO](https://www.rcsb.org/structure/1UAO) on a timescale of microseconds. We identified a cluster of folded states whose center has an C-alpha RMSD of 1.1 Å compared to 1.0 Å obtained in the same setting with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> in [Lindorff-Larsen et al.](https://www-science-org.ubproxy.ub.uni-heidelberg.de/doi/epdf/10.1126/science.1208351).
 
 <p align="center">
-    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/structure_grappa.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i></i></p>
+  <p><i>The cluster center of Chignolin during an MD simulation using Grappa (blue) and the experimentally measured structure.</i></p>
+
+
+### Grappa 1.0
+
+The published model grappa-1.0 has been trained on an extension of the Espaloma dataset that contains Boltzmann-sampled states of tripeptides and radical dipeptides that can be formed by hydrogen atom transfer. For the peptide datasets in Espaloma, we also calculate nonbonded contributions with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> instead of am1BCC (as is done in Espaloma). We split the dataset into 80% train, 10% validation and 10% test molecules using the same partition as Espaloma.
+
+<p align="center">
+    <img src="docs/figures/table_grappa-10.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å. Grappa can differentiate between the optimal bonded parameters for molecules whose nonbonded interaction is modeled with am1BCC-charges and amber99sbildn-charges.</i></p>
+  
+
+### Grappa can parametrize Radicals
+
+Unlike many other machine-learned force fields, Grappa does not rely on hand-crafted input features from Cheminformatics-tools but only on the molecular graph and partial charges as input. This makes it applicable beyond the coverage of existing Cheminformatics-tools, for example to radicals.
+
+Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen atom transfer, i.e. that 'miss' a hydrogen (as opposed to being protonated). Grappa is the first MM force field capable of accurately simulating radical peptides. To demonstrate this, we simulate a small radical peptide that undergoes a hydrogen atom transfer in [KIMMDY](https://github.com/hits-mbm-dev/kimmdy).
+
+
+
+## Method
 
 ### Architecture
 
