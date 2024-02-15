@@ -25,7 +25,7 @@ Grappa uses a deep graph attention network and a transformer with symmetry-prese
 <details>
   <summary><b>Performance on MM Benchmark Datasets</b></summary>
   <p align="center">
-    <img src="docs/figures/table_grappa-1-1.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/table_benchmark.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the test dataset (trained with the same train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
 </details>
@@ -134,7 +134,7 @@ We have simulated the small protein Chignolin in solution starting from an unfol
 The published model grappa-1.0 has been trained on an extension of the Espaloma dataset that contains Boltzmann-sampled states of tripeptides and radical dipeptides that can be formed by hydrogen atom transfer. For the peptide datasets in Espaloma, we also calculate nonbonded contributions with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> instead of am1BCC (as is done in Espaloma). We split the dataset into 80% train, 10% validation and 10% test molecules using the same partition as Espaloma.
 
 <p align="center">
-    <img src="docs/figures/table_grappa-10.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/table-grappa-10.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å. Grappa can differentiate between the optimal bonded parameters for molecules whose nonbonded interaction is modeled with am1BCC-charges and amber99sbildn-charges.</i></p>
   
@@ -143,8 +143,12 @@ The published model grappa-1.0 has been trained on an extension of the Espaloma 
 
 Unlike many other machine-learned force fields, Grappa does not rely on hand-crafted input features from Cheminformatics-tools but only on the molecular graph and partial charges as input. This makes it applicable beyond the coverage of existing Cheminformatics-tools, for example to radicals.
 
-Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen atom transfer, i.e. that 'miss' a hydrogen (as opposed to being protonated). Grappa is the first MM force field capable of accurately simulating radical peptides. To demonstrate this, we simulate a small radical peptide that undergoes a hydrogen atom transfer in [KIMMDY](https://github.com/hits-mbm-dev/kimmdy).
+Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen atom transfer, i.e. that 'miss' a hydrogen (as opposed to being protonated). Grappa is the first MM force field capable of accurately simulating radical peptides. To demonstrate this, we simulate a small radical peptide that undergoes a hydrogen atom transfer in [KIMMDY](https://github.com/hits-mbm-dev/kimmdy), a GROMACS extension for reactive MD via kinetic Monte Carlo methods.
 
+<p align="center">
+    <img src="docs/figures/kimmdy-grappa.gif" width="100%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Example simulation of a hydrogen atom transfer in a small radical peptide to demonstrate that the effect of the radical carbon on the geometry is captured with Grappa.</i></p>
 
 
 ## Method
