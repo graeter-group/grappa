@@ -15,7 +15,7 @@ class LitModel(pl.LightningModule):
                  lr=1e-4, 
                  start_qm_epochs=1, add_restarts=[],
                  warmup_steps=int(2e2),
-                 energy_weight=1., gradient_weight=1e-1, tuplewise_weight=1e-4,
+                 energy_weight=1., gradient_weight=1e-1, tuplewise_weight=0,
                  param_weight=1e-4, proper_regularisation=1e-5, improper_regularisation=1e-5,
                  log_train_interval=5, log_classical=False, log_params=False, weight_decay=0.,
                  early_stopping_energy_weight=2.,
@@ -57,7 +57,7 @@ class LitModel(pl.LightningModule):
         self.model = model
         
         # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
-        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, tuplewise_weight=1e-3, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset) if start_qm_epochs > 0 else MolwiseLoss(gradient_weight=gradient_weight, energy_weight=energy_weight, param_weight=param_weight, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset)
+        self.loss = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset) if start_qm_epochs > 0 else MolwiseLoss(gradient_weight=gradient_weight, energy_weight=energy_weight, param_weight=param_weight, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset)
 
         self.lr = lr
         self.weight_decay = weight_decay

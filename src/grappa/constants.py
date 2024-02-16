@@ -2,7 +2,7 @@ IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion 
 
 MAX_ELEMENT = 53 # cover Iodine
 
-# NOTE: check effect of these. (grappa models have this parameter too)
+# the periodicities for dataset creation. Grappa models have this as hyperparameter too, which must be smaller or equal than the values below.
 N_PERIODICITY_PROPER = 6
 N_PERIODICITY_IMPROPER = 6
 

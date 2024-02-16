@@ -40,9 +40,9 @@ DATASETS=(
   spice-dipeptide_amber99sbildn
   protein-torsion_amber99sbildn
   pepconf-dlc_amber99sbildn
-  # tripeptides_amber99sbildn
+  tripeptides_amber99sbildn
   dipeptide_rad
-  # hyp-dop_amber99sbildn
+  hyp-dop_amber99sbildn
 )
 
 DATADIR=data/dgl_datasets

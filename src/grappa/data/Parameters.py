@@ -34,7 +34,7 @@ class Parameters():
     
     "{proper/improper}s":np.array of shape (#4-body-terms, 4), the ids of the atoms in the molecule that correspond to the parameters. The central atom is at third position, i.e. index 2. For each entral atom, the array contains all cyclic permutation of the other atoms, i.e. 3 entries that all have different parameters in such a way that the total energy is invariant under cyclic permutation of the atoms.
 
-    "{proper/improper}_ks":np.array of shape (#4-body-terms, n_periodicity), the fourier coefficients for the cos terms of torsion. These have the same order along axis 0 as the id tuples in {proper/improper}s. The periodicity is given by 1 + the idx along axis=1, e.g. proper_ks[10,3] describes the term with n_per==4 of the torsion between the atoms propers[10]. May be negative instead of allowing an equilibrium dihedral angle (which is always set to zero). n_periodicity is a hyperparemter of the model and defaults to 6.
+    "{proper/improper}_ks":np.array of shape (#4-body-terms, n_periodicity), the fourier coefficients for the cos terms of torsion. These have the same order along axis 0 as the id tuples in {proper/improper}s. The periodicity is given by 1 + the idx along axis=1, e.g. proper_ks[10,3] describes the term with n_per==4 of the torsion between the atoms propers[10]. May be negative instead of allowing an equilibrium dihedral angle (which is always set to zero). n_periodicity is a hyperparameter of the model and defaults to 6.
 
     "{proper/improper}_phases":np.array of shape (#4-body-terms, n_periodicity), the phases of the cos terms of torsion. These have the same order along axis 0 as the id tuples in {proper/improper}s. n_periodicity is a hyperparameter of the model and defaults to 6.
 
@@ -64,6 +64,7 @@ class Parameters():
         Assumes that the dgl graph has the following features:
             - 'ids' at node type n1 (these are the atom ids)
             - 'idxs' at node types n2, n3, n4, n4_improper (these are the indices of the atom ids the n1-'ids' vector and thus need to be converted to atom ids by ids = atoms[idxs])
+
         """
 
         # Extract the atom indices for each type of interaction
@@ -92,8 +93,9 @@ class Parameters():
             np.zeros_like(proper_ks) + np.pi
         )
         proper_ks = np.abs(proper_ks)
+
         propers = g.nodes['n4'].data['idxs'].detach().cpu().numpy()
-        propers = atom_ids[propers] 
+        propers = atom_ids[propers]
 
 
         improper_ks = g.nodes['n4_improper'].data[f'k{suffix}'].detach().cpu().numpy()
@@ -103,6 +105,7 @@ class Parameters():
             np.zeros_like(improper_ks) + np.pi
         )
         improper_ks = np.abs(improper_ks)
+
         impropers = atom_ids[g.nodes['n4_improper'].data['idxs'].detach().cpu().numpy()]
 
         return cls(

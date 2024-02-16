@@ -15,11 +15,11 @@ data_config:
   - pepconf-dlc_amber99sbildn
   - dipeptide_rad
   - hyp-dop_amber99sbildn
-  - tripeptides_amber99sbildn
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
   pure_test_datasets:
   - rna-trinucleotide
+  - tripeptides_amber99sbildn
   pure_val_datasets: []
   pure_train_datasets:
   - rna-nucleoside
@@ -29,7 +29,7 @@ data_config:
   train_batch_size: 32
   train_loader_workers: 1
   val_batch_size: 32
-  val_loader_workers: 2
+  val_loader_workers: 1
   val_conf_strategy: 500
   weights:
     rna-diverse: 3
@@ -37,7 +37,6 @@ data_config:
     spice-pubchem: 0.8
     hyp-dop_amber99sbildn: 2
     tripeptides_amber99sbildn: 2
-
 
 lit_model_config:
   add_restarts: []
@@ -58,7 +57,7 @@ lit_model_config:
   proper_regularisation: 1.0e-03
   start_qm_epochs: 2
   time_limit: 23.5
-  tuplewise_weight: 0
+  tuplewise_weight: 0.
   warmup_steps: 500
   weight_decay: 0
 model_config:
@@ -98,7 +97,7 @@ model_config:
   layer_norm: true
   learnable_statistics: false
   n_periodicity_improper: 3
-  n_periodicity_proper: 6
+  n_periodicity_proper: 3
   parameter_dropout: 0.5
   positional_encoding: true
   proper_n_heads: 8
@@ -108,6 +107,7 @@ model_config:
   proper_transformer_width: 512
   self_interaction: true
   wrong_symmetry: false
+  torsion_cutoff: 1.e-4
 test_model: false
 trainer_config:
   early_stopping_criterion: early_stopping_loss

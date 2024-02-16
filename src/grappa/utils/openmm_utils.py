@@ -108,7 +108,7 @@ def set_partial_charges(system, partial_charges:Union[list, np.ndarray])->'openm
     return system
 
 
-def write_to_system(system, parameters:'grappa.data.Parameters'):
+def write_to_system(system, parameters:'grappa.data.Parameters')->'openmm.System':
     """
     Writes bonded parameters in an openmm system. For interactions that are already present in the system, overwrite the parameters; otherwise add the interaction to the system. The forces, however, must be already present in the system.
     The ids of the atoms, bonds, etc in the parameters object must be the same as the system indices.

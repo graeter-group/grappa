@@ -17,11 +17,11 @@ class MolwiseLoss(torch.nn.Module):
     """
     def __init__(
         self,
-        gradient_weight:float=0.5,
+        gradient_weight:float=0.8,
         energy_weight:float=1.0,
         param_weight:float=1e-3,
-        tuplewise_weight:float=1e-4,
-        weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2},
+        tuplewise_weight:float=0,
+        weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2, "n4_k":1e-4}, # only slightly change proper torsions when training on classical parameters.
         skip_params_if_not_present:bool=True,
         proper_regularisation:float=0., # prefactor for L2 regularisation of proper torsion parameters
         improper_regularisation:float=0.,
@@ -94,13 +94,14 @@ class MolwiseLoss(torch.nn.Module):
                     these_params = params[k]
                     these_params_ref = params_ref[k]
 
+                    if k == 'n4_k':
+                        # ensure that max_periodicity is that of the model, either by adding zeros or by removing columns
+                        these_params_ref = correct_torsion_shape(these_params_ref, shape1=these_params.shape[1])
+
                     # set both parameters to zero where the ref params are nan. This enables batching graphs with params and without
                     these_params = torch.where(torch.isnan(these_params_ref), torch.zeros_like(these_params), these_params)
                     these_params_ref = torch.where(torch.isnan(these_params_ref), torch.zeros_like(these_params_ref), these_params_ref)
 
-                    if k == 'n4_k':
-                        # ensure that max_periodicity is that of the model, either by adding zeros or by removing columns
-                        these_params_ref = correct_torsion_shape(these_params_ref, shape1=these_params.shape[1])
 
                     if these_params.shape != these_params_ref.shape:
                         raise ValueError(f"Shape of parameters {k} and {k}_ref do not match: {these_params.shape} vs {these_params_ref.shape}")
@@ -131,34 +132,35 @@ class MolwiseLoss(torch.nn.Module):
                 loss_term = loss_term + self.improper_regularisation * torch.mean(torch.square(impropers))
 
             # NOTE: this is currently not used
-            # if self.tuplewise_weight != 0.:
-            #     tuplewise_energies = graph_utils.get_tuplewise_energies(graph)
-            #     tuplewise_energies_ref = graph_utils.get_tuplewise_energies(graph, suffix="_classical_ff")
+            assert self.tuplewise_weight == 0., f"Tuplewise loss not implemented yet., but weight is {self.tuplewise_weight}."
+            if self.tuplewise_weight != 0.:
+                tuplewise_energies = graph_utils.get_tuplewise_energies(graph)
+                tuplewise_energies_ref = graph_utils.get_tuplewise_energies(graph, suffix="_classical_ff")
 
-            #     pred_energies = []
-            #     ref_energies = []
+                pred_energies = []
+                ref_energies = []
 
-            #     for k, predicted_energies in tuplewise_energies.items():
-            #         if k not in tuplewise_energies_ref.keys():
-            #             raise ValueError(f"Tuplewise energy {k} not in tuplewise_energies_ref")
-            #         if tuplewise_energies[k].shape != tuplewise_energies_ref[k].shape:
-            #             raise ValueError(f"Shape of tuplewise energy {k} and {k}_ref do not match: {tuplewise_energies[k].shape} vs {tuplewise_energies_ref[k].shape}")
+                for k, predicted_energies in tuplewise_energies.items():
+                    if k not in tuplewise_energies_ref.keys():
+                        raise ValueError(f"Tuplewise energy {k} not in tuplewise_energies_ref")
+                    if tuplewise_energies[k].shape != tuplewise_energies_ref[k].shape:
+                        raise ValueError(f"Shape of tuplewise energy {k} and {k}_ref do not match: {tuplewise_energies[k].shape} vs {tuplewise_energies_ref[k].shape}")
 
-            #         classical_energies = tuplewise_energies_ref[k]
+                    classical_energies = tuplewise_energies_ref[k]
 
-            #         # set all energies to zero where the ref energies are nan. This enables batching graphs with parameters and without
-            #         predicted_energies = torch.where(torch.isnan(classical_energies), torch.zeros_like(predicted_energies), predicted_energies)
-            #         classical_energies = torch.where(torch.isnan(classical_energies), torch.zeros_like(classical_energies), classical_energies)
+                    # set all energies to zero where the ref energies are nan. This enables batching graphs with parameters and without
+                    predicted_energies = torch.where(torch.isnan(classical_energies), torch.zeros_like(predicted_energies), predicted_energies)
+                    classical_energies = torch.where(torch.isnan(classical_energies), torch.zeros_like(classical_energies), classical_energies)
 
-            #         pred_energies.append(predicted_energies.flatten())
-            #         ref_energies.append(classical_energies.flatten())
+                    pred_energies.append(predicted_energies.flatten())
+                    ref_energies.append(classical_energies.flatten())
 
-            #     pred_energies = torch.cat(pred_energies)
-            #     ref_energies = torch.cat(ref_energies)
+                pred_energies = torch.cat(pred_energies)
+                ref_energies = torch.cat(ref_energies)
                 
-            #     tuplewise_loss_contrib = torch.mean(torch.square(pred_energies - ref_energies)) * self.tuplewise_weight
+                tuplewise_loss_contrib = torch.mean(torch.square(pred_energies - ref_energies)) * self.tuplewise_weight
 
-            #     loss_term = loss_term + tuplewise_loss_contrib
+                loss_term = loss_term + tuplewise_loss_contrib
 
             loss = loss + loss_term/len(graphs)
     

@@ -448,7 +448,6 @@ class WriteTorsionParameters(torch.nn.Module):
             self.register_buffer("k_mean", k_mean_initial)
             self.register_buffer("k_std", k_std_initial)
         
-        print("k_std", self.k_std)
 
         self.suffix = suffix
 
