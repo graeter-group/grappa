@@ -146,7 +146,7 @@ Unlike many other machine-learned force fields, Grappa does not rely on hand-cra
 Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen atom transfer, i.e. that 'miss' a hydrogen (as opposed to being protonated). Grappa is the first MM force field capable of accurately simulating radical peptides. To demonstrate this, we simulate a small radical peptide that undergoes a hydrogen atom transfer in [KIMMDY](https://github.com/hits-mbm-dev/kimmdy), a GROMACS extension for reactive MD via kinetic Monte Carlo methods.
 
 <p align="center">
-    <img src="docs/figures/kimmdy-grappa.gif" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/kimmdy-grappa.gif" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>Example simulation of a hydrogen atom transfer in a small radical peptide to demonstrate that the effect of the radical carbon on the geometry is captured with Grappa.</i></p>
 
@@ -178,7 +178,7 @@ We then predict MM parameters from atom embeddings with four independent models;
 Finally, we map the range of real numbers to the physically sensible range of MM parameters using modified versions of the sigmoid function and the shifted ELU. E.g. the equilibrium bond length is enforced to be positive and the equilibrium angle is enforced to be between 0 and pi.
 
 <p align="center">
-    <img src="docs/figures/symmetric_transformer.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/symmetric_transformer.png" width="90%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>The architecture of Grappas Symmetric Transformer</i></p>
 
