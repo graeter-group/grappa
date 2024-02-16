@@ -35,6 +35,9 @@ data_config:
     rna-diverse: 3
     rna-nucleoside: 5
     spice-pubchem: 0.8
+    hyp-dop_amber99sbildn: 2
+    tripeptides_amber99sbildn: 2
+
 
 lit_model_config:
   add_restarts: []

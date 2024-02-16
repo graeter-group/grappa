@@ -1,45 +1,24 @@
 #%%
 # USAGE
 
-# Download a model if not present already:
-import torch
-from grappa.utils.loading_utils import model_from_tag
-
-model = model_from_tag('grappa-1.0')
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = 'cpu' # for the sake of this example, we will use the CPU
-model = model.to(device)
-
-#%%
-
-from grappa.wrappers.openmm_wrapper import openmm_Grappa
-from openmm.app import PDBFile, ForceField
-from copy import deepcopy
+from openmm.app import ForceField, Topology, PDBFile
+from grappa import OpenmmGrappa
 from pathlib import Path
-import time
+
+topology = PDBFile(str(Path(__file__).parent/'T4.pdb')).topology # load your system as openmm.Topology
+
+classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+system = classical_ff.createSystem(topology)
+
+# load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.0', grappa-1.1' and 'latest'
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.1')
+
+# parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'classical' and 'am1BCC'.
+system = grappa_ff.parametrize_system(system, topology, charge_model='classical')
+
 #%%
 
-pdb = PDBFile(str(Path(__file__).parent/'T4.pdb'))
-
-print(f'Loaded a protein with {pdb.topology.getNumAtoms()} atoms.')
-
-ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
-start = time.time()
-system = ff.createSystem(pdb.topology)
-print(f'Created a system in {(time.time()-start)*1e3:.2f} milliseconds')
-
-orig_system = deepcopy(system) # create a deep copy of the system to compare it to the grappa-parametrized one later
-
-# %%
-
-# build a grappa model that handles the ML pipeline
-grappa = openmm_Grappa(model, device=device)
-
-# write grappa parameters to the system:
-start = time.time()
-system = grappa.parametrize_system(system, pdb.topology, charge_model='classical')
-print(f'Parametrized the system in {(time.time()-start)*1e3:.2f} milliseconds')
+orig_system = classical_ff.createSystem(topology)
 
 # %%
 
@@ -50,7 +29,7 @@ from grappa.utils.openmm_utils import get_energies
 import numpy as np
 from grappa.units import DISTANCE_UNIT
 
-positions = np.array([pdb.positions.value_in_unit(DISTANCE_UNIT)])
+positions = np.array([PDBFile(str(Path(__file__).parent/'T4.pdb')).positions.value_in_unit(DISTANCE_UNIT)])
 
 # get energies and gradients of the original system:
 orig_energy, original_gradients = get_energies(orig_system, positions)
