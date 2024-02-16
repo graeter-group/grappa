@@ -5,7 +5,7 @@ from typing import Union, List, Tuple
 from grappa.models.perm_equiv_transformer import SymmetrisedTransformer
 import copy
 from grappa.utils.graph_utils import get_default_statistics
-
+from grappa.models.network_utils import HardCutoff
 
 class WriteParameters(torch.nn.Module):
     """
@@ -31,10 +31,11 @@ class WriteParameters(torch.nn.Module):
         wrong_symmetry (bool, optional): Flag indicating whether to implement the wrong symmetry constraint for improper torsions. Defaults to False.
         learnable_statistics (bool): Flag to indicate whether to make the mean and std parameters provided by the param_statistics learnable. In this case, they would be initialised to the values provided by the param_statistics but would be updated during training. Defaults to False.
         param_statistics (dict, optional): Dictionary containing statistics for parameter initialization.
+        torsion_cutoff (float, optional): Cutoff value for torsion force constants in kcal/mol. Defaults to 1e-4.
 
     The class initializes and holds four separate writers, each configured for their respective parameter type.
     """
-    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics()):
+    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4):
         super().__init__()
 
         if param_statistics is not None:
@@ -94,6 +95,7 @@ class WriteParameters(torch.nn.Module):
             positional_encoding=positional_encoding,
             gated=gated_torsion,
             learnable_statistics=learnable_statistics,
+            cutoff=torsion_cutoff
         )
 
         # Initialize Improper Torsion Writer
@@ -114,12 +116,13 @@ class WriteParameters(torch.nn.Module):
             positional_encoding=positional_encoding,
             gated=gated_torsion,
             learnable_statistics=learnable_statistics,
-            wrong_symmetry=wrong_symmetry
+            wrong_symmetry=wrong_symmetry,
+            cutoff=torsion_cutoff
         )
 
     def forward(self, g):
         # NOTE:
-        # Since these operations are all independent, they might be parallelized if they do not output the graph but parameter dicts that are then written to the graph.
+        # Since these operations are all independent, they might be parallelized in inference mode if they do not output the graph but parameter dicts that are then written to the graph.
         # also, it might make sense to extract the inputs for the writer first such that they do not all access the whole graph at the same time.
 
         g = self.bond_writer(g)
@@ -393,11 +396,11 @@ class WriteTorsionParameters(torch.nn.Module):
 
     The parameter statistics are used to initialize the model weights such that a normally distributed output of the symmetriser network would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."].
     """
-    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False):
+    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False, cutoff=1e-4):
         super().__init__()
 
-        # the minimum std dviation to which the output of the symmetriser is scaled
-        EPSILON_STD = 1e-6
+        # the minimum std deviation to which torsion parameters are scaled initially. Should be something like the average magnitude of torsion ks ideally. Should be larger than the cutoff!
+        EPSILON_STD = 1e-1 if gated else 1e-2
 
         if param_statistics is None:
             param_statistics = get_default_statistics()
@@ -416,8 +419,8 @@ class WriteTorsionParameters(torch.nn.Module):
         self.register_buffer("n_periodicity", torch.tensor(n_periodicity).long())
 
         if not improper:
-            k_mean=param_statistics["mean"]["n4_k"]
-            k_std=param_statistics["std"]["n4_k"] + EPSILON_STD
+            k_mean = param_statistics["mean"]["n4_k"]
+            k_std = param_statistics["std"]["n4_k"] + EPSILON_STD
         else:
             if not "n4_improper_k" in param_statistics["mean"]:
                 k_mean = torch.zeros(n_periodicity)
@@ -432,8 +435,8 @@ class WriteTorsionParameters(torch.nn.Module):
                 if len(k_std) < n_periodicity:
                     raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_std)} values for the std of the improper torsion parameters.")
                 
-                k_mean = k_mean[:n_periodicity]
-                k_std = k_std[:n_periodicity]
+        k_mean = k_mean[:n_periodicity]
+        k_std = k_std[:n_periodicity]
 
         k_mean_initial = k_mean.unsqueeze(dim=0)
         k_std_initial = k_std.unsqueeze(dim=0)
@@ -445,6 +448,7 @@ class WriteTorsionParameters(torch.nn.Module):
             self.register_buffer("k_mean", k_mean_initial)
             self.register_buffer("k_std", k_std_initial)
         
+        print("k_std", self.k_std)
 
         self.suffix = suffix
 
@@ -486,6 +490,11 @@ class WriteTorsionParameters(torch.nn.Module):
 
         self.torsion_model = SymmetrisedTransformer(n_feats=rep_projected_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=n_out_feats, permutations=perms, layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=copy.deepcopy(positional_encoding))
 
+        if cutoff > 0:
+            # shifted relu:
+            self.cutoff = HardCutoff(cutoff)
+        else:
+            self.cutoff = None
 
     def forward(self, g):
         level = "n4"
@@ -514,10 +523,19 @@ class WriteTorsionParameters(torch.nn.Module):
                 gate_values = torch.sigmoid(coeffs[:,self.n_periodicity:])
                 coeffs = coeffs[:,:self.n_periodicity]
 
-            coeffs = coeffs*self.k_std + self.k_mean
-
             if self.gated:
                 coeffs = coeffs * gate_values
+
+                # due to the gating, we do not shift by the mean (we want the model to help us predict zero values)
+                coeffs = coeffs*self.k_std
+
+            else:
+                coeffs = coeffs*self.k_std + self.k_mean
+
+
+            # apply a cutoff to the abs value of the force constants
+            if self.cutoff is not None:
+                coeffs = self.cutoff(coeffs)
 
         g.nodes[level].data["k"+self.suffix] = coeffs
 

@@ -131,3 +131,15 @@ class DottedAttWithMLP(nn.Module):
         x = self.ff(x)
 
         return x
+    
+
+class HardCutoff(nn.Module):
+    """
+    Shifted ReLU activation function for the entrywise abs value. Returns zero where abs(input) is below the cutoff, otherwise returns the input. Not continuos! Choose small cutoffs!!
+    """
+    def __init__(self, cutoff=0.):
+        super().__init__()
+        self.cutoff = cutoff
+
+    def forward(self, x):
+        return torch.where(torch.abs(x) > self.cutoff, x, torch.zeros_like(x))

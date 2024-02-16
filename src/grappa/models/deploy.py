@@ -15,17 +15,15 @@ def model_from_config(model_config:Dict, param_statistics:Dict=get_default_stati
 
     return model
 
-# NOTE: this is actually not default.
-
 def get_default_model_config():
     args = {
         "graph_node_features": 256,
         "in_feats": None,
-        "in_feat_name": ["atomic_number", "partial_charge", "ring_encoding", "degree"],
+        "in_feat_name": ["atomic_number", "partial_charge", "ring_encoding", "degree", "charge_model"],
         "in_feat_dims": {},
         "gnn_width": 512,
-        "gnn_attentional_layers": 5,
-        "gnn_convolutions": 2,
+        "gnn_attentional_layers": 7,
+        "gnn_convolutions": 0,
         "gnn_attention_heads": 16,
         "gnn_dropout_attention": 0.3,
         "gnn_dropout_initial": 0.0,
@@ -54,12 +52,13 @@ def get_default_model_config():
         "improper_symmetriser_width": 256,
         "n_periodicity_proper": 6,
         "n_periodicity_improper": 3,
-        "gated_torsion": False,
+        "gated_torsion": True,
         "wrong_symmetry": False,
         "positional_encoding": True,
         "layer_norm": True,
         "self_interaction": True,
         "learnable_statistics": False,
+        "torsion_cutoff": 1e-4,
     }
 
     return args
