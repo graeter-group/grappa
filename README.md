@@ -162,6 +162,8 @@ Grappa is a machine learning framework to predict MM parameters from the molecul
 
 In analogy to the atom-typing by hand-crafted rules in conventional MM force fields, Grappa first predicts atom embeddings from the molecular graph. These give the model the freedom to encode the local chemical environment of each atom in a high-dimensional feature vector. In a second step, Grappa predicts the parameters of each N-body MM-interaction from the N embeddings of the involved atoms.
 
+At the moment, Grappa only predicts bonded parameters, nonbonded parameters like partial charges and Lennard-Jones parameters are taken from a classical force field of choice. Grappa is trained on nonbonded parameters by [openff-2.0.0](https://chemrxiv.org/engage/chemrxiv/article-details/637938cbe70b0a110aa33b8b) and [Amberff99sbildn](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/). The reason for this is that we believe that nonbonded parameters have great influence on statistical properties like melting points or folding states that we want to retain in Grappa.
+
 ### Architecture
 
 <p align="center">
