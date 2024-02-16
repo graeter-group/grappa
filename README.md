@@ -173,7 +173,9 @@ For the graph neural network that is supposed to predict atom embeddings, we mod
   </p>
   <p><i>The architecture of Grappas Graph Neural Network</i></p>
 
-We then predict MM parameters from atom embeddings by four independent models; one for each parameter type. 
+We then predict MM parameters from atom embeddings with four independent models; one for each parameter type. The energy contribution from an MM interaction must have the same permutation symmetry as the corresponding subgraph. We achieve this by constructing permutation equivariant layers using attention followed by a symmetric pooling operation: We concatenate the node features for all node permutations that should satisfy the respective symmetry, pass each permuted version through the same feed forward network and then sum up the result. In the equivariant layers, we allow the model to break unnecessary permutation symmetries by introducing a positional encoding that is symmetric only under those permutations for which we demand the symmetry. We call this novel architecture that preserves special symmetries in a very general fashion the 'Symmetric Transformer'.
+
+Finally, we map the range of real numbers to the physically sensible range of MM parameters using modified versions of the sigmoid function and the shifted ELU. E.g. the equilibrium bond length is enforced to be positive and the equilibrium angle is enforced to be between 0 and pi.
 
 <p align="center">
     <img src="docs/figures/symmetric_transformer.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
