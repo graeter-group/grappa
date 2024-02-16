@@ -162,14 +162,18 @@ Grappa is a machine learning framework to predict MM parameters from the molecul
 
 In analogy to the atom-typing by hand-crafted rules in conventional MM force fields, Grappa first predicts atom embeddings from the molecular graph. These give the model the freedom to encode the local chemical environment of each atom in a high-dimensional feature vector. In a second step, Grappa predicts the parameters of each N-body MM-interaction from the N embeddings of the involved atoms.
 
-At the moment, Grappa only predicts bonded parameters, nonbonded parameters like partial charges and Lennard-Jones parameters are taken from a classical force field of choice. Grappa is trained on nonbonded parameters by [openff-2.0.0](https://chemrxiv.org/engage/chemrxiv/article-details/637938cbe70b0a110aa33b8b) and [Amberff99sbildn](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/). The reason for this is that we believe that nonbonded parameters have great influence on statistical properties like melting points or folding states that we want to retain in Grappa.
+At the moment, Grappa only predicts bonded parameters, nonbonded parameters like partial charges and Lennard-Jones parameters are taken from a classical force field of choice. Grappa is trained on nonbonded parameters by [openff-2.0.0](https://chemrxiv.org/engage/chemrxiv/article-details/637938cbe70b0a110aa33b8b) and [Amberff99sbildn](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/). The reason for this is that we want to retain established statistical properties like melting points or folding states.
 
 ### Architecture
+
+For the graph neural network that is supposed to predict atom embeddings, we modify graph attention networks [Veličković et al.](https://arxiv.org/abs/1710.10903) by scaled, dotted multihead attention, skip connections, dropout, layer norm and nodewise feed forward layers in analogy to the transformer architecture [Vaswani et al.](https://arxiv.org/abs/1706.03762).
 
 <p align="center">
     <img src="docs/figures/gnn.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>The architecture of Grappas Graph Neural Network</i></p>
+
+We then predict MM parameters from atom embeddings by four independent models; one for each parameter type. 
 
 <p align="center">
     <img src="docs/figures/symmetric_transformer.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
