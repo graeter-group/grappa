@@ -12,7 +12,7 @@ Here, we present a state of the art machine-learned MM force field that outperfo
 Our forcefield, Grappa, covers a broad range of chemical space: The same force field can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
 Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
 
-Grappa uses a deep graph attention network and a transformer with symmetry-preserving positional encoding to predict MM parameters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
+Grappa uses a novel machine learning architecture that combines a deep attentional graph neural network and a transformer with symmetry-preserving positional encoding to predict MM parameters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
 
 <details open>
   <summary>Grappa Overview</summary>
@@ -146,37 +146,51 @@ Unlike many other machine-learned force fields, Grappa does not rely on hand-cra
 Grappa 1.0 has been trained on radical peptides that can be formed by hydrogen atom transfer, i.e. that 'miss' a hydrogen (as opposed to being protonated). Grappa is the first MM force field capable of accurately simulating radical peptides. To demonstrate this, we simulate a small radical peptide that undergoes a hydrogen atom transfer in [KIMMDY](https://github.com/hits-mbm-dev/kimmdy), a GROMACS extension for reactive MD via kinetic Monte Carlo methods.
 
 <p align="center">
-    <img src="docs/figures/kimmdy-grappa.gif" width="100%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/kimmdy-grappa.gif" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>Example simulation of a hydrogen atom transfer in a small radical peptide to demonstrate that the effect of the radical carbon on the geometry is captured with Grappa.</i></p>
 
 
 ## Method
 
+Grappa is a machine learning framework to predict MM parameters from the molecular graph. Since this prediction does not depend on the conformation of the molecule, it has to be done only once. Then, the prediction of energies and forces has the same computational speed as MM.
+
+<p align="center">
+    <img src="docs/figures/tradeoff_grappa.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+  </p>
+  <p><i>Machine learning lifts the tension between accuracy and speed of force fields. E(3) equivariant neural networks offer highly accurate predictions at improved speed; machine-learned MM is capable of significantly more accurate predictions at the same speed as conventional MM.</i></p>
+
+In analogy to the atom-typing by hand-crafted rules in conventional MM force fields, Grappa first predicts atom embeddings from the molecular graph. These give the model the freedom to encode the local chemical environment of each atom in a high-dimensional feature vector. In a second step, Grappa predicts the parameters of each N-body MM-interaction from the N embeddings of the involved atoms.
+
+At the moment, Grappa only predicts bonded parameters, nonbonded parameters like partial charges and Lennard-Jones parameters are taken from a classical force field of choice. Grappa is trained on nonbonded parameters by [openff-2.0.0](https://chemrxiv.org/engage/chemrxiv/article-details/637938cbe70b0a110aa33b8b) and [Amberff99sbildn](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/). The reason for this is that we want to retain established statistical properties like melting points or folding states.
+
 ### Architecture
+
+For the graph neural network that is supposed to predict atom embeddings, we modify graph attention networks [Veličković et al.](https://arxiv.org/abs/1710.10903) by scaled, dotted multihead attention, skip connections, dropout, layer norm and nodewise feed forward layers in analogy to the transformer architecture [Vaswani et al.](https://arxiv.org/abs/1706.03762).
 
 <p align="center">
     <img src="docs/figures/gnn.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>The architecture of Grappas Graph Neural Network</i></p>
 
+We then predict MM parameters from atom embeddings with four independent models; one for each parameter type. The energy contribution from an MM interaction must have the same permutation symmetry as the corresponding subgraph. We achieve this by constructing permutation equivariant layers using attention followed by a symmetric pooling operation: We concatenate the node features for all node permutations that should satisfy the respective symmetry, pass each permuted version through the same feed forward network and then sum up the result. In the equivariant layers, we allow the model to break unnecessary permutation symmetries by introducing a positional encoding that is symmetric only under those permutations for which we demand the symmetry. We call this novel architecture that preserves special symmetries in a very general fashion the 'Symmetric Transformer'.
+
+Finally, we map the range of real numbers to the physically sensible range of MM parameters using modified versions of the sigmoid function and the shifted ELU. E.g. the equilibrium bond length is enforced to be positive and the equilibrium angle is enforced to be between 0 and pi.
+
 <p align="center">
-    <img src="docs/figures/symmetric_transformer.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/symmetric_transformer.png" width="90%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>The architecture of Grappas Symmetric Transformer</i></p>
 
 
-### Permutation Symmetry
-
 
 ## Pretrained Models
 
-Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g.`latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`.
-
+Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`. For full reproducibility, one can also obtain the model weights toghether with the respective partition of the dataset and the configuration file used for training by `grappa.utils.run_utils.model_dict_from_tag`, which returns a dictionary oth the keys `{'state_dict', 'config', 'split_names'}`.
 
 
 ## Datasets
 
 Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor. An example can be found at `examples/usage/evaluation.py`. Available tags are listed in the documentation of the Dataset class.
 
-To re-create the benchmark experiment, also the splitting into train/val/test sets is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py` has to be run. This will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
+To re-create the benchmark experiment, also the splitting into train/val/test sets is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
