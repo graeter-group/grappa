@@ -5,10 +5,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "grappa"
-version = "0.1.0"
+version = "1.1.1"
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where=["src"]
+
+
+[project.scripts]
+grappa_eval = "grappa.training.eval_model:main"
+grappa_export = "grappa.training.export_model:main"

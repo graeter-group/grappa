@@ -15,12 +15,15 @@ from grappa.utils.run_utils import write_yaml
 from typing import Union, Dict, Callable
 
 
-def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=5)->Path:
+def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=10)->Path:
     """
     Find the local run directory for a given run id.
 
     max_existing_dirs: The maximum number of directories that may exist for a given run id. Set this to a finite value to prevent starting runs that are constantly failing.
     """
+
+    if '/' in run_id:
+        run_id = run_id.split('/')[-1]
 
     # iterate over all files in the wandb folder and find the one that contains the run id, a last.cpkt file and the latest starting time.
     # assume dir name structure: run-YYYYMMDD_HHMMSS-<run_id>
@@ -35,23 +38,23 @@ def get_dir_from_id(wandb_folder:str, run_id:str, max_existing_dirs:int=5)->Path
     match_counter = 0
 
     # Iterate over directories in the wandb folder
-    for dir in Path(wandb_folder).iterdir():
-        if dir.is_dir():
+    for this_dir in Path(wandb_folder).iterdir():
+        if this_dir.is_dir():
             # Match the pattern
-            match = pattern.match(dir.name)
+            match = pattern.match(this_dir.name)
             if match:
                 match_counter += 1
                 if match_counter > max_existing_dirs:
                     raise RuntimeError(f"More than {max_existing_dirs} directories found for run {run_id}. Found {match_counter}. Aborting...")
                 # check whether the directory contains a last.ckpt file
-                if not (dir / 'files/checkpoints/last.ckpt').exists():
-                    print(f"Directory {dir} does not contain a last.ckpt file. Skipping...")
+                if not (this_dir / 'files/checkpoints/last.ckpt').exists():
+                    print(f"Directory {this_dir} does not contain a last.ckpt file. Skipping...")
                     continue
                 # Extract the datetime from the directory name
                 dir_time = datetime.datetime.strptime(match.group(1), "%Y%m%d_%H%M%S")
                 if latest_time is None or dir_time > latest_time:
                     latest_time = dir_time
-                    latest_dir = dir
+                    latest_dir = this_dir
 
     if latest_dir:
         print(f"Latest local directory with last.ckpt for run {run_id}:\n\t{latest_dir}")
@@ -113,7 +116,7 @@ def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.
 
     experiment_dir = Path(trainer.logger.experiment.dir)
 
-    tr, vl, te = get_dataloaders(**config['data_config'], classical_needed=config['lit_model_config']['log_classical'], in_feat_names=config['model_config']['in_feat_name'], save_splits=experiment_dir / 'files/split.json')
+    tr, vl, te = get_dataloaders(**config['data_config'], classical_needed=config['lit_model_config']['log_classical'], in_feat_names=config['model_config']['in_feat_name'], save_splits=run_dir / 'files/split.json')
 
     lit_model = LitModel(model,tr_loader=tr, vl_loader=vl, te_loader=te, **config['lit_model_config'])
 
