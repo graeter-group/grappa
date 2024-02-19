@@ -292,11 +292,6 @@ class LitModel(pl.LightningModule):
                 self.trainer.should_stop = True
                 print(f"\nStopping training because time limit {self.time_limit} hours is exceeded.\n", file=sys.stderr)
 
-        
-
-        # manually clear the cache:
-        # torch.cuda.empty_cache()
-                
 
 
     def configure_optimizers(self):
@@ -306,9 +301,14 @@ class LitModel(pl.LightningModule):
     def on_save_checkpoint(self, checkpoint):
         # Add elapsed time to the checkpoint
         checkpoint['elapsed_time'] = self.elapsed_time + time.time() - self.time_start
+        checkpoint['lr'] = self.lr
 
     
     def on_load_checkpoint(self, checkpoint):
         # Load elapsed time from checkpoint. it is checked whether time.time() - start_time + elaped_time > time_limit in on_validation_epoch_end
         self.elapsed_time = checkpoint.get('elapsed_time', 0)
         self.start_time = time.time()
+        try:
+            self.lr = checkpoint.get('lr', self.lr)
+        except Exception as e:
+            print(f"Error in recovering the lr in on_load_checkpoint: {e}\nStarting with the lr in config file...", file=sys.stderr)
