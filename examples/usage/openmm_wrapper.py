@@ -27,8 +27,9 @@ orig_system = classical_ff.createSystem(topology)
 # now we can use this system downstream. To validate that grappa predicts gradients that are somewhat comparable to those of the classical protein force field, we can plot the gradient components of the grappa system and the original system:
 from grappa.utils.openmm_utils import get_energies
 import numpy as np
-from grappa.units import DISTANCE_UNIT
+from grappa.constants import get_grappa_units_in_openmm
 
+DISTANCE_UNIT = get_grappa_units_in_openmm()['LENGTH']
 positions = np.array([PDBFile(str(Path(__file__).parent/'T4.pdb')).positions.value_in_unit(DISTANCE_UNIT)])
 
 # get energies and gradients of the original system:
@@ -49,6 +50,8 @@ plt.text(0.1, 0.9, f'Component RMSE: {crmse:.2f} kcal/mol/A', transform=plt.gca(
 
 plt.plot(original_gradients.flatten(), original_gradients.flatten(), color='black', linestyle='--')
 
-plt.savefig('grappa_vs_classical_gradients_T4.png')
+plt.savefig('grappa_vs_classical_gradients_T4.png') 
+print(f'Component RMSE between Grappa and ambre99sbildn: {crmse:.2f} kcal/mol/A')
+print('Saved fig to grappa_vs_classical_gradients_T4.png')
 plt.show()
 # %%

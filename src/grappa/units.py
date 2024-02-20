@@ -134,6 +134,7 @@ class Unit:
         Returns the corresponding openmm unit. This function is not optimized, it imports openmm, to make the openmm dependency optional.
         Thus, convert your units to the corresponding system beforehand and do all of the operations in one unit system.
         """
+        raise NotImplementedError("This function does not work because one cannot easily define own units in openmm.")
         from openmm import unit as openmm_unit
         openmm_kg = openmm_unit.gram * 1e3
         openmm_s = openmm_unit.second
@@ -144,6 +145,8 @@ class Unit:
 
         # we can simply construct the unit from dimensionality and the in_si_units factor, which defines it relatively to the SI unit system.
         this_openmm_unit = (openmm_s**self.time_dimension) * (openmm_kg**self.mass_dimension) * (openmm_ampere**self.current_dimension) * (openmm_kelvin**self.temperature_dimension) * (openmm_mole**self.amount_dimension) * (openmm_candela**self.luminous_intensity_dimension) * self.in_si_units
+
+        assert type(this_openmm_unit) == openmm_unit.Unit, f"Expected openmm unit, but got {type(this_openmm_unit)}"
 
         return this_openmm_unit
 

@@ -8,7 +8,7 @@ import numpy as np
 from grappa.utils import openmm_utils
 from grappa import units
 from grappa import constants
-from grappa.constants import GrappaUnits
+from grappa.constants import get_grappa_units_in_openmm
 import torch
 from dgl import DGLGraph
 import warnings
@@ -138,12 +138,13 @@ class Parameters():
         """
 
         # handle the units:
-        BOND_K_UNIT = GrappaUnits.BOND_K.to_openmm()
-        BOND_EQ_UNIT = GrappaUnits.BOND_EQ.to_openmm()
-        ANGLE_K_UNIT = GrappaUnits.ANGLE_K.to_openmm()
-        ANGLE_EQ_UNIT = GrappaUnits.ANGLE_EQ.to_openmm()
-        TORSION_K_UNIT = GrappaUnits.TORSION_K.to_openmm()
-        TORSION_PHASE_UNIT = GrappaUnits.TORSION_PHASE.to_openmm()
+        grappa_units = get_grappa_units_in_openmm()
+        BOND_K_UNIT = grappa_units['BOND_K']
+        BOND_EQ_UNIT = grappa_units['BOND_EQ']
+        ANGLE_K_UNIT = grappa_units['ANGLE_K']
+        ANGLE_EQ_UNIT = grappa_units['ANGLE_EQ']
+        TORSION_K_UNIT = grappa_units['TORSION_K']
+        TORSION_PHASE_UNIT = grappa_units['TORSION_PHASE']
 
         from openmm import HarmonicAngleForce, HarmonicBondForce, PeriodicTorsionForce
 

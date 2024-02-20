@@ -2,7 +2,7 @@ import numpy as np
 from typing import Union, Dict, List
 from pathlib import Path
 import tempfile
-from grappa.constants import GrappaUnits
+from grappa.constants import get_grappa_units_in_openmm
 from grappa import units
 
 
@@ -119,12 +119,13 @@ def write_to_system(system, parameters:'grappa.data.Parameters')->'openmm.System
     import openmm
     from openmm.unit import Quantity
 
-    BOND_K_UNIT = GrappaUnits.BOND_K.to_openmm()
-    BOND_EQ_UNIT = GrappaUnits.BOND_EQ.to_openmm()
-    ANGLE_K_UNIT = GrappaUnits.ANGLE_K.to_openmm()
-    ANGLE_EQ_UNIT = GrappaUnits.ANGLE_EQ.to_openmm()
-    TORSION_K_UNIT = GrappaUnits.TORSION_K.to_openmm()
-    TORSION_PHASE_UNIT = GrappaUnits.TORSION_PHASE.to_openmm()
+    grappa_units = get_grappa_units_in_openmm()
+    BOND_K_UNIT = grappa_units['BOND_K']
+    BOND_EQ_UNIT = grappa_units['BOND_EQ']
+    ANGLE_K_UNIT = grappa_units['ANGLE_K']
+    ANGLE_EQ_UNIT = grappa_units['ANGLE_EQ']
+    TORSION_K_UNIT = grappa_units['TORSION_K']
+    TORSION_PHASE_UNIT = grappa_units['TORSION_PHASE']
 
 
     bonds = parameters.bonds

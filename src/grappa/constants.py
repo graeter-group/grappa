@@ -17,7 +17,20 @@ class GrappaUnits:
     TORSION_K = ENERGY
     TORSION_PHASE = ANGLE
 
-
+def get_grappa_units_in_openmm():
+    from openmm.unit import angstrom, kilocalorie_per_mole, radian
+    return {
+        'LENGTH': angstrom,
+        'ANGLE': radian,
+        'ENERGY': kilocalorie_per_mole,
+        'BOND_K': kilocalorie_per_mole / (angstrom ** 2),
+        'BOND_EQ': angstrom,
+        'ANGLE_K': kilocalorie_per_mole / (radian ** 2),
+        'ANGLE_EQ': radian,
+        'TORSION_K': kilocalorie_per_mole,
+        'TORSION_PHASE': radian
+    }
+    
 
 
 IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion as used by grappa
