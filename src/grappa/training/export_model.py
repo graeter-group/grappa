@@ -16,7 +16,7 @@ def grappa_export():
     parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0\nIf None, the wandb id is used.', default=None)
     parser.add_argument('--checkpoint_path', '-cp', type=str, help='Absolute path to the lightning checkpoint that should be exported. Has to be specified if id is not given.', default=None)
     parser.add_argument('--id', '-i', type=str, help='The wandb id of the run that should be exported. Searches for the oldest best-model.ckpt file that belongs to that run. If you use this argument, the function has to be executed from the dir that contains the wandb folder. Has to be specified if checkpoint_path is not given.', default=None)
-    parser.add_argument('--release_tag', type=str, default=None, help='If not None, uploads the model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.') # NOTE: implement this
+    parser.add_argument('--release_tag', type=str, default=None, help='If not None, uploads the model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.') #
 
     MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
 

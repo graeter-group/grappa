@@ -2,8 +2,6 @@
 Contains the model wrapper class 'Grappa' that is used for parameter prediction.
 """
 
-from typing import Union, Dict
-from pathlib import Path
 import torch
 
 from grappa import constants

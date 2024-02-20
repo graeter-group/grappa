@@ -3,6 +3,7 @@ import dgl
 from grappa.utils.dgl_utils import grad_available
  
 from grappa.models.internal_coordinates import InternalCoordinates
+import copy
 
 def torsion_energy(k, angle, offset=True):
     """
@@ -100,7 +101,7 @@ class Energy(torch.nn.Module):
         First, torsional angles, bonds angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["energy"+write_suffix] and g.nodes["g"].data["energy_"+term+write_suffix] for each term.
         Also stores the individual contributions of shape  at g.nodes[term].data["energy"+write_suffix] for each term.
         """
-        grad_enabled = torch.is_grad_enabled()
+        grad_enabled = copy.deepcopy(torch.is_grad_enabled())
         if not grad_enabled and self.gradients:
             torch.set_grad_enabled(True)
 

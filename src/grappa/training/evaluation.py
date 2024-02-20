@@ -120,14 +120,14 @@ class FastEvaluator:
         for dsname in self.squared_error_energies.keys():
             metrics[dsname] = {}
 
-            metrics[dsname]['rmse_energies'] = float(torch.sqrt(self.squared_error_energies[dsname].cpu() / self.num_energies[dsname]).item())
-            metrics[dsname]['rmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname]).item()) if self.gradients else None
-            metrics[dsname]['crmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname] / 3.).item()) if self.gradients else None
+            metrics[dsname]['rmse_energies'] = float(torch.sqrt(self.squared_error_energies[dsname].cpu() / self.num_energies[dsname]).detach().clone().item())
+            metrics[dsname]['rmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname]).detach().clone().item()) if self.gradients else None
+            metrics[dsname]['crmse_gradients'] = float(torch.sqrt(self.squared_error_gradients[dsname].cpu() / self.num_gradients[dsname] / 3.).detach().clone().item()) if self.gradients else None
 
 
             if self.log_classical_values:
-                metrics[dsname]['rmse_classical_gradients'] = float(torch.sqrt(self.squared_error_classical_gradients[dsname].cpu() / self.num_gradients[dsname]).item()) if self.gradients else None
-                metrics[dsname]['rmse_classical_energies'] = float(torch.sqrt(self.squared_error_classical_energies[dsname].cpu() / self.num_energies[dsname]).item())
+                metrics[dsname]['rmse_classical_gradients'] = float(torch.sqrt(self.squared_error_classical_gradients[dsname].cpu() / self.num_gradients[dsname]).detach().clone().item()) if self.gradients else None
+                metrics[dsname]['rmse_classical_energies'] = float(torch.sqrt(self.squared_error_classical_energies[dsname].cpu() / self.num_energies[dsname]).detach().clone().item())
 
 
             # filter the metrics if necessary (lazy and inefficient)
@@ -163,20 +163,19 @@ class Evaluator:
     """
     Does the same as the FastEvaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', ref_suffix_classical:str=None):
+    def __init__(self, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
-        self.log_parameters = log_parameters
-        self.log_classical_values = log_classical_values
         self.keep_data = keep_data
         self.device = device
         self.suffix = suffix
         self.suffix_ref = suffix_ref
 
-        self.suffix_classical = suffix_classical
+        self.log_classical_values = calculate_classical
 
-        self.ref_suffix_classical = ref_suffix_classical
+        self.suffix_classical = suffix_classical
+        self.suffix_classical_ref = suffix_classical_ref
 
 
         self.init_storage()
@@ -188,10 +187,6 @@ class Evaluator:
 
         self.reference_energies = {}
         self.reference_gradients = {}
-
-        if self.log_parameters:
-            self.parameters = {}
-            self.reference_parameters = {}
 
         if self.log_classical_values:
             self.classical_energies = {}
@@ -213,10 +208,10 @@ class Evaluator:
             energies = get_energies(g, suffix=self.suffix).detach().flatten().to(self.device)
             energies_ref = get_energies(g, suffix=self.suffix_ref).detach().flatten().to(self.device)
             if self.log_classical_values:
-                energies_classical = get_energies(g, suffix=self.suffix_classical).flatten().to(self.device)
+                energies_classical = get_energies(g, suffix=self.suffix_classical).detach().flatten().to(self.device)
 
-                if self.ref_suffix_classical is not None:
-                    energies_ref_classical = get_energies(g, suffix=self.ref_suffix_classical).flatten().to(self.device)
+                if self.suffix_classical_ref is not None:
+                    energies_ref_classical = get_energies(g, suffix=self.suffix_classical_ref).detach().flatten().to(self.device)
 
             # get the gradients in shape (n_atoms*n_confs, 3)
             gradients = get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
@@ -224,17 +219,8 @@ class Evaluator:
             if self.log_classical_values:
                 gradients_classical = get_gradients(g, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
-                if self.ref_suffix_classical is not None:
-                    gradients_ref_classical = get_gradients(g, suffix=self.ref_suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
-
-            if self.log_parameters:
-                parameters = get_parameters(g, exclude=[('n4_improper', 'k')], suffix=self.suffix)
-                for p in parameters.values():
-                    p = p.detach().flatten().to(self.device)
-
-                ref_parameters = get_parameters(g, suffix=self.suffix_ref, exclude=[('n4_improper', 'k')])
-                for p in ref_parameters.values():
-                    p = p.detach().flatten().to(self.device)
+                if self.suffix_classical_ref is not None:
+                    gradients_ref_classical = get_gradients(g, suffix=self.suffix_classical_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             # store everything:
             self.energies.setdefault(dsname, []).append(energies)
@@ -248,15 +234,9 @@ class Evaluator:
                 self.classical_energies.setdefault(dsname, []).append(energies_classical)
                 self.classical_gradients.setdefault(dsname, []).append(gradients_classical)
                 
-                if self.ref_suffix_classical is not None:
+                if self.suffix_classical_ref is not None:
                     self.ref_classical_energies.setdefault(dsname, []).append(energies_ref_classical)
                     self.ref_classical_gradients.setdefault(dsname, []).append(gradients_ref_classical)
-
-            if self.log_parameters:
-                for ptype, params in parameters.items():
-                    self.parameters.setdefault(dsname, {}).setdefault(ptype, []).append(params)
-                for ptype, params in ref_parameters.items():
-                    self.reference_parameters.setdefault(dsname, {}).setdefault(ptype, []).append(params)
 
 
     def collect(self, bootstrap_seed=None):
@@ -284,13 +264,9 @@ class Evaluator:
             self.all_classical_energies = {}
             self.all_classical_gradients = {}
 
-            if self.ref_suffix_classical is not None:
+            if self.suffix_classical_ref is not None:
                 self.all_ref_classical_energies = {}
                 self.all_ref_classical_gradients = {}
-
-        if self.log_parameters:
-            self.all_parameters = {}
-            self.all_reference_parameters = {}
 
 
         for dsname in self.energies.keys():
@@ -308,14 +284,9 @@ class Evaluator:
                 self.all_classical_energies[dsname] = torch.cat([self.classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
                 self.all_classical_gradients[dsname] = torch.cat([self.classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
-                if self.ref_suffix_classical is not None:
+                if self.suffix_classical_ref is not None:
                     self.all_ref_classical_energies[dsname] = torch.cat([self.ref_classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
                     self.all_ref_classical_gradients[dsname] = torch.cat([self.ref_classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
-
-            if self.log_parameters:
-                for ptype in self.parameters[dsname].keys():
-                    self.all_parameters[dsname][ptype] = torch.cat([self.parameters[dsname][ptype][i] for i in mol_indices[dsname]], dim=0)
-                    self.all_reference_parameters[dsname][ptype] = torch.cat([self.reference_parameters[dsname][ptype][i] for i in mol_indices[dsname]], dim=0)
 
 
     def pool(self, n_bootstrap=0, seed=0):
@@ -370,29 +341,23 @@ class Evaluator:
 
             metrics[dsname]['n_mols'] = self.n_mols[dsname]
 
-            metrics[dsname]['std_energies'] = float(self.all_energies[dsname].std().item())
-            metrics[dsname]['std_gradients'] = float(self.all_gradients[dsname].std().item() * np.sqrt(3))
+            metrics[dsname]['std_energies'] = float(self.all_energies[dsname].std().detach().clone().item())
+            metrics[dsname]['std_gradients'] = float(self.all_gradients[dsname].std().detach().clone().item() * np.sqrt(3))
 
             # calculate the metrics
-            metrics[dsname]['rmse_energies'] = float(root_mean_squared_error(self.all_energies[dsname], self.all_reference_energies[dsname]).item())
-            metrics[dsname]['mae_energies'] = float(mean_absolute_error(self.all_energies[dsname], self.all_reference_energies[dsname]).item())
+            metrics[dsname]['rmse_energies'] = float(root_mean_squared_error(self.all_energies[dsname], self.all_reference_energies[dsname]).detach().clone().item())
+            metrics[dsname]['mae_energies'] = float(mean_absolute_error(self.all_energies[dsname], self.all_reference_energies[dsname]).detach().clone().item())
 
-            metrics[dsname]['rmse_gradients'] = float(invariant_rmse(self.all_gradients[dsname], self.all_reference_gradients[dsname]).item())
-            metrics[dsname]['crmse_gradients'] = float(root_mean_squared_error(self.all_gradients[dsname], self.all_reference_gradients[dsname]).item())
-            metrics[dsname]['mae_gradients'] = float(invariant_mae(self.all_gradients[dsname], self.all_reference_gradients[dsname]).item())
+            metrics[dsname]['rmse_gradients'] = float(invariant_rmse(self.all_gradients[dsname], self.all_reference_gradients[dsname]).detach().clone().item())
+            metrics[dsname]['crmse_gradients'] = float(root_mean_squared_error(self.all_gradients[dsname], self.all_reference_gradients[dsname]).detach().clone().item())
+            metrics[dsname]['mae_gradients'] = float(invariant_mae(self.all_gradients[dsname], self.all_reference_gradients[dsname]).detach().clone().item())
 
             if self.log_classical_values:
-                metrics[dsname]['rmse_classical_energies'] = float(root_mean_squared_error(self.all_energies[dsname], self.all_classical_energies[dsname]).item())
-                metrics[dsname]['rmse_classical_gradients'] = float(invariant_rmse(self.all_gradients[dsname], self.all_classical_gradients[dsname]).item())
-                metrics[dsname]['crmse_classical_gradients'] = float(root_mean_squared_error(self.all_gradients[dsname], self.all_classical_gradients[dsname]).item())
 
-                if self.ref_suffix_classical is not None:
-                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.all_classical_energies[dsname], self.all_ref_classical_energies[dsname]).item())
-                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).item())
-                    metrics[dsname]['crmse_classical_gradients_from_ref'] = float(root_mean_squared_error(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).item())
+                if self.suffix_classical_ref is not None:
+                    metrics[dsname]['rmse_classical_energies_from_ref'] = float(root_mean_squared_error(self.all_classical_energies[dsname], self.all_ref_classical_energies[dsname]).detach().clone().item())
+                    metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).detach().clone().item())
+                    metrics[dsname]['crmse_classical_gradients_from_ref'] = float(root_mean_squared_error(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).detach().clone().item())
 
-            if self.log_parameters:
-                for ptype in self.parameters[dsname].keys():
-                    metrics[dsname][f'rmse_{ptype}'] = float(root_mean_squared_error(self.all_parameters[dsname][ptype], self.all_reference_parameters[dsname][ptype]).item())
 
         return metrics

@@ -2,6 +2,9 @@ import numpy as np
 from typing import Union, Dict, List
 from pathlib import Path
 import tempfile
+from grappa.constants import GrappaUnits
+from grappa import units
+
 
 
 def get_energies(openmm_system, xyz):
@@ -9,7 +12,6 @@ def get_energies(openmm_system, xyz):
     Returns enegries, forces. in units kcal/mol and kcal/mol/angstroem
     Assume that xyz is in angstroem and has shape (num_confs, num_atoms, 3).
     """
-    from openmm import app
     import openmm
     from openmm import unit
 
@@ -79,10 +81,9 @@ def remove_forces_from_system(system, remove:Union[List[str], str]=None, keep=No
 
 def set_partial_charges(system, partial_charges:Union[list, np.ndarray])->'openmm.System':
     """
-    Set partial charges of a system.
+    Set partial charges of a system. The charge must be in units of elementary charge.
     """
     import openmm
-    from openmm import unit
 
     # get the nonbonded force (behaves like a reference not a copy!):
     nonbonded_force = None
@@ -113,27 +114,33 @@ def write_to_system(system, parameters:'grappa.data.Parameters')->'openmm.System
     Writes bonded parameters in an openmm system. For interactions that are already present in the system, overwrite the parameters; otherwise add the interaction to the system. The forces, however, must be already present in the system.
     The ids of the atoms, bonds, etc in the parameters object must be the same as the system indices.
     """
+
+    # handle units:
     import openmm
     from openmm.unit import Quantity
-    from grappa import units as grappa_units
 
-    # MAKE DEEPCOPIES OF THESE ALSO OF PARAMETERS.BONDS and angles etc
-    # THEN REMOVE ADDED BONDS etc after finding them
+    BOND_K_UNIT = GrappaUnits.BOND_K.to_openmm()
+    BOND_EQ_UNIT = GrappaUnits.BOND_EQ.to_openmm()
+    ANGLE_K_UNIT = GrappaUnits.ANGLE_K.to_openmm()
+    ANGLE_EQ_UNIT = GrappaUnits.ANGLE_EQ.to_openmm()
+    TORSION_K_UNIT = GrappaUnits.TORSION_K.to_openmm()
+    TORSION_PHASE_UNIT = GrappaUnits.TORSION_PHASE.to_openmm()
+
 
     bonds = parameters.bonds
     angles = parameters.angles
     impropers = parameters.impropers
     propers = parameters.propers
 
-    
-    bond_ks = Quantity(parameters.bond_k, unit=grappa_units.BOND_K_UNIT)
-    bond_eqs = Quantity(parameters.bond_eq, unit=grappa_units.BOND_EQ_UNIT)
-    angle_ks = Quantity(parameters.angle_k, unit=grappa_units.ANGLE_K_UNIT)
-    angle_eqs = Quantity(parameters.angle_eq, unit=grappa_units.ANGLE_EQ_UNIT)
-    improper_ks = Quantity(parameters.improper_ks, unit=grappa_units.TORSION_K_UNIT)
-    improper_phases = Quantity(parameters.improper_phases, unit=grappa_units.TORSION_PHASE_UNIT)
-    proper_ks = Quantity(parameters.proper_ks, unit=grappa_units.TORSION_K_UNIT)
-    proper_phases = Quantity(parameters.proper_phases, unit=grappa_units.TORSION_PHASE_UNIT)
+
+    bond_ks = Quantity(parameters.bond_k, unit=BOND_K_UNIT)
+    bond_eqs = Quantity(parameters.bond_eq, unit=BOND_EQ_UNIT)
+    angle_ks = Quantity(parameters.angle_k, unit=ANGLE_K_UNIT)
+    angle_eqs = Quantity(parameters.angle_eq, unit=ANGLE_EQ_UNIT)
+    improper_ks = Quantity(parameters.improper_ks, unit=TORSION_K_UNIT)
+    improper_phases = Quantity(parameters.improper_phases, unit=TORSION_PHASE_UNIT)
+    proper_ks = Quantity(parameters.proper_ks, unit=TORSION_K_UNIT)
+    proper_phases = Quantity(parameters.proper_phases, unit=TORSION_PHASE_UNIT)
 
     assert np.all(parameters.proper_ks >= 0)
     assert np.all(parameters.improper_ks >= 0)
@@ -215,14 +222,14 @@ def write_to_system(system, parameters:'grappa.data.Parameters')->'openmm.System
     proper_torsion_force = openmm.PeriodicTorsionForce()
     for i, torsion in enumerate(propers):
         for n in range(len(proper_ks[i])):
-            if proper_ks[i][n].value_in_unit(grappa_units.TORSION_K_UNIT) != 0.:
+            if proper_ks[i][n].value_in_unit(TORSION_K_UNIT) != 0.:
                 proper_torsion_force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], periodicity=n+1, phase=proper_phases[i][n], k=proper_ks[i][n])
 
     # Adding all impropers:
     improper_torsion_force = openmm.PeriodicTorsionForce()
     for i, torsion in enumerate(impropers):
         for n in range(len(improper_ks[i])):
-            if improper_ks[i][n].value_in_unit(grappa_units.TORSION_K_UNIT) != 0.:
+            if improper_ks[i][n].value_in_unit(TORSION_K_UNIT) != 0.:
                 improper_torsion_force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], periodicity=n+1, phase=improper_phases[i][n], k=improper_ks[i][n])
 
     system.addForce(proper_torsion_force)

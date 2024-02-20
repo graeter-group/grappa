@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
 from grappa.utils import openmm_utils
-from grappa import units as U
+from grappa import units
 from grappa import constants
+from grappa.constants import GrappaUnits
 import torch
 from dgl import DGLGraph
 import warnings
@@ -135,8 +136,16 @@ class Parameters():
             propers[i][0] < propers[i][3] for all i
             impropers: the central atom is inferred from connectivity, then it is put at place grappa.constants.IMPROPER_CENTRAL_IDX by invariant permutation.
         """
+
+        # handle the units:
+        BOND_K_UNIT = GrappaUnits.BOND_K.to_openmm()
+        BOND_EQ_UNIT = GrappaUnits.BOND_EQ.to_openmm()
+        ANGLE_K_UNIT = GrappaUnits.ANGLE_K.to_openmm()
+        ANGLE_EQ_UNIT = GrappaUnits.ANGLE_EQ.to_openmm()
+        TORSION_K_UNIT = GrappaUnits.TORSION_K.to_openmm()
+        TORSION_PHASE_UNIT = GrappaUnits.TORSION_PHASE.to_openmm()
+
         from openmm import HarmonicAngleForce, HarmonicBondForce, PeriodicTorsionForce
-        from openmm import System
 
         bonds = []
         bond_k = []
@@ -151,7 +160,6 @@ class Parameters():
         torsion_phases = []
         torsion_periodicities = []
 
-
         # iterate through bond, angle and proper torsion forces in openmm_system, convert to correct unit and append to list:
 
         for force in openmm_system.getForces():
@@ -160,8 +168,8 @@ class Parameters():
                     atom1, atom2, bond_eq_, bond_k_ = force.getBondParameters(i)
                    
                     # units:
-                    bond_k_ = bond_k_.value_in_unit(U.BOND_K_UNIT)
-                    bond_eq_ = bond_eq_.value_in_unit(U.BOND_EQ_UNIT)
+                    bond_k_ = bond_k_.value_in_unit(BOND_K_UNIT)
+                    bond_eq_ = bond_eq_.value_in_unit(BOND_EQ_UNIT)
 
                     # write to list:
                     bond_k.append(bond_k_)
@@ -174,8 +182,8 @@ class Parameters():
                     atom1, atom2, atom3, angle_eq_, angle_k_ = force.getAngleParameters(i)
 
                     # units:
-                    angle_k_ = angle_k_.value_in_unit(U.ANGLE_K_UNIT)
-                    angle_eq_ = angle_eq_.value_in_unit(U.ANGLE_EQ_UNIT)
+                    angle_k_ = angle_k_.value_in_unit(ANGLE_K_UNIT)
+                    angle_eq_ = angle_eq_.value_in_unit(ANGLE_EQ_UNIT)
 
                     # write to list:
                     angle_k.append(angle_k_)
@@ -189,8 +197,8 @@ class Parameters():
                     atom1, atom2, atom3, atom4, periodicity, phase, torsion_k = force.getTorsionParameters(i)
 
                     # units:
-                    torsion_k = torsion_k.value_in_unit(U.TORSION_K_UNIT)
-                    phase = phase.value_in_unit(U.TORSION_PHASE_UNIT)
+                    torsion_k = torsion_k.value_in_unit(TORSION_K_UNIT)
+                    phase = phase.value_in_unit(TORSION_PHASE_UNIT)
                     
                     # write to list:
                     torsion_ks.append(torsion_k)

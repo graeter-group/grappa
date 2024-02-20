@@ -168,15 +168,10 @@ def eval_model(state_dict: dict, config: dict, split_ids:dict, with_train:bool=F
     ###################################
     for dstype, these_datasets in zip(['test', 'train', 'val'], [testsets, trainsets, valsets]):
         for ds in these_datasets:
-            dsname = ds[0][1]
-            print(f'Calculating metrics for {dstype} - {dsname}...')
-
-            # prepare dataset for batching:
-            ds.remove_uncommon_features()
+            
+            # determine the device and batch size:
             confs, atoms = zip(*[(len(entry.nodes['g'].data['energy_ref']), entry.num_nodes('n1')) for entry, _ in ds])
             max_confs, max_atoms = max(confs), max(atoms)
-
-            # determine the device and batch size:
             this_device = device
             if batch_size is None:
                 batch_size = forces_per_batch/max_confs/max_atoms
@@ -187,50 +182,89 @@ def eval_model(state_dict: dict, config: dict, split_ids:dict, with_train:bool=F
             else:
                 batch_size = int(max(1,batch_size))
 
+            # we hard-code this because for some reason this fails on the gpu...
+            if 'pepconf' in ds[0][1]:
+                this_device = 'cpu'
+
+
+            print(f'Calculating metrics for {dstype} - {ds[0][1]} - {this_device}...')
+
+            # prepare dataset for batching:
+            ds.remove_uncommon_features()
+
+
             loader = GraphDataLoader(ds, batch_size=batch_size, 
             conf_strategy="all", drop_last=False)
 
-            model = model.to(this_device)
 
-            evaluator = Evaluator()
+            # evaluate the mode. allow max. one cuda oom errors and try again on cpu with higher batch size.
+            finished = False
+            oom_err_count = 0
 
-            energy_names = list(ds[0][0].nodes['g'].data.keys())
+            while not finished:
+                try:
+                    model = model.to(this_device)
 
-            # create an own evaluator for each classical force field:
-            ff_evaluators = {}
+                    evaluator = Evaluator(device='cpu')
 
-            for ff_name in classical_ff:
-                # determine the name of the ff entry in the graph:
-                keys_found = [k for k in energy_names if ff_name in k]
-                if len(keys_found) > 1:
-                    raise RuntimeError(f'Found more than one key that fits ff: {keys_found}')
-                elif len(keys_found) == 1:
-                    ff_name_in_graph = keys_found[0].replace('energy', '')
+                    energy_names = list(ds[0][0].nodes['g'].data.keys())
 
-                    # initialize the evaluator:
-                    ff_evaluators[ff_name] = Evaluator(suffix=ff_name_in_graph, suffix_ref='_qm')
+                    # create an own evaluator for each classical force field:
+                    ff_evaluators = {}
 
-                # else: the ff is not present in the dataset, so we skip it
+                    for ff_name in classical_ff:
+                        # determine the name of the ff entry in the graph:
+                        keys_found = [k for k in energy_names if ff_name in k]
+                        if len(keys_found) > 1:
+                            raise RuntimeError(f'Found more than one key that fits ff: {keys_found}')
+                        elif len(keys_found) == 1:
+                            ff_name_in_graph = keys_found[0].replace('energy', '')
 
-            # iterate over the batches and calculate the metrics:
-            for i, (g, dsnames) in enumerate(loader):
-                with torch.no_grad():
-                    g = g.to(this_device)
-                    g = model(g)
-                    g = g.cpu()
-                    print(f'batch {i+1}/{len(loader)}', end='\r')
-                    evaluator.step(g, dsnames)
-                    for k in ff_evaluators.keys():
-                        ff_evaluators[k].step(g, dsnames)
+                            # initialize the evaluator:
+                            ff_evaluators[ff_name] = Evaluator(suffix=ff_name_in_graph, suffix_ref='_qm', device='cpu')
 
-            print()
+                        # else: the ff is not present in the dataset, so we skip it
 
-            d = evaluator.pool(n_bootstrap=n_bootstrap)
-            d.keys()
-            # d has the form {dsname:...} but since we separate all datasets, it has only one dsname:
-            assert len(list(d.keys())) == 1
-            dsname = list(d.keys())[0]
-            d = d[dsname]
+                    # iterate over the batches and calculate the metrics:
+                    for i, (g, dsnames) in enumerate(loader):
+                        with torch.no_grad():
+                            g = g.to(this_device)
+                            g = model(g)
+                            g = g.cpu()
+                            print(f'batch {i+1}/{len(loader)}', end='\r')
+                            evaluator.step(g, dsnames)
+                            for k in ff_evaluators.keys():
+                                ff_evaluators[k].step(g, dsnames)
+
+                    del loader
+                    del ds
+                    torch.cuda.empty_cache()
+
+                    print()
+                    with torch.no_grad():
+                        d = evaluator.pool(n_bootstrap=n_bootstrap)
+                    # d has the form {dsname:...} but since we separate all datasets, it has only one dsname:
+                    assert len(list(d.keys())) == 1
+                    dsname = list(d.keys())[0]
+                    d = d[dsname]
+
+                    finished = True
+
+                except torch.cuda.OutOfMemoryError:
+                    if oom_err_count > 0 or this_device == 'cpu':
+                        raise
+
+                    oom_err_count = 1
+                    print(f'OOM error. Try again on cpu with higher batch size.')
+                    this_device = 'cpu'
+                    # we assume that RAM is at least 3 times bigger than VRAM, so we can use approximately a batch size that is 3 times bigger:
+                    batch_size = int(3*batch_size)
+                    print(f'New batch size: {batch_size}')
+                    
+                    # re-initialize the loader:
+                    loader = GraphDataLoader(ds, batch_size=batch_size, conf_strategy="all", drop_last=False)
+
+                    # now it will try again with the new batch size and on cpu, the next time it will raise the error if it fails again
 
             ds_results = {
                 k: d[k] for k in ['n_mols', 'n_confs', 'std_energies', 'std_gradients']
@@ -244,7 +278,8 @@ def eval_model(state_dict: dict, config: dict, split_ids:dict, with_train:bool=F
 
             ff_metrics = {}
             for ff_name in ff_evaluators.keys():
-                d = ff_evaluators[ff_name].pool(n_bootstrap=n_bootstrap)
+                with torch.no_grad():
+                    d = ff_evaluators[ff_name].pool(n_bootstrap=n_bootstrap)
                 d = d[dsname]
                 ff_metrics[ff_name] = {
                     k: d[k] for k in METRIC_KEYS

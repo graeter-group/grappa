@@ -1,3 +1,28 @@
+'''
+Defines things that are constant across the whole package.
+'''
+
+from grappa import units
+from enum import Enum
+
+# enum class describing units used in grappas Parameter class:
+
+
+class GrappaUnits(Enum):
+    LENGTH = units.angstrom
+    ANGLE = units.radians
+    ENERGY = units.kilocalories_per_mol
+
+    BOND_K = ENERGY / (LENGTH ** 2)
+    BOND_EQ = LENGTH
+    ANGLE_K = ENERGY / (ANGLE ** 2)
+    ANGLE_EQ = ANGLE
+    TORSION_K = ENERGY
+    TORSION_PHASE = ANGLE
+
+
+
+
 IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion as used by grappa
 
 MAX_ELEMENT = 53 # cover Iodine
@@ -9,6 +34,8 @@ N_PERIODICITY_IMPROPER = 6
 CHARGE_MODELS = ['am1BCC', 'classical'] # classical: amber99ffsbildn-charges for peptides. The idea is that the tag 'classical' can refer to different charge models for different types of molecules (which grappa can usually distinguish). e.g. one could train for rna on charges from some classical rna forcefield without introducing an additional tag.
 
 BONDED_CONTRIBUTIONS = [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]
+
+
 
 
 # creation: see tests/misc/masses.py
