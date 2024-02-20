@@ -1,42 +1,16 @@
 """
-Units used internally in grappa.
+Defines a Unit class and a Quantity class in analogy to openmm. here, the units are defined relative to SI units. You can define any unit by building it from other units as new_unit = float * unit1 * unit2 * ...
 """
-
-from openmm import unit as openmm_unit
-
-
-DISTANCE_UNIT = openmm_unit.angstrom
-ENERGY_UNIT = openmm_unit.kilocalorie_per_mole
-FORCE_UNIT = ENERGY_UNIT / DISTANCE_UNIT
-ANGLE_UNIT = openmm_unit.radian
-CHARGE_UNIT = openmm_unit.elementary_charge
-MASS_UNIT = openmm_unit.dalton
-
-BOND_K_UNIT = ENERGY_UNIT / (DISTANCE_UNIT ** 2)
-BOND_EQ_UNIT = DISTANCE_UNIT
-ANGLE_K_UNIT = ENERGY_UNIT / (ANGLE_UNIT ** 2)
-ANGLE_EQ_UNIT = ANGLE_UNIT
-TORSION_K_UNIT = ENERGY_UNIT
-TORSION_PHASE_UNIT = ANGLE_UNIT
-
-
-OPENMM_LENGTH_UNIT = openmm_unit.nanometer
-OPENMM_ANGLE_UNIT = openmm_unit.radian
-OPENMM_ENERGY_UNIT = openmm_unit.kilojoule_per_mole
-
-OPENMM_BOND_EQ_UNIT = OPENMM_LENGTH_UNIT
-OPENMM_ANGLE_EQ_UNIT = OPENMM_ANGLE_UNIT
-OPENMM_TORSION_K_UNIT = OPENMM_ENERGY_UNIT
-OPENMM_TORSION_PHASE_UNIT = OPENMM_ANGLE_UNIT
-OPENMM_BOND_K_UNIT = OPENMM_ENERGY_UNIT / (OPENMM_LENGTH_UNIT**2)
-OPENMM_ANGLE_K_UNIT = OPENMM_ENERGY_UNIT / (OPENMM_ANGLE_UNIT**2)
-OPENMM_CHARGE_UNIT = openmm_unit.elementary_charge
 
 
 class Unit:
+    """
+    Defines a Unit class in analogy to openmm. Here, the units are defined relative to SI units. You can define any unit by building it from other units as
+        new_unit = float * unit1 * unit2 * ... E.g. calorie = 4.184 * joule = 4.184 * (kg * m**2 / s**2)
+    """
     def __init__(self, time_dimension=0, length_dimension=0, mass_dimension=0,
                  current_dimension=0, temperature_dimension=0, amount_dimension=0,
-                 luminous_intensity_dimension=0, in_si_units=1, name=''):
+                 luminous_intensity_dimension=0, in_si_units=1., name=''):
         self.time_dimension = time_dimension
         self.length_dimension = length_dimension
         self.mass_dimension = mass_dimension
@@ -150,9 +124,9 @@ class Unit:
         """
         Returns a tuple of dimensionalits of the unit for comparison purposes.
         """
-        return (float(dim) for dim in (self.time_dimension, self.length_dimension, self.mass_dimension,
+        return list([float(dim) for dim in (self.time_dimension, self.length_dimension, self.mass_dimension,
                                         self.current_dimension, self.temperature_dimension, self.amount_dimension,
-                                        self.luminous_intensity_dimension))
+                                        self.luminous_intensity_dimension)])
     
 
     def to_openmm(self):
@@ -190,7 +164,7 @@ kilogram = kg
 meter = m
 mole = mol
 candela = cd
-radians = rad
+radian = rad
 
 # derived SI units
 degree = (3.14159265358979323846/180 * rad).set_name('degree')
@@ -226,11 +200,11 @@ kcal_per_mole = (kilocalorie / AVOGADRO_CONSTANT).set_name('kcal_per_mole')
 kj_per_mole = (kilojoule / AVOGADRO_CONSTANT).set_name('kj/mol_per_mole')
 
 kcal_per_mol = kcal_per_mole
-kilocalories_per_mol = kcal_per_mole
-kilocalories_per_mole = kcal_per_mole
+kilocalorie_per_mol = kcal_per_mole
+kilocalorie_per_mole = kcal_per_mole
 kj_per_mol = kj_per_mole
-kilojoules_per_mol = kj_per_mole
-kilojoules_per_mole = kj_per_mole
+kilojoule_per_mol = kj_per_mole
+kilojoule_per_mole = kj_per_mole
 
 
 nanometer = (1e-9 * m).set_name('Nanometer')
@@ -246,7 +220,7 @@ class Quantity:
     A class to represent a quantity with a unit. Inspired by openmm.unit.Quantity. (We don't need the full functionality of openmm.unit.Quantity and want to be independent of openmm.)
     Key functionality:
     - Arithmetic operations with other quantities and with scalars: Overload of addition, subtraction, multiplication and division operators.
-    - Conversion to other units: quantity.in_unit(some_unit_with_fitting_dimensionality)
+    - Conversion to other units: quantity.value_in_unit(some_unit_with_fitting_dimensionality)
 
     When two quantities are added or subtracted, the dimensionality of the units must be the same. The result will have the same unit as the left-hand side of the input, i.e. 1*m + 20*cm = 1.2*m.
     """
@@ -266,9 +240,9 @@ class Quantity:
         if not isinstance(other, Quantity):
             raise ValueError("Can only add Quantity to Quantity.")
         if self.unit.dimensionality() != other.unit.dimensionality():
-            raise ValueError("Dimensionality of units must match for addition.")
+            raise ValueError(f"Dimensionality of units must match for addition, but is\n{self.unit.dimensionality()}\nand\n{other.unit.dimensionality()}\n[time, length, mass, current, temperature, amount, luminous_intensity]")
         # Convert other's value to self's unit before adding
-        converted_value = other.in_unit(self.unit)
+        converted_value = other.value_in_unit(self.unit)
         return Quantity(self.value + converted_value, self.unit)
 
     def __sub__(self, other):
@@ -278,9 +252,10 @@ class Quantity:
         if not isinstance(other, Quantity):
             raise ValueError("Can only subtract Quantity from Quantity.")
         if self.unit.dimensionality() != other.unit.dimensionality():
-            raise ValueError("Dimensionality of units must match for subtraction.")
+            raise ValueError(f"Dimensionality of units must match for subtraction, but is\n{self.unit.dimensionality()}\nand\n{other.unit.dimensionality()}\n[time, length, mass, current, temperature, amount, luminous_intensity]")
+        
         # Convert other's value to self's unit before subtracting
-        converted_value = other.in_unit(self.unit)
+        converted_value = other.value_in_unit(self.unit)
         return Quantity(self.value - converted_value, self.unit)
 
     def __mul__(self, other):
@@ -327,14 +302,15 @@ class Quantity:
             new_value = other / self.value
         return Quantity(new_value, new_unit)
 
-    def in_unit(self, other_unit):
+    def value_in_unit(self, other_unit):
         """
         Convert the quantity to a given unit. The dimensionality must match.
         """
         if self.unit.dimensionality() != other_unit.dimensionality():
-            raise ValueError("Dimensionality of units must match for conversion.")
-        converted_value = self.value * self.unit.in_si_units / other_unit.in_si_units
-        return Quantity(converted_value, other_unit)
+            raise ValueError(f"Dimensionality of units must match for subtraction, but is\n{self.unit.dimensionality()}\nand\n{other_unit.dimensionality()}\n[time, length, mass, current, temperature, amount, luminous_intensity]")
+        
+        converted_value = self.value * float(self.unit.in_si_units / other_unit.in_si_units)
+        return converted_value
 
     def __repr__(self):
         return f"{self.value} {self.unit}"

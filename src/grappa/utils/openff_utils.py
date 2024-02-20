@@ -4,6 +4,7 @@ import pkgutil
 
 from typing import Tuple, Set, Dict, Union, List
 from pathlib import Path
+import importlib
 
 def get_openff_molecule(mapped_smiles:str):
     """
@@ -109,7 +110,7 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
 
     elif 'gaff' in openff_forcefield:
         # assert that openmmforcefields is installed:
-        assert pkgutil.find_loader("openmmforcefields") is not None, "openmmforcefields must be installed if non-openff force fields are being used."
+        assert importlib.util.find_spec("openmmforcefields") is not None, "openmmforcefields must be installed if non-openff force fields are being used."
 
         from openmmforcefields.generators import SystemGenerator
         top = mol.to_topology().to_openmm()

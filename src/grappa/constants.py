@@ -3,15 +3,12 @@ Defines things that are constant across the whole package.
 '''
 
 from grappa import units
-from enum import Enum
-
-# enum class describing units used in grappas Parameter class:
 
 
-class GrappaUnits(Enum):
+class GrappaUnits:
     LENGTH = units.angstrom
-    ANGLE = units.radians
-    ENERGY = units.kilocalories_per_mol
+    ANGLE = units.radian
+    ENERGY = units.kilocalorie_per_mol
 
     BOND_K = ENERGY / (LENGTH ** 2)
     BOND_EQ = LENGTH

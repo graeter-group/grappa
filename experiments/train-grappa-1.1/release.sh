@@ -19,8 +19,7 @@ gh release create $TAG
 pushd $THISDIR
 
 # # export model to local models directory
-# grappa_export --id $RUN_ID --modelname $MODELNAME
-# grappa_eval --modeltag $MODELNAME --with_train --with_val
+# bash prepare_release.sh
 grappa_release $TAG $MODELNAME
 
 # now upload datasets

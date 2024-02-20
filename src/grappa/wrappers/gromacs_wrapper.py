@@ -1,33 +1,75 @@
-from grappa.constants import MAX_ELEMENT
 from grappa.grappa import Grappa
-from grappa.models.grappa import GrappaModel
-from grappa.utils.openmm_utils import write_to_system
-from grappa.data import Molecule
 import pkgutil
+from typing import Union
+from pathlib import Path
+import argparse
+import importlib
 
-if __name__ == "__main__":
+class GromacsGrappa(Grappa):
+    """
+    Wrapper for the grappa model to be used with gromacs. This class is a subclass of the grappa model and adds a method to write the parameters to a gromacs system.
 
-    class GromacsGrappa(Grappa):
-        """
+    Example Usage:
+    ```python
+    from grappa.wrappers.gromacs_wrapper import GromacsGrappa
+    grappa = GromacsGrappa()
+    grappa.parametrize('path/to/topology.top')
+    ```
+    Then, a file 'path/to/topology_grappa.top' will be created, which contains the grappa-predicted parameters for the topology.
     
-        
-        It is necessary to specify the charge model used to assign the charges, as the bonded parameters depend on that model. Possible values are
-            - 'classical': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
-            - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.0.
-        
+    The topology file needs to contain 
+
+    It is necessary to specify the charge model used to assign the charges, as the bonded parameters depend on that model. Possible values are
+        - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+        - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
+    
+    """
+    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, charge_model:str='classical'):
         """
+        Creates a .top file with the grappa-predicted parameters for the topology
 
-        def __init__(*args, **kwargs):
-            pkgutil.find_spec('kimmdy')
-            super().__init__(*args, **kwargs)
+        Args:
+            top_path (Union[str, Path]): 'path/to/topology.top' The path to the topology file, parametrised by a classical force field (nonbonded parameters and improper torsion idxs are needed)
+            top_outpath (Union[str, Path], optional): Defaults to 'path/to/topology_grappa.top'. The path to the output file.
+            charge_model (str, optional): Defaults to 'classical'. The charge model used to assign the charges. Possible values
+                - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+                - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
+        """
+        assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
+        
+        if not top_outpath:
+            top_outpath = Path(top_path).with_stem(Path(top_path).stem + "_grappa")
 
-        def parametrize_system(self, system, topology, charge_model:str='classical'):
-            """
-            Predicts parameters for the system and writes them to the system.
-            system: openmm.System
-            topology: openmm.Topology
+        # import this only when the function is called to make grappas dependency on kimmdy optional
+        from kimmdy.topology.topology import Topology
+        from kimmdy.parsing import read_top, write_top
 
-            TODO: add option to specify sub-topologies that are to be parametrized. (do not parametrize water, ions, etc.)
-            """
-            # convert openmm_topology (and system due to partial charges and impropers) to a Molecule
-            molecule = None
+        from grappa.utils.kimmdy_utils import KimmdyGrappaParameterizer
+
+        # load the topology
+        top_path = Path(top_path)
+        topology = Topology(read_top(Path(top_path)))
+
+        # call grappa model to write the parameters to the topology
+        topology.parametrizer = KimmdyGrappaParameterizer(grappa_model=self, charge_model=charge_model)
+        topology.needs_parameterization = True
+        
+        ## write top file
+        write_top(topology.to_dict(), top_outpath)
+        
+        return
+    
+
+def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.1'):
+    grappa = GromacsGrappa.from_tag(modeltag)
+    grappa.parametrize(top_path, top_outpath)
+    return
+
+def main():
+    parser = argparse.ArgumentParser(description='Parametrize a topology with grappa')
+    parser.add_argument('--top_path', '-f', type=str, required=True, help='path/to/topology.top: The path to the topology file, parametrised by a classical force field. The topology should not contain water or ions, as grappa does not predict parameters for these.')
+    parser.add_argument('--top_outpath', '-p', type=str, default=None, help='path to the topology file written by grappa that can then be used as usual .top file in gromacs. Defaults to top_path with _grappa appended, i.e. path/to/topology_grappa.top')
+    parser.add_argument('--modeltag', '-t', type=str, default='grappa-1.1', help='tag of the grappa model to use')
+    args = parser.parse_args()
+    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag)
+    

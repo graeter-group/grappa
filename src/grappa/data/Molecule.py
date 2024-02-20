@@ -9,8 +9,8 @@ from grappa.utils import tuple_indices
 import dgl.heterograph
 import torch
 from pathlib import Path
-import pkgutil
 import json
+import importlib
 
 
 
@@ -104,7 +104,7 @@ class Molecule():
             self.add_features(feat_names=['degree'])
 
         if not mapped_smiles is None:
-            assert pkgutil.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed if you pass a mapped_smiles string to this constructor."
+            assert importlib.util.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed if you pass a mapped_smiles string to this constructor."
             from grappa.utils.openff_utils import get_openff_molecule
             openff_mol = get_openff_molecule(mapped_smiles)
             self.add_features(feat_names=['sp_hybridization'], openff_mol=openff_mol)
@@ -194,7 +194,7 @@ class Molecule():
             partial_charges ([type], optional): a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system. Defaults to None.
             ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
             """
-        assert pkgutil.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
+        assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
         import openmm.unit as openmm_unit
         from openmm import System
@@ -270,7 +270,7 @@ class Molecule():
         for feat_name in feat_names:
 
             if feat_name == 'ring_encoding':
-                assert pkgutil.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
+                assert importlib.util.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
                 from grappa.utils import rdkit_utils
                 
                 # translate between atom ids and indices:
@@ -283,7 +283,7 @@ class Molecule():
                 self.additional_features['ring_encoding'] = ring_encoding_
 
             elif feat_name == 'degree':
-                assert pkgutil.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
+                assert importlib.util.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
                 from grappa.utils import rdkit_utils
 
                 # translate between atom ids and indices:
@@ -305,8 +305,8 @@ class Molecule():
 
             elif feat_name == 'sp_hybridization':
                 assert "openff_mol" in kwargs, f"openff_mol must be passed as a keyword argument to use the feature {feat_name}"
-                assert pkgutil.find_spec("openff.toolkit") is not None, f"openff.toolkit must be installed to use the feature {feat_name}"
-                assert pkgutil.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
+                assert importlib.util.find_spec("openff.toolkit") is not None, f"openff.toolkit must be installed to use the feature {feat_name}"
+                assert importlib.util.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
                 from grappa.utils import openff_utils
                 openff_mol = kwargs['openff_mol']
                 sp_hybridization = openff_utils.get_sp_hybridization_encoding(openff_mol)
@@ -317,8 +317,8 @@ class Molecule():
 
             elif feat_name == 'is_aromatic':
                 assert "openff_mol" in kwargs, f"openff_mol must be passed as a keyword argument to use the feature {feat_name}"
-                assert pkgutil.find_spec("openff.toolkit") is not None, f"openff.toolkit must be installed to use the feature {feat_name}"
-                assert pkgutil.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
+                assert importlib.util.find_spec("openff.toolkit") is not None, f"openff.toolkit must be installed to use the feature {feat_name}"
+                assert importlib.util.find_spec("rdkit") is not None, f"rdkit must be installed to use the feature {feat_name}"
                 from grappa.utils import openff_utils
                 openff_mol = kwargs['openff_mol']
                 is_aromatic = openff_utils.get_is_aromatic(openff_mol)
@@ -338,7 +338,7 @@ class Molecule():
         DEPRECATED, USE from_openff_molecule INSTEAD.
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to obtain improper torsions and, if partial_charges is None, to obtain the partial charges.
         """
-        assert pkgutil.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
+        assert importlib.util.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
 
         from grappa.utils import openff_utils
 
@@ -364,7 +364,7 @@ class Molecule():
             partial_charges (Union[np.ndarray, float, List[float]]): the partial charges of the molecule. If None, the partial charges are obtained from the openff molecule.
             impropers (Union[str, List[Tuple[int,int,int,int]]]): the improper torsions of the molecule. If 'smirnoff' or 'amber', the improper torsions are obtained from the openff molecule. If a list of tuples of atom ids, these are used as the improper torsions.
         """
-        assert pkgutil.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
+        assert importlib.util.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed to use this constructor."
 
         atoms = [atom.molecule_atom_index for atom in openff_mol.atoms]
 

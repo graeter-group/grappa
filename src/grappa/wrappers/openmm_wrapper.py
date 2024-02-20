@@ -10,6 +10,13 @@ class OpenmmGrappa(Grappa):
         - 'classical': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
         - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.0.
     """
+    @classmethod
+    def from_tag(cls, tag:str='latest'):
+        """
+        Loads a pretrained model from a tag. Currently, possible tags are 'grappa-1.0', 'grappa-1.1' and 'latest'
+        """
+        return super().from_tag(tag)
+    
     def parametrize_system(self, system, topology, charge_model:str='classical'):
         """
         Predicts parameters for the system and writes them to the system.

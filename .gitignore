@@ -122,3 +122,11 @@ mains/**.out
 !dataset_creation/get_espaloma_split/te_smiles.json
 !dataset_creation/get_espaloma_split/vl_smiles.json
 !docs/figures/*.png
+
+**.gro**
+**.top**
+**.itp**
+**.log**
+**.tpr**
+**.trr**
+**.edr**

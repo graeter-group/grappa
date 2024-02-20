@@ -18,3 +18,4 @@ where=["src"]
 grappa_eval = "grappa.training.eval_model:grappa_eval"
 grappa_export = "grappa.training.export_model:grappa_export"
 grappa_release = "grappa.training.export_model:grappa_release"
+grappa_gmx = "grappa.wrappers.gromacs_wrapper:main"
