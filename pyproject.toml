@@ -15,5 +15,6 @@ where=["src"]
 
 
 [project.scripts]
-grappa_eval = "grappa.training.eval_model:main"
-grappa_export = "grappa.training.export_model:main"
+grappa_eval = "grappa.training.eval_model:grappa_eval"
+grappa_export = "grappa.training.export_model:grappa_export"
+grappa_release = "grappa.training.export_model:grappa_release"

@@ -7,11 +7,10 @@ import json
 from grappa.utils.train_utils import remove_module_prefix
 from grappa.training.resume_trainrun import get_dir_from_id
 import os
+import argparse
 
 
-def main():
-    import argparse
-    from pathlib import Path
+def grappa_export():
 
     parser = argparse.ArgumentParser(description='Export a model such that it can be loaded easily. Stores the model, toghether with a config dict and the dataset partition that is was trained on in a .pth file.\nThen, the model can be loaded via model = grappa.utils.loading_utils.model_from_dict(torch.load(modelpath/modelname.pth)). If executed from within a wandb run directory, the model is expected to be in the files/checkpoints/best-model.ckpt file.')
     parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0\nIf None, the wandb id is used.', default=None)
@@ -34,12 +33,14 @@ def main():
     else:
         checkpoint_path = Path(args.checkpoint_path)
 
-    if modelname is None:
+    if args.modelname is None:
         modelname = checkpoint_path.parent.parent.parent.name.split('-')[-1]
+    else:
+        modelname = args.modelname
 
     model_dict = get_model_dict(checkpoint_path)
 
-    store_model_dict(model_dict, modelname=modelname, release_tag=release_tag, modelpath=MODELPATH)
+    store_model_dict(model_dict, modelname=modelname, release_tag=args.release_tag, modelpath=MODELPATH)
 
 
 
@@ -104,8 +105,6 @@ def store_model_dict(model_dict, modelname, modelpath=Path(__file__).parent.pare
     """
     modelpath = Path(modelpath)
 
-    model_dict = get_model_dict(checkpoint_path)
-
     if not modelpath.exists():
         modelpath.mkdir()
 
@@ -133,5 +132,20 @@ def release_model(release_tag:str, modelname:str, modelpath=Path(__file__).paren
     Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already.
     """
 
+    modelfile = modelpath/f'{modelname}.pth'
+    if not modelfile.exists():
+        modelfile = modelpath/f'{modelname}'
+        if not modelfile.exists():
+            raise FileNotFoundError(f"Model {modelname} not found at {modelfile} or {modelfile}.pth")
+
     os.system(f"gh release upload {release_tag} {modelpath/f'{modelname}.pth'} --clobber")
 
+def grappa_release():
+
+    parser = argparse.ArgumentParser(description='Uploads a model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
+    parser.add_argument('--release_tag', type=str, required=True, help='The tag of the release that the model should be uploaded to.')
+    parser.add_argument('--modelname', type=str, required=True, help='The name of the model that should be uploaded.')
+
+    args = parser.parse_args()
+
+    release_model(args.release_tag, args.modelname)

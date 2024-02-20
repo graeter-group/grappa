@@ -1,29 +1,31 @@
 # creates the grappa 1.1 release and uploads model and datasets to github using github cli.
 
-# get an abspath to this script
-THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
 # throw upon error
 set -e
 
-# cd to /grappa:
-pushd $THISDIR/../..
+# get an abspath to this script
+THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-RUNDIR=$THISDIR/wandb/run-20240214_030455-u4fwuo41
+RUN_ID=leif-seute/grappa-1.1/ohm88pjs
 
-MODELNAME=grappa-1.0-20240209
-
-MODELPATH=$RUNDIR/files/checkpoints/best-model.ckpt
+MODELNAME=grappa-1.1.0
 
 TAG='v.1.1.0'
 
 # create release
 gh release create $TAG
 
-# upload the model:
-pushd 'models'
-python export_model.py $MODELPATH $MODELNAME --release_tag $TAG
-popd
+# cd to this directory:
+pushd $THISDIR
+
+# # export model to local models directory
+# grappa_export --id $RUN_ID --modelname $MODELNAME
+# grappa_eval --modeltag $MODELNAME --with_train --with_val
+grappa_release $TAG $MODELNAME
+
+# now upload datasets
+# cd to the grappa directory
+pushd ../../
 
 # upload files
 DATASETS=(
@@ -43,10 +45,10 @@ DATASETS=(
   tripeptides_amber99sbildn
   dipeptide_rad
   hyp-dop_amber99sbildn
+  AA_bondbreak_rad_amber99sbildn
 )
 
 DATADIR=data/dgl_datasets
-
 
 # for each dir, upload a zipped version of it:
 for dir in "${DATASETS[@]}"; do

@@ -17,7 +17,7 @@ from typing import Tuple, Dict
 import argparse
 
 
-def main():
+def grappa_eval():
 
     parser = argparse.ArgumentParser(description='Test a model on the datasets stored in its config file. Creates dictionaries for results of grappa and classical force fields and a dictionary for the total dataset sizes. If called with a modeltag, these dictionaries are added to (or overwrite the corresponding entries of) the modelname.pth file. Otherwise, they are stored as results.json and ds_size.json in the current directory. If executed from within a wandb run directory, the model is expected to be in the files/checkpoints/best-model.ckpt file.')
     parser.add_argument('--modeltag', '-t', type=str, help='Name of an exported grappa model. Either this or checkpoint_path or id has to be specified.', default=None)
@@ -37,6 +37,8 @@ def main():
 
 
 def main_(modeltag:str=None, checkpoint_path:str=None, id:str=None, with_train:bool=False, with_val:bool=False, n_bootstrap:int=1000, classical_ff:list=['amber14', 'gaff-2.11'], forces_per_batch:float=2e3, batch_size:int=None, device:str=None):
+
+    MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
 
     if sum([modeltag is not None, checkpoint_path is not None, id is not None]) > 1:
         raise ValueError("Either id or checkpoint_path or modeltag or none has to be specified, not all or two.")
@@ -59,10 +61,10 @@ def main_(modeltag:str=None, checkpoint_path:str=None, id:str=None, with_train:b
 
     if modeltag is not None:
         filename = str(url_from_tag(modeltag)).split('/')[-1]
-        file_content = torch.load(filename)
+        file_content = torch.load(str(MODELPATH/filename))
         file_content['results'] = result_dict
         file_content['ds_size'] = ds_size
-        torch.save(file_content, filename)
+        torch.save(file_content, str(MODELPATH/filename))
     else:
         with open('results.json', 'w') as f:
             json.dump(result_dict, f, indent=4)
@@ -260,8 +262,3 @@ def eval_model(state_dict: dict, config: dict, split_ids:dict, with_train:bool=F
         ################################
 
     return result_dict, ds_size
-
-# %%
-if __name__ == '__main__':
-    main_(checkpoint_path='/hits/fast/mbm/seutelf/grappa/experiments/train-grappa-1.1/wandb/run-20240218_143130-ohm88pjs/files/checkpoints/best-model.ckpt', n_bootstrap=10)
-# %%

@@ -186,7 +186,7 @@ Finally, we map the range of real numbers to the physically sensible range of MM
 
 ## Pretrained Models
 
-Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`. For full reproducibility, one can also obtain the model weights toghether with the respective partition of the dataset and the configuration file used for training by `grappa.utils.run_utils.model_dict_from_tag`, which returns a dictionary oth the keys `{'state_dict', 'config', 'split_names'}`.
+Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`. For full reproducibility, one can also obtain the model weights toghether with the respective partition of the dataset and the configuration file used for training by `grappa.utils.run_utils.model_dict_from_tag`, which returns a dictionary with the keys `{'state_dict', 'config', 'split_names', 'results','ds_size'}`.
 
 
 ## Datasets
