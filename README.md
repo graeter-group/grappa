@@ -48,7 +48,7 @@ Grappa uses a novel machine learning architecture that combines a deep attention
 - [Training](#training)
 - [Datasets](#datasets)
 - [Pretrained Models](#pretrained-models)
-- 
+- [Reproducibility](#reproducibility)
 </details>
 
 
@@ -262,3 +262,23 @@ Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_ta
 Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor. An example can be found at `examples/usage/evaluation.py`. Available tags are listed in the documentation of the Dataset class.
 
 To re-create the benchmark experiment, also the splitting into train/val/test sets is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
+
+## Reproducibility
+
+Every Grappa model that is published does not only contain the model weights but also a config dict that describes hyperparameters of the model and training and the split of the dataset into train/val/test molecules. This allows seamless reproducibility in a few lines of code. For example, to reproduce the training of Grappa 1.0, one can simply run:
+
+```{python}
+from grappa.utils.run_utils import model_dict_from_tag
+from grappa.utils.loading_utils import model_dict_from_tag
+from grappa.training.trainrun import do_trainrun
+import json
+
+model_dict = model_dict_from_tag('grappa-1.1.0')
+
+split_ids = model_dict['split_names']
+json.dump(split_ids, open('split_ids.json', 'w'))
+
+config['data_config']['splitpath'] = splitpath
+
+do_trainrun(config=config, project='reproduce-grappa')
+```
