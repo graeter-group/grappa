@@ -117,6 +117,11 @@ pip install -r requirements.txt
 pip install .
 ```
 
+Verify the installation by running
+```
+python tests/test_installation.py
+```
+
 ### OpenMM
 
 Unfortunately, OpenMM is not available on pip and has to be installed via conda. Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
@@ -136,6 +141,11 @@ cd grappa
 conda create -n grappa -y
 conda activate grappa
 ./installation_openmm.sh 12.1
+```
+
+Verify the installation by running
+```
+python tests/test_installation.py
 ```
 
 ### Development
@@ -161,6 +171,10 @@ pip install .
 
 Alternatively, install grappa with openmm by running the installation script provided. This will, however, take a bit longer since it will install openmm via conda.
 
+Verify the installation by running
+```
+python tests/test_installation.py
+```
 
 ## Results
 

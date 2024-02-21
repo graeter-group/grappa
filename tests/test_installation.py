@@ -1,9 +1,12 @@
 #%%
 print("Testing installation...")
+print("Downloading a dataset to grappa/data/dgl_datasets and a pretrained model to grappa/models.")
+
 from grappa.data import Dataset
 from grappa.utils.loading_utils import model_from_tag
 from grappa.models.energy import Energy
 import torch
+import copy
 #%%
 ds = Dataset.from_tag('spice-dipeptide')
 model = model_from_tag('grappa-1.1').eval()
@@ -11,12 +14,12 @@ model = torch.nn.Sequential(model, Energy())
 
 #%%
 
-some_dipeptide = ds[42][0]
 
 devices = ['cpu', 'cuda'] if torch.cuda.is_available() else ['cpu']
 
 for device in devices:
     print(f"Testing on {device}...\n")
+    some_dipeptide = copy.deepcopy(ds[42][0])
     some_dipeptide = some_dipeptide.to(device)
     model.to(device)
     some_dipeptide = model(some_dipeptide)

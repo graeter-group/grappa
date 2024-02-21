@@ -47,15 +47,17 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'gen2-torsion',
         'rna-diverse',
         'rna-trinucleotide',
+        'rna-nucleoside',
         'spice-dipeptide',
         'protein-torsion',
         'pepconf-dlc',
         'spice-dipeptide_amber99sbildn',
         'protein-torsion_amber99sbildn',
         'pepconf-dlc_amber99sbildn',
-        # 'tripeptides_amber99sbildn',
+        'tripeptides_amber99sbildn',
         'dipeptide_rad',
-        # 'hyp-dop_amber99sbildn',
+        'hyp-dop_amber99sbildn',
+        'AA_bondbreak_rad_amber99sbildn',
     ]
 
     dir_path = Path(data_dir) / tag
