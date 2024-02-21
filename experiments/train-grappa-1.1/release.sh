@@ -13,7 +13,7 @@ MODELNAME=grappa-1.1.0
 TAG='v.1.1.0'
 
 # create release
-# gh release create $TAG
+gh release create $TAG
 
 # cd to this directory:
 pushd $THISDIR

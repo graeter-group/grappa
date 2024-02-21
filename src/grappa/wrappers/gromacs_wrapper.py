@@ -68,7 +68,7 @@ def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:s
 def main():
     parser = argparse.ArgumentParser(description='Parametrize a topology with grappa')
     parser.add_argument('--top_path', '-f', type=str, required=True, help='path/to/topology.top: The path to the topology file, parametrised by a classical force field. The topology should not contain water or ions, as grappa does not predict parameters for these.')
-    parser.add_argument('--top_outpath', '-p', type=str, default=None, help='path to the topology file written by grappa that can then be used as usual .top file in gromacs. Defaults to top_path with _grappa appended, i.e. path/to/topology_grappa.top')
+    parser.add_argument('--top_outpath', '-o', type=str, default=None, help='path to the topology file written by grappa that can then be used as usual .top file in gromacs. Defaults to top_path with _grappa appended, i.e. path/to/topology_grappa.top')
     parser.add_argument('--modeltag', '-t', type=str, default='grappa-1.1', help='tag of the grappa model to use')
     parser.add_argument('--charge_model', '-c', type=str, default='classical', help='The charge model used to assign the partial charges. Possible values: classical, am1BCC')
     parser.add_argument('--device', '-d', type=str, default='cpu', help='The device to use for grappas inference forward pass. Defaults to cpu.')

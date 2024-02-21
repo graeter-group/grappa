@@ -5,9 +5,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("run_id", type=str, help="Run id of the run to resume.")
 parser.add_argument("--project", type=str, default="grappa-1.1", help="Project name for wandb.")
 
-args = parser.parse_args()
+if __name__ == "__main__":
 
-def transform_config(config):
-    return config
+    args = parser.parse_args()
 
-resume_trainrun(run_id=args.run_id, project=args.project, new_wandb_run=False, transform_config=transform_config)
+    def transform_config(config):
+        config["lit_model_config"]["time_limit"] += 24
+        return config
+
+    resume_trainrun(run_id=args.run_id, project=args.project, new_wandb_run=False, transform_config=transform_config)
