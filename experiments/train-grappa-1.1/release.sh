@@ -13,14 +13,14 @@ MODELNAME=grappa-1.1.0
 TAG='v.1.1.0'
 
 # create release
-gh release create $TAG
+# gh release create $TAG
 
 # cd to this directory:
 pushd $THISDIR
 
 # # export model to local models directory
 # bash prepare_release.sh
-grappa_release $TAG $MODELNAME
+grappa_release -t $TAG -m $MODELNAME
 
 # now upload datasets
 # cd to the grappa directory

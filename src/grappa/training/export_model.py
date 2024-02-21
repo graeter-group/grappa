@@ -143,8 +143,8 @@ def release_model(release_tag:str, modelname:str, modelpath=Path(__file__).paren
 def grappa_release():
 
     parser = argparse.ArgumentParser(description='Uploads a model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
-    parser.add_argument('--release_tag', type=str, required=True, help='The tag of the release that the model should be uploaded to.')
-    parser.add_argument('--modelname', type=str, required=True, help='The name of the model that should be uploaded.')
+    parser.add_argument('--release_tag', '-t', type=str, required=True, help='The tag of the release that the model should be uploaded to.')
+    parser.add_argument('--modelname', '-m', type=str, required=True, help='The name of the model that should be uploaded.')
 
     args = parser.parse_args()
 

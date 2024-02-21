@@ -196,12 +196,12 @@ def dihedral(
     r23 = x3 - x2 + torch.randn_like(x0) * 1e-5
 
     # compute normal planes
-    n1 = torch.cross(r01, r21)
-    n2 = torch.cross(r21, r23)
+    n1 = torch.cross(r01, r21, dim=-1)
+    n2 = torch.cross(r21, r23, dim=-1)
 
     rkj_normed = r21 / torch.norm(r21, dim=-1, keepdim=True)
 
-    y = torch.sum(torch.mul(torch.cross(n1, n2), rkj_normed), dim=-1)
+    y = torch.sum(torch.mul(torch.cross(n1, n2, dim=-1), rkj_normed), dim=-1)
     x = torch.sum(torch.mul(n1, n2), dim=-1)
 
     # choose quadrant correctly

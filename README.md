@@ -54,7 +54,27 @@ Grappa uses a novel machine learning architecture that combines a deep attention
 
 ## Usage
 
-Currently, Grappa is compatible with GROMACS and OpenMM. To use Grappa in OpenMM, parametrize your system with a classical forcefield, from which the nonbonded parameters are taken, and then pass it to Grappas Openmm wrapper class:
+Grapa predicts bonded parameters, the nonbonded parameters like partial charges are predicted with a traditional force field. The input to Grappa is therefore a representation of the system of interest that already contains information on the nonbonded parameters. Currently, Grappa is compatible with GROMACS and OpenMM.
+
+For complete example scripts, see `examples/usage`.
+
+### GROMACS
+
+In GROMACS, Grappa can be used as command line application that receives the path to a topology file and writes the bonded parameters in there.
+
+```{bash}
+# parametrize the system with a traditional forcefield:
+gmx pdb2gmx -f your_protein.pdb -o your_protein.gro -p topology.top -ignh
+
+# create a new topology file with the bonded parameters from Grappa, specifying the tag of the grappa model:
+grappa_gmx -f topology.top -p topology_grappa.top -t grappa-1.1.0
+
+# continue with ususal gromacs workflow
+```
+
+### OpenMM
+
+To use Grappa in OpenMM, parametrize your system with a traditional forcefield, from which the nonbonded parameters are taken, and then pass it to Grappas Openmm wrapper class:
 
 ```{python}
 from openmm.app import ForceField, Topology
@@ -72,13 +92,34 @@ grappa_ff = OpenmmGrappa.from_tag('grappa-1.1')
 system = grappa_ff.parametrize_system(system, topology, charge_model='classical')
 ```
 
-Note that the current version of the OpenMM wrapper will parametrize the whole topology with Grappa, including the solvent. Grappa is not trained to parametrize water, the solvent should thus be removed from the topology before parametrization. In future versions, there will be the option to parametrize only a subset of the topology.
-
-More: See `examples/usage`.
 
 ## Installation
 
-Unfortunately, openmm is not available on pip and has to be installed via conda. Since openmm, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
+
+### GROMACS
+
+The creation of custom GROMACS topology files is handled by [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed via pip.
+
+For simplicity, we recommend to use Grappa for GROMACS in cpu mode since the inference runtime of Grappa is usually small compared to the simulation runtime, even without a GPU. (Simply create another environment if you also intend to train Grappa.)
+
+```{bash}
+pip install kimmdy
+pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
+pip install dgl -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
+```
+
+To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
+
+```{bash}
+git clone git@github.com:hits-mbm-dev/grappa.git
+cd grappa
+pip install -r requirements.txt
+pip install .
+```
+
+### OpenMM
+
+Unfortunately, OpenMM is not available on pip and has to be installed via conda. Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
 
 | CUDA | Python | Torch | OpenMM |
 |------|--------|-------|---------|
@@ -88,11 +129,38 @@ Unfortunately, openmm is not available on pip and has to be installed via conda.
 | cpu  | 3.10   | 2.2.0 | 8.1.1   |
 
 Simply activate the target conda environment and run the install script for the cuda version of choice, e.g. for 12.1:
+
 ```{bash}
+git clone git@github.com:hits-mbm-dev/grappa.git
+cd grappa
 conda create -n grappa -y
 conda activate grappa
-./installation.sh 12.1
+./installation_openmm.sh 12.1
 ```
+
+### Development
+
+To facilitate the interface to OpenMM and GROMACS, Grappa has an optional dependency on [OpenMM](https://github.com/openmm/openmm) and [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which is used to create custom GROMACS topology files. To train and evaluate Grappa on existing datasets, neither of these packages are needed.
+
+In this case, Grappa only needs a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/), e.g. by
+
+```{bash}
+pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cu117
+pip install  dgl -f https://data.dgl.ai/wheels/cu117/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
+conda install cuda-toolkit -c "nvidia/label/cuda-11.7.1" -y
+```
+
+To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
+
+```{bash}
+git clone git@github.com:hits-mbm-dev/grappa.git
+cd grappa
+pip install -r requirements.txt
+pip install .
+```
+
+Alternatively, install grappa with openmm by running the installation script provided. This will, however, take a bit longer since it will install openmm via conda.
+
 
 ## Results
 

@@ -58,11 +58,11 @@ class GromacsGrappa(Grappa):
         write_top(topology.to_dict(), top_outpath)
         
         return
-    
 
-def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.1'):
-    grappa = GromacsGrappa.from_tag(modeltag)
-    grappa.parametrize(top_path, top_outpath)
+
+def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.1', charge_model:str='classical', device:str='cpu'):
+    grappa = GromacsGrappa.from_tag(modeltag, device=device)
+    grappa.parametrize(top_path, top_outpath, charge_model=charge_model)
     return
 
 def main():
@@ -70,6 +70,8 @@ def main():
     parser.add_argument('--top_path', '-f', type=str, required=True, help='path/to/topology.top: The path to the topology file, parametrised by a classical force field. The topology should not contain water or ions, as grappa does not predict parameters for these.')
     parser.add_argument('--top_outpath', '-p', type=str, default=None, help='path to the topology file written by grappa that can then be used as usual .top file in gromacs. Defaults to top_path with _grappa appended, i.e. path/to/topology_grappa.top')
     parser.add_argument('--modeltag', '-t', type=str, default='grappa-1.1', help='tag of the grappa model to use')
+    parser.add_argument('--charge_model', '-c', type=str, default='classical', help='The charge model used to assign the partial charges. Possible values: classical, am1BCC')
+    parser.add_argument('--device', '-d', type=str, default='cpu', help='The device to use for grappas inference forward pass. Defaults to cpu.')
     args = parser.parse_args()
-    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag)
+    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, charge_model=args.charge_model, device=args.device)
     

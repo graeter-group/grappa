@@ -14,7 +14,7 @@ set -e
 mkdir -p mdrun
 pushd mdrun
 
-# (the 6 1 flags are to select the first forcefield and water model)
+# (the 6 1 flags are to select the traditional forcefield and water model)
 printf "6\n1\n "|gmx pdb2gmx -f ../T4.pdb -o T4.gro -p T4.top -ignh
 
 # Then, run grappa_gmx to create a new topology file using the grappa model
