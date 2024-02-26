@@ -20,7 +20,7 @@ printf "6\n1\n "|gmx pdb2gmx -f ../T4.pdb -o T4.gro -p T4.top -ignh
 # Then, run grappa_gmx to create a new topology file using the grappa model
 # (This is the only line that depends on grappa, the rest is standard gromacs usage.)
 ############################################
-grappa_gmx -f T4.top -p T4_grappa.top -t grappa-1.1.0
+grappa_gmx -f T4.top -o T4_grappa.top -t grappa-1.1.0
 ############################################
 
 

@@ -51,7 +51,7 @@ class GromacsGrappa(Grappa):
         topology = Topology(read_top(Path(top_path)))
 
         # call grappa model to write the parameters to the topology
-        topology.parametrizer = KimmdyGrappaParameterizer(grappa_model=self, charge_model=charge_model)
+        topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, charge_model=charge_model)
         topology.needs_parameterization = True
         
         ## write top file

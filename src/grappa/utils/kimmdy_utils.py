@@ -213,41 +213,22 @@ if importlib.util.find_spec('kimmdy') is not None:
             )
 
         ## improper dihedrals
-        top.improper_dihedrals = {}
+        top.improper_dihedrals.clear()
         for i, idx in enumerate(parameters.impropers):
             tup = tuple(idx)
+            dihedral_dict = {}
             for ii in range(len(parameters.improper_ks[i])):
                 n = str(ii + 1)
-                if not math.isclose(
-                    float(parameters.improper_ks[i][ii]), 0.0, abs_tol=1e-6
-                ):
-                    curr_improper = top.improper_dihedrals.get(tup)
-                    if curr_improper is None:
-                        top.improper_dihedrals[tup] = Dihedral(
-                            *tup,
-                            funct="4",
-                            c0=parameters.improper_phases[i][ii],
-                            c1=parameters.improper_ks[i][ii],
-                            periodicity=n,
-                        )
-                    else:
-                        new_improper = Dihedral(
-                            *tup,
-                            funct="4",
-                            c0=parameters.improper_phases[i][ii],
-                            c1=parameters.improper_ks[i][ii],
-                            periodicity=n,
-                        )
-                        if new_improper.c1 > curr_improper.c1:
-                            top.improper_dihedrals[tup] = new_improper
-                            deserted_improper = curr_improper
-                        else:
-                            deserted_improper = new_improper
-
-                        logging.warning(
-                            f"There are multiple improper dihedrals for {tup} and only one can be chosen, dihedral p{deserted_improper} will be ignored."
-                        )
-
+                dihedral_dict[n] = Dihedral(
+                    *tup,
+                    funct="4",
+                    c0=parameters.improper_phases[i][ii],
+                    c1=parameters.improper_ks[i][ii],
+                    periodicity=n,
+                )
+            top.improper_dihedrals[tup] = MultipleDihedrals(
+                *tup, funct="4", dihedrals=dihedral_dict
+            )
         return
 
 
@@ -255,14 +236,14 @@ if importlib.util.find_spec('kimmdy') is not None:
         '''
         Kimmdy Parameterizer that uses a Grappa model to parameterize a Topology.
 
-        - grappa_model: Grappa model to use for parameterization
+        - grappa_instance: Grappa instance to use for parameterization
         - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
             - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_model: Grappa, charge_model:str='classical', **kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', **kwargs):
             super().__init__(*args, **kwargs)
-            self.grappa_model = grappa_model
+            self.grappa_instance = grappa_instance
             self.charge_model = charge_model
 
         def parameterize_topology(
@@ -272,7 +253,7 @@ if importlib.util.find_spec('kimmdy') is not None:
             ## get atoms, bonds, radicals in required format
             mol = build_molecule(current_topology, charge_model=self.charge_model)
 
-            parameters = self.grappa_model.predict(mol)
+            parameters = self.grappa_instance.predict(mol)
 
             # convert units et cetera
             parameters = convert_parameters(parameters)

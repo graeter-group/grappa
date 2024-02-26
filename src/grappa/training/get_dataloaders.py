@@ -77,6 +77,11 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
     # Get the split ids
     # load if path in config, otherwise generate. For now, always generate it.
     if splitpath is not None:
+        if isinstance(splitpath, str):
+            splitpath = Path(splitpath)
+        if not splitpath.exists() and (splitpath.parent/"files/split.json").exists():
+            splitpath = splitpath.parent/"files/split.json"
+        assert splitpath.exists(), f"Split file {splitpath} does not exist."
         split_ids = json.load(open(splitpath, 'r'))
         print(f'Using split ids from {splitpath}')
         split_ids = dataset.calc_split_ids(partition=partition, seed=seed, existing_split=split_ids)

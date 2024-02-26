@@ -2,7 +2,7 @@
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--project", type=str, default="benchmark-grappa-1.0-exp", help="Project name for wandb.")
+parser.add_argument("--project", type=str, default="benchmark-grappa-1.1-exp", help="Project name for wandb.")
 parser.add_argument("-tb", "--train_batch", type=int, default=-1, help="Batch size for training.")
 parser.add_argument("-vb", "--val_batch", type=int, default=-1, help="Batch size for validation.")
 parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature. Default is False.")

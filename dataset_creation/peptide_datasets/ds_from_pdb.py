@@ -70,7 +70,7 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
             total_confs += len(energy)
 
             # create moldata object from the system (calculate the parameters, nonbonded forces and create reference energies and gradients from that)
-            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=mol_id, pdb=pdbstring, smiles=smiles, sequence=sequence, allow_nan_params=True, charge_model=charge_model)
+            moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, gradient=gradient, energy=energy, mol_id=mol_id, pdb=pdbstring, smiles=smiles, sequence=sequence, allow_nan_params=True, charge_model=charge_model, ff_name=forcefield)
 
             if not with_params:
                 moldata.classical_parameters = Parameters.get_nan_params(moldata.molecule)
