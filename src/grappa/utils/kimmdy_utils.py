@@ -213,7 +213,7 @@ if importlib.util.find_spec('kimmdy') is not None:
             )
 
         ## improper dihedrals
-        top.improper_dihedrals = {}
+        top.improper_dihedrals.clear()
         for i, idx in enumerate(parameters.impropers):
             tup = tuple(idx)
             dihedral_dict = {}
@@ -229,9 +229,6 @@ if importlib.util.find_spec('kimmdy') is not None:
             top.improper_dihedrals[tup] = MultipleDihedrals(
                 *tup, funct="4", dihedrals=dihedral_dict
             )
-
-        breakpoint()
-
         return
 
 
