@@ -236,14 +236,14 @@ if importlib.util.find_spec('kimmdy') is not None:
         '''
         Kimmdy Parameterizer that uses a Grappa model to parameterize a Topology.
 
-        - grappa_model: Grappa model to use for parameterization
+        - grappa_instance: Grappa instance to use for parameterization
         - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
             - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_model: Grappa, charge_model:str='classical', **kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', **kwargs):
             super().__init__(*args, **kwargs)
-            self.grappa_model = grappa_model
+            self.grappa_instance = grappa_instance
             self.charge_model = charge_model
 
         def parameterize_topology(
@@ -253,7 +253,7 @@ if importlib.util.find_spec('kimmdy') is not None:
             ## get atoms, bonds, radicals in required format
             mol = build_molecule(current_topology, charge_model=self.charge_model)
 
-            parameters = self.grappa_model.predict(mol)
+            parameters = self.grappa_instance.predict(mol)
 
             # convert units et cetera
             parameters = convert_parameters(parameters)
