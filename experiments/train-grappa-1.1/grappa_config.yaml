@@ -13,6 +13,7 @@ data_config:
   - spice-dipeptide_amber99sbildn
   - protein-torsion_amber99sbildn
   - pepconf-dlc_amber99sbildn
+  - uncapped_amber99sbildn
   - dipeptide_rad
   - hyp-dop_amber99sbildn
   partition: [0.8, 0.1, 0.1]

@@ -73,6 +73,7 @@ class MolData():
             if not self.gradient is None:
                 assert v.shape == self.gradient.shape, f"Shape of ff_gradient {k} does not match gradient: {v.shape} vs {self.gradient.shape}"
 
+        assert not self.mol_id is None and self.mol_id != 'None', f"mol_id must be provided but is {self.mol_id}, type {type(self.mol_id)}"
 
     def  __post_init__(self):
 
@@ -96,8 +97,10 @@ class MolData():
             # create parameters that are all nan but in the correct shape:
             self.classical_parameters = Parameters.get_nan_params(mol=self.molecule)
 
+        self.mol_id = str(self.mol_id)
+
         self._validate()
-    
+            
 
     @classmethod
     def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None, ff_energy:np.ndarray=None, ff_gradient:np.ndarray=None):
@@ -205,16 +208,16 @@ class MolData():
         array_dict['gradient'] = self.gradient
         array_dict['energy_ref'] = self.energy_ref
         array_dict['gradient_ref'] = self.gradient_ref
-        array_dict['mol_id'] = self.mol_id
+        array_dict['mol_id'] = np.array(str(self.mol_id))
 
         if not self.mapped_smiles is None:
-            array_dict['mapped_smiles'] = self.mapped_smiles
+            array_dict['mapped_smiles'] = np.array(str(self.mapped_smiles))
         if not self.pdb is None:
-            array_dict['pdb'] = self.pdb
+            array_dict['pdb'] = np.array(str(self.pdb))
         if not self.smiles is None:
-            array_dict['smiles'] = self.smiles
+            array_dict['smiles'] = np.array(str(self.smiles))
         if not self.sequence is None:
-            array_dict['sequence'] = self.sequence
+            array_dict['sequence'] = np.array(str(self.sequence))
 
         if not self.improper_energy_ref is None:
             array_dict['improper_energy_ref'] = self.improper_energy_ref
@@ -346,7 +349,7 @@ class MolData():
         """
         Load the molecule from a npz file.
         """
-        array_dict = np.load(path)
+        array_dict = np.load(path, allow_pickle=True)
         return cls.from_dict(array_dict)
 
 

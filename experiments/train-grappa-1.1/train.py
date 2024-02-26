@@ -11,7 +11,7 @@ parser.add_argument("-b", "--bondbreak_radicals", action="store_true", default=F
 parser.add_argument("--shrink_train", type=float, default=None, help="Subsample factor for the training set (default: None).")
 parser.add_argument("--n_periodicity", type=int, default=3, help="Number of periodicity for the torsion features.")
 parser.add_argument("--no_torsion_cutoff", action="store_true", help="Do not use the torsion cutoff.")
-
+parser.add_argument("--pretrain_path", type=str, default=None, help="Path to pretrained model used for initialization.")
 
 
 if __name__ == "__main__":
@@ -67,5 +67,10 @@ if __name__ == "__main__":
         config["trainer_config"]["name"] += "_no_cutoff"
 
 
+    if args.pretrain_path is not None:
+        # set the param loss epochs to 0
+        config['lit_model_config']['param_loss_epochs'] = 0
+        config['trainer_config']['name'] += "_pretrain"
+        
     # train:
-    do_trainrun(config=config, project=args.project)
+    do_trainrun(config=config, project=args.project, pretrain_path=args.pretrain_path)

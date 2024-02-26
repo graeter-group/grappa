@@ -39,7 +39,7 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
 
     manual_sweep_config: function that sets wandb.config parameters specified in the sweep to some manual values defined in the function. This can be used for setting the sweep parameters to some known good starting values. Use eg wandb.config.update({'lr': 0.001}, allow_val_change=True) to set the learning rate to 0.001. In this case, the sweep config must be None.
     pretrain_path: path to a checkpoint that is used to initialize the model weights. This can be a lightning checkpoint or the state dict directly.
-    pretrain_path: path to a checkpoint that is used to initialize the model weights. This can be a lightning checkpoint or the state dict directly.
+    In this case, the splitpath from the pretrained model is used and the start_qm_epoch is set to 0.
     """
 
     # check whether all config args are allowed (they are allowed if they are in the default config)
@@ -83,6 +83,11 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
     # write the current config to the run directory.
     write_yaml(config, Path(experiment_dir)/"grappa_config.yaml")
 
+    if pretrain_path is not None:
+    # set the splitpath to the splitpath of the pretrained model:
+        splitpath = str(Path(pretrain_path).parent.parent/'split.json')
+        config['data_config']['splitpath'] = splitpath
+
     # Get the dataloaders
     tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'], classical_needed=config['lit_model_config']['log_classical'], in_feat_names=config['model_config']['in_feat_name'], save_splits=Path(experiment_dir)/'split.json')
 
@@ -119,6 +124,11 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
                 model.load_state_dict(state_dict)
             except Exception as e2:
                 raise e2 from e
+            
+        # set the start_qm_epoch to 0:
+        config['lit_model_config']['start_qm_epochs'] = 0
+
+
 
     model.train()
 
@@ -137,6 +147,10 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
 
     # Get a pytorch lightning model
     lit_model = LitModel(model=model, tr_loader=tr_loader, vl_loader=val_loader, te_loader=test_loader, **config['lit_model_config'])
+
+    if pretrain_path is not None:
+        # set the warmup step to 0 to begin the training with warmup:
+        lit_model.warmup_step = 0
 
     print(f"\nStarting training run {wandb.run.name}...\nSaving logs to {run_id}...\n")
 

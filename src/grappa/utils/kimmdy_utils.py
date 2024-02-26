@@ -216,37 +216,21 @@ if importlib.util.find_spec('kimmdy') is not None:
         top.improper_dihedrals = {}
         for i, idx in enumerate(parameters.impropers):
             tup = tuple(idx)
+            dihedral_dict = {}
             for ii in range(len(parameters.improper_ks[i])):
                 n = str(ii + 1)
-                if not math.isclose(
-                    float(parameters.improper_ks[i][ii]), 0.0, abs_tol=1e-6
-                ):
-                    curr_improper = top.improper_dihedrals.get(tup)
-                    if curr_improper is None:
-                        top.improper_dihedrals[tup] = Dihedral(
-                            *tup,
-                            funct="4",
-                            c0=parameters.improper_phases[i][ii],
-                            c1=parameters.improper_ks[i][ii],
-                            periodicity=n,
-                        )
-                    else:
-                        new_improper = Dihedral(
-                            *tup,
-                            funct="4",
-                            c0=parameters.improper_phases[i][ii],
-                            c1=parameters.improper_ks[i][ii],
-                            periodicity=n,
-                        )
-                        if new_improper.c1 > curr_improper.c1:
-                            top.improper_dihedrals[tup] = new_improper
-                            deserted_improper = curr_improper
-                        else:
-                            deserted_improper = new_improper
+                dihedral_dict[n] = Dihedral(
+                    *tup,
+                    funct="4",
+                    c0=parameters.improper_phases[i][ii],
+                    c1=parameters.improper_ks[i][ii],
+                    periodicity=n,
+                )
+            top.improper_dihedrals[tup] = MultipleDihedrals(
+                *tup, funct="4", dihedrals=dihedral_dict
+            )
 
-                        logging.warning(
-                            f"There are multiple improper dihedrals for {tup} and only one can be chosen, dihedral p{deserted_improper} will be ignored."
-                        )
+        breakpoint()
 
         return
 
