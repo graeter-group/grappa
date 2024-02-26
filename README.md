@@ -103,7 +103,7 @@ The creation of custom GROMACS topology files is handled by [Kimmdy](https://git
 For simplicity, we recommend to use Grappa for GROMACS in cpu mode since the inference runtime of Grappa is usually small compared to the simulation runtime, even without a GPU. (Simply create another environment if you also intend to train Grappa.)
 
 ```{bash}
-pip install kimmdy
+git clone git@github.com:hits-mbm-dev/kimmdy.git && cd kimmdy && pip install -e .
 pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
 pip install dgl -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
 ```
