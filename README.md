@@ -292,7 +292,8 @@ import json
 model_dict = model_dict_from_tag('grappa-1.1.0')
 
 split_ids = model_dict['split_names']
-json.dump(split_ids, open('split_ids.json', 'w'))
+with open('split_ids.json', 'w') as f:
+    json.dump(split_ids, f)
 
 config['data_config']['splitpath'] = splitpath
 
