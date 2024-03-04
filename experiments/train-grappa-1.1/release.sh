@@ -19,7 +19,7 @@ gh release create $TAG
 pushd $THISDIR
 
 # # export model to local models directory
-# bash prepare_release.sh
+# bash prepare_release.sh # NOTE: UNCOMMENT THIS LINE TO EXPORT THE MODEL (will also evaluate, thus it takes some time)
 grappa_release -t $TAG -m $MODELNAME
 
 # now upload datasets
@@ -45,6 +45,7 @@ DATASETS=(
   dipeptide_rad
   hyp-dop_amber99sbildn
   AA_bondbreak_rad_amber99sbildn
+  uncapped_amber99sbildn
 )
 
 DATADIR=data/dgl_datasets
@@ -68,7 +69,7 @@ for dir in "${DATASETS[@]}"; do
     popd
 
     # Upload the zip file
-    gh release upload $TAG "$parent_dir/$dir_name.zip"
+    gh release upload $TAG "$parent_dir/$dir_name.zip" --clobber
 
     # Remove the zip file
     rm "$parent_dir/$dir_name.zip"
