@@ -25,6 +25,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     from grappa.units import Unit, Quantity
     from grappa import units
     from grappa.constants import GrappaUnits
+    from grappa.utils.loading_utils import model_dict_from_tag
 
     # define the units that gromacs uses. Toghether with grappa.constants.GrappaUnits, this defines how we will convert the output of the ML model.
     # https://manual.gromacs.org/current/reference-manual/definitions.html
@@ -245,23 +246,31 @@ if importlib.util.find_spec('kimmdy') is not None:
             - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', **kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', grappa_tag:str,**kwargs):
             super().__init__(*args, **kwargs)
             self.grappa_instance = grappa_instance
+            self.config = model_dict_from_tag(grappa_tag)['config']['model_config']
             self.charge_model = charge_model
 
         def parameterize_topology(
-            self, current_topology: Topology, focus_nrs: dict[str,set[str]] = {}
+            self, current_topology: Topology, focus_nrs: set = set()
         ) -> Topology:
             
-            if not focus_nrs.get('build') and focus_nrs.get('apply'):
+            if not focus_nrs:
                 print(f"Parameterizing molecule without focus")
-                focus_nrs['build'] = set([atom.nr for atom in current_topology.atoms.values()])
-                focus_nrs['apply'] = focus_nrs['build']
+                build_nrs = set([atom.nr for atom in current_topology.atoms.values()])
+                apply_nrs = build_nrs
+            else:
+                # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
+                field_of_view = self.config['gnn_attention_layers'] + self.config['gnn_convolutions'] + 3
+                # new parameters are applied to atoms within the field of view of the focus_nrs atoms. 
+                # For all of those to have the same field of view as in the whole molecule, another field of view is added for building the molecule
+                apply_nrs = current_topology.get_neighbors(focus_nrs,field_of_view)
+                build_nrs = current_topology.get_neighbors(apply_nrs,field_of_view)
 
 
             ## get atoms, bonds, radicals in required format
-            mol = build_molecule(current_topology, focus_nrs['build'], charge_model=self.charge_model)
+            mol = build_molecule(current_topology, build_nrs, charge_model=self.charge_model)
 
             parameters = self.grappa_instance.predict(mol)
 
@@ -269,5 +278,5 @@ if importlib.util.find_spec('kimmdy') is not None:
             parameters = convert_parameters(parameters)
 
             # apply parameters
-            apply_parameters(current_topology, parameters, focus_nrs['apply'])
+            apply_parameters(current_topology, parameters, build_nrs)
             return current_topology
