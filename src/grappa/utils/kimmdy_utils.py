@@ -262,7 +262,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 apply_nrs = build_nrs
             else:
                 # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
-                field_of_view = self.config['gnn_attention_layers'] + self.config['gnn_convolutions'] + 3
+                field_of_view = self.config['gnn_attentional_layers'] + self.config['gnn_convolutions'] + 3
                 # new parameters are applied to atoms within the field of view of the focus_nrs atoms. 
                 # For all of those to have the same field of view as in the whole molecule, another field of view is added for building the molecule
                 apply_nrs = current_topology.get_neighbors(focus_nrs,field_of_view)
