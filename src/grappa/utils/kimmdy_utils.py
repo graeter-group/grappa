@@ -11,7 +11,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     import numpy as np
 
     import math
-    from typing import Union
+    from typing import Union, Optional
 
     from kimmdy.topology.topology import Topology
     from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
@@ -25,6 +25,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     from grappa.units import Unit, Quantity
     from grappa import units
     from grappa.constants import GrappaUnits
+    from grappa.utils.loading_utils import model_dict_from_tag
 
     # define the units that gromacs uses. Toghether with grappa.constants.GrappaUnits, this defines how we will convert the output of the ML model.
     # https://manual.gromacs.org/current/reference-manual/definitions.html
@@ -47,10 +48,6 @@ if importlib.util.find_spec('kimmdy') is not None:
         ), f"Different length of {name} parameters: { {k:len(v) for k, v in d.items()} }"
 
 
-    # unused?
-    def convert_to_python_types(array: Union[list, np.ndarray]) -> list:
-        return getattr(array, "tolist", lambda: array)()
-
 
     def order_proper(idxs: np.ndarray) -> np.ndarray:
         # center atoms of dihedral must have ascending value
@@ -62,7 +59,7 @@ if importlib.util.find_spec('kimmdy') is not None:
         
 
     # workflow functions
-    def build_molecule(top: Topology, charge_model:str='classical') -> Molecule:
+    def build_molecule(top: Topology, build_nrs:set[str], charge_model:str='classical') -> Molecule:
         '''
         Build a grappa.data.Molecule from a kimmdy.topology.topology.Topology
 
@@ -78,20 +75,19 @@ if importlib.util.find_spec('kimmdy') is not None:
             "partial_charges": [],
             "sigma": [],
             "epsilon": [],
-            "is_radical": [], # this feature is not used anymore in grappa-1.1!
         }
         for atom in top.atoms.values():
-            atom_info["nr"].append(int(atom.nr))
-            atom_info["atomic_number"].append(int(at_map[atom.type].at_num))
-            atom_info["partial_charges"].append(float(atom.charge))
-            atom_info["sigma"].append(float(at_map[atom.type].sigma))
-            atom_info["epsilon"].append(float(at_map[atom.type].epsilon))
-            atom_info["is_radical"].append(int(atom.is_radical))
+            if atom.nr in build_nrs:
+                atom_info["nr"].append(int(atom.nr))
+                atom_info["atomic_number"].append(int(at_map[atom.type].at_num))
+                atom_info["partial_charges"].append(float(atom.charge))
+                atom_info["sigma"].append(float(at_map[atom.type].sigma))
+                atom_info["epsilon"].append(float(at_map[atom.type].epsilon))
 
-        bonds = [(int(bond.ai), int(bond.aj)) for bond in top.bonds.values()]
+        bonds = [(int(bond.ai), int(bond.aj)) for bond in top.bonds.values() if all(atom_nr in build_nrs for atom_nr in [bond.ai,bond.aj])]
         impropers = [
             (int(improper.ai), int(improper.aj), int(improper.ak), int(improper.al))
-            for improper in top.improper_dihedrals.values()
+            for improper in top.improper_dihedrals.values() if all(atom_nr in build_nrs for atom_nr in [improper.ai,improper.aj, improper.ak,improper.al])
         ]
 
         mol = Molecule(
@@ -150,7 +146,7 @@ if importlib.util.find_spec('kimmdy') is not None:
         return parameters
 
 
-    def apply_parameters(top: Topology, parameters: Parameters):
+    def apply_parameters(top: Topology, parameters: Parameters, apply_nrs: set[str]):
         """Applies parameters to topology
 
         parameter structure is defined in grappa.data.Parameters.Parameters
@@ -163,72 +159,81 @@ if importlib.util.find_spec('kimmdy') is not None:
 
         ## bonds
         for i, idx in enumerate(parameters.bonds):
-            tup = tuple(idx)
-            if not top.bonds.get(tup):
-                # raise KeyError(f"bad index {tup} in {list(top.bonds.keys())}")
-                logging.warning(f"Ignored parameters with invalid ids: {tup} for bonds")
-                continue
-            top.bonds[tup] = Bond(
-                *tup,
-                funct="1",
-                c0=parameters.bond_eq[i],
-                c1=parameters.bond_k[i],
-            )
+            if all(atom_nr in apply_nrs for atom_nr in idx):
+                tup = tuple(idx)
+                if not top.bonds.get(tup):
+                    # raise KeyError(f"bad index {tup} in {list(top.bonds.keys())}")
+                    logging.warning(f"Ignored parameters with invalid ids: {tup} for bonds")
+                    continue
+                top.bonds[tup] = Bond(
+                    *tup,
+                    funct="1",
+                    c0=parameters.bond_eq[i],
+                    c1=parameters.bond_k[i],
+                )
 
         ## angles
         for i, idx in enumerate(parameters.angles):
-            tup = tuple(idx)
-            if not top.angles.get(tup):
-                # raise KeyError(f"bad index {tup} in {list(top.angles.keys())}")
-                logging.warning(f"Ignored parameters with invalid ids: {tup} for angles")
-                continue
-            top.angles[tup] = Angle(
-                *tup,
-                funct="1",
-                c0=parameters.angle_eq[i],
-                c1=parameters.angle_k[i],
-            )
+            if all(atom_nr in apply_nrs for atom_nr in idx):
+                tup = tuple(idx)
+                if not top.angles.get(tup):
+                    # raise KeyError(f"bad index {tup} in {list(top.angles.keys())}")
+                    logging.warning(f"Ignored parameters with invalid ids: {tup} for angles")
+                    continue
+                top.angles[tup] = Angle(
+                    *tup,
+                    funct="1",
+                    c0=parameters.angle_eq[i],
+                    c1=parameters.angle_k[i],
+                )
 
         ## proper dihedrals
         for i, idx in enumerate(parameters.propers):
-            tup = tuple(idx)
-            if not top.proper_dihedrals.get(tup):
-                # raise KeyError(f"bad index {tup} in {list(top.proper_dihedrals.keys())}")
-                logging.warning(
-                    f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
+            if all(atom_nr in apply_nrs for atom_nr in idx):
+                tup = tuple(idx)
+                if not top.proper_dihedrals.get(tup):
+                    # raise KeyError(f"bad index {tup} in {list(top.proper_dihedrals.keys())}")
+                    logging.warning(
+                        f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
+                    )
+                    continue
+                dihedral_dict = {}
+                for ii in range(len(parameters.proper_ks[i])):
+                    n = str(ii + 1)
+                    dihedral_dict[n] = Dihedral(
+                        *tup,
+                        funct="9",
+                        c0=parameters.proper_phases[i][ii],
+                        c1=parameters.proper_ks[i][ii],
+                        periodicity=n,
+                    )
+                top.proper_dihedrals[tup] = MultipleDihedrals(
+                    *tup, funct="9", dihedrals=dihedral_dict
                 )
-                continue
-            dihedral_dict = {}
-            for ii in range(len(parameters.proper_ks[i])):
-                n = str(ii + 1)
-                dihedral_dict[n] = Dihedral(
-                    *tup,
-                    funct="9",
-                    c0=parameters.proper_phases[i][ii],
-                    c1=parameters.proper_ks[i][ii],
-                    periodicity=n,
-                )
-            top.proper_dihedrals[tup] = MultipleDihedrals(
-                *tup, funct="9", dihedrals=dihedral_dict
-            )
 
         ## improper dihedrals
-        top.improper_dihedrals.clear()
+        # clear old dihedrals for the apply_nrs region
+        for improper in list(top.improper_dihedrals.values()):
+            tup = tuple([improper.ai,improper.aj,improper.ak,improper.al])
+            if all(atom_nr in apply_nrs for atom_nr in tup):
+                top.improper_dihedrals.pop(tup)
+
         for i, idx in enumerate(parameters.impropers):
-            tup = tuple(idx)
-            dihedral_dict = {}
-            for ii in range(len(parameters.improper_ks[i])):
-                n = str(ii + 1)
-                dihedral_dict[n] = Dihedral(
-                    *tup,
-                    funct="4",
-                    c0=parameters.improper_phases[i][ii],
-                    c1=parameters.improper_ks[i][ii],
-                    periodicity=n,
+            if all(atom_nr in apply_nrs for atom_nr in idx):
+                tup = tuple(idx)
+                dihedral_dict = {}
+                for ii in range(len(parameters.improper_ks[i])):
+                    n = str(ii + 1)
+                    dihedral_dict[n] = Dihedral(
+                        *tup,
+                        funct="4",
+                        c0=parameters.improper_phases[i][ii],
+                        c1=parameters.improper_ks[i][ii],
+                        periodicity=n,
+                    )
+                top.improper_dihedrals[tup] = MultipleDihedrals(
+                    *tup, funct="4", dihedrals=dihedral_dict
                 )
-            top.improper_dihedrals[tup] = MultipleDihedrals(
-                *tup, funct="4", dihedrals=dihedral_dict
-            )
         return
 
 
@@ -241,17 +246,31 @@ if importlib.util.find_spec('kimmdy') is not None:
             - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', **kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', grappa_tag:str,**kwargs):
             super().__init__(*args, **kwargs)
             self.grappa_instance = grappa_instance
+            self.config = model_dict_from_tag(grappa_tag)['config']['model_config']
             self.charge_model = charge_model
 
         def parameterize_topology(
-            self, current_topology: Topology, focus_nr: list[str] = []
+            self, current_topology: Topology, focus_nrs:  Optional[set[str]] = None
         ) -> Topology:
             
+            if not focus_nrs:
+                print(f"Parameterizing molecule without focus")
+                build_nrs = set([atom.nr for atom in current_topology.atoms.values()])
+                apply_nrs = build_nrs
+            else:
+                # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
+                field_of_view = self.config['gnn_attentional_layers'] + self.config['gnn_convolutions'] + 3
+                # new parameters are applied to atoms within the field of view of the focus_nrs atoms. 
+                # For all of those to have the same field of view as in the whole molecule, another field of view is added for building the molecule
+                apply_nrs = current_topology.get_neighbors(focus_nrs,field_of_view)
+                build_nrs = current_topology.get_neighbors(apply_nrs,field_of_view)
+
+
             ## get atoms, bonds, radicals in required format
-            mol = build_molecule(current_topology, charge_model=self.charge_model)
+            mol = build_molecule(current_topology, build_nrs, charge_model=self.charge_model)
 
             parameters = self.grappa_instance.predict(mol)
 
@@ -259,5 +278,5 @@ if importlib.util.find_spec('kimmdy') is not None:
             parameters = convert_parameters(parameters)
 
             # apply parameters
-            apply_parameters(current_topology, parameters)
+            apply_parameters(current_topology, parameters, build_nrs)
             return current_topology
