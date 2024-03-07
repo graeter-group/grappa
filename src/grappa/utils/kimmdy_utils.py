@@ -11,7 +11,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     import numpy as np
 
     import math
-    from typing import Union
+    from typing import Union, Optional
 
     from kimmdy.topology.topology import Topology
     from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
@@ -253,7 +253,7 @@ if importlib.util.find_spec('kimmdy') is not None:
             self.charge_model = charge_model
 
         def parameterize_topology(
-            self, current_topology: Topology, focus_nrs: set = set()
+            self, current_topology: Topology, focus_nrs:  Optional[set[str]] = None
         ) -> Topology:
             
             if not focus_nrs:
