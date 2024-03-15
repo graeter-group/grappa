@@ -189,7 +189,7 @@ The Espaloma dataset covers small molecules, peptides and RNA with states sample
 <p align="center">
     <img src="docs/figures/table_benchmark.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å. The dataset is split into 80% train, 10% validation and 10% test molecules, demonstrating not transferability not only in conformational but also in chemical space.</i></p>
+  <p><i>Energy and force-component RMSE on test molecules in kcal/mol and kcal/mol/Å. The dataset is split into 80% train, 10% validation and 10% test molecules, demonstrating transferability not only in conformational but also in chemical space.</i></p>
   
 
 ### Grappa keeps large Proteins stable

@@ -256,11 +256,11 @@ class Molecule():
     def add_features(self, feat_names:Union[str,List[str]]=['ring_encoding', 'degree', 'mass'], **kwargs):
         """
         Add features to the molecule by keyword. Currently supported:
-            - 'ring_encoding': a one-hot encoding of ring membership obtained from rdkit. feat dim: 7
+            - 'ring_encoding': a one-hot encoding of membership in rings of size 3 to 8. feat dim: 7
             - 'sp_hybridization': a one-hot encoding of the hybridization of the atom. openff_mol must be passed as a keyword argument. feat dim: 6
             - 'is_aromatic': a one-hot encoding indicating whether the atom is aromatic or not. openff_mol must be passed as a keyword argument. feat dim: 1
             - 'is_radical': a one-hot encoding indicating whether the atom is a radical or not. feat dim: 1
-            - 'degree': the degree of the noe in the graph, i.e. the number of neighbors, one hot encoded. feat dim: 6
+            - 'degree': the degree of the node in the graph, i.e. the number of neighbors, one hot encoded. feat dim: 6
             - 'mass': the mass and the nat log of the mass of the atom. openff_mol must be passed as a keyword argument. feat dim: 2
             - 'partial_charge_encoding': 
         """

@@ -188,6 +188,10 @@ for ds_order, name in [(boltzmann, 'boltzmann'), (opts, 'opts'), (scans, 'scans'
             ds, 
             grappa_results['test'][ds]['n_mols'],
             grappa_results['test'][ds]['n_confs'],
+            grappa_results['test'][ds]['std_energies']['mean'],
+            grappa_results['test'][ds]['std_gradients']['mean']/np.sqrt(3), # rescale to component-wise std deviation
+            grappa_results['test'][ds]['std_energies']['std'],
+            grappa_results['test'][ds]['std_gradients']['std']/np.sqrt(3), # rescale to component-wise std deviation
             {
                 ff: [
                     results['rmse_energies']['mean'],
@@ -210,6 +214,6 @@ for ds_order, name in [(boltzmann, 'boltzmann'), (opts, 'opts'), (scans, 'scans'
         json.dump(table, f, indent=4)
     
 with open("readme.txt", 'w') as f:
-    f.write('The json files store lists for every dataset:\n[dsname, n_mols, n_confs, "forcefield": [rmse_energies-mean, rmse_energies-std, crmse_gradients-mean, crmse_gradients-mean]]\nUnits are kcal/mol and Angstrom. crmse is the componentwise-rmse, which is smaller by a factor of sqrt(3) than the actual force-vector rmse.')
+    f.write('The json files store lists for every dataset:\n[dsname, n_mols, n_confs, std_energies, std_forces, std_energies_std, std_forces_std, "forcefield": [rmse_energies-mean, rmse_energies-std, crmse_gradients-mean, crmse_gradients-mean]]\nUnits are kcal/mol and Angstrom. crmse is the componentwise-rmse, which is smaller by a factor of sqrt(3) than the actual force-vector rmse.')
 # %%
 

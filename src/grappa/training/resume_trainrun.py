@@ -116,7 +116,7 @@ def resume_trainrun(run_id:str, project:str, wandb_folder:Union[Path, str]=Path.
 
     experiment_dir = Path(trainer.logger.experiment.dir)
 
-    tr, vl, te = get_dataloaders(**config['data_config'], classical_needed=config['lit_model_config']['log_classical'], in_feat_names=config['model_config']['in_feat_name'], save_splits=run_dir / 'files/split.json')
+    tr, vl, te = get_dataloaders(**config['data_config'], classical_needed=config['lit_model_config']['log_classical'], in_feat_names=config['model_config']['in_feat_name'], save_splits=experiment_dir / 'files/split.json')
 
     lit_model = LitModel(model,tr_loader=tr, vl_loader=vl, te_loader=te, **config['lit_model_config'])
 

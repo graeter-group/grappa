@@ -30,6 +30,7 @@ PROJECT_DIR = Path(__file__).parent.parent.parent/'benchmark'
 
 WANDPATH = PROJECT_DIR/'wandb' 
 
+# MODELNAME = 'last.ckpt'
 MODELNAME = 'best-model.ckpt'
 
 WITH_TRAIN = False

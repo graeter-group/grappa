@@ -61,8 +61,7 @@ def get_grappa_model(checkpoint_path):
             with open(splitpath, 'r') as f:
                 split_names = json.load(f)
         else:
-            print(f"Warning: split_names.json not found in {splitpath}")
-            split_names = None
+            raise RuntimeError(f"split_names.json not found in {splitpath}")
     else:
         with open(splitpath, 'r') as f:
             split_names = json.load(f)

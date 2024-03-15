@@ -19,6 +19,14 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pdf
+*.tar.gz
+*.aux
+*.log
+*.out
+*.fdb_latexmk
+*.fls
+*.synctex.gz
 
 notes.md
 

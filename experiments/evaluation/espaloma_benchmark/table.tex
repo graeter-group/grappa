@@ -14,48 +14,53 @@
 
 \renewcommand{\arraystretch}{1.0} % Adjust the factor as needed for more or less space
 
-\begin{tabular}{l c c l c c c c c}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{tabular}{l c c l c c c c c c}
 
 \hline
 \hline
-Test Dataset & Mols & Confs & & Grappa & Espaloma & Gaff-2.11 & ff14SB/RNA.OL3 \\
+\multirow{2}{*}{Dataset} & \multirow{2}{*}{Test Mols} & \multirow{2}{*}{Confs} & & \multirow{2}{*}{Grappa} & \multirow{2}{*}{Espaloma} & \multirow{2}{*}{Gaff-2.11} & ff14SB, & Mean\\
+& & & & & & & RNA.OL3 & Predictor\\
 \hline
 \multicolumn{8}{l}{\vspace{\widthbetweentype}} \\[-1em]
 \multicolumn{8}{l}{\small{BOLTZMANN SAMPLED}} \\\hline
-\multirow{2}{*}{SPICE-Pubchem} & \multirow{2}{*}{1411} & \multirow{2}{*}{60853} & \textit{Energy} & \textbf{2.3} & \textbf{2.3} & 4.6 & \\
-                                   &                       &                         & \textit{Force}  & \textbf{6.1} & 6.8 & 14.6 & \\
+\multirow{2}{*}{SPICE-Pubchem} & \multirow{2}{*}{1411} & \multirow{2}{*}{60853} & \textit{Energy} & \textbf{2.3} & \textbf{2.3} & 4.6 &  & 18.4\\
+                                   &                       &                         & \textit{Force}  & \textbf{6.1} & 6.8 & 14.6 &  & 23.4\\
 \hline
-\multirow{2}{*}{SPICE-DES-Monomers} & \multirow{2}{*}{39} & \multirow{2}{*}{2032} & \textit{Energy} & \textbf{1.3} & 1.4 & 2.5 & \\
-                                   &                       &                         & \textit{Force}  & \textbf{5.2} & 5.9 & 11.1 & \\
+\multirow{2}{*}{SPICE-DES-Monomers} & \multirow{2}{*}{39} & \multirow{2}{*}{2032} & \textit{Energy} & \textbf{1.3} & 1.4 & 2.5 &  & 8.2\\
+                                   &                       &                         & \textit{Force}  & \textbf{5.2} & 5.9 & 11.1 &  & 21.3\\
 \hline
-\multirow{2}{*}{SPICE-Dipeptide} & \multirow{2}{*}{67} & \multirow{2}{*}{2592} & \textit{Energy} & \textbf{2.3} & 3.1 & 4.5 & 4.6\\
-                                   &                       &                         & \textit{Force}  & \textbf{5.4} & 7.8 & 12.9 & 12.1\\
+\multirow{2}{*}{SPICE-Dipeptide} & \multirow{2}{*}{67} & \multirow{2}{*}{2592} & \textit{Energy} & \textbf{2.3} & 3.1 & 4.5 & 4.6 & 18.7\\
+                                   &                       &                         & \textit{Force}  & \textbf{5.4} & 7.8 & 12.9 & 12.1 & 21.6\\
 \hline
-\multirow{2}{*}{RNA-Diverse} & \multirow{2}{*}{6} & \multirow{2}{*}{357} & \textit{Energy} & \textbf{3.5} & 4.2 & 6.5 & 6.0\\
-                                   &                       &                         & \textit{Force}  & \textbf{3.6} & 4.4 & 16.7 & 19.4\\
+\multirow{2}{*}{RNA-Diverse} & \multirow{2}{*}{6} & \multirow{2}{*}{357} & \textit{Energy} & \textbf{3.3} & 4.2 & 6.5 & 6.0 & 5.4\\
+                                   &                       &                         & \textit{Force}  & \textbf{3.7} & 4.4 & 16.7 & 19.4 & 17.1\\
 \hline
-\multirow{2}{*}{RNA-Trinucleotide} & \multirow{2}{*}{64} & \multirow{2}{*}{35811} & \textit{Energy} & \textbf{3.6} & 3.8 & 5.9 & 6.1\\
-                                   &                       &                         & \textit{Force}  & \textbf{3.5} & 4.3 & 17.1 & 19.7\\
+\multirow{2}{*}{RNA-Trinucleotide} & \multirow{2}{*}{64} & \multirow{2}{*}{35811} & \textit{Energy} & \textbf{3.5} & 3.8 & 5.9 & 6.1 & 5.3\\
+                                   &                       &                         & \textit{Force}  & \textbf{3.6} & 4.3 & 17.1 & 19.7 & 17.7\\
 \hline
 \multicolumn{8}{l}{\vspace{\widthbetweentype}} \\[-1em]
 \multicolumn{8}{l}{\small{TORSION SCAN}} \\\hline
-\multirow{2}{*}{Gen2-Torsion} & \multirow{2}{*}{131} & \multirow{2}{*}{21890} & \textit{Energy} & 1.8 & \textbf{1.6} & 2.7 & \\
-                                   &                       &                         & \textit{Force}  & \textbf{3.9} & 4.7 & 9.4 & \\
+\multirow{2}{*}{Gen2-Torsion} & \multirow{2}{*}{131} & \multirow{2}{*}{21890} & \textit{Energy} & 1.7 & \textbf{1.6} & 2.7 &  & 4.7\\
+                                   &                       &                         & \textit{Force}  & \textbf{4.0} & 4.7 & 9.4 &  & 5.5\\
 \hline
-\multirow{2}{*}{Protein-Torsion} & \multirow{2}{*}{9} & \multirow{2}{*}{6624} & \textit{Energy} & 2.3 & \textbf{1.9} & 3.0 & \\
-                                   &                       &                         & \textit{Force}  & 3.8 & \textbf{3.5} & 9.7 & \\
+\multirow{2}{*}{Protein-Torsion} & \multirow{2}{*}{9} & \multirow{2}{*}{6624} & \textit{Energy} & 2.2 & \textbf{1.9} & 3.0 &  & 3.5\\
+                                   &                       &                         & \textit{Force}  & 3.8 & \textbf{3.5} & 9.7 &  & 5.1\\
 \hline
 \multicolumn{8}{l}{\vspace{\widthbetweentype}} \\[-1em]
 \multicolumn{8}{l}{\small{OPTIMIZATION}} \\\hline
-\multirow{2}{*}{Gen2-Opt} & \multirow{2}{*}{154} & \multirow{2}{*}{40055} & \textit{Energy} & 1.8 & \textbf{1.7} & 3.0 & \\
-                                   &                       &                         & \textit{Force}  & \textbf{3.7} & 4.5 & 9.7 & \\
+\multirow{2}{*}{Gen2-Opt} & \multirow{2}{*}{154} & \multirow{2}{*}{40055} & \textit{Energy} & 1.8 & \textbf{1.7} & 3.0 &  & 3.9\\
+                                   &                       &                         & \textit{Force}  & \textbf{3.8} & 4.5 & 9.7 &  & 5.1\\
 \hline
-\multirow{2}{*}{Pepconf-Opt} & \multirow{2}{*}{55} & \multirow{2}{*}{14884} & \textit{Energy} & 3.2 & \textbf{2.8} & 5.1 & 4.1\\
-                                   &                       &                         & \textit{Force}  & \textbf{3.6} & 4.0 & 10.2 & 10.2\\
+\multirow{2}{*}{Pepconf-Opt} & \multirow{2}{*}{55} & \multirow{2}{*}{14884} & \textit{Energy} & 3.2 & \textbf{2.8} & 5.1 & 4.1 & 6.3\\
+                                   &                       &                         & \textit{Force}  & \textbf{3.6} & 4.0 & 10.2 & 10.2 & 5.3\\
 \hline
 \hline
 \hline
 \end{tabular}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \end{adjustbox}
 

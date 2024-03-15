@@ -114,6 +114,7 @@ class FastEvaluator:
         """
         Returns a dictionary containing dictionaries for each dsname with the averaged metrics. For energies, this average is per conformation, for gradients it is per 3-vector, that is total number of atoms times conformations.
         Also resets the internal storage.
+        The std_gradients entry is the atom-wise standard deviation, not the component-wise standard deviation.
         """
         metrics = {}
 

@@ -44,8 +44,6 @@ with open("espaloma_test_results.json", "w") as f:
 
 espaloma_results = parsed_data
 
-print(json.dumps(espaloma_results, indent=4))
-
 import numpy as np
     
 with open("results.json", "r") as f:
@@ -59,24 +57,20 @@ boltzmann = [
     'spice-pubchem',
     'spice-des-monomers',
     'spice-dipeptide',
-    'spice-dipeptide_amber99sbildn',
     'rna-diverse',
     'rna-trinucleotide',
-    'tripeptides_amber99sbildn',
     'dipeptide_rad',
-    'hyp-dop_amber99sbildn',
+    'hyp-dop'
 ]
 
 opts = [
     'gen2',
     'pepconf-dlc',
-    'pepconf-dlc_amber99sbildn',
 ]
 
 scans = [
     'gen2-torsion',
     'protein-torsion',
-    'protein-torsion_amber99sbildn',
 ]
 
 with open("ds_size.json", "r") as f:
@@ -90,6 +84,10 @@ for ds_order, name in [(boltzmann, 'boltzmann'), (opts, 'opts'), (scans, 'scans'
             ds, 
             grappa_results['test'][ds]['n_mols'],
             grappa_results['test'][ds]['n_confs'],
+            grappa_results['test'][ds]['std_energies']['mean'],
+            grappa_results['test'][ds]['std_gradients']['mean']/np.sqrt(3), # rescale to component-wise std deviation
+            grappa_results['test'][ds]['std_energies']['std'],
+            grappa_results['test'][ds]['std_gradients']['std']/np.sqrt(3), # rescale to component-wise std deviation
             {
                 ff: [
                     results['rmse_energies']['mean'],
@@ -98,7 +96,8 @@ for ds_order, name in [(boltzmann, 'boltzmann'), (opts, 'opts'), (scans, 'scans'
                     results['crmse_gradients']['std']
                 ] if not results is None else [np.nan, np.nan, np.nan, np.nan]
                 for ff, results in [
-                    ('Grappa', grappa_results['test'][ds]['grappa']),
+                    ('Grappa-AM1-BCC', grappa_results['test'][ds]['Grappa-AM1-BCC']) if 'Grappa-AM1-BCC' in grappa_results['test'][ds].keys() else (None, None),
+                    ('Grappa-ff99SB', grappa_results['test'][ds]['Grappa-ff99SB'] if 'Grappa-ff99SB' in grappa_results['test'][ds].keys() else None),
                     ('Espaloma', espaloma_results[ds] if ds in espaloma_results.keys() else None),
                     ('Gaff-2.11', grappa_results['test'][ds]['gaff-2.11'] if 'gaff-2.11' in grappa_results['test'][ds].keys() and not 'amber99' in ds else None),
                     ('RNA.OL3', grappa_results['test'][ds]['amber14'] if ds in ['rna-diverse', 'rna-trinucleotide'] else None),
@@ -112,6 +111,6 @@ for ds_order, name in [(boltzmann, 'boltzmann'), (opts, 'opts'), (scans, 'scans'
         json.dump(table, f, indent=4)
     
 with open("readme.txt", 'w') as f:
-    f.write('The json files store lists for every dataset:\n[dsname, n_mols, n_confs, "forcefield": [rmse_energies-mean, rmse_energies-std, crmse_gradients-mean, crmse_gradients-mean]]\nUnits are kcal/mol and Angstrom. crmse is the componentwise-rmse, which is smaller by a factor of sqrt(3) than the actual force-vector rmse.')
+    f.write('The json files store lists for every dataset:\n[dsname, n_mols, n_confs, std_energies, std_forces, std_energies_std, std_forces_std, "forcefield": [rmse_energies-mean, rmse_energies-std, crmse_gradients-mean, crmse_gradients-mean]]\nUnits are kcal/mol and Angstrom. crmse is the componentwise-rmse, which is smaller by a factor of sqrt(3) than the actual force-vector rmse.')
 # %%
 

@@ -1,6 +1,6 @@
 # script that evaluates a grappa model on the espaloma dataset and creates a table of the results, stored as table.png
 
-RUN_ID=mjolg4yf
+RUN_ID=te5k7pbo
 
 set -e
 

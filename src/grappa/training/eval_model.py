@@ -56,6 +56,8 @@ def main_(modeltag:str=None, checkpoint_path:str=None, id:str=None, with_train:b
             checkpoint_path = Path.cwd() / 'files' / 'checkpoints' / 'best-model.ckpt'
         model_dict = get_model_dict(checkpoint_path)
 
+    assert not model_dict is None, 'No model found'
+    assert not model_dict['split_names'] is None, 'No split names found in the model config'
 
     result_dict, ds_size = eval_model(state_dict=model_dict['state_dict'], config=model_dict['config'], split_ids=model_dict['split_names'], with_train=with_train, with_val=with_val, forces_per_batch=forces_per_batch, batch_size=batch_size, n_bootstrap=n_bootstrap, classical_ff=classical_ff, device=device)
 
