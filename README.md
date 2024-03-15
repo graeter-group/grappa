@@ -284,7 +284,7 @@ from grappa.utils.loading_utils import model_dict_from_tag
 from grappa.training.trainrun import do_trainrun
 import json
 
-model_dict = model_dict_from_tag('grappa-1.1.0')
+model_dict = model_dict_from_tag('grappa-1.1.0') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
 
 split_ids = model_dict['split_names']
 with open('split_ids.json', 'w') as f:
