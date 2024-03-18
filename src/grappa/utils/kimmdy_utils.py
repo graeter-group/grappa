@@ -9,6 +9,7 @@ if importlib.util.find_spec('kimmdy') is not None:
 
     import logging
     import numpy as np
+    import time
 
     import math
     from typing import Union, Optional
@@ -257,7 +258,7 @@ if importlib.util.find_spec('kimmdy') is not None:
         ) -> Topology:
             
             if not focus_nrs:
-                print(f"Parameterizing molecule without focus")
+                #print(f"Parameterizing molecule without focus")
                 build_nrs = set([atom.nr for atom in current_topology.atoms.values()])
                 apply_nrs = build_nrs
             else:
@@ -272,7 +273,10 @@ if importlib.util.find_spec('kimmdy') is not None:
             ## get atoms, bonds, radicals in required format
             mol = build_molecule(current_topology, build_nrs, charge_model=self.charge_model)
 
+            print('predict',time.time())
+
             parameters = self.grappa_instance.predict(mol)
+            print('extract',time.time())
 
             # convert units et cetera
             parameters = convert_parameters(parameters)

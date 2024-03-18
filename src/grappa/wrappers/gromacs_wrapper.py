@@ -4,6 +4,7 @@ from typing import Union
 from pathlib import Path
 import argparse
 import importlib
+import time
 
 class GromacsGrappa(Grappa):
     """
@@ -51,7 +52,7 @@ class GromacsGrappa(Grappa):
         topology = Topology(read_top(Path(top_path)))
 
         # call grappa model to write the parameters to the topology
-        topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, charge_model=charge_model)
+        topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, charge_model=charge_model,grappa_tag='latest')
         topology.needs_parameterization = True
         
         ## write top file
@@ -61,6 +62,7 @@ class GromacsGrappa(Grappa):
 
 
 def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.1', charge_model:str='classical', device:str='cpu'):
+    print('execute',time.time())
     grappa = GromacsGrappa.from_tag(modeltag, device=device)
     grappa.parametrize(top_path, top_outpath, charge_model=charge_model)
     return
