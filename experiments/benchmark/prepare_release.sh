@@ -16,4 +16,4 @@ pushd $THISDIR
 
 # export model to local models directory
 grappa_export --id $RUN_ID --modelname $MODELNAME
-grappa_eval --modeltag $MODELNAME --with_train
+grappa_eval --modeltag $MODELNAME

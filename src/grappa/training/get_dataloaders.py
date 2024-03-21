@@ -6,7 +6,7 @@ import json
 from grappa.utils.dataset_utils import get_path_from_tag
 
 
-def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Union[str, int]=100, train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=1, test_loader_workers:int=1, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], tr_subsampling_factor:float=None, weights:Dict[str,float]={}, balance_factor:float=0., classical_needed:bool=False, in_feat_names:List[str]=None, save_splits:Union[str,Path]=None, val_conf_strategy:int=200)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
+def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Union[str, int]=100, train_batch_size:int=1, val_batch_size:int=1, test_batch_size:int=1, train_loader_workers:int=1, val_loader_workers:int=1, test_loader_workers:int=1, seed:int=0, pin_memory:bool=True, splitpath:Path=None, partition:Union[Tuple[float,float,float], Tuple[Tuple[float,float,float],Dict[str, Tuple[float, float, float]]]]=(0.8,0.1,0.1), pure_train_datasets:List[Union[Path, str, Dataset]]=[], pure_val_datasets:List[Union[Path, str, Dataset]]=[], pure_test_datasets:List[Union[Path, str, Dataset]]=[], tr_subsampling_factor:float=None, weights:Dict[str,float]={}, balance_factor:float=0., classical_needed:bool=False, in_feat_names:List[str]=None, save_splits:Union[str,Path]=None, val_conf_strategy:int=200, split_ids:Dict[str, List[str]]=None, keep_features:bool=False)->Tuple[GraphDataLoader, GraphDataLoader, GraphDataLoader]:
     """
     This function returns train, validation, and test dataloaders for a given list of datasets.
 
@@ -27,6 +27,11 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         weights (Dict[str,str], optional): Dictionary mapping subdataset names to weights. If a subdataset name is not in the dictionary, it is assigned a weight of 1.0. If a subdataset has e.g. weight factor 2, it is sampled 2 times more often per epoch than it would be with factor 1. The total number of molecules sampled per epoch is unaffected, i.e. some molecules will not be sampled at all if the weight of other datasets is > 1. Defaults to {}.
         balance_factor (float, optional): parameter between 0 and 1 that balances sampling of the train datasets: 0 means that the molecules are sampled uniformly across all datasets, 1 means that the probabilities are re-weighted such that the sampled number of molecules per epoch is the same for all datasets. The weights assigned in 'weights' are multiplied by the weight factor obtained from balancing. Defaults to 0.
         save_splits (Union[str,Path], optional): Path to save the split file as json. If None, the split is not saved. Defaults to None.
+        classical_needed (bool, optional): Whether the classical gradient is needed. Defaults to False.
+        in_feat_names (List[str], optional): List of feature names to keep. Defaults to None.
+        val_conf_strategy (int, optional): Strategy for sampling conformations when batching for the validation dataloader. Defaults to 200.
+        split_ids (Dict[str], optional): Dictionary containing the split ids. If provided, the function will use these split ids for the partitioning. Defaults to None.
+
 
     Returns:
         Tuple[DataLoader, DataLoader, DataLoader]: A tuple containing the train, validation, and test dataloaders.
@@ -65,17 +70,24 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
             raise ValueError(f"Unknown type for dataset: {type(ds)}")
 
     # Remove uncommon features for enabling batching
-    dataset.remove_uncommon_features()
-    keep_feats = None
-    if not in_feat_names is None:
-        keep_feats = ['gradient_ref'] + in_feat_names
-        if classical_needed:
-            keep_feats += ['gradient_classical']
+    if not keep_features:
+        dataset.remove_uncommon_features()
+        keep_feats = None
+        if not in_feat_names is None:
+            keep_feats = ['gradient_ref'] + in_feat_names
+            if classical_needed:
+                keep_feats += ['gradient_classical']
 
-        dataset.clean(keep_feats=keep_feats)
+            dataset.clean(keep_feats=keep_feats)
 
     # Get the split ids
-    # load if path in config, otherwise generate. For now, always generate it.
+    #########################################################
+    assert not ((split_ids is not None) and (splitpath is not None)), f"split_ids and splitpath must be both None or both not None, but got split_ids={split_ids} and splitpath={splitpath}"
+    if not split_ids is None:
+        assert isinstance(split_ids, dict), f"split_ids must be a dictionary, but got {type(split_ids)}"
+        assert split_ids.keys() == {'train', 'val', 'test'}, f"split_ids must have keys 'train', 'val', and 'test', but got {split_ids.keys()}"
+
+    # load if path in config, otherwise generate.
     if splitpath is not None:
         if isinstance(splitpath, str):
             splitpath = Path(splitpath)
@@ -84,9 +96,8 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         assert splitpath.exists(), f"Split file {splitpath} does not exist."
         split_ids = json.load(open(splitpath, 'r'))
         print(f'Using split ids from {splitpath}')
-        split_ids = dataset.calc_split_ids(partition=partition, seed=seed, existing_split=split_ids)
-    else:
-        split_ids = dataset.calc_split_ids(partition=partition, seed=seed)
+
+    split_ids = dataset.calc_split_ids(partition=partition, seed=seed, existing_split=split_ids)
 
     if not save_splits is None:
         if isinstance(save_splits, str):
@@ -95,6 +106,8 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         save_splits.parent.mkdir(parents=True, exist_ok=True)
         with open(save_splits, 'w') as f:
             json.dump(split_ids, f, indent=4)
+        print(f'Saved split ids to {save_splits}')
+    #########################################################
 
     tr, vl, te = dataset.split(*split_ids.values())
 

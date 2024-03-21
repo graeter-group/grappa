@@ -60,7 +60,8 @@ boltzmann = [
     'rna-diverse',
     'rna-trinucleotide',
     'dipeptide_rad',
-    'hyp-dop'
+    'hyp-dop',
+    'uncapped'
 ]
 
 opts = [
@@ -101,7 +102,8 @@ for ds_order, name in [(boltzmann, 'boltzmann'), (opts, 'opts'), (scans, 'scans'
                     ('Espaloma', espaloma_results[ds] if ds in espaloma_results.keys() else None),
                     ('Gaff-2.11', grappa_results['test'][ds]['gaff-2.11'] if 'gaff-2.11' in grappa_results['test'][ds].keys() and not 'amber99' in ds else None),
                     ('RNA.OL3', grappa_results['test'][ds]['amber14'] if ds in ['rna-diverse', 'rna-trinucleotide'] else None),
-                    ('ff14SB', grappa_results['test'][ds]['amber14'] if 'amber14' in grappa_results['test'][ds].keys() else None),
+                    # for uncapped, we only have amber99sbildn, the values do not differ significantly. re-calculate this later!
+                    ('ff14SB', grappa_results['test'][ds]['amber14'] if 'amber14' in grappa_results['test'][ds].keys() else None) if ds!='uncapped' else ('ff14SB', grappa_results['test'][ds]['amber99sbildn'])
                 ]
             }
         ] for ds in ds_order

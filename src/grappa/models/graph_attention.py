@@ -417,7 +417,7 @@ class ResidualConvBlock(torch.nn.Module):
 
 class PositionalEncoding(torch.nn.Module):
     """
-    Positional encoding similar to the one used in transformers, adapeted to a given range of values. In Grappa, this is used for partial charges.
+    Positional encoding similar to the one used in transformers, adapted to a given range of values. In Grappa, this is used for partial charges.
     """
     def __init__(self, dimension=32, min_value=-2, max_value=2):
         super().__init__()

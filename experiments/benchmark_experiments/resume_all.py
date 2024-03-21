@@ -5,9 +5,11 @@ import wandb
 
 this_dir = Path(__file__).parent
 
-PROJECT = 'benchmark-grappa-1.0-exp'
+PROJECT = 'benchmark-grappa-1.1-lc'
 
-EXCEPT = []
+EXCEPT = [
+    'fvo42q4k',
+]
 
 # get all run ids:
 api = wandb.Api()
