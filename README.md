@@ -1,18 +1,13 @@
 # Graph Attentional Protein Parametrization (GrAPPa)
 
-_A machine-learned molecular mechanics force field using deep graph attention networks_
+_A machine-learned molecular mechanics force field using a deep graph attentional network_
 
 
 ## Abstract
 
-Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
-While E(3) equivariant neural networks are providing a speedup over computational Quantum Mechanics (QM) at high accuracy, they are several orders of magnitude slower than Molecular Mechanics (MM) force fields.
+Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient. In the recent years, E(3) equivariant neural networks have lifted the tension between computational efficiency and accuracy of force fields, but they are still several orders of magnitude more expensive than classical molecular mechanics (MM) force fields.
 
-Here, we present a state of the art machine-learned MM force field that outperforms traditional and other machine-learned MM force fields [[Takaba et al. 2023](https://arxiv.org/abs/2307.07085v4)] significantly in terms of accuracy, at the same computational cost.
-Our forcefield, Grappa, covers a broad range of chemical space: The same force field can parametrize small molecules, proteins, RNA and even uncommon molecules like radical peptides.
-Besides predicting energies and forces at greatly improved accuracy, Grappa is transferable to large molecules. We show that it keeps Ubiquitin stable and can fold small proteins in molecular dynamics simulations.
-
-Grappa uses a novel machine learning architecture that combines a deep attentional graph neural network and a transformer with symmetry-preserving positional encoding to predict MM parameters from molecular graphs. The current model is trained on QM energies and forces of over 14,000 molecules and over 800,000 states, and is available for use with GROMACS and OpenMM.
+Here, we propose a novel machine learning architecture to learn MM parameters from the molecular graph, employing a graph attentional neural network and a transformer with symmetry-preserving positional encoding. The resulting force field outperforms established and other machine-learned MM force fields in terms of accuracy at the same small computational cost and can be used in existing MM engines like GROMACS and OpenMM. Besides predicting energies and forces of small molecules, peptides, RNA and radicals at state-of-the-art MM accuracy, our force field is transferable to macromolecules. We show that it keeps large proteins stable and can fold small proteins in molecular dynamics simulations.
 
 <details open>
   <summary>Grappa Overview</summary>
@@ -277,6 +272,8 @@ Datasets of dgl graphs representing molecules can be obtained by using the `grap
 
 To re-create the benchmark experiment, also the splitting into train/val/test sets is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
 
+The datasets 'uncapped_amber99sbildn', 'tripeptides_amber99sbildn', 'hyp-dop_amber99sbildn' and 'dipeptide_rad' from [grappa-1.1](https://github.com/hits-mbm-dev/grappa/releases/tag/v.1.1.0) were generated using scripts at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
+
 ## Reproducibility
 
 Every Grappa model that is published does not only contain the model weights but also a config dict that describes hyperparameters of the model and training and the split of the dataset into train/val/test molecules. This allows seamless reproducibility in a few lines of code. For example, to reproduce the training of Grappa 1.0, one can simply run:
@@ -287,10 +284,11 @@ from grappa.utils.loading_utils import model_dict_from_tag
 from grappa.training.trainrun import do_trainrun
 import json
 
-model_dict = model_dict_from_tag('grappa-1.1.0')
+model_dict = model_dict_from_tag('grappa-1.1.0') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
 
 split_ids = model_dict['split_names']
-json.dump(split_ids, open('split_ids.json', 'w'))
+with open('split_ids.json', 'w') as f:
+    json.dump(split_ids, f)
 
 config['data_config']['splitpath'] = splitpath
 
