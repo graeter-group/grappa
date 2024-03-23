@@ -6,9 +6,9 @@ set -e
 # get an abspath to this script
 THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-RUN_ID=leif-seute/grappa-1.1/ohm88pjs
+RUN_ID=leif-seute/grappa-1.1/4te386b4
 
-MODELNAME=grappa-1.1.0
+MODELNAME=grappa-1.1.1
 
 
 # cd to this directory:
@@ -16,4 +16,4 @@ pushd $THISDIR
 
 # export model to local models directory
 grappa_export --id $RUN_ID --modelname $MODELNAME
-grappa_eval --modeltag $MODELNAME --with_train
+grappa_eval --modeltag $MODELNAME

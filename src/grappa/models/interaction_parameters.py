@@ -137,7 +137,7 @@ class WriteParameters(torch.nn.Module):
 
 class RepProjector(torch.nn.Module):
     """
-    This Layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
+    This layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
     The graph must have node features stored at g.nodes["n1"].data["h"] and tuple indices at g.nodes[f"n{dim_tupel}"].data["idxs"].
     """
     def __init__(self, dim_tupel, in_feats, out_feats, improper:bool=False) -> None:
@@ -152,7 +152,7 @@ class RepProjector(torch.nn.Module):
 
     def forward(self, g):
         """
-        This Layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors that contain the features of the nodes involved in the respective interaction given by self.dim_tupel. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
+        This layer takes a graph with node representation (num_nodes, feat_dim), passes it through one MLP layer and returns a stack of dim_tupel node feature vectors that contain the features of the nodes involved in the respective interaction given by self.dim_tupel. The output thus has shape (dim_tupel, num_tuples, out_feat_dim).
         The graph must have node features stored at g.nodes["n1"].data["h"] and tuple indices at g.nodes[f"n{dim_tupel}"].data["idxs"].
         """
         atom_feats = g.nodes["n1"].data["h"]

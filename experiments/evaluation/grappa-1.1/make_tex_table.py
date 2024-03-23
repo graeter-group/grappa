@@ -152,6 +152,7 @@ DSNAMES = {
     'rna-trinucleotide': 'RNA-Trinucleotide',
     'dipeptide_rad': 'Radical-Dipeptide',
     'hyp-dop': 'HYP-DOP-Dipeptide',
+    'uncapped': 'Uncapped-Dipeptide'
 }
 
 

@@ -26,7 +26,7 @@ import argparse
 # RUN_ID = args.run_id
 # DEVICE = args.device
 
-RUN = 'leif-seute/grappa-1.1/ohm88pjs'
+RUN = 'leif-seute/grappa-1.1/4te386b4'
 RUN_ID = RUN.split('/')[-1]
 PROJECT = RUN.split('/')[-2]
 DEVICE = 'cuda'
@@ -100,7 +100,7 @@ trainsets = []
 
 seed = 0 # used in all splits in this project
 
-for tag in data_config["datasets"]:
+for tag in datasets:
     ds = Dataset.from_tag(tag)
     ds_size[tag] = get_ds_size(ds)
 
@@ -242,3 +242,29 @@ with open('results.json', 'w') as f:
     json.dump(result_dict, f, indent=4)
 # %%
     
+# reformat:
+data_dict = json.load(open('results.json'))
+modified_dict = {}
+
+for set_type in data_dict.keys():
+    modified_dict[set_type] = {}
+
+    for dataset in data_dict[set_type].keys():
+        grappa_data = data_dict[set_type][dataset]['grappa']
+
+        other_data = {ff: data_dict[set_type][dataset][ff] for ff in data_dict[set_type][dataset].keys() if 'grappa' not in ff}
+
+        if '_amber99sbildn' in dataset or 'rad' in dataset:
+            dataset = dataset.replace('_amber99sbildn', '')
+            other_data['Grappa-ff99SB'] = grappa_data
+        else:
+            other_data['Grappa-AM1-BCC'] = grappa_data
+
+        if dataset not in modified_dict[set_type]:
+            modified_dict[set_type][dataset] = other_data
+        else:
+            modified_dict[set_type][dataset].update(other_data)
+# %%
+with open('results.json', 'w') as f:
+    json.dump(modified_dict, f, indent=4)
+# %%

@@ -387,10 +387,10 @@ for handle in legend.legendHandles:
 ax.set_xticks([])
 ax.set_yticks([])
 
-ax.set_xlabel(r'$u_1$', fontsize=FONTSIZE)
-ax.set_ylabel(r'$u_2$', fontsize=FONTSIZE)
+ax.set_xlabel(r'$u_1$', fontsize=FONTSIZE-1)
+ax.set_ylabel(r'$u_2$', fontsize=FONTSIZE-1)
 
-ax.set_title('Atom Embeddings', fontsize=FONTSIZE+2)
+ax.set_title('Learned Atom Embeddings', fontsize=FONTSIZE)
 
 # save:
 fig.savefig('pca.png', dpi=300, bbox_inches='tight')

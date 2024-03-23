@@ -5,7 +5,9 @@ from pathlib import Path
 #%%
 # published grappa models have not only the state-dict of the trained model, but also the results of the training, the configuration used for training and the partition of the dataset into train, validation and test molecules.
 
-data_dict = model_dict_from_tag('grappa-1.1.0')['results']
+# data_dict = model_dict_from_tag('grappa-1.1.0')['results']
+
+data_dict = json.load(open('results.json'))
 
 modified_dict = {}
 

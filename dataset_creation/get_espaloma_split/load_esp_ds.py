@@ -3,6 +3,7 @@
 By copying the procedure from espaloma, creates a list of smiles strings for the validation and test set of the espaloma dataset split. These smiles strings are used as ids for splitting the dataset in grappa.
 """
 # from https://github.com/choderalab/refit-espaloma/tree/main, 10.01.2024
+# https://github.com/choderalab/refit-espaloma/blob/main/openff-default/02-train/joint-improper-charge/charge-weight-1.0/train.py
 import espaloma as esp
 import os
 import random

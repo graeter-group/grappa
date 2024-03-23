@@ -6,20 +6,20 @@ set -e
 # get an abspath to this script
 THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-RUN_ID=leif-seute/grappa-1.1/ohm88pjs
+RUN_ID=leif-seute/grappa-1.1/4te386b4
 
-MODELNAME=grappa-1.1.0
+MODELNAME=grappa-1.1.1
 
 TAG='v.1.1.0'
 
 # create release
-gh release create $TAG
+# gh release create $TAG
 
 # cd to this directory:
 pushd $THISDIR
 
 # # export model to local models directory
-# bash prepare_release.sh # NOTE: UNCOMMENT THIS LINE TO EXPORT THE MODEL (will also evaluate, thus it takes some time)
+bash prepare_release.sh # NOTE: UNCOMMENT THIS LINE TO EXPORT THE MODEL (will also evaluate, thus it takes some time)
 grappa_release -t $TAG -m $MODELNAME
 
 # now upload datasets
@@ -28,23 +28,23 @@ pushd ../../
 
 # upload files
 DATASETS=(
-  spice-des-monomers
-  spice-pubchem
-  gen2
-  gen2-torsion
-  rna-diverse
-  rna-trinucleotide
-  rna-nucleoside
-  spice-dipeptide
-  protein-torsion
-  pepconf-dlc
-  spice-dipeptide_amber99sbildn
-  protein-torsion_amber99sbildn
-  pepconf-dlc_amber99sbildn
-  tripeptides_amber99sbildn
-  dipeptide_rad
-  hyp-dop_amber99sbildn
-  AA_bondbreak_rad_amber99sbildn
+  # spice-des-monomers
+  # spice-pubchem
+  # gen2
+  # gen2-torsion
+  # rna-diverse
+  # rna-trinucleotide
+  # rna-nucleoside
+  # spice-dipeptide
+  # protein-torsion
+  # pepconf-dlc
+  # spice-dipeptide_amber99sbildn
+  # protein-torsion_amber99sbildn
+  # pepconf-dlc_amber99sbildn
+  # tripeptides_amber99sbildn
+  # dipeptide_rad
+  # hyp-dop_amber99sbildn
+  # AA_bondbreak_rad_amber99sbildn
   uncapped_amber99sbildn
 )
 
