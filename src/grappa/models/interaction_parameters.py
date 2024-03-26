@@ -35,7 +35,7 @@ class WriteParameters(torch.nn.Module):
 
     The class initializes and holds four separate writers, each configured for their respective parameter type.
     """
-    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4):
+    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False):
         super().__init__()
 
         if param_statistics is not None:
@@ -58,6 +58,7 @@ class WriteParameters(torch.nn.Module):
             symmetriser_feats=bond_symmetriser_width,
             attention_hidden_feats=bond_transformer_width,
             learnable_statistics=learnable_statistics,
+            gate=harmonic_gate,
         )
 
         # Initialize Angle Writer
@@ -75,6 +76,7 @@ class WriteParameters(torch.nn.Module):
             attention_hidden_feats=angle_transformer_width,
             positional_encoding=positional_encoding,
             learnable_statistics=learnable_statistics,
+            gate=harmonic_gate,
         )
 
         # Initialize Proper Torsion Writer
@@ -206,7 +208,7 @@ class WriteBondParameters(torch.nn.Module):
         - a ToPositive layer that transforms the output of the SymmetrisedTransformer to positive values such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."]
     For initialization of the model weights, a param_statistics containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
     """
-    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False):
+    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False, gate:bool=False):
         super().__init__()
 
         # the minimum std dviation to which the output of the symmetriser is scaled
@@ -231,8 +233,9 @@ class WriteBondParameters(torch.nn.Module):
         if attention_hidden_feats is None:
             attention_hidden_feats = 4*between_feats
 
+        self.gate = gate
 
-        self.bond_model = SymmetrisedTransformer(n_feats=between_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=2, permutations=torch.tensor([[0,1],[1,0]], dtype=torch.int32), layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=False)
+        self.bond_model = SymmetrisedTransformer(n_feats=between_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=2+int(gate), permutations=torch.tensor([[0,1],[1,0]], dtype=torch.int32), layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=False)
         
         self.to_k = ToPositive(mean=k_mean, std=k_std, min_=0, learnable_statistics=learnable_statistics)
         self.to_eq = ToPositive(mean=eq_mean, std=eq_std, learnable_statistics=learnable_statistics)
@@ -248,6 +251,14 @@ class WriteBondParameters(torch.nn.Module):
 
         coeffs[:,0] = self.to_eq(coeffs[:,0])
         coeffs[:,1] = self.to_k(coeffs[:,1])
+
+        k = coeffs[:,1]
+
+        if self.gate:
+            # multiply the output by a gate with possible values between 0 and 2, with mean 1 and std 1
+            # (for x to zero, sigmoid behaves like 1/2 + x/4 +O(x^2)), so this will go like 1 + x:
+            k_gate_value = 2 * (torch.sigmoid(2*coeffs[:,2]))
+            k = k * k_gate_value
 
         g.nodes["n2"].data["eq"+self.suffix] = coeffs[:,0]
         g.nodes["n2"].data["k"+self.suffix] = coeffs[:,1]
@@ -289,7 +300,7 @@ class WriteAngleParameters(torch.nn.Module):
     For initialization of the model weights, a param_statistics containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
     """
 
-    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False):
+    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False, gate:bool=False):
         super().__init__()
 
         # the minimum std dviation to which the output of the symmetriser is scaled
@@ -314,8 +325,9 @@ class WriteAngleParameters(torch.nn.Module):
         if attention_hidden_feats is None:
             attention_hidden_feats = 4*between_feats
 
+        self.gate = gate
 
-        self.angle_model = SymmetrisedTransformer(n_feats=rep_projected_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=2, permutations=torch.tensor([[0,1,2],[2,1,0]], dtype=torch.int32), layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=copy.deepcopy(positional_encoding))
+        self.angle_model = SymmetrisedTransformer(n_feats=rep_projected_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=2+int(gate), permutations=torch.tensor([[0,1,2],[2,1,0]], dtype=torch.int32), layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=copy.deepcopy(positional_encoding))
         
 
         self.to_k = ToPositive(mean=k_mean, std=k_std, min_=0, learnable_statistics=learnable_statistics)
@@ -334,6 +346,15 @@ class WriteAngleParameters(torch.nn.Module):
 
         coeffs[:,0] = self.to_eq(coeffs[:,0])
         coeffs[:,1] = self.to_k(coeffs[:,1])
+
+        k = coeffs[:,1]
+
+        if self.gate:
+            # multiply the output by a gate with possible values between 0 and 2, with mean 1 and std 1
+            # (for x to zero, sigmoid behaves like 1/2 + x/4 +O(x^2)), so this will go like 1 + x:
+            k_gate_value = 2 * (torch.sigmoid(2*coeffs[:,2]))
+            k = k * k_gate_value
+
 
         g.nodes["n3"].data["eq"+self.suffix] = coeffs[:,0]
         g.nodes["n3"].data["k"+self.suffix] = coeffs[:,1]

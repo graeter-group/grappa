@@ -99,7 +99,7 @@ model_config:
   self_interaction: true
   wrong_symmetry: false
   torsion_cutoff: 1.e-4
-test_model: false
+test_model: true
 trainer_config:
   early_stopping_criterion: early_stopping_loss
   gradient_clip_val: 10.0

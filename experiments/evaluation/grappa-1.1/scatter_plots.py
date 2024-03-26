@@ -262,9 +262,10 @@ DATASETS = [
     'rna-trinucleotide',
 ]
 DSNAMES = [
-    'Small molecules',
+    'Small Molecules',
     'Dipeptides',
-    'Trinucleotides',
+    # 'Trinucleotides',
+    'RNA',
 ]
 FFS = [
     'gaff-2.11',
@@ -279,15 +280,23 @@ FF_NAMES = [
 ]
 
 figsize = 4.5
+figsize=4
 padding = 2
 
-fig, axes = plt.subplots(2, len(DATASETS), figsize=(len(DATASETS)*figsize, 2*figsize + 2*padding*0.05))
+N=5000
+
+s=2
+
+with_forces=False
+
+fig, axes = plt.subplots(1+int(with_forces), len(DATASETS), figsize=(len(DATASETS)*figsize, (float(with_forces)+1.)*figsize + 2*padding*0.05))
 for i, dataset_name in enumerate(DATASETS):
     # axes[0, i] = scatter_plot(data, dataset_name, force=False, compare_ff=FFS[i], compare_ff_name=FF_NAMES[i], ax=axes[0, i], no_yscale=(i>0), title=DSNAMES[i], n_max=10000, nograppa=True, fix_scale=True, unit=False, no_ticks=(i>0))
     # axes[1, i] = scatter_plot(data, dataset_name, force=True, compare_ff=FFS[i], compare_ff_name=FF_NAMES[i], ax=axes[1, i], no_yscale=(i>0), n_max=10000, legend=False, nograppa=True, fix_scale=True, unit=False, no_ticks=(i>0))
 
-    axes[0, i] = scatter_plot(data, dataset_name, force=False, compare_ff=FFS[i], compare_ff_name=FF_NAMES[i], ax=axes[0, i], no_yscale=(i>0), title=DSNAMES[i], n_max=10000, fix_scale=True)
-    axes[1, i] = scatter_plot(data, dataset_name, force=True, compare_ff=FFS[i], compare_ff_name=FF_NAMES[i], ax=axes[1, i], no_yscale=(i>0), n_max=10000, legend=False, fix_scale=True)
+    scatter_plot(data, dataset_name, force=False, compare_ff=FFS[i], compare_ff_name=FF_NAMES[i], ax=axes[0, i] if with_forces else axes[i], no_yscale=(i>0), title=DSNAMES[i], n_max=N, fix_scale=True, s=s)
+    if with_forces:
+        axes[1, i] = scatter_plot(data, dataset_name, force=True, compare_ff=FFS[i], compare_ff_name=FF_NAMES[i], ax=axes[1, i], no_yscale=(i>0), n_max=N, legend=False, fix_scale=True, s=s)
 
 # tight layout
 fig.tight_layout(h_pad=padding)
@@ -354,6 +363,7 @@ fig, ax = plt.subplots(figsize=(5,5))
 
 FONT = 'Arial'
 FONTSIZE = 21
+
 plt.rc('font', family=FONT)
 plt.rc('xtick', labelsize=FONTSIZE)
 plt.rc('ytick', labelsize=FONTSIZE)
@@ -376,11 +386,9 @@ legend = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=2, fram
 
 for handle in legend.legendHandles:
     handle.set_sizes([80])  # Set to desired size
-    # set alpha:
-    handle.set_alpha(1)
-    # reduce distance of legend markers:
-    # handle.set_y(-5)
-
+    handle.set_alpha(1)  # Set alpha
+    # handle.set_y(-5)  # Example of how to adjust positioning, commented out
+name = 'pca.png'
 
 
 # turn off ticks entirely:
@@ -393,7 +401,89 @@ ax.set_ylabel(r'$u_2$', fontsize=FONTSIZE-1)
 ax.set_title('Learned Atom Embeddings', fontsize=FONTSIZE)
 
 # save:
-fig.savefig('pca.png', dpi=300, bbox_inches='tight')
+
+fig.savefig(name, dpi=300, bbox_inches='tight')
 
 ax
+
+# %%
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Your plotting setup
+fig, ax = plt.subplots(figsize=(5, 5))
+FONT = 'Arial'
+FONTSIZE = 21
+plt.rc('font', family=FONT)
+plt.rc('xtick', labelsize=FONTSIZE)
+plt.rc('ytick', labelsize=FONTSIZE)
+plt.rc('axes', labelsize=FONTSIZE)
+plt.rc('legend', fontsize=FONTSIZE + 2)
+
+# Define elements and color map
+ELEMS = {1: 'H', 6: 'C', 7: 'N', 8: 'O', 9: 'F', 15: 'P', 16: 'S', 17: 'Cl', 35: 'Br'}
+
+from cycler import cycler
+import matplotlib as mpl
+
+# Get default color cycle from matplotlib
+default_colors = mpl.rcParams['axes.prop_cycle'].by_key()['color']
+
+# Assign default colors to elements
+color_map = {ELEMS[key]: default_colors[i % len(default_colors)] for i, key in enumerate(ELEMS.keys())}
+
+# Plot each element
+for elem, symbol in ELEMS.items():
+    idxs = (y == elem)
+    ax.scatter(x_pca[idxs, 0], x_pca[idxs, 1], alpha=1, s=3, label=symbol, color=color_map[symbol])
+
+# No ticks
+ax.set_xticks([])
+ax.set_yticks([])
+
+# Labels and title
+ax.set_xlabel(r'$u_1$', fontsize=FONTSIZE - 1)
+ax.set_ylabel(r'$u_2$', fontsize=FONTSIZE - 1)
+ax.set_title('Learned Atom Embeddings', fontsize=FONTSIZE)
+
+# Function to overlay axes for independent legends
+def overlay_axes_for_legend(fig, position):
+    ax_leg = fig.add_axes(position)
+    ax_leg.axis('off')
+    return ax_leg
+
+# Define groups for separate legends
+element_groups = [
+    ['H', 'C', 'N', 'O', 'F'],
+    ['P', 'S', 'Cl'],
+    ['Br']
+]
+
+# Position for the first legend group, adjust as necessary
+legend_shift_y = -0.14
+legend_shift_x = 0.165
+
+legend_pos_x = 1.3
+legend_pos_y = 0.7
+
+colspace = 0.9
+
+# Create and place each legend
+for i, group in enumerate(element_groups):
+    handles, labels = ax.get_legend_handles_labels()
+    filtered_handles = [h for h, l in zip(handles, labels) if l in group]
+    ax_leg = overlay_axes_for_legend(fig, [legend_pos_x, legend_pos_y, 0.2, 0.1])
+    legend_pos_x += legend_shift_x
+    legend_pos_y += legend_shift_y
+
+    leg = ax_leg.legend(filtered_handles, group, frameon=False, handlelength=0.8, handletextpad=0., ncols=5,loc='upper center', bbox_to_anchor=(0.0, -0.0), columnspacing=colspace)
+
+    for handle in leg.legendHandles:
+        handle.set_sizes([80])  # Set to desired size
+        handle.set_alpha(1)  # Set alpha
+
+# Save the figure
+name = 'pca_horizontal.png'
+fig.savefig(name, dpi=300, bbox_inches='tight')
+
 # %%

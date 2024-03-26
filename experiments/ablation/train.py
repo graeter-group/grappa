@@ -14,6 +14,7 @@ parser.add_argument("--no_scaling", action="store_true", help="Use no scaling to
 parser.add_argument("--exp_to_range", action="store_true", help="Use exp to range instead of shited elu. Default is False.")
 parser.add_argument("--no_self_interaction", action="store_true", help="Use no self interaction. Default is False.")
 parser.add_argument("--no_gated_torsion", action="store_true", help="Use no gated torsion. Default is False.")
+parser.add_argument("--harmonic_gate", action="store_true")
 args = parser.parse_args()
 
 
@@ -78,6 +79,9 @@ if __name__ == "__main__":
     if args.wrong_symmetry:
         config["model_config"]["wrong_symmetry"] = True
         config["trainer_config"]["name"] += "_wrong_sym"
+
+    if args.harmonic_gate:
+        config["model_config"]["harmonic_gate"] = True
 
     if args.no_scaling:
         raise NotImplementedError("No scaling not implemented yet.")

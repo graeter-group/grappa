@@ -42,6 +42,8 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
     In this case, the splitpath from the pretrained model is used and the start_qm_epoch is set to 0.
     """
 
+    RESTRICT_CONFIG = False
+
     # check whether all config args are allowed (they are allowed if they are in the default config)
     default_config_ = default_config()
     for k in config.keys():
@@ -50,7 +52,8 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
         if isinstance(config[k], dict):
             for kk in config[k].keys():
                 if kk not in default_config_[k]:
-                    raise KeyError(f"Key {k}-{kk} not an allowed config argument.")
+                    if RESTRICT_CONFIG:
+                        raise KeyError(f"Key {k}-{kk} not an allowed config argument.")
 
 
     # Get the trainer  and initialize wandb
