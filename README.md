@@ -62,7 +62,7 @@ In GROMACS, Grappa can be used as command line application that receives the pat
 gmx pdb2gmx -f your_protein.pdb -o your_protein.gro -p topology.top -ignh
 
 # create a new topology file with the bonded parameters from Grappa, specifying the tag of the grappa model:
-grappa_gmx -f topology.top -p topology_grappa.top -t grappa-1.1.0
+grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.1.0
 
 # continue with ususal gromacs workflow
 ```
