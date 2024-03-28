@@ -203,7 +203,7 @@ Grappa can not only accurately predict QM energies and forces, but also reproduc
 With Grappa, we have simulated the small protein Chignolin in solution starting from an unfolded configuration and observed that it folds into the experimentally measured state [5AWL](https://www.rcsb.org/structure/5awl) on a timescale of microseconds. We identified a cluster of folded states whose center has an C-alpha RMSD of 0.8 Å compared to 1.0 Å obtained in the same setting with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> in [Lindorff-Larsen et al.](https://www-science-org.ubproxy.ub.uni-heidelberg.de/doi/epdf/10.1126/science.1208351).
 
 <p align="center">
-    <img src="docs/figures/structure_grappa.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/structure_grappa.png" width="30%" style="max-width: 200px; display: block; margin: auto;">
   </p>
 <p><i>The cluster center of Chignolin during an MD simulation using Grappa (blue) and the experimentally measured crystal structure (red).</i></p>
 
@@ -213,9 +213,9 @@ With Grappa, we have simulated the small protein Chignolin in solution starting 
 <p><i>The C alpha RMSD to the reference structure during the folding simulation.</i></p>
 
 
-### Grappa 1.0
+### Grappa 1.1
 
-The published model grappa-1.0 has been trained on an extension of the Espaloma dataset that contains Boltzmann-sampled states of tripeptides and radical dipeptides that can be formed by hydrogen atom transfer. For the peptide datasets in Espaloma, we also calculate nonbonded contributions with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> instead of am1BCC (as is done in Espaloma). We split the dataset into 80% train, 10% validation and 10% test molecules using the same partition as Espaloma.
+The published model grappa-1.1 has been trained on an extension of the Espaloma dataset that contains Boltzmann-sampled states of tripeptides and radical dipeptides that can be formed by hydrogen atom transfer. For the peptide datasets in Espaloma, we also calculate nonbonded contributions with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> instead of am1BCC (as is done in Espaloma). We split the dataset into 80% train, 10% validation and 10% test molecules using the same partition as Espaloma.
 
 <p align="center">
     <img src="docs/figures/table-grappa-10.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
