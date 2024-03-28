@@ -105,6 +105,9 @@ class GrappaModel(torch.nn.Module):
             harmonic_gate=harmonic_gate,
         )
 
+        # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
+        self.field_of_view = gnn_attentional_layers + gnn_convolutions + 3
+
     def forward(self, g):
         """
         Forward pass of the GrappaModel. Applies GrappaGNN to extract features and then WriteParameters to assign molecular parameters.

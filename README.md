@@ -62,7 +62,7 @@ In GROMACS, Grappa can be used as command line application that receives the pat
 gmx pdb2gmx -f your_protein.pdb -o your_protein.gro -p topology.top -ignh
 
 # create a new topology file with the bonded parameters from Grappa, specifying the tag of the grappa model:
-grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.1.0
+grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.1
 
 # continue with ususal gromacs workflow
 ```
@@ -106,8 +106,10 @@ pip install dgl -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dg
 To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
 
 ```{bash}
-git clone git@github.com:hits-mbm-dev/grappa.git
+git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
+conda create -n grappa -y
+conda activate grappa
 pip install -r requirements.txt
 pip install .
 ```
@@ -128,14 +130,14 @@ Unfortunately, OpenMM is not available on pip and has to be installed via conda.
 | 12.1 | 3.10   | 2.2.0 | 8.1.1   |
 | cpu  | 3.10   | 2.2.0 | 8.1.1   |
 
-Simply activate the target conda environment and run the install script for the cuda version of choice, e.g. for 12.1:
+Simply activate the target conda environment and run the install script for the cuda version of choice, for pure inference usualluy the cpu version is sufficient.
 
 ```{bash}
-git clone git@github.com:hits-mbm-dev/grappa.git
+git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
 conda create -n grappa -y
 conda activate grappa
-./installation_openmm.sh 12.1
+./installation_openmm.sh cpu
 ```
 
 Verify the installation by running
@@ -179,7 +181,7 @@ In this section, we show that Grappa outperforms established MM force fields and
 
 We trained Grappa on the dataset (and train-validation-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>] and compared it with established MM force fields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>], [<a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>].
 
-The Espaloma dataset covers small molecules, peptides and RNA with states sampled from the Boltzmann distribution at 300K and 500K, from optimization trajectories and from torsion scans. For all types of molecules, Grappa outperforms established MM force fields and Espaloma in terms of force accuracy, and for Boltzmann-sampled states also in terms of energy accuracy. To the best of our knowledge, this makes it the most accurate MM force field currently available (as of February 2024).
+The Espaloma dataset covers small molecules, peptides and RNA with states sampled from the Boltzmann distribution at 300K and 500K, from optimization trajectories and from torsion scans. For all types of molecules, Grappa outperforms established MM force fields and Espaloma in terms of force accuracy, and for Boltzmann-sampled states also in terms of energy accuracy.
 
 <p align="center">
     <img src="docs/figures/table_benchmark.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
@@ -192,18 +194,23 @@ The Espaloma dataset covers small molecules, peptides and RNA with states sample
 Grappa can not only accurately predict QM energies and forces, but also reproduces well-known behaviour of established protein force fields. Ubiquitin [<a href="https://www.rcsb.org/structure/1UBQ">1UBQ</a>] shows a similar magnitude of fluctuation when simulated with Grappa and <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a>.
 
 <p align="center">
-    <img src="docs/figures/rmsd.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/rmsd_1ubq.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>RMSD Distribution between states with a given time difference during 40 ns of MD simulation of Ubiquitin in solution at 300K. The shaded area corresponds to the range between the 25th and 75th percentile.</i></p>
+  <p><i>RMSD over time and RMSD distribution between states with a given time difference during 100 ns of MD simulation of Ubiquitin in solution at 300K. The shaded area corresponds to the range between the 25th and 75th percentile.</i></p>
 
 ### Grappa can fold small Proteins
 
-We have simulated the small protein Chignolin in solution starting from an unfolded configuration and observed that it folds into the experimentally measured state [1UAO](https://www.rcsb.org/structure/1UAO) on a timescale of microseconds. We identified a cluster of folded states whose center has an C-alpha RMSD of 1.1 Å compared to 1.0 Å obtained in the same setting with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> in [Lindorff-Larsen et al.](https://www-science-org.ubproxy.ub.uni-heidelberg.de/doi/epdf/10.1126/science.1208351).
+With Grappa, we have simulated the small protein Chignolin in solution starting from an unfolded configuration and observed that it folds into the experimentally measured state [5AWL](https://www.rcsb.org/structure/5awl) on a timescale of microseconds. We identified a cluster of folded states whose center has an C-alpha RMSD of 0.8 Å compared to 1.0 Å obtained in the same setting with <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2970904/">Amberff99sbildn</a> in [Lindorff-Larsen et al.](https://www-science-org.ubproxy.ub.uni-heidelberg.de/doi/epdf/10.1126/science.1208351).
 
 <p align="center">
     <img src="docs/figures/structure_grappa.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>The cluster center of Chignolin during an MD simulation using Grappa (blue) and the experimentally measured structure.</i></p>
+<p><i>The cluster center of Chignolin during an MD simulation using Grappa (blue) and the experimentally measured crystal structure (red).</i></p>
+
+<p align="center">
+  <img src="docs/figures/chignolin_grappa_ref_rmsd.png" width="70%" style="max-width: 200px; display: block; margin: auto;">
+</p>
+<p><i>The C alpha RMSD to the reference structure during the folding simulation.</i></p>
 
 
 ### Grappa 1.0
@@ -268,7 +275,7 @@ Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_ta
 
 ## Datasets
 
-Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor. An example can be found at `examples/usage/evaluation.py`. Available tags are listed in the documentation of the Dataset class.
+Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor. An example can be found at `examples/usage/dataset.py`. Available tags are listed in the documentation of the Dataset class.
 
 To re-create the benchmark experiment, also the splitting into train/val/test sets is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
 
@@ -276,7 +283,7 @@ The datasets 'uncapped_amber99sbildn', 'tripeptides_amber99sbildn', 'hyp-dop_amb
 
 ## Reproducibility
 
-Every Grappa model that is published does not only contain the model weights but also a config dict that describes hyperparameters of the model and training and the split of the dataset into train/val/test molecules. This allows seamless reproducibility in a few lines of code. For example, to reproduce the training of Grappa 1.0, one can simply run:
+Every Grappa model that is published does not only contain the model weights but also a config dict that describes hyperparameters of the model and training and the split of the dataset into train/val/test molecules. This allows seamless reproducibility in a few lines of code. For example, to reproduce the training of Grappa 1.1, one can simply run:
 
 ```{python}
 from grappa.utils.run_utils import model_dict_from_tag
@@ -284,7 +291,7 @@ from grappa.utils.loading_utils import model_dict_from_tag
 from grappa.training.trainrun import do_trainrun
 import json
 
-model_dict = model_dict_from_tag('grappa-1.1.0') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
+model_dict = model_dict_from_tag('grappa-1.1') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
 
 split_ids = model_dict['split_names']
 with open('split_ids.json', 'w') as f:

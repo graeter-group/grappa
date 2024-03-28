@@ -53,10 +53,19 @@ class Dataset(torch.utils.data.Dataset):
             - 'spice-dipeptide'
             - 'spice-des-monomers'
             - 'spice-pubchem'
-            ...
+            - 'rna-trinucleotide'
+            - 'rna-diverse'
+            - 'gen2'
+            - 'pepconf-dlc'
+            - 'gen2-torsion'
+            - 'protein-torsion'
         PEPTIDE DATASET:
-            - 'tripeptide_amber99sbildn'
-            - 'spice_dipeptide_amber99sbildn'
+            - 'spice-dipeptide_amber99sbildn'
+            - 'pepconf-dlc_amber99sbildn'
+            - 'protein-torsion_amber99sbildn'
+            - 'tripeptides_amber99sbildn'
+            - 'dipeptide_rad'
+            - 'uncapped_amber99sbildn'
         """
         path = dataset_utils.get_path_from_tag(tag=tag, data_dir=data_dir)
         return Dataset.load(path)

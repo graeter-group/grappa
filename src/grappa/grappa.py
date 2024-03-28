@@ -20,6 +20,7 @@ class Grappa:
         self.model.eval()
         self.max_element = max_element
         self.device = device
+        self.field_of_view = model.field_of_view    
 
     @classmethod
     def from_tag(cls, tag:str='latest', max_element=constants.MAX_ELEMENT, device:str='cpu') -> 'Grappa':

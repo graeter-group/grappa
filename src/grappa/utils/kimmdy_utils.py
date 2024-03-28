@@ -246,10 +246,10 @@ if importlib.util.find_spec('kimmdy') is not None:
             - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', grappa_tag:str,**kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical' ,**kwargs):
             super().__init__(*args, **kwargs)
             self.grappa_instance = grappa_instance
-            self.config = model_dict_from_tag(grappa_tag)['config']['model_config']
+            self.field_of_view = grappa_instance.field_of_view
             self.charge_model = charge_model
 
         def parameterize_topology(
@@ -262,7 +262,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 apply_nrs = build_nrs
             else:
                 # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
-                field_of_view = self.config['gnn_attentional_layers'] + self.config['gnn_convolutions'] + 3
+                field_of_view = self.field_of_view
                 # new parameters are applied to atoms within the field of view of the focus_nrs atoms. 
                 # For all of those to have the same field of view as in the whole molecule, another field of view is added for building the molecule
                 apply_nrs = current_topology.get_neighbors(focus_nrs,field_of_view)
