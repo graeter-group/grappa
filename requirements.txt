@@ -2,6 +2,7 @@ numpy
 pandas
 scipy
 pyyaml
+pydantic
 rdkit==2023.9.1
 matplotlib==3.8.2
 wandb==0.16.1
