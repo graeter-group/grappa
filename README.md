@@ -138,7 +138,13 @@ python tests/test_installation.py
 
 To facilitate the interface to OpenMM and GROMACS, Grappa has an optional dependency on [OpenMM](https://github.com/openmm/openmm) and [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which is used to create custom GROMACS topology files. To train and evaluate Grappa on existing datasets, neither of these packages are needed.
 
-In this case, Grappa only needs a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/), e.g. by
+In this case, Grappa only needs a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice, e.g. with conda by
+
+```{bash}
+conda install pytorch=2.1.0 pytorch-cuda=11.8 dgl -c pytorch -c nvidia -c dglteam/label/cu118
+```
+
+or with pip,
 
 ```{bash}
 pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cu117
@@ -146,7 +152,7 @@ pip install  dgl -f https://data.dgl.ai/wheels/cu117/repo.html dglgo -f https://
 conda install cuda-toolkit -c "nvidia/label/cuda-11.7.1" -y
 ```
 
-To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
+To then install Grappa, simply clone the repository, install additional requirements and the package itself:
 
 ```{bash}
 git clone git@github.com:hits-mbm-dev/grappa.git
