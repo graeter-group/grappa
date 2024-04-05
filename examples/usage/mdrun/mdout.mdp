@@ -1,14 +1,14 @@
 ;
 ;	File 'mdout.mdp' was generated
 ;	By user: seutelf (7137)
-;	On host: cascade-124.cluster
-;	At date: Mon Feb 26 17:26:56 2024
+;	On host: rh06326.villa-bosch.de
+;	At date: Tue Apr  2 13:56:39 2024
 ;
 ;	Created by:
-;	                      :-) GROMACS - gmx grompp, 2023 (-:
+;	             :-) GROMACS - gmx grompp, 2021.4-Ubuntu-2021.4-2 (-:
 ;	
-;	Executable:   /hits/fast/mbm/broszms/software/gromacs-2023-cascade/bin/gmx
-;	Data prefix:  /hits/fast/mbm/broszms/software/gromacs-2023-cascade
+;	Executable:   /usr/bin/gmx
+;	Data prefix:  /usr
 ;	Working dir:  /hits/fast/mbm/seutelf/grappa/examples/usage/mdrun
 ;	Command line:
 ;	  gmx grompp -f minim.mdp -c T4_out_ion.gro -p T4_grappa.top -o T4_out_min.tpr
@@ -130,8 +130,6 @@ epsilon-surface          = 0
 implicit-solvent         = no
 
 ; OPTIONS FOR WEAK COUPLING ALGORITHMS
-ensemble-temperature-setting = auto
-ensemble-temperature     = -1
 ; Temperature coupling  
 tcoupl                   = No
 nsttcouple               = -1
@@ -171,7 +169,7 @@ annealing-temp           =
 ; GENERATE VELOCITIES FOR STARTUP RUN
 gen-vel                  = no
 gen-temp                 = 300
-gen-seed                 = 1843656585
+gen-seed                 = -1
 
 ; OPTIONS FOR BONDS    
 constraints              = none
@@ -261,15 +259,11 @@ temperature-lambdas      =
 calc-lambda-neighbors    = 1
 init-lambda-weights      = 
 dhdl-print-energy        = no
-sc-function              = beutler
 sc-alpha                 = 0
 sc-power                 = 1
 sc-r-power               = 6
 sc-sigma                 = 0.3
 sc-coul                  = no
-sc-gapsys-scale-linpoint-lj = 0.85
-sc-gapsys-scale-linpoint-q = 0.3
-sc-gapsys-sigma-lj       = 0.3
 separate-dhdl-file       = yes
 dhdl-derivatives         = yes
 dh_hist_size             = 0
@@ -316,6 +310,3 @@ electric-field-z         = 0 0 0 0
 
 ; Density guided simulation
 density-guided-simulation-active = false
-
-; QM/MM with CP2K
-qmmm-cp2k-active         = false

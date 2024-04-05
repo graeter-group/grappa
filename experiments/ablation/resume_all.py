@@ -9,10 +9,16 @@ PROJECT = 'ablation-grappa-1.0'
 
 EXCEPT = []
 
+ONLY = ['hsk5zkv0']
+
 # get all run ids:
 api = wandb.Api()
 runs = api.runs(PROJECT)
-run_ids = [run.id for run in runs if run.state != 'running' and run.id not in EXCEPT]
+if len(ONLY) > 0:
+    run_ids = ONLY
+else:
+    run_ids = [run.id for run in runs if run.state != 'running' and run.id not in EXCEPT]
+
 #%%
 for run_id in run_ids:
     print(f'Job {run_id}')

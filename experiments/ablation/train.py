@@ -82,6 +82,7 @@ if __name__ == "__main__":
 
     if args.harmonic_gate:
         config["model_config"]["harmonic_gate"] = True
+        config["trainer_config"]["name"] += "_harmonic_gate"
 
     if args.no_scaling:
         raise NotImplementedError("No scaling not implemented yet.")
