@@ -34,21 +34,29 @@ def batch(graphs: List[DGLGraph], deep_copies_of_same_n_atoms:bool=False) -> DGL
     if deep_copies_of_same_n_atoms:
         xyz_shapes_set = set([g.nodes['n1'].data['xyz'].shape for g in graphs])
     for graph, offset in zip(graphs, n1_offsets):
+        copied_graph = graph
+        
+        # deep copy the idxs features since we dont want to change them in the original graph
+        # for this we need to use ndata instead of nodes[].data for some reason
+        copied_graph.ndata['idxs'] = {ntype: copy.deepcopy(graph.ndata['idxs'][ntype]) for ntype in graph.ndata['idxs'].keys()}
+
+        # copied_graph = copy.deepcopy(copied_graph)
         if deep_copies_of_same_n_atoms:
             # If we have the same graph multiple times in the batch, we need to make a deep copy of the whole graph to avoid autograd errors. Thus, create a deep copy if the shape of xyz did already occur (this is not a sufficient but a necessary condition).
-            n_atoms = graph.nodes['n1'].data['xyz'].shape
+            n_atoms = copied_graph.nodes['n1'].data['xyz'].shape
             if n_atoms in xyz_shapes_set:
-                graph = copy.deepcopy(graph)
+                copied_graph = copy.deepcopy(copied_graph)
 
         if num_confs is not None:
-            if num_confs != graph.nodes['n1'].data['xyz'].shape[1]:
-                raise ValueError(f'All graphs must have the same number of conformations but found {num_confs} and {graph.nodes["n1"].data["xyz"].shape[1]}')
+            if num_confs != copied_graph.nodes['n1'].data['xyz'].shape[1]:
+                raise ValueError(f'All graphs must have the same number of conformations but found {num_confs} and {copied_graph.nodes["n1"].data["xyz"].shape[1]}')
             
         for ntype in ['n2', 'n3', 'n4', 'n4_improper']:
-            graph.nodes[ntype].data['idxs'] = copy.deepcopy(graph.nodes[ntype].data['idxs'])
-            graph.nodes[ntype].data['idxs'] = graph.nodes[ntype].data['idxs'] + offset
+            # Make a copy of the idxs tensor and modify this copy
+            idxs = graph.nodes[ntype].data['idxs']
+            copied_graph.nodes[ntype].data['idxs'] = idxs + offset
         
-        batched_graphs.append(graph)
+        batched_graphs.append(copied_graph)
 
     return dgl.batch(batched_graphs)
 
@@ -57,7 +65,6 @@ def unbatch(batched_graph: DGLGraph) -> List[DGLGraph]:
     """
     Splits a batched graph back into a list of individual graphs,
     correcting the 'idxs' feature to reflect the original node indices of the 'n1' type.
-    Modifies the idxs feature of the graphs in-place!
     Also deletes all dummy conformations.
     """
     subgraphs = dgl.unbatch(batched_graph)
@@ -67,7 +74,7 @@ def unbatch(batched_graph: DGLGraph) -> List[DGLGraph]:
 
     for subgraph, offset in zip(subgraphs, n1_offsets):
         for ntype in ['n2', 'n3', 'n4', 'n4_improper']:
-            subgraph.nodes[ntype].data['idxs'] = subgraph.nodes[ntype].data['idxs'] - offset
+            subgraph.nodes[ntype].data['idxs'] = copy.deepcopy(subgraph.nodes[ntype].data['idxs'] - offset)
 
     # delete all dummy-confs:
     for i, subgraph in enumerate(subgraphs):

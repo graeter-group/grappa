@@ -5,6 +5,7 @@ from grappa.utils import dgl_utils
 from typing import List
 import torch
 from collections import defaultdict
+import copy
 
 
 
@@ -107,9 +108,6 @@ class FastEvaluator:
                 self.squared_error_classical_gradients[dsname] += classical_gradient_se.detach()
                 self.squared_error_classical_energies[dsname] += classical_energy_se.detach()
 
-        # re-batch the graphs: (no! breaks something)
-        # g = dgl_utils.batch(graphs)
-
     def pool(self):
         """
         Returns a dictionary containing dictionaries for each dsname with the averaged metrics. For energies, this average is per conformation, for gradients it is per 3-vector, that is total number of atoms times conformations.
@@ -205,23 +203,23 @@ class Evaluator:
             raise ValueError(f"Number of graphs and dsnames must be equal but are {len(graphs)} and {len(dsnames)}")
 
         # get the energies and gradients
-        for g, dsname in zip(graphs, dsnames):
-            energies = get_energies(g, suffix=self.suffix).detach().flatten().to(self.device)
-            energies_ref = get_energies(g, suffix=self.suffix_ref).detach().flatten().to(self.device)
+        for g_, dsname in zip(graphs, dsnames):
+            energies = get_energies(g_, suffix=self.suffix).detach().flatten().to(self.device)
+            energies_ref = get_energies(g_, suffix=self.suffix_ref).detach().flatten().to(self.device)
             if self.log_classical_values:
-                energies_classical = get_energies(g, suffix=self.suffix_classical).detach().flatten().to(self.device)
+                energies_classical = get_energies(g_, suffix=self.suffix_classical).detach().flatten().to(self.device)
 
                 if self.suffix_classical_ref is not None:
-                    energies_ref_classical = get_energies(g, suffix=self.suffix_classical_ref).detach().flatten().to(self.device)
+                    energies_ref_classical = get_energies(g_, suffix=self.suffix_classical_ref).detach().flatten().to(self.device)
 
             # get the gradients in shape (n_atoms*n_confs, 3)
-            gradients = get_gradients(g, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
-            gradients_ref = get_gradients(g, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+            gradients = get_gradients(g_, suffix=self.suffix).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+            gradients_ref = get_gradients(g_, suffix=self.suffix_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
             if self.log_classical_values:
-                gradients_classical = get_gradients(g, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                gradients_classical = get_gradients(g_, suffix=self.suffix_classical).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
                 if self.suffix_classical_ref is not None:
-                    gradients_ref_classical = get_gradients(g, suffix=self.suffix_classical_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                    gradients_ref_classical = get_gradients(g_, suffix=self.suffix_classical_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             # store everything:
             self.energies.setdefault(dsname, []).append(energies)
@@ -290,7 +288,7 @@ class Evaluator:
                     self.all_ref_classical_gradients[dsname] = torch.cat([self.ref_classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
 
-    def pool(self, n_bootstrap=0, seed=0):
+    def pool(self, n_bootstrap=0, seed=0)->dict:
         """
         If n_bootstrap == 0, the metrics are calculated once and returned.
         If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as mean = pool()[]
@@ -338,12 +336,12 @@ class Evaluator:
         for dsname in self.energies.keys():
             metrics[dsname] = {}
 
-            metrics[dsname]['n_confs'] = self.all_energies[dsname].shape[0]
+            metrics[dsname]['n_confs'] = self.all_reference_energies[dsname].shape[0]
 
             metrics[dsname]['n_mols'] = self.n_mols[dsname]
 
-            metrics[dsname]['std_energies'] = float(self.all_energies[dsname].std().detach().clone().item())
-            metrics[dsname]['std_gradients'] = float(self.all_gradients[dsname].std().detach().clone().item() * np.sqrt(3))
+            metrics[dsname]['std_energies'] = float(self.all_reference_energies[dsname].std().detach().clone().item())
+            metrics[dsname]['std_gradients'] = float(self.all_reference_gradients[dsname].std().detach().clone().item() * np.sqrt(3))
 
             # calculate the metrics
             metrics[dsname]['rmse_energies'] = float(root_mean_squared_error(self.all_energies[dsname], self.all_reference_energies[dsname]).detach().clone().item())
