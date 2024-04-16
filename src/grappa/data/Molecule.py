@@ -181,6 +181,7 @@ class Molecule():
         Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
         The indices are those of the topology.
+        the topology may be a sub-topology of the full system, e.g. without solvant. The indices have to correspond to the indices of the atoms in the system.
         Arguments:
             - openmm_system: an openmm system
             - openmm_topology: an openmm topology
@@ -188,11 +189,14 @@ class Molecule():
             - ring_encoding: if False, the ring encoding feature (for which rdkit is needd) is not added.
             - mapped_smiles: the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'.
 
+            
         Args:
             openmm_system ([openmm.System]): an openmm system defining the improper torsions and, if partial_charges is None, the partial charges.
             openmm_topology ([openmm.app.Topology]): an openmm topology defining the bonds and atomic numbers.
             partial_charges ([type], optional): a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system. Defaults to None.
             ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
+            mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
+            charge_model (str, optional): the model from which the partial charges where obtained. can be 'classical' or 'am1BCC'. Defaults to 'classical'.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
@@ -203,9 +207,12 @@ class Molecule():
         assert isinstance(openmm_system, System), f"openmm_system must be an instance of openmm.app.System. but is: {type(openmm_system)}"
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
 
+        # indexes in the system:
+        atom_idxs = [atom.id for atom in openmm_topology.atoms()] # assume that the id in the topology is the index in the system.
+
         bonds = []
         for bond in openmm_topology.bonds():
-            bonds.append((bond[0].index, bond[1].index))
+            bonds.append((bond[0].index, bond[1].index)) # here we use the index in atom_idxs
 
         neighbor_dict = tuple_indices.get_neighbor_dict(bonds, sort=True)
         tuple_dict = tuple_indices.get_idx_tuples(bonds=bonds, is_sorted=True, neighbor_dict=neighbor_dict)
@@ -220,7 +227,9 @@ class Molecule():
                     *torsion, _,_,_ = force.getTorsionParameters(i)
                     assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
 
-                    all_torsions.append(tuple(torsion))
+                    # add the torsion if it is between atoms included in the topology:
+                    if all([atom_idx in atom_idxs for atom_idx in torsion]):
+                        all_torsions.append(tuple(torsion))
 
         _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
 
@@ -229,7 +238,7 @@ class Molecule():
             partial_charges = []
             for force in openmm_system.getForces():
                 if force.__class__.__name__ == 'NonbondedForce':
-                    for i in range(force.getNumParticles()):
+                    for i in atom_idxs:
                         q, _, _ = force.getParticleParameters(i)
                         partial_charges.append(q.value_in_unit(openmm_unit.elementary_charge))
 
@@ -241,13 +250,12 @@ class Molecule():
             if not isinstance(partial_charges, list):
                 raise ValueError(f"partial_charges must be None, int or np.ndarray but is {type(partial_charges)}")
 
-        # get atomic numbers and atom indices using zip:
-        atomic_numbers, atoms = [], []
+        # get atomic numbers (order is the same as atom_idxs)
+        atomic_numbers = []
         for atom in openmm_topology.atoms():
             atomic_numbers.append(atom.element.atomic_number)
-            atoms.append(atom.index)
 
-        self = cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True, charge_model=charge_model)
+        self = cls(atoms=atom_idxs, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True, charge_model=charge_model)
 
 
         return self

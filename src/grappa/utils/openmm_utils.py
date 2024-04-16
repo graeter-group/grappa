@@ -6,6 +6,45 @@ from grappa.constants import get_grappa_units_in_openmm
 from grappa import units
 
 
+OPENMM_WATER_RESIDUES = ["HOH", "WAT", "TIP3", "TIP4", "TIP5", "TIP3P", "TIP4P", "TIP5P", "SPC", "SPC/E", "SPCE", "SPC-FW", "SPC-HW", "SPC-HFW", "SPC-HF"]
+OPENMM_ION_RESIDUES = ["CL", "NA", "K", "MG", "CA", "ZN", "FE", "CU", "F", "BR", "I", "CL-", "NA+", "K+", "MG2+", "CA2+", "ZN2+", "FE2+", "FE3+", "CU2+", "CU1+", "F-", "BR-", "I-"]
+
+def get_subtopology(topology:'openmm.Topology', exclude_residues:List[str]=None)->'openmm.Topology':
+    """
+    Returns a sub-topology of the given topology, excluding certain residues with names given in exclude_residues.
+    The atom.id of the atoms in the sub-topology is the same as the atom.index in the original topology.
+    """
+    import openmm
+
+    if exclude_residues is None:
+        return topology
+    
+    # create a new topology:
+    new_topology = openmm.app.Topology()
+
+    new_topol_idx = {} # maps the old atom index to the new atom index
+
+    # add a dummy chain and residue:
+    new_chain = new_topology.addChain()
+    new_residue = new_topology.addResidue('DUM', new_chain)
+
+    # add all atoms ensuring that their atom.id is the index in the original topology
+    for atom in topology.atoms():
+        if atom.residue.name not in exclude_residues:
+            new_topology.addAtom(atom.name, atom.element, new_residue, id=atom.index)
+            new_topol_idx[atom.index] = new_topology.getNumAtoms() - 1
+
+    new_atoms = list(new_topology.atoms())
+
+    # add all bonds:
+    # we only add bonds where both atoms are in the new topology
+    # obtain the old indices, map to new indices, and pick the atoms from the new topology
+    for bond in topology.bonds():
+        if all([atom.index in new_topol_idx.keys() for atom in bond]):
+            new_topology.addBond(new_atoms[new_topol_idx[bond[0].index]], new_atoms[new_topol_idx[bond[1].index]])
+
+    return new_topology
+
 
 def get_energies(openmm_system, xyz):
     """
@@ -15,9 +54,9 @@ def get_energies(openmm_system, xyz):
     import openmm
     from openmm import unit
 
-    assert len(xyz.shape) == 3
-    assert xyz.shape[1] == openmm_system.getNumParticles()
-    assert xyz.shape[2] == 3
+    assert len(xyz.shape) == 3, f"xyz must have shape (num_confs, num_atoms, 3), but got {xyz.shape}"
+    assert xyz.shape[1] == openmm_system.getNumParticles(), f"Number of atoms in xyz ({xyz.shape[1]}) does not match number of atoms in system ({openmm_system.getNumParticles()})"
+    assert xyz.shape[2] == 3, f"xyz must have shape (num_confs, num_atoms, 3), but got {xyz.shape}"
 
     if xyz.shape[0] == 0:
         return np.array([]).astype(np.float32), np.zeros(xyz.shape).astype(np.float32)
@@ -113,6 +152,7 @@ def write_to_system(system, parameters:'grappa.data.Parameters')->'openmm.System
     """
     Writes bonded parameters in an openmm system. For interactions that are already present in the system, overwrite the parameters; otherwise add the interaction to the system. The forces, however, must be already present in the system.
     The ids of the atoms, bonds, etc in the parameters object must be the same as the system indices.
+    The ids must n0t necessarily run from 0 to N-1, they can also represent a subset of the system indices.
     """
 
     # handle units:
@@ -154,7 +194,8 @@ def write_to_system(system, parameters:'grappa.data.Parameters')->'openmm.System
 
     ordered_torsions = {tuple(sorted(p)) for p in list(improper_lookup) + list(proper_lookup)}
 
-    # loop through the system forces, overwrite the parameters if present, otherwise add the interaction.
+    # loop through the system forces, for all parameters in the parameters object, overwrite the system parameters if present, otherwise add the interaction.
+    # Note that if the system contains bonds/angles/... between atoms that are not in the parameters object, these bonds/angles... will be untouched, i.e. kept as they are.
     # in each step, first transform the parameter id to the system index.
 
     for force in system.getForces():

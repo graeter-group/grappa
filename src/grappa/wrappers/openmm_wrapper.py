@@ -2,6 +2,8 @@ from grappa.grappa import Grappa
 from grappa.utils.openmm_utils import write_to_system
 from grappa.data import Molecule
 from grappa import constants
+from typing import List
+from grappa.utils.openmm_utils import OPENMM_ION_RESIDUES, OPENMM_WATER_RESIDUES, get_subtopology
 
 class OpenmmGrappa(Grappa):
     """
@@ -17,7 +19,7 @@ class OpenmmGrappa(Grappa):
         """
         return super().from_tag(tag, max_element, device)
     
-    def parametrize_system(self, system, topology, charge_model:str='classical'):
+    def parametrize_system(self, system, topology, charge_model:str='classical', exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES):
         """
         Predicts parameters for the system and writes them to the system.
         system: openmm.System
@@ -30,7 +32,12 @@ class OpenmmGrappa(Grappa):
         TODO: add option to specify sub-topologies that are to be parametrized. (do not parametrize water, ions, etc.)
         """
         # convert openmm_topology (and system due to partial charges and impropers) to a Molecule
-        molecule = Molecule.from_openmm_system(openmm_system=system, openmm_topology=topology, charge_model=charge_model)
+
+        # create a sub topology excluding certain residue names (e.g. water, ions)
+        # the atom.id of the atoms in this sub topology will be the same as the atom index in the original topology, i.e. as in the system.
+        sub_topology = get_subtopology(topology, exclude_residues=exclude_residues)
+
+        molecule = Molecule.from_openmm_system(openmm_system=system, openmm_topology=sub_topology, charge_model=charge_model)
 
         # predict parameters
         parameters = super().predict(molecule)

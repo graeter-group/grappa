@@ -14,7 +14,7 @@ from openmm.app import Modeller
 from openmm import unit
 
 modeller = Modeller(topology, PDBFile(str(Path(__file__).parent/'T4.pdb')).positions)
-# modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
+modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
 
 topology = modeller.getTopology()
 positions = modeller.getPositions()
@@ -45,12 +45,13 @@ import numpy as np
 from grappa.constants import get_grappa_units_in_openmm
 
 DISTANCE_UNIT = get_grappa_units_in_openmm()['LENGTH']
-positions = np.array([PDBFile(str(Path(__file__).parent/'T4.pdb')).positions.value_in_unit(DISTANCE_UNIT)])
+positions = np.array([positions.value_in_unit(DISTANCE_UNIT)])
 
-# get energies and gradients of the original system:
+# # get energies and gradients of the original system:
 orig_energy, original_gradients = get_energies(orig_system, positions)
 
 grappa_energy, grappa_gradients = get_energies(system, positions)
+
 # %%
 
 from matplotlib import pyplot as plt
