@@ -66,3 +66,7 @@ print(json.dumps(results, indent=4))
 
 plt.scatter(gradients_ref, gradients)
 # %%
+# now load the dataset with residue information:
+
+from grappa.data.MolData import MolData
+from grappa.utils.dataset_utils import get_path_from_tag

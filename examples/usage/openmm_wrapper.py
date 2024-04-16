@@ -5,10 +5,25 @@ from openmm.app import ForceField, Topology, PDBFile
 from grappa import OpenmmGrappa
 from pathlib import Path
 
+
 topology = PDBFile(str(Path(__file__).parent/'T4.pdb')).topology # load your system as openmm.Topology
 
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+# solvate:
+from openmm.app import Modeller
+from openmm import unit
+
+modeller = Modeller(topology, PDBFile(str(Path(__file__).parent/'T4.pdb')).positions)
+# modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
+
+topology = modeller.getTopology()
+positions = modeller.getPositions()
+
+#%%
+
+
 system = classical_ff.createSystem(topology)
+
 
 # load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.0', grappa-1.1' and 'latest'
 grappa_ff = OpenmmGrappa.from_tag('grappa-1.1')

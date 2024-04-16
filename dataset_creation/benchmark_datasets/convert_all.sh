@@ -6,7 +6,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # di
 espaloma_ds_path="$SCRIPT_DIR/../../data/esp_data"
 target_path="$SCRIPT_DIR/../../data/datasets"
 
-# espaloma merged duplicates away from their actual dataset to a new 'duplicate' dataset. we reverse this step.
+# espaloma removed duplicates from their actual dataset and merged them to a new 'duplicate' dataset. we reverse this step and d the train-test splitting based on the unique smiles
 python unmerge_duplicates.py --duplpath "$espaloma_ds_path/duplicated-isomeric-smiles-merge" --targetpath "$espaloma_ds_path"
 
 # List of dataset names

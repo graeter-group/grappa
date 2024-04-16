@@ -135,6 +135,8 @@ def main(dspath, targetpath, with_amber99: bool = True):
 
                 system = get_peptide_system(mol=mol, ff='amber99sbildn.xml')
 
+                # get list or residue names per atom from the system:
+
                 energy_amber99, force_amber99 = get_energies(openmm_system=system, xyz=data['xyz'])
 
                 system = remove_forces_from_system(system=system, keep='nonbonded')

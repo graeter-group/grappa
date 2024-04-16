@@ -445,9 +445,15 @@ class Molecule():
 
         b = idxs["n2"].transpose(0,1) # transform from (n_bonds, 2) to (2, n_bonds)
 
+        assert b.max() < len(self.atoms), f"Internal error: Maximal atom index in bonds ({b.max()}) must be smaller than the number of atoms ({len(self.atoms)})"
+
         # the edges of the other direction:
         first_idxs = torch.cat((b[0], b[1]), dim=0)
         second_idxs = torch.cat((b[1], b[0]), dim=0) # shape (2*n_bonds,)
+
+        # assert that every atom has a bond (completely isolated atoms will not be included in the graph since it is constructed via an adjacency matrix and we have no self-bonds!)
+        # use torch unique to check if all atoms are in the bonds:
+        assert len(torch.unique(b.flatten())) == len(self.atoms), f"Every atom must be part of a bond but {len(torch.unique(b.flatten()))} of {len(self.atoms)} atoms are in the bonds. Atoms {[self.atoms[idx_] for idx_ in np.setdiff1d(np.arange(len(self.atoms)), np.unique(b.flatten().detach().numpy()))]} are not part of a bond. These might be ions, which are generally not parameterized by Grappa."
 
         hg[("n1", "n1_edge", "n1")] = torch.stack((first_idxs, second_idxs), dim=0).int() # shape (2, 2*n_bonds)
         assert len(self.bonds)*2 == len(hg[("n1", "n1_edge", "n1")][0]), f"number of edges in graph ({len(hg[('n1', 'n1_edge', 'n1')][0])}) does not match 2*number of bonds ({2*len(self.bonds)})"

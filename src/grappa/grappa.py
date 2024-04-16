@@ -8,7 +8,7 @@ from grappa import constants
 from grappa.data import Molecule, Parameters
 from grappa.utils.loading_utils import model_from_tag
 from grappa.models.grappa import GrappaModel
-
+from grappa.utils.dgl_utils import check_disconnected_graphs
 
 
 class Grappa:
@@ -40,6 +40,9 @@ class Grappa:
 
         # transform the input to a dgl graph
         g = molecule.to_dgl(max_element=self.max_element, exclude_feats=[])
+
+        # check if water is contained, throw an error if so
+        check_disconnected_graphs(g)
 
         g = g.to(self.device)
 

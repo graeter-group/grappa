@@ -206,3 +206,32 @@ def laplacian_positional_encoding(g: DGLGraph, k: int = 5) -> np.ndarray:
         # Ignore the first eigenvector (trivial, corresponding to the eigenvalue 0)
         eigenvectors = eigenvectors[:, 1:]
         return eigenvectors
+    
+
+def check_disconnected_graphs(g, print_information:bool=True)->List[DGLGraph]:
+    # Obtain the list of disconnected subgraphs
+    homgraph = dgl.node_type_subgraph(g, ['n1'])
+
+    # Convert DGL graph to NetworkX graph
+    nx_g = homgraph.to_networkx().to_undirected()
+
+    # Find connected components using NetworkX
+    components = list(nx.connected_components(nx_g))
+
+    # Convert each component back to a DGL graph and preserve node features
+    subgraphs = []
+    for component in components:
+        # Create a subgraph for the current component
+        sg = homgraph.subgraph(torch.tensor(list(component)).int())
+        subgraphs.append(sg)
+
+    if print_information:
+        print(f"Found {len(subgraphs)} disconnected subgraphs of lengths {[subgraphs[i].num_nodes() for i in range(min(len(subgraphs), 3))]}...")
+
+    if any([subgraph.num_nodes() == 3 for subgraph in subgraphs]):
+        # check if the molecule is water
+        for subgraph in subgraphs:
+            if subgraph.num_nodes() == 3:
+                elements = torch.argmax(subgraph.ndata['atomic_number'], dim=-1).tolist()
+                if set(elements) == {1, 8}:
+                    raise ValueError("Found a water molecule in the graph. Grappa can currently not parametrize water molecules. Strip the water, parametrize and solvate then.")
