@@ -28,19 +28,19 @@ def batch(graphs: List[DGLGraph], deep_copies_of_same_n_atoms:bool=False) -> DGL
 
     batched_graphs = []
 
-
     # make deep copies of the idx features
     # then shift them
     if deep_copies_of_same_n_atoms:
         xyz_shapes_set = set([g.nodes['n1'].data['xyz'].shape for g in graphs])
+
     for graph, offset in zip(graphs, n1_offsets):
         copied_graph = graph
         
         # deep copy the idxs features since we dont want to change them in the original graph
-        # for this we need to use ndata instead of nodes[].data for some reason
-        copied_graph.ndata['idxs'] = {ntype: copy.deepcopy(graph.ndata['idxs'][ntype]) for ntype in graph.ndata['idxs'].keys()}
-
-        # copied_graph = copy.deepcopy(copied_graph)
+        # copied_graph.ndata['idxs'] = {ntype: copy.deepcopy(graph.ndata['idxs'][ntype].detach().clone()) for ntype in graph.ndata['idxs'].keys()}
+        # this does not work unfortunately, thus we deep copy the whole graph:
+        copied_graph = copy.deepcopy(copied_graph)
+        
         if deep_copies_of_same_n_atoms:
             # If we have the same graph multiple times in the batch, we need to make a deep copy of the whole graph to avoid autograd errors. Thus, create a deep copy if the shape of xyz did already occur (this is not a sufficient but a necessary condition).
             n_atoms = copied_graph.nodes['n1'].data['xyz'].shape
@@ -53,8 +53,7 @@ def batch(graphs: List[DGLGraph], deep_copies_of_same_n_atoms:bool=False) -> DGL
             
         for ntype in ['n2', 'n3', 'n4', 'n4_improper']:
             # Make a copy of the idxs tensor and modify this copy
-            idxs = graph.nodes[ntype].data['idxs']
-            copied_graph.nodes[ntype].data['idxs'] = idxs + offset
+            copied_graph.nodes[ntype].data['idxs'] = copy.deepcopy(copied_graph.nodes[ntype].data['idxs'] + offset)
         
         batched_graphs.append(copied_graph)
 
@@ -225,7 +224,7 @@ def check_disconnected_graphs(g, print_information:bool=True)->List[DGLGraph]:
         sg = homgraph.subgraph(torch.tensor(list(component)).int())
         subgraphs.append(sg)
 
-    if print_information:
+    if print_information and len(subgraphs) > 1:
         print(f"Found {len(subgraphs)} disconnected subgraphs of lengths {[subgraphs[i].num_nodes() for i in range(min(len(subgraphs), 3))]}...")
 
     if any([subgraph.num_nodes() == 3 for subgraph in subgraphs]):

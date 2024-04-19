@@ -11,7 +11,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     import numpy as np
 
     import math
-    from typing import Union, Optional
+    from typing import Union, Optional, Set
 
     from kimmdy.topology.topology import Topology
     from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
@@ -59,7 +59,7 @@ if importlib.util.find_spec('kimmdy') is not None:
         
 
     # workflow functions
-    def build_molecule(top: Topology, build_nrs:set[str], charge_model:str='classical') -> Molecule:
+    def build_molecule(top: Topology, build_nrs:Set[str], charge_model:str='classical') -> Molecule:
         '''
         Build a grappa.data.Molecule from a kimmdy.topology.topology.Topology
 
@@ -146,7 +146,7 @@ if importlib.util.find_spec('kimmdy') is not None:
         return parameters
 
 
-    def apply_parameters(top: Topology, parameters: Parameters, apply_nrs: set[str]):
+    def apply_parameters(top: Topology, parameters: Parameters, apply_nrs: Set[str]):
         """Applies parameters to topology
 
         parameter structure is defined in grappa.data.Parameters.Parameters
@@ -246,14 +246,15 @@ if importlib.util.find_spec('kimmdy') is not None:
             - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical' ,**kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', plot_path=None, **kwargs):
             super().__init__(*args, **kwargs)
             self.grappa_instance = grappa_instance
             self.field_of_view = grappa_instance.field_of_view
             self.charge_model = charge_model
+            self.plot_path = plot_path
 
         def parameterize_topology(
-            self, current_topology: Topology, focus_nrs:  Optional[set[str]] = None
+            self, current_topology: Topology, focus_nrs:  Optional[Set[str]] = None
         ) -> Topology:
             
             if not focus_nrs:
@@ -273,6 +274,10 @@ if importlib.util.find_spec('kimmdy') is not None:
             mol = build_molecule(current_topology, build_nrs, charge_model=self.charge_model)
 
             parameters = self.grappa_instance.predict(mol)
+
+            # create a plot for visual inspection:
+            if self.plot_path is not None:
+                parameters.plot(filename=str(self.plot_path))
 
             # convert units et cetera
             parameters = convert_parameters(parameters)

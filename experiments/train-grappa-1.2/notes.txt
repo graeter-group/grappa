@@ -1,0 +1,1 @@
+removed histidin version HID from the amber99sbildn datasets because apparently the nonbonded energy contribution calculated from openmmforcefield's amber99sbildn was wrong.

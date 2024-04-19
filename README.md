@@ -121,9 +121,9 @@ python tests/test_installation.py
 
 ### OpenMM
 
-Unfortunately, OpenMM is not available on pip and has to be installed via conda. Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and install the following versions:
+Unfortunately, OpenMM is not available on pip and has to be installed via conda. Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and cuda 12.1 and install the following versions:
 
-| CUDA | Python | Torch | OpenMM |
+| CUDA | Python | Torch | OpenMM  |
 |------|--------|-------|---------|
 | 11.7 | 3.9    | 2.0.1 | 7.7.0   |
 | 11.8 | 3.10   | 2.2.0 | 8.1.1   |
@@ -137,7 +137,8 @@ git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
 conda create -n grappa -y
 conda activate grappa
-./installation_openmm.sh cpu
+bash installation_openmm.sh cpu
+# bash installation_openmm.sh 11.8 # with cuda
 ```
 
 Verify the installation by running

@@ -1,6 +1,6 @@
 from grappa.grappa import Grappa
 from grappa.utils.openmm_utils import write_to_system
-from grappa.data import Molecule
+from grappa.data import Molecule, Parameters
 from grappa import constants
 from typing import List
 from grappa.utils.openmm_utils import OPENMM_ION_RESIDUES, OPENMM_WATER_RESIDUES, get_subtopology
@@ -19,7 +19,7 @@ class OpenmmGrappa(Grappa):
         """
         return super().from_tag(tag, max_element, device)
     
-    def parametrize_system(self, system, topology, charge_model:str='classical', exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES):
+    def parametrize_system(self, system, topology, charge_model:str='classical', exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES, plot_dir:str=None):
         """
         Predicts parameters for the system and writes them to the system.
         system: openmm.System
@@ -39,8 +39,20 @@ class OpenmmGrappa(Grappa):
 
         molecule = Molecule.from_openmm_system(openmm_system=system, openmm_topology=sub_topology, charge_model=charge_model)
 
+        try:
+            reference_parameters = Parameters.from_openmm_system(openmm_system=system, mol=molecule, allow_skip_improper=True)
+        except:
+            reference_parameters = None
+
         # predict parameters
         parameters = super().predict(molecule)
+
+        if plot_dir is not None:
+            parameters.plot(filename=plot_dir+'/grappa_parameters.png')
+            
+            if not reference_parameters is None:
+                parameters.plot(filename=plot_dir+'/reference_parameters.png', compare_parameters=reference_parameters, name="Grappa", compare_name="Amber ff99SB-ILDN")
+                parameters.compare_with(reference_parameters, filename=plot_dir+'/parameter_comparison.png', xlabel="Grappa", ylabel="Amber ff99SB-ILDN")
 
         # write parameters to system
         system = write_to_system(system, parameters)

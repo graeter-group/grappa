@@ -107,7 +107,7 @@ def extract_data(g, mol):
 # %%
 
 
-def main(dspath, targetpath, with_amber99: bool = True):
+def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: str = None):
     print(f"Converting\n{dspath}\nto\n{targetpath}")
     dspath = Path(dspath)
     targetpath = Path(targetpath)
@@ -130,6 +130,11 @@ def main(dspath, targetpath, with_amber99: bool = True):
             print(f"Processing {idx}", end='\r')
             g, mol = load_graph(molpath), load_mol(molpath)
             data = extract_data(g, mol)
+
+            if exclude_pattern is not None:
+                if exclude_pattern in data['smiles'][0]:
+                    print(f"Excluding {data['smiles'][0][:20]}...")
+                    continue
 
             if with_amber99:
 
@@ -204,5 +209,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Whether to compute amber99sbildn energies and forces and rather use them as reference. Can only be done for peptides. If True, grappa.data.MolData objects will be created and stored directly!",
     )
+    parser.add_argument(
+        "--exclude_pattern",
+        type=str,
+        default=None,
+        help="If given, exclude all molecules whose smiles contain this pattern.",
+    )
     args = parser.parse_args()
-    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99)
+    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99, exclude_pattern=args.exclude_pattern)

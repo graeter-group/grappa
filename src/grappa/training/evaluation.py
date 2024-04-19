@@ -6,6 +6,9 @@ from typing import List
 import torch
 from collections import defaultdict
 import copy
+from grappa.data import Parameters
+from grappa.data.Parameters import compare_parameters, plot_parameters
+import matplotlib.pyplot as plt
 
 
 
@@ -162,7 +165,7 @@ class Evaluator:
     """
     Does the same as the FastEvaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False):
+    def __init__(self, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False, plot_dir:str=None):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
@@ -176,6 +179,7 @@ class Evaluator:
         self.suffix_classical = suffix_classical
         self.suffix_classical_ref = suffix_classical_ref
 
+        self.plot_dir = plot_dir
 
         self.init_storage()
 
@@ -193,6 +197,9 @@ class Evaluator:
 
             self.ref_classical_energies = {}
             self.ref_classical_gradients = {}
+
+        self.parameters = {}
+        self.reference_parameters = {}
 
 
     def step(self, g, dsnames):
@@ -236,6 +243,14 @@ class Evaluator:
                 if self.suffix_classical_ref is not None:
                     self.ref_classical_energies.setdefault(dsname, []).append(energies_ref_classical)
                     self.ref_classical_gradients.setdefault(dsname, []).append(gradients_ref_classical)
+
+            if self.plot_dir is not None:
+                if not dsname in self.parameters.keys():
+                    self.parameters[dsname] = []
+                    self.reference_parameters[dsname] = []
+
+                self.parameters[dsname].append(Parameters.from_dgl(g_))
+                self.reference_parameters[dsname].append(Parameters.from_dgl(g_, suffix='_ref'))
 
 
     def collect(self, bootstrap_seed=None):
@@ -293,6 +308,7 @@ class Evaluator:
         If n_bootstrap == 0, the metrics are calculated once and returned.
         If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as mean = pool()[]
         """
+
         if n_bootstrap > 0:
             # first take the full dataset:
             self.collect()
@@ -330,6 +346,7 @@ class Evaluator:
             self.collect()
             return self.get_metrics()
 
+
     def get_metrics(self):
 
         metrics = {}
@@ -358,5 +375,26 @@ class Evaluator:
                     metrics[dsname]['rmse_classical_gradients_from_ref'] = float(invariant_rmse(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).detach().clone().item())
                     metrics[dsname]['crmse_classical_gradients_from_ref'] = float(root_mean_squared_error(self.all_classical_gradients[dsname], self.all_ref_classical_gradients[dsname]).detach().clone().item())
 
-
         return metrics
+    
+
+    def plot_parameters(self, xlabel='Prediction', ylabel='Reference', log=True, scatter=False, gridsize=50, density=True):
+        
+        if self.plot_dir is None:
+            raise ValueError("plot_dir must be set in the constructor to plot the parameters.")
+        
+        # create parameter plots for each dataset:
+        for dsname, param_list in self.parameters.items():
+            ref_params = self.reference_parameters[dsname]
+
+            fig, ax = compare_parameters(param_list, ref_params, xlabel=xlabel, ylabel=ylabel, title=dsname, log=log, scatter=scatter, gridsize=gridsize, density=density)
+            
+            fig.savefig(f'{self.plot_dir}/{dsname}_parameter_comparision.png')
+
+            plt.close(fig)
+
+            fig, ax = plot_parameters(param_list)
+
+            fig.savefig(f'{self.plot_dir}/{dsname}_parameters.png')
+
+            plt.close(fig)

@@ -40,6 +40,8 @@ class GromacsGrappa(Grappa):
         if not top_outpath:
             top_outpath = Path(top_path).with_stem(Path(top_path).stem + "_grappa")
 
+        plot_path = Path(Path(top_outpath).stem + "_parameters.png")
+
         # import this only when the function is called to make grappas dependency on kimmdy optional
         from kimmdy.topology.topology import Topology
         from kimmdy.parsing import read_top, write_top
@@ -51,7 +53,7 @@ class GromacsGrappa(Grappa):
         topology = Topology(read_top(Path(top_path)))
 
         # call grappa model to write the parameters to the topology
-        topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, charge_model=charge_model)
+        topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, charge_model=charge_model, plot_path=plot_path)
         topology.needs_parameterization = True
         
         ## write top file

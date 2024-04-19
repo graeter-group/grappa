@@ -7,3 +7,4 @@ matplotlib==3.8.2
 wandb==0.16.1
 lightning==2.1.0
 networkx==3.2.1
+seaborn

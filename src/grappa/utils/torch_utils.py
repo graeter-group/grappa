@@ -376,3 +376,12 @@ def invariant_rmse(y_true, y_pred):
         raise ValueError("y_true must have shape (..., 3) for invariant_rmse")
     diffs = torch.sum(torch.square(y_true - y_pred), dim=-1)
     return torch.sqrt(torch.mean(diffs))
+
+
+def to_numpy(x)->np.ndarray:
+    if isinstance(x, np.ndarray):
+        return x
+    if isinstance(x, torch.Tensor):
+        return x.cpu().numpy()
+    if isinstance(x, list):
+        return np.array(x)

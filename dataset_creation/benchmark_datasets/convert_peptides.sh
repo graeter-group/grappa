@@ -13,5 +13,5 @@ datasets=("spice-dipeptide" "pepconf-dlc" "protein-torsion")
 
 # Loop through each dataset name
 for ds in "${datasets[@]}"; do
-  python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds""_amber99sbildn" --with_amber99
+  python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds""_amber99sbildn" --with_amber99 --exclude_pattern '[N]([H])[C](=[O])[C]([H])([H])[H])[N]1[H]' # hid fragment, excluded because of some apparant bug of openmmforcefields for this
 done

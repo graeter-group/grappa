@@ -207,9 +207,14 @@ class Molecule():
         assert isinstance(openmm_system, System), f"openmm_system must be an instance of openmm.app.System. but is: {type(openmm_system)}"
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
 
-        # indexes in the system:
-        atom_idxs = [atom.id for atom in openmm_topology.atoms()] # assume that the id in the topology is the index in the system.
-
+        # indices in the system:
+        if openmm_system.getNumParticles() > len(list(openmm_topology.atoms())):
+            atom_idxs = [int(atom.id) for atom in openmm_topology.atoms()] # assume that the id in the topology is the index in the system.
+        elif openmm_system.getNumParticles() == len(list(openmm_topology.atoms())):
+            atom_idxs = list(range(openmm_system.getNumParticles()))
+        else:
+            raise ValueError(f"the number of particles in the system ({openmm_system.getNumParticles()}) must be equal to or greater than the number of atoms in the topology ({len(list(openmm_topology.atoms()))})")
+            
         bonds = []
         for bond in openmm_topology.bonds():
             bonds.append((bond[0].index, bond[1].index)) # here we use the index in atom_idxs
@@ -665,3 +670,20 @@ class Molecule():
             assert len(is_radical.shape) == 1, f"is_radical must be a 1d array but has shape {is_radical.shape}"
 
         self.additional_features['is_radical'] = np.array(is_radical, dtype=np.float32)
+
+    @classmethod
+    def random(cls):
+        """
+        Create a random molecule (A-B-C-D, E-B) with atomic numbers 1,2,3,4,5 and partial charges 0.0, 0.2, 0.3, -0.5., 0.
+        """
+
+        atoms = [0,1,2,3,4]
+        bonds = [(0,1), (1,2), (2,3), (1,4)]
+        angles = [(0,1,2), (1,2,3), (1,2,4)]
+        propers = [(0,1,2,3)]
+        impropers = [(0,2,1,4)]
+
+        atomic_numbers = [1,2,3,4,5]
+        partial_charges = [0.0, 0.2, 0.3, -0.5, 0.]
+
+        return cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges)

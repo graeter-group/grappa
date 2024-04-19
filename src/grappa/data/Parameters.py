@@ -1,3 +1,4 @@
+#%%
 """
 Contains the output dataclass 'Parameters'.
 """
@@ -13,7 +14,9 @@ import torch
 from dgl import DGLGraph
 import warnings
 
-from .Molecule import Molecule
+from grappa.data.Molecule import Molecule
+import matplotlib.pyplot as plt
+from grappa.utils.torch_utils import to_numpy
 
 import pkgutil
 
@@ -490,16 +493,26 @@ class Parameters():
             else:
                 improper_ks = np.zeros_like(self.improper_ks)
         else:
-            improper_ks = np.where(
-                np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2),
-                self.improper_ks, -self.improper_ks)
-            
-
+            improper_ks = Parameters.to_signed_k(self.improper_ks, self.improper_phases)
 
         g.nodes['n4_improper'].data['k_ref'] = correct_shape(torch.tensor(improper_ks, dtype=torch.float32), n_periodicity_improper)
 
         return g
     
+    @staticmethod
+    def to_signed_k(k:np.ndarray, phase:np.ndarray)->np.ndarray:
+        """
+        Converts the k and phase to a signed k.
+        """
+        k = to_numpy(k)
+        phase = to_numpy(phase)
+        assert np.all((k >= 0) + np.isnan(k)), f"The force constants must be positive."
+        if not np.all(np.isclose(phase, 0, atol=1e-2) + np.isclose(phase, np.pi, atol=1e-2) + np.isclose(phase, 2*np.pi, atol=1e-2) + np.isnan(phase)):
+            raise ValueError(f"The phases must be either 0 or pi or 2pi")
+        
+        return np.where(
+                np.isclose(phase, 0, atol=1e-2) + np.isclose(phase, 2*np.pi, atol=1e-2),
+                k, -k)
 
     @classmethod
     def get_nan_params(cls, mol:Molecule):
@@ -539,3 +552,352 @@ class Parameters():
             improper_ks=improper_ks,
             improper_phases=improper_phases,
         )
+    
+
+    def __len__(self):
+        return len(self.atoms)
+    
+    def plot(self, filename:str=None, **plot_args)->Union[None, Tuple]:
+        """
+        Save a plot of the parameters.
+        """
+        fig, ax = plot_parameters([self], **plot_args)
+
+        if not filename is None:
+            fig.savefig(filename)
+            plt.close(fig)
+            return None
+
+        else:
+            return fig, ax
+        
+
+    def compare_with(self, other, filename:str=None, **plot_args)->Union[None, Tuple]:
+        """
+        Compare the parameters with another Parameters object.
+        """
+        fig, ax = compare_parameters(self, other, **plot_args)
+
+        if not filename is None:
+            fig.savefig(filename)
+            plt.close(fig)
+            return None
+
+        else:
+            return fig, ax
+        
+    @classmethod
+    def random(cls):
+        """
+        Returns random parameters for a toy molecule.
+        """
+        from grappa.data.Molecule import Molecule
+        mol = Molecule.random()
+        params = cls.get_nan_params(mol)
+
+        # for every param, pick randn like:
+
+        params.bond_k = np.random.randn(len(params.bonds))*3 + 100
+        params.bond_eq = np.random.randn(len(params.bonds)) + 10
+
+        params.angle_k = np.random.randn(len(params.angles)) + 10
+        params.angle_eq = (np.random.randn(len(params.angles))*0.5 + 3.14)
+
+        params.proper_ks = np.abs(np.random.randn(len(params.propers), constants.N_PERIODICITY_PROPER))
+
+        params.improper_ks = np.abs(np.random.randn(len(params.impropers), constants.N_PERIODICITY_IMPROPER))
+
+        params.proper_phases = np.ones_like(params.proper_ks) * np.pi * 2
+        params.improper_phases = np.ones_like(params.improper_ks) * np.pi * 2
+
+        return params
+    
+
+
+################################################
+# plotting utility
+
+
+#%%
+import matplotlib.pyplot as plt
+import numpy as np
+from typing import Tuple, List
+from grappa.utils.torch_utils import to_numpy
+from grappa import units
+from matplotlib.colors import LogNorm
+
+
+
+def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, fontsize: int = 27, figsize: int = 7, s:float=4, xlabel:str=None, ylabel:str=None, scatter=True, log=True, gridsize:int=50, density:bool=False) -> Tuple[plt.Figure, plt.Axes]:
+    if not isinstance(parameters_x, list):
+        parameters_x = [parameters_x]
+
+    if not isinstance(parameters_y, list):
+        parameters_y = [parameters_y]
+
+    assert len(parameters_x) == len(parameters_y), "The number of parameter sets must be the same for x and y."
+
+    # Extract parameters for x and y
+    bond_eq_x = np.concatenate([to_numpy(params.bond_eq) for params in parameters_x], axis=0)
+    bond_k_x = np.concatenate([to_numpy(params.bond_k) for params in parameters_x], axis=0)
+    bond_eq_y = np.concatenate([to_numpy(params.bond_eq) for params in parameters_y], axis=0)
+    bond_k_y = np.concatenate([to_numpy(params.bond_k) for params in parameters_y], axis=0)
+
+    angle_eq_x = np.concatenate([to_numpy(params.angle_eq) for params in parameters_x], axis=0)
+    angle_k_x = np.concatenate([to_numpy(params.angle_k) for params in parameters_x], axis=0)
+    angle_eq_y = np.concatenate([to_numpy(params.angle_eq) for params in parameters_y], axis=0)
+    angle_k_y = np.concatenate([to_numpy(params.angle_k) for params in parameters_y], axis=0)
+
+    n_periodicity = 3
+
+    signed_proper_ks_x_n0 = np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,0].flatten() for params in parameters_x], axis=0)
+    signed_proper_ks_y_n0 = np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,0].flatten() for params in parameters_y], axis=0)
+
+    signed_proper_ks_x_n_rest = np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,1:n_periodicity].flatten() for params in parameters_x], axis=0)
+    signed_proper_ks_y_n_rest = np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,1:n_periodicity].flatten() for params in parameters_y], axis=0)
+
+    # Check shapes and raise ValueError if they do not match
+    if bond_eq_x.shape != bond_eq_y.shape:
+        raise ValueError(f"bond_eq_x.shape={bond_eq_x.shape}, bond_eq_y.shape={bond_eq_y.shape}")
+
+    if bond_k_x.shape != bond_k_y.shape:
+        raise ValueError(f"bond_k_x.shape={bond_k_x.shape}, bond_k_y.shape={bond_k_y.shape}")
+
+    if angle_eq_x.shape != angle_eq_y.shape:
+        raise ValueError(f"angle_eq_x.shape={angle_eq_x.shape}, angle_eq_y.shape={angle_eq_y.shape}")
+
+    if angle_k_x.shape != angle_k_y.shape:
+        raise ValueError(f"angle_k_x.shape={angle_k_x.shape}, angle_k_y.shape={angle_k_y.shape}")
+
+    if signed_proper_ks_x_n0.shape != signed_proper_ks_y_n0.shape:
+        raise ValueError(f"signed_proper_ks_x_n0.shape={signed_proper_ks_x_n0.shape}, signed_proper_ks_y_n0.shape={signed_proper_ks_y_n0.shape}")
+
+    if signed_proper_ks_x_n_rest.shape != signed_proper_ks_y_n_rest.shape:
+        raise ValueError(f"signed_proper_ks_x_n_rest.shape={signed_proper_ks_x_n_rest.shape}, signed_proper_ks_y_n_rest.shape={signed_proper_ks_y_n_rest.shape}")
+
+    
+
+    # convert rad to degree:
+    angle_eq_x = units.Quantity(angle_eq_x, units.rad).value_in_unit(units.degree)
+    angle_eq_y = units.Quantity(angle_eq_y, units.rad).value_in_unit(units.degree)
+
+    angle_k_x = units.Quantity(angle_k_x, units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
+    angle_k_y = units.Quantity(angle_k_y, units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
+
+    # Create figure and axes
+    fig, ax = plt.subplots(2, 3, figsize=(figsize * 3, figsize * 2))
+
+    axes = ax.flatten()
+
+    if density:
+        import seaborn as sns
+        try:
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=bond_eq_x, y=bond_eq_y, ax=axes[0], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+        except:
+            pass
+        try:
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=bond_k_x, y=bond_k_y, ax=axes[1], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+        except:
+            pass
+        try:
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_eq_x, y=angle_eq_y, ax=axes[2], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+        except:
+            pass
+        try:
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_k_x, y=angle_k_y, ax=axes[3], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+        except:
+            pass
+        try:
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=signed_proper_ks_x_n0, y=signed_proper_ks_y_n0, ax=axes[4], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+        except:
+            pass
+        try:
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=signed_proper_ks_x_n_rest, y=signed_proper_ks_y_n_rest, ax=axes[5], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+        except:
+            pass
+
+    if scatter:
+        axes[0].scatter(bond_eq_x, bond_eq_y, color='blue', s=s)
+        axes[1].scatter(bond_k_x, bond_k_y, color='blue', s=s)
+        axes[2].scatter(angle_eq_x, angle_eq_y, color='blue', s=s)
+        axes[3].scatter(angle_k_x, angle_k_y, color='blue', s=s)
+        axes[4].scatter(signed_proper_ks_x_n0, signed_proper_ks_y_n0, color='blue', s=s)
+        axes[5].scatter(signed_proper_ks_x_n_rest, signed_proper_ks_y_n_rest, color='blue', s=s) 
+
+    # Titles and labels
+    for ax in axes:
+        min_val = np.min([ax.get_xlim()[0], ax.get_ylim()[0]])
+        max_val = np.max([ax.get_xlim()[1], ax.get_ylim()[1]])
+
+        # ax.axline([min_val, min_val], [max_val, max_val], color='black', linestyle='--', linewidth=1)  # Add line
+
+        ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='--', linewidth=1, alpha=1)  # Add line
+
+        ax.set_xlim(min_val, max_val)
+        ax.set_ylim(min_val, max_val)
+
+        
+        if not xlabel is None:
+            ax.set_xlabel(xlabel, fontsize=fontsize)
+        if not ylabel is None:
+            ax.set_ylabel(ylabel, fontsize=fontsize)
+
+        num_ticks = None
+
+        if num_ticks:
+            ax.xaxis.set_major_locator(plt.MaxNLocator(num_ticks))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(num_ticks))
+
+        # make the ticks go into and out of the plot and make them larger:
+        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1, labelsize=fontsize-3)
+        
+    # Units dictionary
+    UNITS = {
+        'bond_eq': 'nm',
+        'bond_k': r'kcal/mol/$\AA^2$',
+        'angle_eq': 'deg',
+        'angle_k': r'kcal/mol/deg$^2$',
+        'proper_ks': r'kcal/mol',
+        'improper_ks': r'kcal/mol',
+    }
+
+    # Set labels with units
+    axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]", fontsize=fontsize)
+    axes[1].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
+    axes[2].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
+    axes[3].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
+    axes[4].set_title(f"Proper k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]", fontsize=fontsize)
+
+    plt.tight_layout(pad=3.0)
+    # plt.subplots_adjust(wspace=0.6, hspace=0.2)
+
+    return fig, ax
+
+
+def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsize=7, compare_parameters:List[Parameters]=None, name="Grappa", compare_name="Reference"):
+
+    if type(parameters) is not list:
+        parameters = [parameters]
+
+    if compare_parameters is not None:
+        if type(compare_parameters) is not list:
+            compare_parameters = [compare_parameters]
+
+    # Create figure and axes with a 2-row, 3-column layout
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(figsize*2.8, figsize*2))
+    
+    # Flatten the axes array for easy iteration
+    axes = axes.flatten()
+
+    n_periodicity = 3
+    
+    # Parameter data for plotting
+    data = [
+        np.concatenate([to_numpy(params.bond_eq) for params in parameters], axis=0),
+        np.concatenate([to_numpy(params.bond_k) for params in parameters], axis=0),
+        np.concatenate([to_numpy(params.angle_eq) for params in parameters], axis=0),
+        np.concatenate([to_numpy(params.angle_k) for params in parameters], axis=0),
+        np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,0].flatten() for params in parameters], axis=0),
+        np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,1:n_periodicity].flatten() for params in parameters], axis=0),
+    ]
+
+    if compare_parameters is not None:
+        data_compare = [
+            np.concatenate([to_numpy(params.bond_eq) for params in compare_parameters], axis=0),
+            np.concatenate([to_numpy(params.bond_k) for params in compare_parameters], axis=0),
+            np.concatenate([to_numpy(params.angle_eq) for params in compare_parameters], axis=0),
+            np.concatenate([to_numpy(params.angle_k) for params in compare_parameters], axis=0),
+            np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,0].flatten() for params in compare_parameters], axis=0),
+            np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,1:n_periodicity].flatten() for params in compare_parameters], axis=0),
+        ]
+
+        # convert rad to degree:
+        data_compare[2] = units.Quantity(data_compare[2], units.rad).value_in_unit(units.degree)
+        data_compare[3] = units.Quantity(data_compare[3], units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
+
+
+    # convert rad to degree:
+    data[2] = units.Quantity(data[2], units.rad).value_in_unit(units.degree)
+
+    data[3] = units.Quantity(data[3], units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
+
+    
+    # Create violin plots for each parameter set
+    for ax, param in zip(axes, data):
+        if compare_parameters is not None:
+            parts = ax.violinplot([param, data_compare[axes.tolist().index(ax)]], showmeans=False, showextrema=True, points=1000, bw_method=0.05)
+
+            ax.set_xticks([1, 2])
+            ax.set_xticklabels([name, compare_name], fontsize=fontsize-3)
+
+        else:
+            parts = ax.violinplot(param, showmeans=False, showextrema=True, points=1000, bw_method=0.05)
+
+            # no x ticks:
+            ax.set_xticks([])
+
+        num_ticks = None
+
+        if num_ticks:
+            ax.yaxis.set_major_locator(plt.MaxNLocator(num_ticks))
+
+        # make the ticks go into and out of the plot and make them larger:
+        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1, labelsize=fontsize-3)
+
+    # Units dictionary
+    UNITS = {
+        'bond_eq': 'nm',
+        'bond_k': r'kcal/mol/$\AA^2$',
+        'angle_eq': 'deg',
+        'angle_k': r'kcal/mol/deg$^2$',
+        'proper_ks': r'kcal/mol',
+        'improper_ks': r'kcal/mol',
+    }
+
+    # Set labels with units
+    axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]", fontsize=fontsize)
+    axes[1].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
+    axes[2].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
+    axes[3].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
+    axes[4].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]", fontsize=fontsize)
+
+    plt.tight_layout(pad=3.0)
+
+    # Set the overall title and layout adjustment
+    if not title is None:
+        fig.suptitle(title, fontsize=fontsize)
+        plt.subplots_adjust(top=0.85)  # Adjust the top padding to make room for title if necessary
+    # plt.subplots_adjust(wspace=0.6, hspace=0.2)
+    
+    return fig, axes
+
+# %%
+
+if __name__ == '__main__':
+    # test plotting
+        
+    # get some random parameters:
+    random_parameters = [Parameters.random() for i in range(100)]
+
+    # plot the parameters
+    fig, ax = plot_parameters(random_parameters)
+
+    fig.savefig('random_parameters.png')
+
+    # close all:
+    plt.close('all')
+    # %%
+    random_parameters2 = [Parameters.random() for i in range(100)]
+
+    # compare the parameters
+    fig, ax = compare_parameters(random_parameters, random_parameters2)
+
+    fig.savefig('comparison_parameters.png')
+
+    plt.close('all')
+
+
+
+# %%

@@ -1,45 +1,44 @@
 #%%
-# USAGE
-
-from openmm.app import ForceField, Topology, PDBFile
-from grappa import OpenmmGrappa
+# STANDARD OPENMM WORKFLOW
+######################
 from pathlib import Path
+from openmm.app import ForceField, Topology, PDBFile
+from openmm.app import Modeller
+from openmm import unit
+from grappa import OpenmmGrappa
 
-
-topology = PDBFile(str(Path(__file__).parent/'T4.pdb')).topology # load your system as openmm.Topology
+pdbfile = PDBFile('data/trp_cage.pdb')
+topology = pdbfile.topology # load your system as openmm.Topology
 
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
 # solvate:
-from openmm.app import Modeller
-from openmm import unit
 
-modeller = Modeller(topology, PDBFile(str(Path(__file__).parent/'T4.pdb')).positions)
+modeller = Modeller(topology, pdbfile.positions)
+modeller.deleteWater()
+modeller.addHydrogens(classical_ff)
 modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
+
 
 topology = modeller.getTopology()
 positions = modeller.getPositions()
 
-#%%
-
-
 system = classical_ff.createSystem(topology)
+##########################
 
-
+#%%
 # load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.0', grappa-1.1' and 'latest'
-grappa_ff = OpenmmGrappa.from_tag('grappa-1.1')
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.2.0')
 
 # parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'classical' and 'am1BCC'.
-system = grappa_ff.parametrize_system(system, topology, charge_model='classical')
-
-#%%
-
-orig_system = classical_ff.createSystem(topology)
+system = grappa_ff.parametrize_system(system, topology, charge_model='classical', plot_dir='.')
 
 # %%
 
 # SMALL VALIDATION
 
 # now we can use this system downstream. To validate that grappa predicts gradients that are somewhat comparable to those of the classical protein force field, we can plot the gradient components of the grappa system and the original system:
+
+orig_system = classical_ff.createSystem(topology)
 from grappa.utils.openmm_utils import get_energies
 import numpy as np
 from grappa.constants import get_grappa_units_in_openmm
@@ -68,6 +67,6 @@ plt.plot(original_gradients.flatten(), original_gradients.flatten(), color='blac
 
 plt.savefig('grappa_vs_classical_gradients_T4.png') 
 print(f'Component RMSE between Grappa and amber99sbildn: {crmse:.2f} kcal/mol/A')
-print('Saved fig to grappa_vs_classical_gradients_T4.png')
+print('Saved fig to grappa_vs_classical_gradients.png')
 plt.show()
 # %%
