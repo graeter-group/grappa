@@ -7,7 +7,7 @@ from openmm.app import Modeller
 from openmm import unit
 from grappa import OpenmmGrappa
 
-pdbfile = PDBFile('data/trp_cage.pdb')
+pdbfile = PDBFile('1ubq.pdb')
 topology = pdbfile.topology # load your system as openmm.Topology
 
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
@@ -26,7 +26,7 @@ system = classical_ff.createSystem(topology)
 ##########################
 
 #%%
-# load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.0', grappa-1.1' and 'latest'
+# load the pretrained ML model from a tag. Currently, possible tags are grappa-1.1', 'grappa-1.2' and 'latest'
 grappa_ff = OpenmmGrappa.from_tag('grappa-1.2.0')
 
 # parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'classical' and 'am1BCC'.
