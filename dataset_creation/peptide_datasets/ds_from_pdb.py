@@ -11,7 +11,7 @@ import tempfile
 from openmm.app import PDBFile
 from grappa.utils import openmm_utils, openff_utils
 
-def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[], charge_model='classical', with_params=False):
+def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[], charge_model='amber99', with_params=False):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
     target_path = Path(target_path)
@@ -127,8 +127,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--charge_model",
         type=str,
-        default='classical',
-        help="Which charge model to use. Possible values: classical, am1bcc",
+        default='amber99',
+        help="Which charge model to use. Possible values: amber99, am1bcc",
     )
     parser.add_argument(
         "--with_params",

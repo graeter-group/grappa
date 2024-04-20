@@ -6,7 +6,7 @@ set -e
 # get an abspath to this script
 THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-RUN_ID=leif-seute/grappa-1.2/4te386b4
+RUN_ID=leif-seute/grappa-1.2/b2b46z0l
 
 MODELNAME=grappa-1.2.0
 
@@ -48,7 +48,9 @@ DATASETS=(
   uncapped_amber99sbildn
 )
 
-DATASETS=()
+DATASETS=(
+  spice-dipeptide_amber99sbildn
+)
 DATADIR=data/dgl_datasets
 
 # for each dir, upload a zipped version of it:

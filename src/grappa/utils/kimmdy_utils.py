@@ -59,13 +59,13 @@ if importlib.util.find_spec('kimmdy') is not None:
         
 
     # workflow functions
-    def build_molecule(top: Topology, build_nrs:Set[str], charge_model:str='classical') -> Molecule:
+    def build_molecule(top: Topology, build_nrs:Set[str], charge_model:str='amber99') -> Molecule:
         '''
         Build a grappa.data.Molecule from a kimmdy.topology.topology.Topology
 
         - top: Topology to be represented by the Molecule
         - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
-            - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+            - 'amber99': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
         at_map = top.ff.atomtypes
@@ -243,10 +243,10 @@ if importlib.util.find_spec('kimmdy') is not None:
 
         - grappa_instance: Grappa instance to use for parameterization
         - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
-            - 'classical': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+            - 'amber99': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
         '''
-        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='classical', plot_path=None, **kwargs):
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='amber99', plot_path=None, **kwargs):
             super().__init__(*args, **kwargs)
             self.grappa_instance = grappa_instance
             self.field_of_view = grappa_instance.field_of_view

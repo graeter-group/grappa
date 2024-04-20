@@ -40,7 +40,7 @@ class Molecule():
         additional_features (Optional[Dict[str, List]]): A dictionary containing additional features associated with 
             atoms. The dictionary keys are feature names, and values are lists or arrays of shape (n_atoms, feat_dim).
         charge_model: A tag defining the model from which the partial charges where obtained. can be
-            - 'classical': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+            - 'amber99': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
             - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.0.
 
     Optional Attributes:
@@ -73,7 +73,7 @@ class Molecule():
         degree: bool = True,
         mass_encoding: bool = True,
         mapped_smiles: str = None,
-        charge_model: str = 'classical',
+        charge_model: str = 'amber99',
     )->None:
         self.atoms = atoms
         self.bonds = bonds
@@ -176,7 +176,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='classical'):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='amber99'):
         """
         Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
@@ -196,7 +196,7 @@ class Molecule():
             partial_charges ([type], optional): a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system. Defaults to None.
             ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
-            charge_model (str, optional): the model from which the partial charges where obtained. can be 'classical' or 'am1BCC'. Defaults to 'classical'.
+            charge_model (str, optional): the model from which the partial charges where obtained. can be 'amber99' or 'am1BCC'. Defaults to 'amber99'.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 

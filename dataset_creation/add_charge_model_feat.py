@@ -32,7 +32,7 @@ def process_dspath(dspath, overwrite=True):
     dgl_graphlist = dgl.load_graphs(str(dspath/"graphs.bin"))[0]
 
     if dspath.name in CLASSICAL_CHARGES or any([tag in dspath.name for tag in CLASSICAL_CHARGE_TAG]):
-        charge_model = "classical"
+        charge_model = "amber99"
     else:
         charge_model = "am1BCC"
 

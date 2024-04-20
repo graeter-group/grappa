@@ -627,8 +627,15 @@ from grappa import units
 from matplotlib.colors import LogNorm
 
 
+# set font to arial:
+plt.rc('font', family="Arial")
 
-def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, fontsize: int = 27, figsize: int = 7, s:float=4, xlabel:str=None, ylabel:str=None, scatter=True, log=True, gridsize:int=50, density:bool=False) -> Tuple[plt.Figure, plt.Axes]:
+
+
+def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, fontsize: int = 27, figsize: int = 7, s:float=4, xlabel:str=None, ylabel:str=None, scatter=True, log=True, gridsize:int=50, density:bool=False, exclude_idxs:List[np.ndarray]=None) -> Tuple[plt.Figure, plt.Axes]:
+    """
+    exclude_idxs: bonds and angles that involve these atoms will be ignored.
+    """
     if not isinstance(parameters_x, list):
         parameters_x = [parameters_x]
 
@@ -638,15 +645,46 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
     assert len(parameters_x) == len(parameters_y), "The number of parameter sets must be the same for x and y."
 
     # Extract parameters for x and y
-    bond_eq_x = np.concatenate([to_numpy(params.bond_eq) for params in parameters_x], axis=0)
-    bond_k_x = np.concatenate([to_numpy(params.bond_k) for params in parameters_x], axis=0)
-    bond_eq_y = np.concatenate([to_numpy(params.bond_eq) for params in parameters_y], axis=0)
-    bond_k_y = np.concatenate([to_numpy(params.bond_k) for params in parameters_y], axis=0)
+    bond_eq_x = [to_numpy(params.bond_eq) for params in parameters_x]
+    bond_k_x = [to_numpy(params.bond_k) for params in parameters_x]
+    bond_eq_y = [to_numpy(params.bond_eq) for params in parameters_y]
+    bond_k_y = [to_numpy(params.bond_k) for params in parameters_y]
 
-    angle_eq_x = np.concatenate([to_numpy(params.angle_eq) for params in parameters_x], axis=0)
-    angle_k_x = np.concatenate([to_numpy(params.angle_k) for params in parameters_x], axis=0)
-    angle_eq_y = np.concatenate([to_numpy(params.angle_eq) for params in parameters_y], axis=0)
-    angle_k_y = np.concatenate([to_numpy(params.angle_k) for params in parameters_y], axis=0)
+    angle_eq_x = [to_numpy(params.angle_eq) for params in parameters_x]
+    angle_k_x = [to_numpy(params.angle_k) for params in parameters_x]
+    angle_eq_y = [to_numpy(params.angle_eq) for params in parameters_y]
+    angle_k_y = [to_numpy(params.angle_k) for params in parameters_y]
+
+    if exclude_idxs is not None:
+        assert len(exclude_idxs) == len(parameters_x)
+        bond_idxs = [to_numpy(params.bonds) for params in parameters_x]
+        angle_idxs = [to_numpy(params.angles) for params in parameters_x]
+        proper_idxs = [to_numpy(params.propers) for params in parameters_x]
+
+        for i, idxs in enumerate(exclude_idxs):
+            mask = ~np.isin(bond_idxs[i][:, :2], idxs).any(axis=1)
+            bond_eq_x[i] = bond_eq_x[i][mask]
+            bond_k_x[i] = bond_k_x[i][mask]
+            bond_eq_y[i] = bond_eq_y[i][mask]
+            bond_k_y[i] = bond_k_y[i][mask]
+
+            mask = ~np.isin(angle_idxs[i][:, :3], idxs).any(axis=1)
+            angle_eq_x[i] = angle_eq_x[i][mask]
+            angle_k_x[i] = angle_k_x[i][mask]
+            angle_eq_y[i] = angle_eq_y[i][mask]
+            angle_k_y[i] = angle_k_y[i][mask]
+
+
+    bond_eq_x = np.concatenate(bond_eq_x)
+    bond_k_x = np.concatenate(bond_k_x)
+    bond_eq_y = np.concatenate(bond_eq_y)
+    bond_k_y = np.concatenate(bond_k_y)
+
+    angle_eq_x = np.concatenate(angle_eq_x)
+    angle_k_x = np.concatenate(angle_k_x)
+    angle_eq_y = np.concatenate(angle_eq_y)
+    angle_k_y = np.concatenate(angle_k_y)     
+        
 
     n_periodicity = 3
 
@@ -696,19 +734,19 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         except:
             pass
         try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=bond_k_x, y=bond_k_y, ax=axes[1], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=bond_k_x, y=bond_k_y, ax=axes[3], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
         except:
             pass
         try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_eq_x, y=angle_eq_y, ax=axes[2], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_eq_x, y=angle_eq_y, ax=axes[1], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
         except:
             pass
         try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_k_x, y=angle_k_y, ax=axes[3], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_k_x, y=angle_k_y, ax=axes[4], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
         except:
             pass
         try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=signed_proper_ks_x_n0, y=signed_proper_ks_y_n0, ax=axes[4], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
+            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=signed_proper_ks_x_n0, y=signed_proper_ks_y_n0, ax=axes[1], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
         except:
             pass
         try:
@@ -718,14 +756,14 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
 
     if scatter:
         axes[0].scatter(bond_eq_x, bond_eq_y, color='blue', s=s)
-        axes[1].scatter(bond_k_x, bond_k_y, color='blue', s=s)
-        axes[2].scatter(angle_eq_x, angle_eq_y, color='blue', s=s)
-        axes[3].scatter(angle_k_x, angle_k_y, color='blue', s=s)
-        axes[4].scatter(signed_proper_ks_x_n0, signed_proper_ks_y_n0, color='blue', s=s)
+        axes[1].scatter(angle_eq_x, angle_eq_y, color='blue', s=s)
+        axes[2].scatter(signed_proper_ks_x_n0, signed_proper_ks_y_n0, color='blue', s=s)
+        axes[3].scatter(bond_k_x, bond_k_y, color='blue', s=s)
+        axes[4].scatter(angle_k_x, angle_k_y, color='blue', s=s)
         axes[5].scatter(signed_proper_ks_x_n_rest, signed_proper_ks_y_n_rest, color='blue', s=s) 
 
     # Titles and labels
-    for ax in axes:
+    for i, ax in enumerate(axes):
         min_val = np.min([ax.get_xlim()[0], ax.get_ylim()[0]])
         max_val = np.max([ax.get_xlim()[1], ax.get_ylim()[1]])
 
@@ -739,7 +777,7 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         
         if not xlabel is None:
             ax.set_xlabel(xlabel, fontsize=fontsize)
-        if not ylabel is None:
+        if not ylabel is None and i in [0,3]:
             ax.set_ylabel(ylabel, fontsize=fontsize)
 
         num_ticks = None
@@ -763,10 +801,10 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
 
     # Set labels with units
     axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]", fontsize=fontsize)
-    axes[1].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
-    axes[2].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
-    axes[3].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
-    axes[4].set_title(f"Proper k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
+    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[3].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
+    axes[4].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
     axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]", fontsize=fontsize)
 
     plt.tight_layout(pad=3.0)
@@ -795,32 +833,32 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
     # Parameter data for plotting
     data = [
         np.concatenate([to_numpy(params.bond_eq) for params in parameters], axis=0),
-        np.concatenate([to_numpy(params.bond_k) for params in parameters], axis=0),
         np.concatenate([to_numpy(params.angle_eq) for params in parameters], axis=0),
-        np.concatenate([to_numpy(params.angle_k) for params in parameters], axis=0),
         np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,0].flatten() for params in parameters], axis=0),
+        np.concatenate([to_numpy(params.bond_k) for params in parameters], axis=0),
+        np.concatenate([to_numpy(params.angle_k) for params in parameters], axis=0),
         np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,1:n_periodicity].flatten() for params in parameters], axis=0),
     ]
 
     if compare_parameters is not None:
         data_compare = [
             np.concatenate([to_numpy(params.bond_eq) for params in compare_parameters], axis=0),
-            np.concatenate([to_numpy(params.bond_k) for params in compare_parameters], axis=0),
             np.concatenate([to_numpy(params.angle_eq) for params in compare_parameters], axis=0),
-            np.concatenate([to_numpy(params.angle_k) for params in compare_parameters], axis=0),
             np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,0].flatten() for params in compare_parameters], axis=0),
+            np.concatenate([to_numpy(params.bond_k) for params in compare_parameters], axis=0),
+            np.concatenate([to_numpy(params.angle_k) for params in compare_parameters], axis=0),
             np.concatenate([Parameters.to_signed_k(params.proper_ks, params.proper_phases)[:,1:n_periodicity].flatten() for params in compare_parameters], axis=0),
         ]
 
         # convert rad to degree:
-        data_compare[2] = units.Quantity(data_compare[2], units.rad).value_in_unit(units.degree)
-        data_compare[3] = units.Quantity(data_compare[3], units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
+        data_compare[1] = units.Quantity(data_compare[1], units.rad).value_in_unit(units.degree)
+        data_compare[4] = units.Quantity(data_compare[4], units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
 
 
     # convert rad to degree:
-    data[2] = units.Quantity(data[2], units.rad).value_in_unit(units.degree)
+    data[1] = units.Quantity(data[1], units.rad).value_in_unit(units.degree)
 
-    data[3] = units.Quantity(data[3], units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
+    data[4] = units.Quantity(data[4], units.kcal_per_mol/units.rad/units.rad).value_in_unit(units.kcal_per_mol/units.degree/units.degree)
 
     
     # Create violin plots for each parameter set
@@ -857,10 +895,10 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
 
     # Set labels with units
     axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]", fontsize=fontsize)
-    axes[1].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
-    axes[2].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
-    axes[3].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
-    axes[4].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
+    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[3].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
+    axes[4].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
     axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]", fontsize=fontsize)
 
     plt.tight_layout(pad=3.0)

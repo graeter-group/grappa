@@ -62,7 +62,7 @@ In GROMACS, Grappa can be used as command line application that receives the pat
 gmx pdb2gmx -f your_protein.pdb -o your_protein.gro -p topology.top -ignh
 
 # create a new topology file with the bonded parameters from Grappa, specifying the tag of the grappa model:
-grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.1
+grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.2
 
 # continue with ususal gromacs workflow
 ```
@@ -80,11 +80,11 @@ topology = ... # load your system as openmm.Topology
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
 system = classical_ff.createSystem(topology)
 
-# load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.0', grappa-1.1' and 'latest'
-grappa_ff = OpenmmGrappa.from_tag('grappa-1.1')
+# load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.1', grappa-1.2' and 'latest'
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.2')
 
-# parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'classical' and 'am1BCC'.
-system = grappa_ff.parametrize_system(system, topology, charge_model='classical')
+# parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'amber99' and 'am1BCC'.
+system = grappa_ff.parametrize_system(system, topology, charge_model='amber99')
 ```
 
 
@@ -292,7 +292,7 @@ from grappa.utils.loading_utils import model_dict_from_tag
 from grappa.training.trainrun import do_trainrun
 import json
 
-model_dict = model_dict_from_tag('grappa-1.1') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
+model_dict = model_dict_from_tag('grappa-1.2') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
 
 split_ids = model_dict['split_names']
 with open('split_ids.json', 'w') as f:

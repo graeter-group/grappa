@@ -39,9 +39,10 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
     wandb_logger = WandbLogger(experiment=wandb.run, notes=notes, project=project, name=wandb.run.name)
 
     # Checkpoint directory in the run directory
+    # print(dir(wandb_logger.experiment))
     wandb_run_dir = wandb_logger.experiment.dir
+    assert isinstance(wandb_run_dir, str) or isinstance(wandb_run_dir, Path), f"Internal Error, found type {type(wandb_run_dir)}"
     checkpoint_dir = str(Path(wandb_run_dir) / "checkpoints")
-
     ###############################
     # CHECKPOINTING MODIFICATIONS:
     # SAVE MODEL WITHOUT ENERGY MODULE
@@ -83,6 +84,9 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
 
     # deactivate the progress bar in slurm jobs to prevent huge log files
     is_slurm = os.environ.get('SLURM_JOB_ID') is not None
+
+    if is_slurm:
+        print("Detected SLURM mode: Disabling progress bar...")
 
     trainer = pl.Trainer(logger=wandb_logger, gradient_clip_val=gradient_clip_val, max_epochs=max_epochs, profiler=profiler, callbacks=[checkpoint_callback], enable_progress_bar=not is_slurm)
 

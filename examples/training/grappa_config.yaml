@@ -2,12 +2,21 @@ data_config:
   balance_factor: 0.0
   conf_strategy: 32
   datasets:
+  - spice-des-monomers
+  - spice-pubchem
+  - gen2
+  - gen2-torsion
+  - rna-diverse
   - spice-dipeptide
+  - protein-torsion
+  - pepconf-dlc
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
-  pure_test_datasets: []
+  pure_test_datasets:
+  - rna-trinucleotide
   pure_val_datasets: []
-  pure_train_datasets: []
+  pure_train_datasets:
+  - rna-nucleoside
   splitpath: null
   test_batch_size: 1
   test_loader_workers: 1
@@ -16,7 +25,10 @@ data_config:
   val_batch_size: 32
   val_loader_workers: 2
   val_conf_strategy: 500
-  weights: []
+  weights:
+    rna-diverse: 3
+    rna-nucleoside: 5
+    spice-pubchem: 0.8
 
 lit_model_config:
   add_restarts: []

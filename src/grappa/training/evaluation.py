@@ -201,6 +201,8 @@ class Evaluator:
         self.parameters = {}
         self.reference_parameters = {}
 
+        self.hydrogen_idxs = {}
+
 
     def step(self, g, dsnames):
         # unbatch the graphs
@@ -248,9 +250,15 @@ class Evaluator:
                 if not dsname in self.parameters.keys():
                     self.parameters[dsname] = []
                     self.reference_parameters[dsname] = []
+                    self.hydrogen_idxs[dsname] = []
+
+                atomic_numbers = torch.argmax(g_.nodes['n1'].data['atomic_number'], dim=1) + 1
+                hydrogen_idxs = np.argwhere(atomic_numbers.detach().numpy()==1)[0]
+
 
                 self.parameters[dsname].append(Parameters.from_dgl(g_))
                 self.reference_parameters[dsname].append(Parameters.from_dgl(g_, suffix='_ref'))
+                self.hydrogen_idxs[dsname].append(hydrogen_idxs)
 
 
     def collect(self, bootstrap_seed=None):
@@ -378,7 +386,7 @@ class Evaluator:
         return metrics
     
 
-    def plot_parameters(self, xlabel='Prediction', ylabel='Reference', log=True, scatter=False, gridsize=50, density=True):
+    def plot_parameters(self, xlabel='Prediction', ylabel='Reference', log=True, scatter=False, gridsize=50, density=True, ignore_hydrogen:bool=True):
         
         if self.plot_dir is None:
             raise ValueError("plot_dir must be set in the constructor to plot the parameters.")
@@ -386,8 +394,9 @@ class Evaluator:
         # create parameter plots for each dataset:
         for dsname, param_list in self.parameters.items():
             ref_params = self.reference_parameters[dsname]
+            hydrogen_idxs = self.hydrogen_idxs[dsname] if not ignore_hydrogen else None
 
-            fig, ax = compare_parameters(param_list, ref_params, xlabel=xlabel, ylabel=ylabel, title=dsname, log=log, scatter=scatter, gridsize=gridsize, density=density)
+            fig, ax = compare_parameters(param_list, ref_params, xlabel=xlabel, ylabel=ylabel, title=dsname, log=log, scatter=scatter, gridsize=gridsize, density=density, exclude_idxs=hydrogen_idxs)
             
             fig.savefig(f'{self.plot_dir}/{dsname}_parameter_comparision.png')
 

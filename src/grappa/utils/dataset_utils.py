@@ -71,6 +71,10 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
     
     url = RELEASE_URL + tag + '.zip'
 
+    if tag == 'spice-dipeptide_amber99sbildn':
+        url = 'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.2.0/' + tag + '.zip'
+
+
     return load_dataset(url=url, data_dir=data_dir, filename=tag)
 
 

@@ -67,7 +67,7 @@ def main(source_path, target_path):
             is_radical = np.array(is_radical).reshape(-1)
             partial_charge = data['n1 q_ref'].tolist()
 
-            mol = Molecule(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charge, charge_model='classical')
+            mol = Molecule(atoms=atoms, bonds=bonds, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charge, charge_model='amber99')
 
             mol.additional_features.update({'is_radical': is_radical})
 
@@ -77,7 +77,7 @@ def main(source_path, target_path):
             print(f"Processing {idx}, sequence: {sequence}")
 
 
-            # create moldata object without classical parameters
+            # create moldata object without amber99 parameters
             moldata = MolData.from_arrays(molecule=mol, xyz=xyz, gradient=gradient, energy=energy, sequence=sequence, nonbonded_energy=energy_nonbonded, nonbonded_gradient=gradient_nonbonded, ff_energy=energy_total_ff-energy_nonbonded, ff_gradient=gradient_total_ff-gradient_nonbonded)
 
             moldata.molecule.add_features(['ring_encoding'])

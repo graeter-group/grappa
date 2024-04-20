@@ -27,8 +27,8 @@ class Grappa:
         """
         Load a model from a tag. Available tags are:
             - 'latest'
-            - 'grappa-1.0'
             - 'grappa-1.1'
+            - 'grappa-1.2'
         """
         model = model_from_tag(tag)
         return cls(model, max_element, device)

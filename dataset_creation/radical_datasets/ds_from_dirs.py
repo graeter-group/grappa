@@ -10,7 +10,7 @@ from typing import List
 import numpy as np
 from grappa.constants import CHARGE_MODELS
 
-charge_model = 'classical'
+charge_model = 'amber99'
 
 def main(sourcepath, targetpath, openmm_ff:str=None, skip:List[str]=[]):
     if not openmm_ff is None:

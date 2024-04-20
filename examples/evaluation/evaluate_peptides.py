@@ -13,7 +13,7 @@ from grappa.utils.loading_utils import model_dict_from_tag, model_from_dict
 #%%
 
 # load a dictionary specifying the model and its training configuration
-model_dict = model_dict_from_tag('grappa-1.1.1')
+model_dict = model_dict_from_tag('grappa-1.2')
 
 # load the model from the dictionary
 model = model_from_dict(model_dict)
@@ -22,7 +22,7 @@ model = model_from_dict(model_dict)
 model = torch.nn.Sequential(model, Energy())
 
 # load a dataset
-DSNAME = 'spice-dipeptide'
+DSNAME = 'uncapped_amber99sbildn'
 dataset = Dataset.from_tag(DSNAME)
 
 
@@ -44,7 +44,7 @@ def evaluate(dataset, model):
     model.eval().to('cuda' if torch.cuda.is_available() else 'cpu')
 
     # create a dataloader for batching:
-    dataloader = GraphDataLoader(dataset, conf_strategy='max', batch_size=100, shuffle=False)
+    dataloader = GraphDataLoader(dataset, conf_strategy='max', batch_size=10, shuffle=False)
 
     for batch_idx, (graphs, ds_names) in enumerate(dataloader):
 
