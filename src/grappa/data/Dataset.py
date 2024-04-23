@@ -80,6 +80,7 @@ class Dataset(torch.utils.data.Dataset):
     def split(self, train_ids:List[str], val_ids:List[str], test_ids:List[str], check_overlap:bool=True):
         """
         Splits the dataset into train, validation and test sets that are then returned as new Dataset objects.
+        If an id of the dataset does not appear in any of the splits, it is included in the test set.
         Args:
             train_ids (List[str]): list of molecule ids to be used for training
             val_ids (List[str]): list of molecule ids to be used for validation
@@ -95,15 +96,14 @@ class Dataset(torch.utils.data.Dataset):
             assert len(train_ids.intersection(test_ids)) == 0
             assert len(val_ids.intersection(test_ids)) == 0
 
-        assert all([mol_id in val_ids.union(train_ids).union(test_ids) for mol_id in self.mol_ids]), "Some molecule ids are not in the split"
-
         train_idx = [i for i in range(len(self.mol_ids)) if self.mol_ids[i] in train_ids]
         val_idx = [i for i in range(len(self.mol_ids)) if self.mol_ids[i] in val_ids]
-        test_idx = [i for i in range(len(self.mol_ids)) if self.mol_ids[i] in test_ids]
+        # all the rest is test:
+        test_idx = [i for i in range(len(self.mol_ids)) if not i in train_idx and not i in val_idx]
 
-        train_graphs, train_mol_ids, train_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in train_idx]))
-        val_graphs, val_mol_ids, val_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in val_idx]))
-        test_graphs, test_mol_ids, test_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in test_idx]))
+        train_graphs, train_mol_ids, train_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in train_idx])) if len(train_idx) > 0 else ([], [], [])
+        val_graphs, val_mol_ids, val_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in val_idx])) if len(val_idx) > 0 else ([], [], [])
+        test_graphs, test_mol_ids, test_subdataset = map(list, zip(*[(self.graphs[i], self.mol_ids[i], self.subdataset[i]) for i in test_idx])) if len(test_idx) > 0 else ([], [], [])
 
         train = Dataset(graphs=train_graphs, mol_ids=train_mol_ids, subdataset=train_subdataset)
         val = Dataset(graphs=val_graphs, mol_ids=val_mol_ids, subdataset=val_subdataset)

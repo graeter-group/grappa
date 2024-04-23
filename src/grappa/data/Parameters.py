@@ -628,7 +628,7 @@ from matplotlib.colors import LogNorm
 
 
 # set font to arial:
-plt.rc('font', family="Arial")
+# plt.rc('font', family="Arial")
 
 
 

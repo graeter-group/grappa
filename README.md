@@ -53,6 +53,8 @@ gmx pdb2gmx -f your_protein.pdb -o your_protein.gro -p topology.top -ignh
 # create a new topology file with the bonded parameters from Grappa, specifying the tag of the grappa model:
 grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.2
 
+# (you can also create a plot of the parameters for inspection using the -p flag)
+
 # continue with ususal gromacs workflow
 ```
 
@@ -72,7 +74,8 @@ system = classical_ff.createSystem(topology)
 # load the pretrained ML model from a tag. Currently, possible tags are 'grappa-1.1', grappa-1.2' and 'latest'
 grappa_ff = OpenmmGrappa.from_tag('grappa-1.2')
 
-# parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'amber99' and 'am1BCC'.
+# parametrize the system using grappa.
+# The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'amber99' and 'am1BCC'.
 system = grappa_ff.parametrize_system(system, topology, charge_model='amber99')
 ```
 

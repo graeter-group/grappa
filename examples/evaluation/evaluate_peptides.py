@@ -22,7 +22,7 @@ model = model_from_dict(model_dict)
 model = torch.nn.Sequential(model, Energy())
 
 # load a dataset
-DSNAME = 'uncapped_amber99sbildn'
+DSNAME = 'spice-dipeptide'
 dataset = Dataset.from_tag(DSNAME)
 
 
