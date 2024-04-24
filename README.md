@@ -44,7 +44,7 @@ For complete example scripts, see `examples/usage`.
 
 ### GROMACS
 
-In GROMACS, Grappa can be used as command line application that receives the path to a topology file and writes the bonded parameters in there.
+In GROMACS, Grappa can be used as command line application that receives the path to a topology file and writes the bonded parameters in a new topology file.
 
 ```{bash}
 # parametrize the system with a traditional forcefield:
@@ -55,7 +55,7 @@ grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.2
 
 # (you can also create a plot of the parameters for inspection using the -p flag)
 
-# continue with ususal gromacs workflow
+# continue with ususal gromacs workflow (solvation etc.)
 ```
 
 ### OpenMM
@@ -89,21 +89,18 @@ The creation of custom GROMACS topology files is handled by [Kimmdy](https://git
 
 For simplicity, we recommend to use Grappa for GROMACS in cpu mode since the inference runtime of Grappa is usually small compared to the simulation runtime, even without a GPU. (Simply create another environment if you also intend to train Grappa.)
 
-```{bash}
-git clone git@github.com:hits-mbm-dev/kimmdy.git && cd kimmdy && pip install -e . && cd ..
-pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
-pip install dgl -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
-```
-
 To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
 
 ```{bash}
+conda create -n grappa -y python=3.10
+conda activate grappa
 git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
-conda create -n grappa -y
-conda activate grappa
+pip install kimmdy
+pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
+pip install dgl -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
 pip install -r requirements.txt
-pip install .
+pip install -e .
 ```
 
 Verify the installation by running
