@@ -78,5 +78,5 @@ def main():
     parser.add_argument('--plot_parameters', '-p', action='store_true', help='If set, a plot of the MM parameters is created and saved in the same directory as the output file.')
     args = parser.parse_args()
 
-    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, charge_model=args.charge_model, device=args.device)
+    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, charge_model=args.charge_model, device=args.device, plot_parameters=args.plot_parameters)
     
