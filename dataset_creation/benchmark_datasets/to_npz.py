@@ -2,6 +2,7 @@
 import dgl
 from pathlib import Path
 import torch
+from typing import List
 import openmm
 import openff.toolkit
 import json
@@ -107,7 +108,7 @@ def extract_data(g, mol):
 # %%
 
 
-def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: str = None):
+def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[str] = None):
     print(f"Converting\n{dspath}\nto\n{targetpath}")
     dspath = Path(dspath)
     targetpath = Path(targetpath)
@@ -132,7 +133,7 @@ def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: str = N
             data = extract_data(g, mol)
 
             if exclude_pattern is not None:
-                if exclude_pattern in data['smiles'][0]:
+                if any([p in data['smiles'][0] for p in exclude_pattern]):
                     print(f"Excluding {data['smiles'][0][:20]}...")
                     continue
 
@@ -212,6 +213,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--exclude_pattern",
         type=str,
+        nargs='+',
         default=None,
         help="If given, exclude all molecules whose smiles contain this pattern.",
     )

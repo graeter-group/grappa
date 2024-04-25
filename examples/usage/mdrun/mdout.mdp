@@ -1,15 +1,15 @@
 ;
 ;	File 'mdout.mdp' was generated
-;	By user: seutelf (7137)
-;	On host: cascade-110.cluster
-;	At date: Tue Apr 23 11:14:16 2024
+;	By user: unknown (7137)
+;	On host: genoa-deep-01.cluster
+;	At date: Thu Apr 25 12:16:34 2024
 ;
 ;	Created by:
 ;	                      :-) GROMACS - gmx grompp, 2023 (-:
 ;	
 ;	Executable:   /hits/fast/mbm/broszms/software/gromacs-2023-cascade/bin/gmx
 ;	Data prefix:  /hits/fast/mbm/broszms/software/gromacs-2023-cascade
-;	Working dir:  /hits/fast/mbm/seutelf/grappa/examples/usage/mdrun
+;	Working dir:  /local/user/seutelf/grappa/examples/usage/mdrun
 ;	Command line:
 ;	  gmx grompp -f minim.mdp -c T4_out_ion.gro -p T4_grappa.top -o T4_out_min.tpr
 
@@ -171,7 +171,7 @@ annealing-temp           =
 ; GENERATE VELOCITIES FOR STARTUP RUN
 gen-vel                  = no
 gen-temp                 = 300
-gen-seed                 = -1073889586
+gen-seed                 = -436356673
 
 ; OPTIONS FOR BONDS    
 constraints              = none

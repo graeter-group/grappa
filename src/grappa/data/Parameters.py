@@ -63,7 +63,7 @@ class Parameters():
     improper_phases: Optional[np.ndarray]
 
     @classmethod
-    def from_dgl(cls, g:DGLGraph, suffix:str=''):
+    def from_dgl(cls, g:DGLGraph, suffix:str='', check_eq_values:bool=True):
         """
         Assumes that the dgl graph has the following features:
             - 'ids' at node type n1 (these are the atom ids)
@@ -88,6 +88,20 @@ class Parameters():
         angle_eq = g.nodes['n3'].data[f'eq{suffix}'].detach().cpu().numpy()
         angles = g.nodes['n3'].data['idxs'].detach().cpu().numpy()
         angles = atom_ids[angles]
+
+        # some checks:
+        if check_eq_values:
+            MAX_ANGLE = 45
+            MAX_BOND_LENGTH = 0.5
+            # if any angle is smaller than MAX_ANGLE degrees, notify the user
+            if np.any(angle_eq < np.pi/180*MAX_ANGLE):
+                n_smaller = np.sum(angle_eq < np.pi/180*MAX_ANGLE)
+                raise RuntimeError(f"{n_smaller} angles are smaller than 20 degrees. This can lead to numerical instabilities in the model.\nThe smallest angle is {np.min(angle_eq)*180/np.pi} degrees at atom ids {angles[np.argmin(angle_eq)]}.\nnext: {angle_eq[np.argsort(angle_eq)[1:n_smaller+1]]*180/np.pi} degrees at atom ids {angles[np.argsort(angle_eq)[:n_smaller]]}.")
+                    
+            # if any bond eq length is smaller than MAX_BOND_LENGTH Angstrom, notify the user
+            if np.any(bond_eq < MAX_BOND_LENGTH):
+                n_smaller = np.sum(bond_eq < MAX_BOND_LENGTH)
+                raise RuntimeError(f"{n_smaller} bond eq lengths are smaller than 0.5 Angstrom. This can lead to numerical instabilities in the model.\nThe smallest bond eq length is {np.min(bond_eq)} Angstrom at atom ids {bonds[np.argmin(bond_eq)]}.\nnext: {bond_eq[np.argsort(bond_eq)[1:n_smaller+1]]} Angstrom at atom ids {bonds[np.argsort(bond_eq)[:n_smaller]]}.")
 
         proper_ks = g.nodes['n4'].data[f'k{suffix}'].detach().cpu().numpy()
         # Assuming the phases are stored with a similar naming convention
@@ -791,7 +805,7 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         
     # Units dictionary
     UNITS = {
-        'bond_eq': 'nm',
+        'bond_eq': r'$\AA$',
         'bond_k': r'kcal/mol/$\AA^2$',
         'angle_eq': 'deg',
         'angle_k': r'kcal/mol/deg$^2$',
@@ -885,7 +899,7 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
 
     # Units dictionary
     UNITS = {
-        'bond_eq': 'nm',
+        'bond_eq': r'$\AA$',
         'bond_k': r'kcal/mol/$\AA^2$',
         'angle_eq': 'deg',
         'angle_k': r'kcal/mol/deg$^2$',
