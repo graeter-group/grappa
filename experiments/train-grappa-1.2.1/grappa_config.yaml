@@ -14,6 +14,7 @@ data_config:
   - uncapped_amber99sbildn
   - dipeptide_rad
   - hyp-dop_amber99sbildn
+  - AA_bondbreak_rad_amber99sbildn
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
   pure_test_datasets:

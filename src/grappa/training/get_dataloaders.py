@@ -20,7 +20,7 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
         val_loader_workers (int, optional): Number of worker processes for the validation dataloader. Defaults to 2.
         test_loader_workers (int, optional): Number of worker processes for the test dataloader. Defaults to 2.
         pin_memory (bool, optional): Whether to pin memory for the dataloaders. Defaults to True.
-        splitpath (Path, optional): Path to the split file. If provided, the function will load the split from this file. If not, it will generate a new split. Defaults to None.
+        splitpath (Path, optional): Path to the split file. If provided, the function will load the split from this file. If not, it will generate a new split. can also be a tag. Defaults to None.
         partition (Union[Tuple[float,float,float], Dict[str, Tuple[float, float, float]]], optional): Partition of the dataset into train, validation, and test. Can be a tuple of three floats or a dictionary with 'train', 'val', and 'test' keys. Defaults to (0.8,0.1,0.1).
         pure_..._datasets: list of paths to datasets that are only for one specific set type, independent on which mol_ids occur. this can be used to be independent of the splitting by mol_ids. in the case of the espaloma benchmark, this is used to have the same molecules in the test and train set (where training is on rna-diverse-conformations and testing on rna-trinucleotide-conformations)
         subsample_tr : float between 0 and 1 specifying the subsampling factor (subsampling is applied after splitting)
@@ -93,6 +93,9 @@ def get_dataloaders(datasets:List[Union[Path, str, Dataset]], conf_strategy:Unio
             splitpath = Path(splitpath)
         if not splitpath.exists() and (splitpath.parent/"files/split.json").exists():
             splitpath = splitpath.parent/"files/split.json"
+        if not splitpath.exists():
+            # assume it is a tag
+            splitpath = get_path_from_tag(tag=splitpath)/'split.json'
         assert splitpath.exists(), f"Split file {splitpath} does not exist."
         split_ids = json.load(open(splitpath, 'r'))
         print(f'Using split ids from {splitpath}')

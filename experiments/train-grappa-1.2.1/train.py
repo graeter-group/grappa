@@ -30,7 +30,7 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
 
     # set the splitpath:    
-    config["data_config"]["splitpath"] = str(Path(__file__).parent.parent.parent/f"dataset_creation/get_espaloma_split/espaloma_split.json")
+    config["data_config"]["splitpath"] = 'espaloma_split'
 
     # set the name:
     config["trainer_config"]["name"] = ""

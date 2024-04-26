@@ -44,6 +44,7 @@ DATASETS=(
   hyp-dop_amber99sbildn
   AA_bondbreak_rad_amber99sbildn
   uncapped_amber99sbildn
+  espaloma_split
 )
 
 DATADIR=data/dgl_datasets

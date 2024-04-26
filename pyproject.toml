@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "grappa"
-version = "1.2.0"
+version = "1.2.1"
 
 [tool.setuptools]
 include-package-data = true
