@@ -16,5 +16,8 @@ config["data_config"]["datasets"] = ["spice-dipeptide"]
 config["data_config"]["pure_train_datasets"] = []
 config["data_config"]["pure_test_datasets"] = []
 
+# uncomment to train on the cpu only:
+# config["trainer_config"]["accelerator"] = "cpu"
+
 #%%
 do_trainrun(config=config, project="grappa_example", dir=thisdir)

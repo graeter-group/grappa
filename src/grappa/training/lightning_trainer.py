@@ -9,7 +9,7 @@ import os
 from typing import Union
 
 
-def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, project='grappa', resume_id:str=None, wandb_dir:Union[str,Path]=None)->pl.Trainer:
+def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, project='grappa', resume_id:str=None, wandb_dir:Union[str,Path]=None, **kwargs)->pl.Trainer:
     """
     Returns a pytorch lightning trainer with a wandb logger.
     Initializes wandb.
@@ -89,7 +89,7 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
     if is_slurm:
         print("Detected SLURM mode: Disabling progress bar...")
 
-    trainer = pl.Trainer(logger=wandb_logger, gradient_clip_val=gradient_clip_val, max_epochs=max_epochs, profiler=profiler, callbacks=[checkpoint_callback], enable_progress_bar=not is_slurm)
+    trainer = pl.Trainer(logger=wandb_logger, gradient_clip_val=gradient_clip_val, max_epochs=max_epochs, profiler=profiler, callbacks=[checkpoint_callback], enable_progress_bar=not is_slurm, **kwargs)
 
     return trainer
 
