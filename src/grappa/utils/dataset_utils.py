@@ -40,7 +40,7 @@ def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_dat
         'espaloma_split'
     '''
 
-    RELEASE_URL = 'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/'
+    RELEASE_URL = 'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.2.0/'
 
     URL_TAGS = [
         'spice-des-monomers',
