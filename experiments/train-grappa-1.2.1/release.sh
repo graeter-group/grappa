@@ -6,20 +6,20 @@ set -e
 # get an abspath to this script
 THISDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-RUN_ID=leif-seute/grappa-1.2/
+RUN_ID=leif-seute/grappa-1.2/wm54xocy
 
 MODELNAME=grappa-1.2.1
 
 TAG='v.1.2.0'
 
 # create release
-gh release create $TAG
+# gh release create $TAG
 
 # cd to this directory:
 pushd $THISDIR
 
 # # export model to local models directory
-#bash prepare_release.sh # NOTE: UNCOMMENT THIS LINE TO EXPORT THE MODEL (will also evaluate, thus it takes some time)
+bash prepare_release.sh # NOTE: UNCOMMENT THIS LINE TO EXPORT THE MODEL (will also evaluate, thus it takes some time)
 grappa_release -t $TAG -m $MODELNAME
 
 # now upload datasets
