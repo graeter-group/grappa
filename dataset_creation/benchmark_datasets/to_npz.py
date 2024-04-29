@@ -108,7 +108,7 @@ def extract_data(g, mol):
 # %%
 
 
-def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[str] = None):
+def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[str] = None, with_charmm36: bool = False):
     print(f"Converting\n{dspath}\nto\n{targetpath}")
     dspath = Path(dspath)
     targetpath = Path(targetpath)
@@ -137,9 +137,17 @@ def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[st
                     print(f"Excluding {data['smiles'][0][:20]}...")
                     continue
 
-            if with_amber99:
+            if with_amber99 or with_charmm36:
 
-                system = get_peptide_system(mol=mol, ff='amber99sbildn.xml')
+                assert not (with_amber99 and with_charmm36), "Can only compute one of amber99sbildn and charmm36 energies and forces!"
+
+                if with_amber99:
+                    system = get_peptide_system(mol=mol, ff='amber99sbildn.xml')
+                    tag = 'amber99'
+                elif with_charmm36:
+                    system = get_peptide_system(mol=mol, ff='charmm/toppar_all36_prot_model.xml')
+                    tag = 'charmm36'
+                    
 
                 # get list or residue names per atom from the system:
 
@@ -149,13 +157,13 @@ def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[st
 
                 energy_amber99_nonbonded, force_amber99_nonbonded = get_energies(openmm_system=system, xyz=data['xyz'])
 
-                data['energy_amber99'] = energy_amber99
-                data['gradient_amber99'] = -force_amber99
-                data['energy_amber99_nonbonded'] = energy_amber99_nonbonded
-                data['gradient_amber99_nonbonded'] = -force_amber99_nonbonded
+                data[f'energy_{tag}'] = energy_amber99
+                data[f'gradient_{tag}'] = -force_amber99
+                data[f'energy_{tag}_nonbonded'] = energy_amber99_nonbonded
+                data[f'gradient_{tag}_nonbonded'] = -force_amber99_nonbonded
 
-                data['energy_ref'] = data['energy_qm'] - data['energy_amber99_nonbonded']
-                data['gradient_ref'] = data['gradient_qm'] - data['gradient_amber99_nonbonded']
+                data['energy_ref'] = data['energy_qm'] - data[f'energy_{tag}_nonbonded']
+                data['gradient_ref'] = data['gradient_qm'] - data[f'gradient_{tag}_nonbonded']
 
                 # create moldata from amber99sbildn system
                 moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=mol.to_topology().to_openmm(), mol_id=data['smiles'][0], partial_charges=None, xyz=data['xyz'], energy=data['energy_qm'], gradient=data['gradient_qm'], energy_ref=data['energy_ref'], gradient_ref=data['gradient_ref'], mapped_smiles=data['mapped_smiles'][0], smiles=data['smiles'][0], allow_nan_params=True, charge_model='amber99')
@@ -211,6 +219,11 @@ if __name__ == "__main__":
         help="Whether to compute amber99sbildn energies and forces and rather use them as reference. Can only be done for peptides. If True, grappa.data.MolData objects will be created and stored directly!",
     )
     parser.add_argument(
+        "--with_charmm36",
+        action="store_true",
+        help="Whether to compute charmm36 energies and forces and rather use them as reference. Can only be done for peptides. If True, grappa.data.MolData objects will be created and stored directly!",
+    )
+    parser.add_argument(
         "--exclude_pattern",
         type=str,
         nargs='+',
@@ -218,4 +231,4 @@ if __name__ == "__main__":
         help="If given, exclude all molecules whose smiles contain this pattern.",
     )
     args = parser.parse_args()
-    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99, exclude_pattern=args.exclude_pattern)
+    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99, exclude_pattern=args.exclude_pattern, with_charmm36=args.with_charmm36)

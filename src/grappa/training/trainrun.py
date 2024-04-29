@@ -21,7 +21,7 @@ from typing import Callable
 from grappa.training.resume_trainrun import resume_trainrun
 
 #%%
-def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, pretrain_path:Union[Path,str]=None):
+def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, pretrain_path:Union[Path,str]=None, dir:Union[Path,str]=None):
     """
     Do a single training run with the given configuration.
 
@@ -57,7 +57,7 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
 
 
     # Get the trainer  and initialize wandb
-    trainer = get_lightning_trainer(**config['trainer_config'], config=config, project=project)
+    trainer = get_lightning_trainer(**config['trainer_config'], config=config, project=project, wandb_dir=dir)
 
     run_id = wandb.run.id
 

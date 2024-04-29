@@ -6,9 +6,10 @@ import torch
 from grappa.models.energy import Energy
 from grappa.models.grappa import GrappaModel
 import os
+from typing import Union
 
 
-def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, project='grappa', resume_id:str=None)->pl.Trainer:
+def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simple", early_stopping_criterion='early_stopping_loss', config={}, name:str=None, notes:str=None, project='grappa', resume_id:str=None, wandb_dir:Union[str,Path]=None)->pl.Trainer:
     """
     Returns a pytorch lightning trainer with a wandb logger.
     Initializes wandb.
@@ -19,7 +20,7 @@ def get_lightning_trainer(max_epochs=500, gradient_clip_val=1e1, profiler="simpl
 
     # Initialize Wandb
     if resume_id is None:
-        wandb.init(project=project, notes=notes)
+        wandb.init(project=project, notes=notes, dir=str(wandb_dir))
         # get the run name:
         if name is not None:
             wandb.run.name += f'-{name}'
