@@ -14,7 +14,7 @@ if [ "$1" == "-q" ]; then
     shift # Remove the first argument (the -q flag)
 fi
 
-PKGMANAGER=${2:-conda}
+PKGMANAGER=${2:-conda} # conda or mamba
 echo "Using package manager $PKGMANAGER and pip for the installation."
 
 
@@ -94,7 +94,7 @@ case $cuda_version in
     cpu)
         install_cpu
         ;;
-    *)
+    * )
         echo "Invalid argument. Please provide one of the following: 11.7, 11.8, 12.1, cpu."
         ;;
 esac

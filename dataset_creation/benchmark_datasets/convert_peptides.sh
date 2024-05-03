@@ -13,7 +13,7 @@ datasets=("spice-dipeptide")
 
 
 # exclude some residues because of some apparant bug of openmmforcefields for this
-HID_FRAGMENT='[N]([H])[C](=[O])[C]([H])([H])[H])[N]1[H]'
+HID_FRAGMENT='[C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]'
 ASP_FRAGMENT='[C]([H])([H])[H])[C]([H])([H])[C](=[O])[O-])'
 
 # Loop through each dataset name

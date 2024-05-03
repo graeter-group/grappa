@@ -15,6 +15,7 @@ smiles = dataset.mol_ids
 target = '[C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]([H])([H])[H])[N]([H])[C](=[O]'
 target = '([C](=[O])[N]([H])[C]([H])([H])[H])'
 target = '[N]([H])[C](=[O])[C]([H])([H])[H])[N]1[H]' # hid fragment
+target = '[C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]'
 
 counter = 0
 for smile in smiles:

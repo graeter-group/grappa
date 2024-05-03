@@ -1,0 +1,119 @@
+data_config:
+  balance_factor: 0.0
+  conf_strategy: 32
+  datasets:
+  - spice-des-monomers
+  - spice-pubchem
+  - gen2
+  - gen2-torsion
+  - rna-diverse
+  - spice-dipeptide
+  - protein-torsion
+  - pepconf-dlc
+  - spice-dipeptide_amber99sbildn
+  - uncapped_amber99sbildn
+  - dipeptide_rad
+  - hyp-dop_amber99sbildn
+  - AA_bondbreak_rad_amber99sbildn
+  partition: [0.8, 0.1, 0.1]
+  pin_memory: true
+  pure_test_datasets:
+  - rna-trinucleotide
+  - tripeptides_amber99sbildn
+  pure_val_datasets: []
+  pure_train_datasets:
+  - rna-nucleoside
+  splitpath: null
+  test_batch_size: 1
+  test_loader_workers: 1
+  train_batch_size: 32
+  train_loader_workers: 1
+  val_batch_size: 32
+  val_loader_workers: 1
+  val_conf_strategy: 500
+  weights:
+    rna-diverse: 3
+    rna-nucleoside: 5
+    spice-pubchem: 0.8
+    hyp-dop_amber99sbildn: 2
+
+lit_model_config:
+  add_restarts: []
+  early_stopping_energy_weight: 3.0
+  energy_weight: 1.0
+  finish_criterion: {}
+  gradient_weight: 0.8
+  improper_regularisation: 1.0e-03
+  log_classical: false
+  log_metrics: true
+  log_params: false
+  log_train_interval: 5
+  lr: 1.5e-05
+  lr_decay: 0.8
+  param_loss_epochs: 100
+  param_weight: 0.001
+  patience: 50
+  proper_regularisation: 1.0e-03
+  start_qm_epochs: 2
+  time_limit: 23.5
+  tuplewise_weight: 0.
+  warmup_steps: 500
+  weight_decay: 0
+model_config:
+  angle_n_heads: 8
+  angle_symmetriser_depth: 3
+  angle_symmetriser_width: 256
+  angle_transformer_depth: 3
+  angle_transformer_width: 512
+  bond_n_heads: 8
+  bond_symmetriser_depth: 3
+  bond_symmetriser_width: 256
+  bond_transformer_depth: 3
+  bond_transformer_width: 512
+  gated_torsion: true
+  gnn_attention_heads: 16
+  gnn_attentional_layers: 7
+  gnn_convolutions: 0
+  gnn_dropout_attention: 0.3
+  gnn_dropout_conv: 0.1
+  gnn_dropout_final: 0.1
+  gnn_dropout_initial: 0.0
+  gnn_width: 512
+  graph_node_features: 256
+  improper_n_heads: 8
+  improper_symmetriser_depth: 3
+  improper_symmetriser_width: 256
+  improper_transformer_depth: 3
+  improper_transformer_width: 512
+  in_feat_dims: {}
+  in_feat_name:
+  - atomic_number
+  - partial_charge
+  - ring_encoding
+  - degree
+  - charge_model
+  in_feats: null
+  layer_norm: true
+  learnable_statistics: false
+  n_periodicity_improper: 3
+  n_periodicity_proper: 3
+  parameter_dropout: 0.5
+  positional_encoding: true
+  proper_n_heads: 8
+  proper_symmetriser_depth: 3
+  proper_symmetriser_width: 256
+  proper_transformer_depth: 3
+  proper_transformer_width: 512
+  self_interaction: true
+  wrong_symmetry: false
+  torsion_cutoff: 1.e-4
+  harmonic_gate: true
+  only_n2_improper: true
+test_model: false
+trainer_config:
+  early_stopping_criterion: early_stopping_loss
+  gradient_clip_val: 10.0
+  max_epochs: 10000
+  name: null
+  notes: null
+  profiler: simple

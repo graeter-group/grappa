@@ -99,6 +99,7 @@ npy_charge_dicts/
 **/.png
 **/.pickle
 **/metric_data.json
+**/mdout.mdp
 
 **/model.pt
 **/model.pth
@@ -130,6 +131,9 @@ mains/**.out
 !dataset_creation/get_espaloma_split/te_smiles.json
 !dataset_creation/get_espaloma_split/vl_smiles.json
 !docs/figures/*.png
+!examples/dataset_creation/*/*.npz
+
+examples/dataset_creation/*/*.pdb
 
 **.gro**
 **.top**
