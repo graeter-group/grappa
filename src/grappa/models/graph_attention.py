@@ -66,7 +66,7 @@ class GrappaGNN(torch.nn.Module):
                 "degree": 6,
                 "is_radical": 1,
                 "laplacian_positional_encoding": 5,
-                "charge_model": len(constants.CHARGE_MODELS) 
+                "charge_model": len(constants.CHARGE_MODELS)-1, # NOTE: set to MAX_NUMBER_OF_CHARGE_MODELS
             }
             # overwrite/append to these default values:
             for key in in_feat_dims.keys():

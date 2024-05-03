@@ -35,7 +35,7 @@ class WriteParameters(torch.nn.Module):
 
     The class initializes and holds four separate writers, each configured for their respective parameter type.
     """
-    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False):
+    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False, only_n2_improper=False):
         super().__init__()
 
         if param_statistics is not None:
@@ -119,7 +119,8 @@ class WriteParameters(torch.nn.Module):
             gated=gated_torsion,
             learnable_statistics=learnable_statistics,
             wrong_symmetry=wrong_symmetry,
-            cutoff=torsion_cutoff
+            cutoff=torsion_cutoff,
+            only_n2=only_n2_improper
         )
 
     def forward(self, g):
@@ -417,7 +418,7 @@ class WriteTorsionParameters(torch.nn.Module):
 
     The parameter statistics are used to initialize the model weights such that a normally distributed output of the symmetriser network would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."].
     """
-    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False, cutoff=1e-4):
+    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False, cutoff=1e-4, only_n2:bool=False):
         super().__init__()
 
         # the minimum std deviation to which torsion parameters are scaled initially. Should be something like the average magnitude of torsion ks ideally. Should be larger than the cutoff!
@@ -456,8 +457,8 @@ class WriteTorsionParameters(torch.nn.Module):
                 if len(k_std) < n_periodicity:
                     raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_std)} values for the std of the improper torsion parameters.")
                 
-        k_mean = k_mean[:n_periodicity]
-        k_std = k_std[:n_periodicity]
+        k_mean = k_mean[:n_periodicity] if not only_n2 else k_mean[1]
+        k_std = k_std[:n_periodicity] if not only_n2 else k_std[1]
 
         k_mean_initial = k_mean.unsqueeze(dim=0)
         k_std_initial = k_std.unsqueeze(dim=0)
@@ -507,6 +508,11 @@ class WriteTorsionParameters(torch.nn.Module):
                 positional_encoding = torch.tensor([[0],[0],[1],[0]], dtype=torch.float32)
 
         n_out_feats = n_periodicity if not gated else 2*n_periodicity
+        if only_n2:
+            n_out_feats = 1 if not gated else 2
+
+        self.n_out_feats = n_out_feats
+        self.only_n2 = only_n2
 
         self.torsion_model = SymmetrisedTransformer(n_feats=rep_projected_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=n_out_feats, permutations=perms, layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=copy.deepcopy(positional_encoding))
 
@@ -540,10 +546,9 @@ class WriteTorsionParameters(torch.nn.Module):
                 # to obtain the correct statistics, we 
 
                 # shape of coeffs: n_torsions, 2*n_periodicity
-                gate_values = torch.sigmoid(coeffs[:,self.n_periodicity:])
-                coeffs = coeffs[:,:self.n_periodicity]
+                gate_values = torch.sigmoid(coeffs[:,int(self.n_out_feats/2):])
+                coeffs = coeffs[:,:int(self.n_out_feats/2)]
 
-            if self.gated:
                 coeffs = coeffs * gate_values
 
                 # due to the gating, we do not shift by the mean (we want the model to help us predict zero values)
@@ -556,6 +561,12 @@ class WriteTorsionParameters(torch.nn.Module):
             # apply a cutoff to the abs value of the force constants
             if self.cutoff is not None:
                 coeffs = self.cutoff(coeffs)
+
+            if self.only_n2:
+                # add zeros such that coeffs is of shape n_torsions, n_periodicity with only coeffs[1] != 0
+                coeffs = torch.cat([torch.zeros_like(coeffs[:,:1]), coeffs], dim=1)
+                if self.n_periodicity > 2:
+                    coeffs = torch.cat([coeffs, torch.zeros((coeffs.shape[0], self.n_periodicity-2), dtype=coeffs.dtype, device=coeffs.device)], dim=1)
 
         g.nodes[level].data["k"+self.suffix] = coeffs
 

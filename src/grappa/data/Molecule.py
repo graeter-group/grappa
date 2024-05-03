@@ -148,7 +148,11 @@ class Molecule():
         
         if not 'charge_model' in self.additional_features.keys():
             assert self.charge_model in constants.CHARGE_MODELS, f"charge_model must be one of {constants.CHARGE_MODELS} but is {self.charge_model}"
-            self.additional_features['charge_model'] = np.tile(np.array([cm == self.charge_model for cm in constants.CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
+            assert len(constants.CHARGE_MODELS) <= constants.MAX_NUM_CHARGE_MODELS, f"the number of charge models must be less than or equal to {constants.MAX_NUM_CHARGE_MODELS}"
+            
+            ALL_CHARGE_MODELS = constants.CHARGE_MODELS + ['none'] * (constants.MAX_NUM_CHARGE_MODELS - len(constants.CHARGE_MODELS)) # this is done to ensure that the number of charge models can be modified without making past model weights incompatible.
+
+            self.additional_features['charge_model'] = np.tile(np.array([cm == self.charge_model for cm in ALL_CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
 
 
         # initialize all mols to be not-radical if not overwritten later:
@@ -436,6 +440,7 @@ class Molecule():
             - n4: propers
             - n4_improper: impropers        
         The node type n1 carries the feature 'ids', which are the identifiers in self.atoms. The other interaction levels (n{>1}) carry the idxs (not ids) of the atoms as ordered in self.atoms as feature 'idxs'. These are not the identifiers but must be translated back to the identifiers using ids = self.atoms[idxs] after the forward pass.
+        atomic numbers are one-hot encoded such that Z=argmax(g.nodes['n1'].data['atomic_number'])+1.
         """
         assert max_element > 0, f"max_element must be larger than 0 but is {max_element}"
         assert not any([ids is None for ids in [self.angles, self.propers]]), f"atoms, bonds, angles, propers and impropers must not be None"
