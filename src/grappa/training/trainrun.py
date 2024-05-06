@@ -21,9 +21,11 @@ from typing import Callable
 from grappa.training.resume_trainrun import resume_trainrun
 
 #%%
-def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, pretrain_path:Union[Path,str]=None):
+def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=None, manual_sweep_config:Callable=None, pretrain_path:Union[Path,str]=None, dir:Union[Path,str]=None):
     """
     Do a single training run with the given configuration.
+
+    config: dictionary with the configurations. config['trainer_config'] may also contain kwargs for pl.Trainer.
 
     config_from_sweep: function that takes the wandb.config and returns a dict that can be used to update the grappa config. This can be used for updating several config parameters from one sweep param (e.g. global dropout rates) or for applying transformations to the sweep config (e.g. converting a sweep parameter like the learning rate from linear to log scale). This can be e.g.:
         def config_from_sweep(wandb_config):
@@ -42,8 +44,25 @@ def do_trainrun(config:Dict, project:str='grappa', config_from_sweep:Callable=No
     In this case, the splitpath from the pretrained model is used and the start_qm_epoch is set to 0.
     """
 
+    RESTRICT_CONFIG = False
+
+    # check whether all config args are allowed (they are allowed if they are in the default config)
+    default_config_ = default_config()
+    for k in config.keys():
+        if k in ["trainer_config"]:
+            continue
+        if k not in default_config_:
+            if RESTRICT_CONFIG:
+                raise KeyError(f"Key {k} not an allowed config argument.")
+        if isinstance(config[k], dict):
+            for kk in config[k].keys():
+                if kk not in default_config_[k]:
+                    if RESTRICT_CONFIG:
+                        raise KeyError(f"Key {k}-{kk} not an allowed config argument.")
+
+
     # Get the trainer  and initialize wandb
-    trainer = get_lightning_trainer(**config['trainer_config'], config=config, project=project)
+    trainer = get_lightning_trainer(**config['trainer_config'], config=config, project=project, wandb_dir=dir)
 
     run_id = wandb.run.id
 

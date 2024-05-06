@@ -25,8 +25,8 @@ def url_from_tag(tag:str):
     - grappa-1.0
     """
     MODEL_NAMES = {
-        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.2.0/grappa-1.2.0.pth': ['grappa-1.2', 'latest'],
-        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1.1.pth': ['grappa-1.1'],
+        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.2.0/grappa-1.2.1.pth': ['grappa-1.2', 'grappa-1.2.1', 'latest'],
+        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1.1.pth': ['grappa-1.1', 'grappa-1.1.1'],
         'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1.0.pth': ['grappa-1.1.0',],
         'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1-benchmark.pth': ['grappa-1.1-benchmark',],
     }

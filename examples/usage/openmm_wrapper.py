@@ -7,7 +7,7 @@ from openmm.app import Modeller
 from openmm import unit
 from grappa import OpenmmGrappa
 
-pdbfile = PDBFile('1ubq.pdb')
+pdbfile = PDBFile('T4.pdb')
 topology = pdbfile.topology # load your system as openmm.Topology
 
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
@@ -18,7 +18,6 @@ modeller.deleteWater()
 modeller.addHydrogens(classical_ff)
 modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
 
-
 topology = modeller.getTopology()
 positions = modeller.getPositions()
 
@@ -27,9 +26,10 @@ system = classical_ff.createSystem(topology)
 
 #%%
 # load the pretrained ML model from a tag. Currently, possible tags are grappa-1.1', 'grappa-1.2' and 'latest'
-grappa_ff = OpenmmGrappa.from_tag('grappa-1.2.0')
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.2')
 
 # parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'amber99' and 'am1BCC'.
+# grappa will not change the solvant parameters and the nonbonded parameters, e.g. the partial charges, Lennard-Jones parameters and combination rules
 system = grappa_ff.parametrize_system(system, topology, charge_model='amber99', plot_dir='.')
 
 # %%
@@ -68,5 +68,4 @@ plt.plot(original_gradients.flatten(), original_gradients.flatten(), color='blac
 plt.savefig('grappa_vs_classical_gradients_T4.png') 
 print(f'Component RMSE between Grappa and amber99sbildn: {crmse:.2f} kcal/mol/A')
 print('Saved fig to grappa_vs_classical_gradients.png')
-plt.show()
 # %%
