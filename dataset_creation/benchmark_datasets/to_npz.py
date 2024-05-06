@@ -108,7 +108,7 @@ def extract_data(g, mol):
 # %%
 
 
-def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[str] = None):
+def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[str] = None, skip_deviations: bool = False, force_tolerance: float = 100.0):
     print(f"Converting\n{dspath}\nto\n{targetpath}")
     dspath = Path(dspath)
     targetpath = Path(targetpath)
@@ -144,6 +144,16 @@ def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[st
                 # get list or residue names per atom from the system:
 
                 energy_amber99, force_amber99 = get_energies(openmm_system=system, xyz=data['xyz'])
+
+                # check whether there is a force with more force_tolerance kcal/mol/A error (averaged over conformations) between reference force field and QM (we assume that the nonbonded part is wrong then and exclude the molecule if the corresponding flag is set)
+                if np.mean(np.linalg.norm(-data['gradient_qm'] - force_amber99, axis=-1), axis=0).max() > force_tolerance:
+                    msg = f"Excluding {data['smiles'][0][:20]}...\n\t(large force deviation between QM and amber99sbildn) for {int(np.sum(np.mean(np.linalg.norm(data['gradient_qm'] - force_amber99, axis=-1), axis=0)>force_tolerance))} atoms"
+                    if skip_deviations:
+                        print()
+                        print(msg)
+                        continue
+                    else:
+                        raise RuntimeError(msg)
 
                 system = remove_forces_from_system(system=system, keep='nonbonded')
 
@@ -217,5 +227,16 @@ if __name__ == "__main__":
         default=None,
         help="If given, exclude all molecules whose smiles contain this pattern.",
     )
+    parser.add_argument(
+        "--skip_deviations",
+        action="store_true",
+        help="If True, molecules with large force deviations between QM and amber99sbildn will be skipped instead of raising an error.",
+    )
+    parser.add_argument(
+        "--force_tolerance",
+        type=float,
+        default=100.0,
+        help="If the maximum force deviation between QM and amber99sbildn is larger than this value, the molecule will be skipped (only if skip_deviations is False).",
+    )
     args = parser.parse_args()
-    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99, exclude_pattern=args.exclude_pattern)
+    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99, exclude_pattern=args.exclude_pattern, skip_deviations=args.skip_deviations, force_tolerance=args.force_tolerance)

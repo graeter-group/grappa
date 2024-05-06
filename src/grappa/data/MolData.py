@@ -105,7 +105,7 @@ class MolData():
     @classmethod
     def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None, ff_energy:np.ndarray=None, ff_gradient:np.ndarray=None):
         """
-        Construct moldata from 'raw' arrays of xyz, energies and nonbonded energies. Sets gradients to zeros if not provided and mol_id to '' if not provided. Note that without gradient or valid mol_id, the moldata cannot be used for training or evaluation on unseen test data since 'unseen' is defined via mol_id.
+        Construct moldata from 'raw' arrays of xyz, energies and nonbonded energies. Sets gradients to zeros if not provided and mol_id to '' if not provided. Note that without gradient or valid mol_id, the moldata should not be used for training or evaluation on unseen test data since 'unseen' is defined via mol_id.
         """
         energy_ref = energy - nonbonded_energy
         energy_ref -= energy_ref.mean()

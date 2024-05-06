@@ -11,12 +11,7 @@ target_path="$SCRIPT_DIR/../../data/grappa_datasets" # due to with_amber flag, t
 # List of dataset names
 datasets=("spice-dipeptide")
 
-
-# exclude some residues because of some apparant bug of openmmforcefields for this
-HID_FRAGMENT='[C]([H])([H])[C@@]([H])([C](=[O])[N]([H])[C]'
-ASP_FRAGMENT='[C]([H])([H])[H])[C]([H])([H])[C](=[O])[O-])'
-
-# Loop through each dataset name
+# Loop through each dataset name, filtering out molecules with large force errors of the classical force field since there seem to be some bugs in those openmmforcefields implementations
 for ds in "${datasets[@]}"; do
-  python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds""_amber99sbildn" --with_amber99 --exclude_pattern $HID_FRAGMENT $ASP_FRAGMENT
+  python to_npz.py --dspath "$espaloma_ds_path/$ds" --targetpath "$target_path/$ds""_amber99sbildn_filtered" --with_amber99 --skip_deviations --force_tolerance 100
 done

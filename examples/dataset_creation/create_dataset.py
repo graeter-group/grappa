@@ -60,7 +60,7 @@ print(data[0]['pdbstring'][10])
 print("We can save the pdbstring as file to create an openmm system later on:")
 for i, mol in enumerate(data):
     with open(dspath/f"pdb_{i}.pdb", 'w') as f:
-        f.write('\n'.join(mol['pdbstring']))
+        f.write(''.join(mol['pdbstring']))
 # %%
 
 # now we can create an openmm system and topology using the charmm36 force field and the pdbfile, which we pass to a constructur of Grappa's MolData class that handles the calculation of the nonbonded contribution

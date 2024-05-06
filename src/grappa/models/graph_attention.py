@@ -71,6 +71,8 @@ class GrappaGNN(torch.nn.Module):
             # overwrite/append to these default values:
             for key in in_feat_dims.keys():
                 default_dims[key] = in_feat_dims[key]
+            self.in_feat_dims = default_dims
+
             in_feat_dims = [default_dims[feat] for feat in in_feat_name]
 
             
@@ -156,7 +158,19 @@ class GrappaGNN(torch.nn.Module):
             # concatenate all the input features, allow the shape (n_nodes,n_feat) and (n_nodes)
             in_feature = torch.cat([g.nodes["n1"].data[feat].float()
                                     if len(g.nodes["n1"].data[feat].shape) >=2 else g.nodes["n1"].data[feat].unsqueeze(dim=-1).float()
-                                    for feat in self.in_feat_name], dim=-1)
+                                    for feat in sorted(self.in_feat_name) if feat not in ['charge_model', 'atomic_number']], dim=-1)
+
+            # for charge_model and atomic_number, allow different shapes as specified in feat_dims to retain backward compatibility. simply add zeros or slice the input features
+            for feat in ['charge_model', 'atomic_number']:
+                if feat in self.in_feat_name:
+                    feat_dim = self.in_feat_dims[feat]
+                    if g.nodes["n1"].data[feat].shape[-1] == feat_dim:
+                        in_feature = torch.cat([in_feature, g.nodes["n1"].data[feat].float()], dim=-1)
+                    elif g.nodes["n1"].data[feat].shape[-1] < feat_dim:
+                        in_feature = torch.cat([in_feature, torch.zeros((in_feature.shape[0],feat_dim-g.nodes["n1"].data[feat].shape[-1]), device=in_feature.device)], dim=-1)
+                    else:
+                        in_feature = torch.cat([in_feature, g.nodes["n1"].data[feat].float()[:,:feat_dim]], dim=-1)
+
             assert len(in_feature.shape) == 2, f"the input features must be of shape (n_nodes, n_features), but got {in_feature.shape}"
 
         if self.charge_encoding:
