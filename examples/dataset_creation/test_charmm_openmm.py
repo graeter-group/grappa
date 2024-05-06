@@ -22,17 +22,14 @@ In this example, we use a small dataset of QM energies and force for peptides an
 
 
 from openmm.app import PDBFile, ForceField, Modeller
+#%%
 
 pdb = PDBFile("tripeptide_example_data/pdb_0.pdb")
 topology = pdb.getTopology()
-# model the pdb:
-modeller = Modeller(topology, pdb.getPositions())
 # load the forcefield:
-forcefield = ForceField('amber99sbildn.xml')
-# add the forcefield to the modeller:
-modeller.addForceField(forcefield)
+forcefield = ForceField('charmm36.xml')
 
 # create the system:
-system = forcefield.createSystem(modeller.topology)
+system = forcefield.createSystem(topology)
 
 # %%

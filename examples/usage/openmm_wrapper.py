@@ -66,6 +66,6 @@ plt.text(0.1, 0.9, f'Component RMSE: {crmse:.2f} kcal/mol/A', transform=plt.gca(
 plt.plot(original_gradients.flatten(), original_gradients.flatten(), color='black', linestyle='--')
 
 plt.savefig('grappa_vs_classical_gradients_T4.png') 
-print(f'Component RMSE between Grappa and amber99sbildn: {crmse:.2f} kcal/mol/A')
+print(f'Force component RMSE between Grappa and amber99sbildn: {crmse:.2f} kcal/mol/A')
 print('Saved fig to grappa_vs_classical_gradients.png')
 # %%
