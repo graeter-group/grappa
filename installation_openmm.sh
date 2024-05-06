@@ -42,7 +42,7 @@ install_11_7() {
 
 install_11_8() {
     echo "Installing openmm and pytorch for CUDA version 11.8..."
-    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.2.0 pytorch-cuda=11.8 cudatoolkit=11.8 -c nvidia -c pytorch -c conda-forge -y >$OUTPUT_TARGET
+    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.1.0 pytorch-cuda=11.8 cudatoolkit=11.8 -c nvidia -c pytorch -c conda-forge -y >$OUTPUT_TARGET
     echo "Installing DGL..."
     pip install dgl -f "https://data.dgl.ai/wheels/cu118/repo.html" >$OUTPUT_TARGET
     pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
@@ -50,7 +50,7 @@ install_11_8() {
 
 install_12_1() {
     echo "Installing openmm and pytorch for CUDA version 12.1..."
-    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.2.0 pytorch-cuda=12.1 -c nvidia -c pytorch -c conda-forge -y >$OUTPUT_TARGET
+    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.1.0 pytorch-cuda=12.1 -c nvidia -c pytorch -c conda-forge -y >$OUTPUT_TARGET
     echo "Installing DGL..."
     pip install dgl -f "https://data.dgl.ai/wheels/cu121/repo.html" >$OUTPUT_TARGET
     pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
@@ -58,9 +58,9 @@ install_12_1() {
 
 install_cpu() {
     echo "Installing openmm and pytorch in CPU mode..."
-    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.2.0 cpuonly -c pytorch -c conda-forge -y >$OUTPUT_TARGET
+    $PKGMANAGER install python=3.10 openmm=8.1.1 pytorch=2.1.0 cpuonly -c pytorch -c conda-forge -y >$OUTPUT_TARGET
     echo "Installing DGL..."
-    pip install dgl -f https://data.dgl.ai/wheels/repo.html >$OUTPUT_TARGET
+    pip install dgl==2.0 -f https://data.dgl.ai/wheels/repo.html >$OUTPUT_TARGET
     pip install dglgo -f "https://data.dgl.ai/wheels-test/repo.html" >$OUTPUT_TARGET
 }
 

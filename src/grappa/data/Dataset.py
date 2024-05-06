@@ -7,6 +7,7 @@ If initialized with a list of MolData objects, stores a list the mol_ids and a l
 
 from grappa.data import MolData
 from grappa.utils import torch_utils, dataset_utils
+from grappa import constants
 import dgl
 from dgl import DGLGraph
 import json
@@ -184,6 +185,8 @@ class Dataset(torch.utils.data.Dataset):
         ----------
         create_feats : Dict[str, torch.Tensor], optional
             Dictionary of features that should be created for all graphs if not already present in the graph. The key is the name of the feature and the value is the default value per node for the feature. For example, if some graphs have the is_radical feature as onedimensional onehot encoding, create_feats={'is_radical':0} will make all molecules without this feature have torch.zeros((n_atoms, 1)) as is_radical feature.
+
+        Also fills zeros to the charge_model entry until the length resembles grappa.constants.MAX_NUM_CHARGE_MODELS
         """
         for v in create_feats.values():
             if isinstance(v, torch.Tensor):  
@@ -207,6 +210,12 @@ class Dataset(torch.utils.data.Dataset):
         # iterate twice, first to collect all feats that are to be kept, then to remove all feats that are not to be kept
         for i in range(len(self.graphs)):
             self.graphs[i] = add_feats(self.graphs[i])
+            if 'charge_model' in self.graphs[i].nodes['n1'].data.keys() and self.graphs[i].nodes['n1'].data['charge_model'].shape[-1] < constants.MAX_NUM_CHARGE_MODELS:
+                self.graphs[i].nodes['n1'].data['charge_model'] = torch.cat(
+                    (self.graphs[i].nodes['n1'].data['charge_model'],
+                     torch.zeros((self.graphs[i].nodes['n1'].data['charge_model'].shape[0], constants.MAX_NUM_CHARGE_MODELS - self.graphs[i].nodes['n1'].data['charge_model'].shape[-1]))
+                     ), dim=-1
+                    )
             keep = keep.intersection(set(self.graphs[i].ndata.keys()))
 
         for graph in self.graphs:

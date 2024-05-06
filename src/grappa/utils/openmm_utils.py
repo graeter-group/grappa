@@ -299,7 +299,9 @@ def topology_from_pdb(pdbstring:str)->'openmm.Topology':
 def get_openmm_forcefield(name, *args, **kwargs):
     """
     The name can be given either with or without .xml ending. Possible names are all openmm forcefield names and:
-    - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP)
+    - charmm36 (capable of parametrizing ACE and NME caps)
+    - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP residue type)
+    - any standard openmm forcefield
     """
     from openmm.app import ForceField
 
@@ -328,6 +330,12 @@ def get_openmm_forcefield(name, *args, **kwargs):
                 return self.ff.createSystem(topology, *args, **kwargs)
                 
         return HypDopOpenmmForceField(str(ff_path), *args, **kwargs)
+
+
+    elif name in ['charmm36', 'charmm36-jul2022']:
+        ff_path = Path(__file__).parent / Path("amber99sbildn-star_.xml")
+        return ForceField(str(ff_path))
+
 
     else:
         return ForceField(name+'.xml')

@@ -24,6 +24,7 @@ import numpy as np
 from pathlib import Path
 
 from grappa.data import MolData
+from grappa.utils.openmm_utils import get_openmm_forcefield
 
 #%%
 
@@ -75,7 +76,9 @@ for i in tqdm(range(len(data))):
     sequence = data[i]['sequence']
 
     topology = PDBFile(str(dspath/f"pdb_{i}.pdb")).topology
-    system = ForceField('amber99sbildn.xml').createSystem(topology)
+    # system = ForceField('amber99sbildn.xml').createSystem(topology)
+    # for charmm, we need a modified version that can deal with ACE and NME caps:
+    system = get_openmm_forcefield('charmm36').createSystem(topology)
 
     moldata = MolData.from_openmm_system(openmm_topology=topology, openmm_system=system, xyz=xyz, energy=energy_qm, gradient=gradient_qm, mol_id=sequence, charge_model='amber99')
 
@@ -89,13 +92,13 @@ i = 0
 xyz, energy_qm, gradient_qm, sequence = data[i]['xyz'], data[i]['energy_qm'], data[i]['gradient_qm'], data[i]['sequence']
 
 topology = PDBFile(str(dspath/f"pdb_{i}.pdb")).topology
-system = ForceField('amber99sbildn.xml').createSystem(topology)
+system = get_openmm_forcefield('charmm36').createSystem(topology)
 
 # use random partial charges:
 partial_charges = np.random.rand(topology.getNumAtoms())
 partial_charges -= partial_charges.mean()
 
-moldata_own_charges = MolData.from_openmm_system(openmm_topology=topology, openmm_system=system, xyz=xyz, energy=energy_qm, gradient=gradient_qm, mol_id=sequence, charge_model='amber99', partial_charges=partial_charges)
+moldata_own_charges = MolData.from_openmm_system(openmm_topology=topology, openmm_system=system, xyz=xyz, energy=energy_qm, gradient=gradient_qm, mol_id=sequence, charge_model='charmm', partial_charges=partial_charges)
 
 # if the charges are changed systematically, one could modify grappa.constants.CHARGE_MODELS to include a new charge model, e.g. 'amber99_modified'/'amber99_overcharged'/... and pass this as charge model.
 
@@ -146,7 +149,7 @@ import yaml
 with open(thisdir/"grappa_config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
-config["data_config"]["datasets"] = [dsname] # a 0.8/0.1/0.1 tr/vl/te split is used by default
+config["data_config"]["datasets"] = [dsname, 'spice-dipeptide', 'hyp-dop_amber99sbildn'] # a 0.8/0.1/0.1 tr/vl/te split is used by default
 
 config["trainer_config"]["max_epochs"] = 50
 
@@ -159,3 +162,4 @@ config["data_config"]["pure_train_datasets"] = [train_tag]
 config["data_config"]["pure_val_datasets"] = [val_tag]
 config["data_config"]["pure_test_datasets"] = [test_tag]
 """
+# %%

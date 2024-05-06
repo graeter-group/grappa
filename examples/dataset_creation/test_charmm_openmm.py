@@ -27,7 +27,7 @@ from openmm.app import PDBFile, ForceField, Modeller
 pdb = PDBFile("tripeptide_example_data/pdb_0.pdb")
 topology = pdb.getTopology()
 # load the forcefield:
-forcefield = ForceField('charmm36.xml')
+forcefield = ForceField('charmm36-jul2022.xml')
 
 # create the system:
 system = forcefield.createSystem(topology)

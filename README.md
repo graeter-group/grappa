@@ -98,7 +98,7 @@ git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
 pip install kimmdy
 pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
-pip install dgl -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
+pip install dgl==2.0 -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
 pip install -r requirements.txt
 pip install -e .
 ```
