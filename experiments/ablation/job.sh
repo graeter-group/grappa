@@ -13,6 +13,7 @@
 DIR=$1
 
 source ~/.bashrc
+genoa-conda
 
 set -e
 

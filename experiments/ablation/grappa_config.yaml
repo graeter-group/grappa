@@ -3,13 +3,13 @@ data_config:
   conf_strategy: 32
   datasets:
   - spice-des-monomers
-  # - spice-pubchem
-  # - gen2
-  # - gen2-torsion
-  # - rna-diverse
-  # - spice-dipeptide
-  # - protein-torsion
-  # - pepconf-dlc
+  - spice-pubchem
+  - gen2
+  - gen2-torsion
+  - rna-diverse
+  - spice-dipeptide
+  - protein-torsion
+  - pepconf-dlc
   partition: [0.8, 0.1, 0.1]
   pin_memory: true
   pure_test_datasets:
