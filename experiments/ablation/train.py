@@ -2,7 +2,7 @@
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--project", type=str, default="ablation-grappa-1.0", help="Project name for wandb.")
+parser.add_argument("--project", type=str, default="ablation-grappa-1.3", help="Project name for wandb.")
 parser.add_argument("--pretrain_path", type=str, default=None)
 parser.add_argument("--with_hybridization", action="store_true", help="Use hybridization as input feature. Default is False.")
 parser.add_argument("--wrong_symmetry", action="store_true", help="Use wrong symmetry of improper torsion. Default is False.")
@@ -30,32 +30,25 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
 
     # set the splitpath:    
-    config["data_config"]["splitpath"] = str(Path(__file__).parent.parent.parent/f"dataset_creation/get_espaloma_split/espaloma_split.json")
+    config["data_config"]["splitpath"] = 'espaloma_split'
 
     # set the name:
     config["trainer_config"]["name"] = ""
 
-    if args.with_hybridization:
-        config["model_config"]["in_feat_name"] += ["sp_hybridization"]
-        config["trainer_config"]["name"] += "_hybrid"
 
     if args.pretrain_path is not None:
         config["lit_model_config"]['start_qm_epochs'] = 0
 
 
-    if args.wrong_symmetry:
-        config["model_config"]["worng_symmetry"] = True
-        config["trainer_config"]["name"] += "_wrong_sym"
-
     if args.no_positional_encoding:
         config["model_config"]["positional_encoding"] = False
-        config["trainer_config"]["name"] += "_no_pos_enc"    
+        config["trainer_config"]["name"] += "_no_pos_enc"
 
     if args.no_param_attention:
         for lvl in ['bond', 'angle', 'proper', 'improper']:
             config["model_config"][f"{lvl}_symmetriser_depth"] += config["model_config"][f"{lvl}_transformer_depth"]
+            config["model_config"][f"{lvl}_symmetriser_width"] *= 3
             config["model_config"][f"{lvl}_transformer_depth"] = 0
-
         config["trainer_config"]["name"] += "_no_param_att"
 
     if args.no_gnn_attention:
@@ -66,29 +59,28 @@ if __name__ == "__main__":
     if args.no_gnn:
         config["model_config"]["gnn_convolutions"] = 0
         config["model_config"]["gnn_attentional_layers"] = 0
+        # keep num params ~ constant
+        for lvl in ['bond', 'angle', 'proper', 'improper']:
+            config["model_config"][f"{lvl}_symmetriser_depth"] += 4
+            config["model_config"][f"{lvl}_symmetriser_width"] *= 3
         config["trainer_config"]["name"] += "_no_gnn"
 
     if args.no_self_interaction:
         config["model_config"]["self_interaction"] = False
+        config["model_config"]["gnn_width"] *= 3 # keep num params ~ constant
         config["trainer_config"]["name"] += "_no_self_int"
 
     if args.no_gated_torsion:
         config["model_config"]["gated_torsion"] = False
         config["trainer_config"]["name"] += "_no_gated_torsion"
 
-    if args.wrong_symmetry:
-        config["model_config"]["wrong_symmetry"] = True
-        config["trainer_config"]["name"] += "_wrong_sym"
-
-    if args.harmonic_gate:
-        config["model_config"]["harmonic_gate"] = True
-        config["trainer_config"]["name"] += "_harmonic_gate"
-
     if args.no_scaling:
-        raise NotImplementedError("No scaling not implemented yet.")
+        config["model_config"]["stat_scaling"] = False
+        config["trainer_config"]["name"] += "_no_scaling"
     
     if args.exp_to_range:
-        raise NotImplementedError("Exp to range not implemented yet.")
+        config["model_config"]["shifted_elu"] = False
+        config["trainer_config"]["name"] += "_exp_to_range"
 
     config['lit_model_config']['time_limit'] = 23.5 * 2
 

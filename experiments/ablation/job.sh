@@ -1,29 +1,22 @@
 #!/bin/bash
 
-#SBATCH -t 24:00:00
+#SBATCH -t 48:00:00
+#SBATCH --partition=genoa-deep.p
 #SBATCH --mem=32000
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
 #SBATCH --output=/hits/fast/mbm/seutelf/logs/%j
 #SBATCH --error=/hits/fast/mbm/seutelf/logs/%j.err
-#SBATCH --job-name=bmrk-grappa
+#SBATCH --job-name=grappa-abl
 
-RESUBMIT=false
-set -e
-
-# store all args:
-ARGS="$@"
-
-# first arg is the directory to run in. This should be the dir in whcih this script lies if resubmitting
+# first arg is the directory to run in
 DIR=$1
 
-#conda path to fast:
-CONDA_PREFIX="/hits/fast/mbm/seutelf/software/conda"
+source ~/.bashrc
 
-eval "$($CONDA_PREFIX/bin/conda shell.bash hook)"
+set -e
 
-conda activate grappa_cascade
+conda activate grappa
 
 cd $DIR
 
@@ -32,10 +25,3 @@ shift
 
 # forward all remaining args to the script
 "$@"
-
-if [ "$RESUBMIT" = false ]; then
-    exit 0
-fi
-
-# resubmit the job
-sbatch job.sh $ARGS

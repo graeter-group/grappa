@@ -59,6 +59,8 @@ def get_default_model_config():
         "self_interaction": True,
         "learnable_statistics": False,
         "torsion_cutoff": 1e-4,
+        "stat_scaling": True,
+        "shifted_elu": True,
     }
 
     return args

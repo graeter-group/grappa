@@ -97,7 +97,6 @@ model_config:
   proper_transformer_depth: 3
   proper_transformer_width: 512
   self_interaction: true
-  wrong_symmetry: false
   torsion_cutoff: 1.e-4
 test_model: false
 trainer_config:
