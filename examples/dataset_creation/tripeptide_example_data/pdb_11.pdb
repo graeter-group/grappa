@@ -1,0 +1,68 @@
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-08-03
+HETATM    1  C   ACE A   1       1.537   0.737   0.855  1.00  0.00           C  
+HETATM    2  O   ACE A   1       1.802  -0.446   1.025  1.00  0.00           O  
+HETATM    3  CH3 ACE A   1       0.380   1.354   1.604  1.00  0.00           C  
+HETATM    4  H1  ACE A   1      -0.149   0.568   2.139  1.00  0.00           H  
+HETATM    5  H2  ACE A   1       0.774   2.086   2.307  1.00  0.00           H  
+HETATM    6  H3  ACE A   1      -0.290   1.837   0.896  1.00  0.00           H  
+ATOM      7  N   ASP A   2       2.160   1.537  -0.005  1.00  0.00           N  
+ATOM      8  CA  ASP A   2       3.341   1.188  -0.810  1.00  0.00           C  
+ATOM      9  C   ASP A   2       4.511   2.119  -0.424  1.00  0.00           C  
+ATOM     10  O   ASP A   2       4.469   3.312  -0.730  1.00  0.00           O  
+ATOM     11  CB  ASP A   2       2.950   1.295  -2.297  1.00  0.00           C  
+ATOM     12  CG  ASP A   2       3.982   0.709  -3.266  1.00  0.00           C  
+ATOM     13  OD1 ASP A   2       4.546  -0.345  -2.889  1.00  0.00           O  
+ATOM     14  OD2 ASP A   2       3.765   0.964  -4.473  1.00  0.00           O  
+ATOM     15  H   ASP A   2       1.894   2.507  -0.030  1.00  0.00           H  
+ATOM     16  HA  ASP A   2       3.637   0.157  -0.606  1.00  0.00           H  
+ATOM     17  HB2 ASP A   2       2.770   2.343  -2.549  1.00  0.00           H  
+ATOM     18  HB1 ASP A   2       2.013   0.754  -2.445  1.00  0.00           H  
+ATOM     19  N   ASP A   3       5.269   1.696   0.593  1.00  0.00           N  
+ATOM     20  CA  ASP A   3       6.077   2.563   1.468  1.00  0.00           C  
+ATOM     21  C   ASP A   3       7.568   2.612   1.067  1.00  0.00           C  
+ATOM     22  O   ASP A   3       8.332   1.696   1.381  1.00  0.00           O  
+ATOM     23  CB  ASP A   3       5.897   2.078   2.922  1.00  0.00           C  
+ATOM     24  CG  ASP A   3       6.513   3.035   3.950  1.00  0.00           C  
+ATOM     25  OD1 ASP A   3       6.035   4.192   3.975  1.00  0.00           O  
+ATOM     26  OD2 ASP A   3       7.078   2.509   4.937  1.00  0.00           O  
+ATOM     27  H   ASP A   3       5.177   0.732   0.870  1.00  0.00           H  
+ATOM     28  HA  ASP A   3       5.685   3.580   1.417  1.00  0.00           H  
+ATOM     29  HB2 ASP A   3       6.339   1.086   3.032  1.00  0.00           H  
+ATOM     30  HB1 ASP A   3       4.830   1.989   3.135  1.00  0.00           H  
+ATOM     31  N   GLU A   4       8.040   3.744   0.525  1.00  0.00           N  
+ATOM     32  CA  GLU A   4       9.483   4.065   0.484  1.00  0.00           C  
+ATOM     33  C   GLU A   4       9.959   4.588   1.861  1.00  0.00           C  
+ATOM     34  O   GLU A   4      10.312   5.755   2.039  1.00  0.00           O  
+ATOM     35  CB  GLU A   4       9.822   4.996  -0.704  1.00  0.00           C  
+ATOM     36  CG  GLU A   4      11.344   5.079  -0.946  1.00  0.00           C  
+ATOM     37  CD  GLU A   4      11.721   5.762  -2.273  1.00  0.00           C  
+ATOM     38  OE1 GLU A   4      11.312   6.929  -2.469  1.00  0.00           O  
+ATOM     39  OE2 GLU A   4      12.660   5.246  -2.925  1.00  0.00           O  
+ATOM     40  H   GLU A   4       7.382   4.486   0.338  1.00  0.00           H  
+ATOM     41  HA  GLU A   4      10.019   3.133   0.305  1.00  0.00           H  
+ATOM     42  HB2 GLU A   4       9.413   5.992  -0.530  1.00  0.00           H  
+ATOM     43  HB1 GLU A   4       9.360   4.586  -1.604  1.00  0.00           H  
+ATOM     44  HG2 GLU A   4      11.745   4.063  -0.946  1.00  0.00           H  
+ATOM     45  HG1 GLU A   4      11.819   5.616  -0.123  1.00  0.00           H  
+HETATM   46  N   NME A   5       9.832   3.729   2.880  1.00  0.00           N  
+HETATM   47  C   NME A   5       9.911   4.096   4.289  1.00  0.00           C  
+HETATM   48  H   NME A   5       9.392   2.841   2.658  1.00  0.00           H  
+HETATM   49  H1  NME A   5      10.806   4.689   4.477  1.00  0.00           H  
+HETATM   50  H2  NME A   5       9.026   4.681   4.550  1.00  0.00           H  
+HETATM   51  H3  NME A   5       9.917   3.197   4.906  1.00  0.00           H  
+TER      52      NME A   5
+CONECT    1    3    2    7
+CONECT    2    1
+CONECT    3    1    4    5    6
+CONECT    4    3
+CONECT    5    3
+CONECT    6    3
+CONECT    7    1
+CONECT   33   46
+CONECT   46   33   47   48
+CONECT   47   49   50   51   46
+CONECT   48   46
+CONECT   49   47
+CONECT   50   47
+CONECT   51   47
+END

@@ -6,7 +6,6 @@ Contains the output dataclass 'Parameters'.
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
-from grappa.utils import openmm_utils
 from grappa import units
 from grappa import constants
 from grappa.constants import get_grappa_units_in_openmm
@@ -17,8 +16,6 @@ import warnings
 from grappa.data.Molecule import Molecule
 import matplotlib.pyplot as plt
 from grappa.utils.torch_utils import to_numpy
-
-import pkgutil
 
 
 @dataclass
@@ -151,7 +148,7 @@ class Parameters():
             bonds[i][0] < bonds[i][1] for all i
             angles[i][0] < angles[i][2] for all i
             propers[i][0] < propers[i][3] for all i
-            impropers: the central atom is inferred from connectivity, then it is put at place grappa.constants.IMPROPER_CENTRAL_IDX by invariant permutation.
+            impropers: the central atom is inferred from connectivity, then it is put at place grappa.constants.IMPROPER_CENTRAL_IDX by invariant permutations.
         """
 
         # handle the units:

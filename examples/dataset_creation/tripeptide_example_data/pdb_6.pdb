@@ -1,0 +1,84 @@
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-08-15
+HETATM    1  C   ACE A   1       2.082   0.603   0.795  1.00  0.00           C  
+HETATM    2  O   ACE A   1       2.943   0.127   1.528  1.00  0.00           O  
+HETATM    3  CH3 ACE A   1       0.621   0.440   1.135  1.00  0.00           C  
+HETATM    4  H1  ACE A   1       0.530  -0.180   2.027  1.00  0.00           H  
+HETATM    5  H2  ACE A   1       0.180   1.417   1.325  1.00  0.00           H  
+HETATM    6  H3  ACE A   1       0.108  -0.047   0.307  1.00  0.00           H  
+ATOM      7  N   LYS A   2       2.384   1.357  -0.267  1.00  0.00           N  
+ATOM      8  CA  LYS A   2       3.757   1.637  -0.723  1.00  0.00           C  
+ATOM      9  C   LYS A   2       4.486   2.617   0.219  1.00  0.00           C  
+ATOM     10  O   LYS A   2       4.824   3.735  -0.164  1.00  0.00           O  
+ATOM     11  CB  LYS A   2       3.719   2.115  -2.190  1.00  0.00           C  
+ATOM     12  CG  LYS A   2       5.117   2.150  -2.840  1.00  0.00           C  
+ATOM     13  CD  LYS A   2       5.140   3.032  -4.096  1.00  0.00           C  
+ATOM     14  CE  LYS A   2       6.584   3.199  -4.582  1.00  0.00           C  
+ATOM     15  NZ  LYS A   2       6.672   4.107  -5.752  1.00  0.00           N  
+ATOM     16  H   LYS A   2       1.616   1.742  -0.798  1.00  0.00           H  
+ATOM     17  HA  LYS A   2       4.312   0.698  -0.689  1.00  0.00           H  
+ATOM     18  HB2 LYS A   2       3.270   3.110  -2.221  1.00  0.00           H  
+ATOM     19  HB1 LYS A   2       3.087   1.442  -2.774  1.00  0.00           H  
+ATOM     20  HG2 LYS A   2       5.421   1.134  -3.098  1.00  0.00           H  
+ATOM     21  HG1 LYS A   2       5.844   2.548  -2.135  1.00  0.00           H  
+ATOM     22  HD2 LYS A   2       4.733   4.013  -3.845  1.00  0.00           H  
+ATOM     23  HD1 LYS A   2       4.526   2.575  -4.874  1.00  0.00           H  
+ATOM     24  HE2 LYS A   2       6.991   2.213  -4.828  1.00  0.00           H  
+ATOM     25  HE1 LYS A   2       7.171   3.606  -3.755  1.00  0.00           H  
+ATOM     26  HZ1 LYS A   2       6.300   5.019  -5.513  1.00  0.00           H  
+ATOM     27  HZ2 LYS A   2       7.639   4.224  -6.030  1.00  0.00           H  
+ATOM     28  HZ3 LYS A   2       6.149   3.732  -6.534  1.00  0.00           H  
+ATOM     29  N   LYS A   3       4.870   2.144   1.408  1.00  0.00           N  
+ATOM     30  CA  LYS A   3       5.727   2.851   2.379  1.00  0.00           C  
+ATOM     31  C   LYS A   3       7.210   2.774   1.966  1.00  0.00           C  
+ATOM     32  O   LYS A   3       8.052   2.263   2.700  1.00  0.00           O  
+ATOM     33  CB  LYS A   3       5.441   2.272   3.780  1.00  0.00           C  
+ATOM     34  CG  LYS A   3       6.007   3.122   4.933  1.00  0.00           C  
+ATOM     35  CD  LYS A   3       5.806   2.404   6.276  1.00  0.00           C  
+ATOM     36  CE  LYS A   3       6.309   3.264   7.441  1.00  0.00           C  
+ATOM     37  NZ  LYS A   3       6.097   2.592   8.750  1.00  0.00           N  
+ATOM     38  H   LYS A   3       4.502   1.230   1.662  1.00  0.00           H  
+ATOM     39  HA  LYS A   3       5.450   3.907   2.376  1.00  0.00           H  
+ATOM     40  HB2 LYS A   3       5.850   1.261   3.835  1.00  0.00           H  
+ATOM     41  HB1 LYS A   3       4.359   2.202   3.917  1.00  0.00           H  
+ATOM     42  HG2 LYS A   3       5.498   4.086   4.953  1.00  0.00           H  
+ATOM     43  HG1 LYS A   3       7.072   3.296   4.786  1.00  0.00           H  
+ATOM     44  HD2 LYS A   3       6.355   1.460   6.256  1.00  0.00           H  
+ATOM     45  HD1 LYS A   3       4.744   2.194   6.414  1.00  0.00           H  
+ATOM     46  HE2 LYS A   3       5.773   4.218   7.422  1.00  0.00           H  
+ATOM     47  HE1 LYS A   3       7.372   3.477   7.290  1.00  0.00           H  
+ATOM     48  HZ1 LYS A   3       6.622   1.728   8.798  1.00  0.00           H  
+ATOM     49  HZ2 LYS A   3       6.396   3.189   9.512  1.00  0.00           H  
+ATOM     50  HZ3 LYS A   3       5.117   2.377   8.882  1.00  0.00           H  
+ATOM     51  N   SER A   4       7.529   3.209   0.746  1.00  0.00           N  
+ATOM     52  CA  SER A   4       8.881   3.143   0.175  1.00  0.00           C  
+ATOM     53  C   SER A   4       9.757   4.297   0.685  1.00  0.00           C  
+ATOM     54  O   SER A   4       9.911   5.303  -0.006  1.00  0.00           O  
+ATOM     55  CB  SER A   4       8.808   3.098  -1.359  1.00  0.00           C  
+ATOM     56  OG  SER A   4       8.220   4.275  -1.880  1.00  0.00           O  
+ATOM     57  H   SER A   4       6.796   3.633   0.188  1.00  0.00           H  
+ATOM     58  HA  SER A   4       9.350   2.212   0.497  1.00  0.00           H  
+ATOM     59  HB2 SER A   4       8.212   2.236  -1.665  1.00  0.00           H  
+ATOM     60  HB1 SER A   4       9.816   2.989  -1.764  1.00  0.00           H  
+ATOM     61  HG  SER A   4       8.698   5.013  -1.455  1.00  0.00           H  
+HETATM   62  N   NME A   5      10.184   4.213   1.950  1.00  0.00           N  
+HETATM   63  C   NME A   5      10.953   5.246   2.644  1.00  0.00           C  
+HETATM   64  H   NME A   5       9.889   3.403   2.481  1.00  0.00           H  
+HETATM   65  H1  NME A   5      11.400   5.939   1.927  1.00  0.00           H  
+HETATM   66  H2  NME A   5      10.300   5.812   3.310  1.00  0.00           H  
+HETATM   67  H3  NME A   5      11.753   4.788   3.227  1.00  0.00           H  
+TER      68      NME A   5
+CONECT    1    3    2    7
+CONECT    2    1
+CONECT    3    1    4    5    6
+CONECT    4    3
+CONECT    5    3
+CONECT    6    3
+CONECT    7    1
+CONECT   53   62
+CONECT   62   53   63   64
+CONECT   63   65   66   67   62
+CONECT   64   62
+CONECT   65   63
+CONECT   66   63
+CONECT   67   63
+END
