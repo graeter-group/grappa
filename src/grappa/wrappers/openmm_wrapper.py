@@ -1,12 +1,16 @@
 from grappa.grappa import Grappa
-from grappa.utils.openmm_utils import write_to_system
 from grappa.data import Molecule, Parameters
 from grappa import constants
 from typing import List
-from grappa.utils.openmm_utils import OPENMM_ION_RESIDUES, OPENMM_WATER_RESIDUES, get_subtopology
 import numpy as np
 from grappa.utils.torch_utils import to_numpy
 import copy
+import importlib.util
+from grappa.utils.openmm_utils import OPENMM_WATER_RESIDUES, OPENMM_ION_RESIDUES
+if importlib.util.find_spec("openmm") is not None:
+    from grappa.utils.openmm_utils import get_subtopology
+    import openmm
+    from grappa.utils.openmm_utils import write_to_system
 
 
 class OpenmmGrappa(Grappa):
@@ -16,6 +20,10 @@ class OpenmmGrappa(Grappa):
         - 'amber99': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where amber99 refers to the charges from the amber99sbildn force field.
         - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.0.
     """
+    def __init__(self, *args, **kwargs):
+        assert importlib.util.find_spec("openmm") is not None, "OpenmmGrappa requires the openmm package to be installed."
+        return super().__init__(*args, **kwargs)
+
     @classmethod
     def from_tag(cls, tag:str='latest', max_element=constants.MAX_ELEMENT, device:str='cpu'):
         """
@@ -23,11 +31,11 @@ class OpenmmGrappa(Grappa):
         """
         return super().from_tag(tag, max_element, device)
     
-    def parametrize_system(self, system, topology, charge_model:str='amber99', exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES, plot_dir:str=None):
+    def parametrize_system(self, system:"openmm.System", topology:"openmm.app.Topology", charge_model:str='amber99', exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES, plot_dir:str=None):
         """
         Predicts parameters for the system and writes them to the system.
         system: openmm.System
-        topology: openmm.Topology
+        topology: openmm.app.Topology
         charge_model: str
             The charge model used to assign the charges. Possible values
                 - 'amber99': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where amber99 refers to the charges from the amber99sbildn force field.
