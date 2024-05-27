@@ -22,14 +22,32 @@ In this example, we use a small dataset of QM energies and force for peptides an
 
 
 from openmm.app import PDBFile, ForceField, Modeller
+from grappa.utils.openmm_utils import get_openmm_forcefield
+from grappa.data import MolData
 #%%
 
 pdb = PDBFile("tripeptide_example_data/pdb_0.pdb")
 topology = pdb.getTopology()
 # load the forcefield:
-forcefield = ForceField('charmm36-jul2022.xml')
+forcefield = get_openmm_forcefield('charmm36')
 
 # create the system:
 system = forcefield.createSystem(topology)
 
+data = MolData.load("tripeptide_example_data/moldata_0.npz")
+
+# %%
+forces = -data.gradient
+forces.shape
+# %%
+xyz = data.xyz
+
+from grappa.utils.openmm_utils import get_energies
+
+charmm_energies, charmm_forces = get_energies(system, xyz)
+# %%
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.scatter(forces.flatten(), charmm_forces.flatten())
 # %%
