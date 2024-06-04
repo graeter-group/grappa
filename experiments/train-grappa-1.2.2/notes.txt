@@ -1,1 +1,0 @@
-now with harmonic gate and improper torsion restricted to n=2

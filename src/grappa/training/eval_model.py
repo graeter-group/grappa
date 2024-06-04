@@ -6,11 +6,9 @@ from pathlib import Path
 import yaml
 import json
 import wandb
-from grappa.training.resume_trainrun import get_dir_from_id
-from grappa.models.deploy import model_from_config
 from grappa.utils.train_utils import remove_module_prefix
 from grappa.models.energy import Energy
-from grappa.utils.loading_utils import model_dict_from_tag, url_from_tag
+from grappa.utils.model_loading_utils import model_dict_from_tag, url_from_tag
 from grappa.training.export_model import get_model_dict
 import copy
 from typing import Tuple, Dict
@@ -26,7 +24,7 @@ def grappa_eval():
     parser.add_argument('--with_train', '-wt', action='store_true', help='If True, the training datasets are also tested.')
     parser.add_argument('--with_val', '-wv', action='store_true', help='If True, the val datasets are also tested.')
     parser.add_argument('--n_bootstrap', '-nb', type=int, default=1000, help='The number of bootstrap samples.')
-    parser.add_argument('--classical_ff', '-cff', nargs='+', default=['amber14', 'gaff-2.11'], help='The classical force fields that should be evaluated.')
+    parser.add_argument('--classical_ff', '-cff', nargs='+', default=[], help='The classical force fields that should be evaluated.')
     parser.add_argument('--forces_per_batch', '-fpb', type=float, default=2e3, help='The number of forces per batch. Determines the batch size.')
     parser.add_argument('--batch_size', '-bs', type=int, default=None, help='The batch size. If None, it is calculated from forces_per_batch.')
     parser.add_argument('--device', '-d', default=None, help='The device to use. Default is cuda if available, else cpu.')
@@ -36,7 +34,7 @@ def grappa_eval():
     return main_(**vars(args))
 
 
-def main_(modeltag:str=None, checkpoint_path:str=None, id:str=None, with_train:bool=False, with_val:bool=False, n_bootstrap:int=1000, classical_ff:list=['amber14', 'gaff-2.11'], forces_per_batch:float=2e3, batch_size:int=None, device:str=None):
+def main_(modeltag:str=None, checkpoint_path:str=None, with_train:bool=False, with_val:bool=False, n_bootstrap:int=1000, classical_ff:list=[], forces_per_batch:float=2e3, batch_size:int=None, device:str=None):
 
     MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
 
@@ -49,11 +47,7 @@ def main_(modeltag:str=None, checkpoint_path:str=None, id:str=None, with_train:b
     elif not modeltag is None:
         model_dict = model_dict_from_tag(modeltag)
     else:
-        if not id is None:
-            wandb_folder = Path.cwd() if Path.cwd().name == 'wandb' else Path.cwd()/'wandb'
-            checkpoint_path = get_dir_from_id(run_id=id, wandb_folder=wandb_folder) / 'files' / 'checkpoints' / 'best-model.ckpt'
-        else:
-            checkpoint_path = Path.cwd() / 'files' / 'checkpoints' / 'best-model.ckpt'
+        checkpoint_path = Path.cwd() / 'files' / 'checkpoints' / 'best-model.ckpt'
         model_dict = get_model_dict(checkpoint_path)
 
     assert not model_dict is None, 'No model found'
@@ -82,7 +76,7 @@ def eval_model(state_dict: dict, config: dict, split_ids:dict, with_train:bool=F
 
     # prepare the model:
     ############################################
-    model = model_from_config(config['model_config'])
+    # model = model_from_config(config['model_config']) #NOTE
     # load the state dict:
     model.load_state_dict(state_dict)
     # add the energy layer:

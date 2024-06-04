@@ -1,11 +1,10 @@
 from grappa.utils.run_utils import load_yaml
 from pathlib import Path
-from grappa.models.deploy import model_from_config
 import torch
 from grappa.models.energy import Energy
 import json
 from grappa.utils.train_utils import remove_module_prefix
-from grappa.training.resume_trainrun import get_dir_from_id
+# from grappa.training.resume_trainrun import get_dir_from_id
 import os
 import argparse
 
@@ -29,7 +28,8 @@ def grappa_export():
         if args.id is None:
             checkpoint_path = Path.cwd() / 'files' / 'checkpoints' / 'best-model.ckpt'
         else:
-            checkpoint_path = Path(get_dir_from_id(run_id=args.id, wandb_folder=Path.cwd()/'wandb')) / 'files/checkpoints/best-model.ckpt'
+            # checkpoint_path = Path(get_dir_from_id(run_id=args.id, wandb_folder=Path.cwd()/'wandb')) / 'files/checkpoints/best-model.ckpt'
+            pass
     else:
         checkpoint_path = Path(args.checkpoint_path)
 
@@ -66,7 +66,7 @@ def get_grappa_model(checkpoint_path):
         with open(splitpath, 'r') as f:
             split_names = json.load(f)
 
-    model = model_from_config(config['model_config'])
+    # model = model_from_config(config['model_config'])
 
     full_model = torch.nn.Sequential(
         model,

@@ -1,5 +1,5 @@
 #%%
-from grappa.utils.loading_utils import model_dict_from_tag
+from grappa.utils.model_loading_utils import model_dict_from_tag
 import json
 
 #%%

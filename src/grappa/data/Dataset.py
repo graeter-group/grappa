@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Union, Tuple, Dict
 
 import numpy as np
-
+import logging
 import torch
 
 # inherit from torch ds:
@@ -77,6 +77,24 @@ class Dataset(torch.utils.data.Dataset):
     
     def __getitem__(self, idx):
         return self.graphs[idx], self.subdataset[idx]
+    
+    @classmethod
+    def concatenate(cls, *others):
+        """
+        Concatenates the dataset with other datasets.
+        Args:
+            others (List[Dataset]): datasets to be concatenated
+        Returns:
+            dataset (Dataset): concatenated dataset
+        """
+        graphs = []
+        mol_ids = []
+        subdataset = []
+        for dataset in list(others):
+            graphs += dataset.graphs
+            mol_ids += dataset.mol_ids
+            subdataset += dataset.subdataset
+        return cls(graphs, mol_ids, subdataset)
     
     def split(self, train_ids:List[str], val_ids:List[str], test_ids:List[str], check_overlap:bool=True):
         """
@@ -223,21 +241,19 @@ class Dataset(torch.utils.data.Dataset):
             for feature in set(graph.ndata.keys()).difference(keep):
                 del graph.ndata[feature]
 
-        if len(removed) > 0:
-            print(f"Removed features:\n  {removed}")
     
 
     def clean(self, keep_feats:List[str]=None):
         """
         Assumes that all graphs have the same node features, i.e. that Dataset.remove_uncommon_features() has been called before.
-        Remove all n1 feats with name that is not in keep_feats. This is for speeding up transfer of data to gpu.
+        Remove all n1 feats with name that is not in keep_feats. This is to reduce the size of the dataset.
         """
         if keep_feats is None:
             return
         remove = []
         graph = self.graphs[0]
         for feature in graph.nodes['n1'].data.keys():
-            if not feature in keep_feats + ['xyz', 'atomic_number', 'partial_charge', 'ring_encoding']:
+            if not feature in keep_feats + ['xyz', 'atomic_number', 'partial_charge', 'ring_encoding', 'charge_model']:
                 remove.append(feature)
 
         for graph in self.graphs:
@@ -293,13 +309,25 @@ class Dataset(torch.utils.data.Dataset):
         return self
     
 
-    def subsampled(self, factor:float, seed:int=0):
+    def subsampled(self, factor:float=1., seed:int=0):
         """
-        Subsample the dataset by a factor. The subsampling is done in a deterministic way, i.e. the same subsample will be returned for the same seed.
+        Subsample the dataset by a factor. 1 is the whole dataset, 0 an empty dataset. The subsampling is done in a deterministic way, i.e. the same subsample will be returned for the same seed.
         """
-        print(f'Sampling {round(factor*100, 2)}% of the original dataset...')
+        if factor is None:
+            return self
+        if factor == 1.:
+            return self
+
+        logging.info(f'Sampling {round(factor*100, 2)}% of the original dataset...')
         np.random.seed(seed)
         n = len(self.graphs)
         perm = np.random.permutation(n)
         subsample = perm[:int(n*factor)]
         return self.where(condition=[i in subsample for i in range(n)])
+
+
+    def create_reference(self, ref_terms:List[str]):
+        """
+        Stores QM - MM reference energies and gradients as energy_ref and gradient_ref in the graphs.
+        """
+        pass

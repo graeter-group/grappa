@@ -2,10 +2,11 @@ import torch
 import dgl
 from typing import Tuple, List, Dict, Union
 import copy
+import logging
 
 from grappa.constants import BONDED_CONTRIBUTIONS
 
-def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
+def get_parameters(g, suffix="", exclude:Tuple[str,str]=[], terms:List[str]=['n2', 'n3', 'n4', 'n4_improper']):
     """
     Get the parameters of a graph asuming that they are stored at g.nodes[lvl].data[{k}/{eq}+suffix]
     Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}.
@@ -24,11 +25,14 @@ def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
     """
     params = {}
     for lvl, param_name in BONDED_CONTRIBUTIONS:
+        if lvl not in terms:
+            continue
         if (lvl, param_name) in exclude:
             continue
 
-        params[f"{lvl}_{param_name}"] = g.nodes[lvl].data[f"{param_name}{suffix}"]
-
+        if lvl in g.ntypes:
+            if f"{param_name}{suffix}" in g.nodes[lvl].data.keys():
+                params[f"{lvl}_{param_name}"] = g.nodes[lvl].data[f"{param_name}{suffix}"]
     return params
 
 
@@ -211,12 +215,15 @@ def get_param_statistics(loader, suffix="_ref"):
             else:
                 these_params = get_parameters(g,suffix=suffix)
                 for k, v in these_params.items():
+                    if torch.isnan(v).any():
+                        continue
                     # remove the suffix from the key in the stat dict:
                     parameters[k.replace(suffix, "")] = torch.cat((parameters[k.replace(suffix, "")], v), dim=0)
         
         param_statistics = {'mean':{}, 'std':{}}
 
         if parameters is None:
+            logging.warning("No MM parameters found in loader. Returning default statistics.")
             return get_default_statistics()
 
         for k, v in parameters.items():
@@ -227,12 +234,20 @@ def get_param_statistics(loader, suffix="_ref"):
                 assert not torch.isnan(param_statistics['mean'][k]).any(), f"mean of {k} is nan"
                 assert not torch.isnan(param_statistics['std'][k]).any(), f"std of {k} is nan"
 
+
+    # if there are nans, replace them with the default statistics:
+    for m in ['mean', 'std']:
+        for k, v in param_statistics[m].items():
+            if torch.isnan(v).any():
+                param_statistics[m][k] = get_default_statistics()[m][k]
+                logging.warning(f"Found nan in train MM parameter statistics {m} of {k}. Replacing with default statistics.")
+
     return param_statistics
 
 
 def get_default_statistics():
     """
-    Just some example statistics obtained at some point in time from a peptide dataset. Better than nothing but not good.
+    Just some example statistics obtained at some point in time from a peptide dataset. Better than nothing.
     """
     DEFAULT_STATISTICS = {
     'mean':

@@ -1,7 +1,7 @@
 #%%
 from grappa.data import MolData
 from grappa.wrappers import openmm_wrapper
-from grappa.utils import loading_utils
+from grappa.utils import model_loading_utils
 from grappa.models import GrappaModel, get_default_model_config, model_from_config
 
 #%%

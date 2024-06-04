@@ -1,7 +1,7 @@
 #%%
 from grappa.data import MolData
 from grappa.wrappers import openmm_wrapper
-from grappa.utils import loading_utils
+from grappa.utils import model_loading_utils
 
 #%%
 
@@ -57,7 +57,7 @@ mol2 = Molecule.from_openmm_system(openmm_system=system, openmm_topology=top, ch
 print(mol2.additional_features['charge_model'].mean(0))
 
 # %%
-from grappa.utils.loading_utils import model_from_tag
+from grappa.utils.model_loading_utils import model_from_tag
 from grappa.models import Energy
 import torch
 

@@ -76,9 +76,9 @@ class Energy(torch.nn.Module):
     Class that writes the bonded energy of molecule conformations into a graph. First, torsional angles, angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["energy"+write_suffix] and g.nodes["g"].data["energy_"+term+write_suffix] for each term. If gradients is True, the gradients of the total energy w.r.t. the xyz coordinates are calculated and written under g.nodes["n1"].data["gradient"+write_suffix].
     If the internal coordiantes are not already written in the graph, calculates them using the InternalCoordinates module.
     """
-    def __init__(self, terms:list=["n2", "n3", "n4", "n4_improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True):
+    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True):
         """
-        terms: list of terms to be considered. must be a subset of ["n2", "n3", "n4", "n4_improper"]
+        terms: list of terms to be considered. must be a subset of ["bond", "angle", "torsion", "improper"]
         suffix: suffix of the parameters stored in the graph.
         offset_torsion: whether to include the constant offset term (that makes the contribution positive) in the torsion energy calculation
         write_suffix: suffix of the energy and gradient attributes written to the graph. if None, write_suffix is set to suffix.
@@ -91,10 +91,17 @@ class Energy(torch.nn.Module):
         self.offset_torsion = offset_torsion
         self.suffix = suffix
         self.write_suffix = write_suffix if not write_suffix is None else suffix
-        self.terms = terms
         self.gradients = gradients
         self.geom = InternalCoordinates()
-
+        
+        TERM_TO_LEVEL = {
+            "bond": "n2",
+            "angle": "n3",
+            "proper": "n4",
+            "torsion": "n4",
+            "improper": "n4_improper"
+        }
+        self.terms = [TERM_TO_LEVEL[t] for t in terms]
 
     def forward(self, g):
         """

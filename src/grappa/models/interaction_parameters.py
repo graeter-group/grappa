@@ -14,7 +14,7 @@ class WriteParameters(torch.nn.Module):
 
     Initialization Arguments:
         graph_node_features (int, optional): Number of features in the input graph nodes. Defaults to 256.
-        parameter_dropout (float, optional): Dropout rate applied in all writers. Defaults to 0.
+        symmetric_transformer_dropout (float, optional): Dropout rate applied in all writers. Defaults to 0.
         layer_norm (bool, optional): Flag to apply layer normalization in all writers. Defaults to True.
         positional_encoding (bool, optional): Flag to apply positional encoding in all writers. Defaults to True.
         
@@ -39,7 +39,7 @@ class WriteParameters(torch.nn.Module):
 
     The class initializes and holds four separate writers, each configured for their respective parameter type.
     """
-    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False, only_n2_improper=False, shifted_elu:bool=True, stat_scaling:bool=True):
+    def __init__(self, graph_node_features=256, symmetric_transformer_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False, only_n2_improper=False, shifted_elu:bool=True, stat_scaling:bool=True):
         super().__init__()
 
         if param_statistics is not None:
@@ -57,7 +57,7 @@ class WriteParameters(torch.nn.Module):
             n_att=bond_transformer_depth,
             n_heads=bond_n_heads,
             dense_layers=bond_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=bond_symmetriser_width,
             attention_hidden_feats=bond_transformer_width,
@@ -76,7 +76,7 @@ class WriteParameters(torch.nn.Module):
             n_att=angle_transformer_depth,
             n_heads=angle_n_heads,
             dense_layers=angle_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=angle_symmetriser_width,
             attention_hidden_feats=angle_transformer_width,
@@ -97,7 +97,7 @@ class WriteParameters(torch.nn.Module):
             n_att=proper_transformer_depth,
             n_heads=proper_n_heads,
             dense_layers=proper_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=proper_symmetriser_width,
             attention_hidden_feats=proper_transformer_width,
@@ -119,7 +119,7 @@ class WriteParameters(torch.nn.Module):
             n_att=improper_transformer_depth,
             n_heads=improper_n_heads,
             dense_layers=improper_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=improper_symmetriser_width,
             attention_hidden_feats=improper_transformer_width,

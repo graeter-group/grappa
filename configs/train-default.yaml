@@ -1,0 +1,121 @@
+defaults:
+  - _self_
+
+experiment:
+  ckpt_path: null
+  wandb:
+    name: benchmark-baseline
+    project: grappa
+    save_code: True
+    tags: []
+  checkpointer:
+    dirpath: ckpt/${experiment.wandb.project}/${experiment.wandb.name}/${now:%Y-%m-%d}_${now:%H-%M-%S}
+    monitor: early_stopping_loss
+    mode: min
+    save_top_k: 2
+    save_last: True
+    every_n_epochs: 5
+  progress_bar: true
+  trainer:
+    overfit_batches: 0
+    min_epochs: 50
+    max_epochs: 2000
+    accelerator: gpu
+    log_every_n_steps: 10
+    deterministic: False
+    check_val_every_n_epoch: 1
+
+data:
+  datasets:
+  - spice-des-monomers
+  - spice-pubchem
+  - gen2
+  - gen2-torsion
+  - rna-diverse
+  - spice-dipeptide
+  - protein-torsion
+  - pepconf-dlc
+  pure_test_datasets:
+  - rna-trinucleotide
+  pure_val_datasets: []
+  pure_train_datasets:
+  - rna-nucleoside
+  splitpath: espaloma_split
+  partition: [0.8, 0.1, 0.1]
+  train_batch_size: 32
+  val_batch_size: 32
+  ref_terms:
+    - nonbonded
+  train_loader_workers: 2
+  val_loader_workers: 1
+  conf_strategy: 32
+  seed: 0
+  pin_memory: true
+  tr_subsampling_factor: null
+  weights:
+    rna-diverse: 3
+    rna-nucleoside: 5
+    spice-pubchem: 0.8
+  balance_factor: 0.0
+  val_conf_strategy: 200
+
+train:
+  lr: 1.5e-05
+  energy_weight: 1.0
+  gradient_weight: 0.8
+  start_qm_epochs: 2
+  param_loss_epochs: 100
+  warmup_steps: 500
+  early_stopping_energy_weight: 3.0
+  param_weight: 0.001
+  proper_regularisation: 1.0e-03
+  improper_regularisation: 1.0e-03
+  weight_decay: 0
+  patience: 50
+  lr_decay: 0.8
+  tuplewise_weight: 0.
+  time_limit: 47.5
+
+model:
+  graph_node_features: 256
+  in_feats: null
+  in_feat_name:
+    - atomic_number
+    - ring_encoding
+    - partial_charge
+    - degree
+  in_feat_dims: {}
+  gnn_width: 512
+  gnn_attentional_layers: 7
+  gnn_convolutions: 0
+  gnn_attention_heads: 16
+  gnn_dropout_attention: 0.3
+  gnn_dropout_initial: 0.0
+  gnn_dropout_conv: 0.0
+  gnn_dropout_final: 0.1
+  symmetric_transformer_dropout: 0.5
+  symmetric_transformer_depth: 1
+  symmetric_transformer_n_heads: 8
+  symmetric_transformer_width: 512
+  symmetriser_depth: 4
+  symmetriser_width: 256
+  n_periodicity_proper: 3
+  n_periodicity_improper: 2
+  gated_torsion: true
+  positional_encoding: true
+  layer_norm: true
+  self_interaction: true
+  learnable_statistics: false
+  torsion_cutoff: 1.e-4
+  harmonic_gate: false
+  only_n2_improper: true
+  stat_scaling: true
+  shifted_elu: true
+
+energy:
+  terms:
+    - bond
+    - angle
+    - proper
+    - improper
+  gradients: true

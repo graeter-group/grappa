@@ -5,6 +5,11 @@ __pycache__/
 # C extensions
 *.so
 
+ckpt/
+old_experiments/
+outputs/
+job.sh
+
 # Distribution / packaging
 bin/
 build/

@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 from grappa.constants import get_grappa_units_in_openmm
 from grappa import units
+import copy
 
 
 OPENMM_WATER_RESIDUES = ["HOH", "WAT", "TIP3", "TIP4", "TIP5", "TIP3P", "TIP4P", "TIP5P", "SPC", "SPC/E", "SPCE", "SPC-FW", "SPC-HW", "SPC-HFW", "SPC-HF"]
@@ -339,3 +340,62 @@ def get_openmm_forcefield(name, *args, **kwargs):
 
     else:
         return ForceField(name+'.xml')
+
+
+def get_nonbonded_contribution(openmm_system, xyz):
+    return get_contribution(openmm_system, xyz, force='NonbondedForce')
+
+def get_bond_contribution(openmm_system, xyz):
+    return get_contribution(openmm_system, xyz, force='HarmonicBondForce')
+
+def get_angle_contribution(openmm_system, xyz):
+    return get_contribution(openmm_system, xyz, force='HarmonicAngleForce')
+
+def get_torsion_contribution(openmm_system, xyz):
+    """
+    Proper + Improper contribution!
+    """
+    return get_contribution(openmm_system, xyz, force='PeriodicTorsionForce')
+
+
+def get_contribution(openmm_system, xyz, force:str):
+    """
+    Create a deep copy of the openmm system and remove all forces except the force given in the argument. Then calculate the energy and gradient of the states in that system.
+    """
+    openmm_system = copy.deepcopy(openmm_system)
+
+    openmm_system = remove_forces_from_system(openmm_system, keep=[force])
+
+    energy, gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
+    gradient = -gradient # the reference gradient is the negative of the force
+
+    return energy, gradient
+
+
+
+def get_improper_contribution(openmm_system, xyz):
+
+        openmm_system = copy.deepcopy(openmm_system)
+
+        # calculate the contribution from improper torsions in the system:
+        # remove all forces but periodic torsions
+        openmm_system = remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
+
+        # get a list of sets of improper torsion tuples:
+        improper_set = {tuple(sorted(t)) for t in self.molecule.impropers}
+
+        # set all ks to zero that are not impropers:
+        for force in openmm_system.getForces():
+            if not isinstance(force, openmm.PeriodicTorsionForce):
+                raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
+            for i in range(force.getNumTorsions()):
+                atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
+                if not tuple(sorted((self.molecule.atoms[atom1], self.molecule.atoms[atom2], self.molecule.atoms[atom3], self.molecule.atoms[atom4]))) in improper_set:
+                    force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
+
+
+        # get energy and gradient. these are now only sourced from improper torsions.
+        improper_energy, improper_gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
+        improper_gradient = -self.improper_gradient # the reference gradient is the negative of the force
+
+        return improper_energy, improper_gradient

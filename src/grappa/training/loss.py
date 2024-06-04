@@ -25,7 +25,8 @@ class MolwiseLoss(torch.nn.Module):
         skip_params_if_not_present:bool=True,
         proper_regularisation:float=0., # prefactor for L2 regularisation of proper torsion parameters
         improper_regularisation:float=0.,
-        param_weights_by_dataset:Dict[str,float]={}
+        param_weights_by_dataset:Dict[str,float]={},
+        terms:List[str]=['n2', 'n3', 'n4'],
         ):
 
         super().__init__()
@@ -39,6 +40,7 @@ class MolwiseLoss(torch.nn.Module):
         self.proper_regularisation = proper_regularisation
         self.improper_regularisation = improper_regularisation
         self.param_weights_by_dataset = param_weights_by_dataset
+        self.terms = terms
 
 
 
@@ -75,20 +77,21 @@ class MolwiseLoss(torch.nn.Module):
 
             if param_weight != 0.:
                 try:
-                    params_ref = graph_utils.get_parameters(graph, suffix="_ref")
+                    params_ref = graph_utils.get_parameters(graph, suffix="_ref", terms=self.terms)
                 except KeyError as e:
                     if self.skip_params_if_not_present:
                         params_ref = {} # if this is empty, we will iterate over an empty list later, effectively skipping this part
                     else:
                         raise e
 
-                params = graph_utils.get_parameters(graph)
+                params = graph_utils.get_parameters(graph, terms=self.terms)
                 # concat all parameters
                 param_tensor = []
                 param_ref_tensor = []
                 
                 for k in params_ref.keys():
                     if 'improper' in k:
+                        # we do not train on improper parameters since we have three improper terms per interaction tuple
                         continue
                     fac = 1. if not k in self.weights.keys() else self.weights[k]
                     these_params = params[k]
@@ -132,7 +135,7 @@ class MolwiseLoss(torch.nn.Module):
                 loss_term = loss_term + self.improper_regularisation * torch.mean(torch.square(impropers))
 
             # NOTE: this is currently not used
-            assert self.tuplewise_weight == 0., f"Tuplewise loss not implemented yet., but weight is {self.tuplewise_weight}."
+            assert self.tuplewise_weight == 0., f"Tuplewise loss not implemented yet, but weight is {self.tuplewise_weight}."
             if self.tuplewise_weight != 0.:
                 tuplewise_energies = graph_utils.get_tuplewise_energies(graph)
                 tuplewise_energies_ref = graph_utils.get_tuplewise_energies(graph, suffix="_classical_ff")

@@ -3,7 +3,7 @@
 Evaluate grappas forward pass runtime in cpu mode, dependent on the size of the molecule.
 """
 from grappa.data import Dataset
-from grappa.utils.loading_utils import model_from_tag
+from grappa.utils.model_loading_utils import model_from_tag
 from grappa.data import GraphDataLoader
 import numpy as np
 import matplotlib.pyplot as plt

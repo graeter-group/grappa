@@ -9,7 +9,8 @@ import copy
 from grappa.data import Parameters
 from grappa.data.Parameters import compare_parameters, plot_parameters
 import matplotlib.pyplot as plt
-
+from tqdm import tqdm
+import logging
 
 
 
@@ -159,7 +160,6 @@ class FastEvaluator:
         return metrics
 
 #%%
-# NOTE: ERROR IN RMSE_FROM_CLASSICAL. ONLY BONDED SHOULD BE USED THERE!!
 
 class Evaluator:
     """
@@ -314,10 +314,11 @@ class Evaluator:
     def pool(self, n_bootstrap=0, seed=0)->dict:
         """
         If n_bootstrap == 0, the metrics are calculated once and returned.
-        If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as mean = pool()[]
+        If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as {'dsname': {'metric1': {'mean': float, 'std': float}, 'metric2': {'mean': float, 'std': float}, ...}}
         """
 
         if n_bootstrap > 0:
+            logging.info("Calculating bootstrapped metrics... This may take a while.")
             # first take the full dataset:
             self.collect()
             metrics = [self.get_metrics()]
@@ -327,7 +328,7 @@ class Evaluator:
 
             np.random.seed(seed)
             bootstrap_seeds = np.random.randint(0, 2**32, size=n_bootstrap-1).tolist()
-            for i, bootstrap_seed in enumerate(bootstrap_seeds):
+            for i, bootstrap_seed in enumerate(tqdm(bootstrap_seeds, desc=f'Bootstrapping...')):
                 self.collect(bootstrap_seed=bootstrap_seed)
                 metrics.append(self.get_metrics())
 

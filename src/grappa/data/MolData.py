@@ -15,6 +15,7 @@ import traceback
 
 import pkgutil
 
+# NOTE: get rid of ref completely, just store all contributions of the reference ff under energy_bond_ref ...
 
 @dataclass
 class MolData():
@@ -473,14 +474,7 @@ class MolData():
         self.ff_energy[ff_name] = total_ref_energy
         self.ff_gradient[ff_name] = total_ref_gradient
         
-        # create a deep copy of the system:
-        system2 = openmm.XmlSerializer.deserialize(openmm.XmlSerializer.serialize(openmm_system))
-
-        # remove all but the nonbonded forces in this copy:
-        system2 = openmm_utils.remove_forces_from_system(system2, keep=['NonbondedForce'])
-        
-        nonbonded_energy, nonbonded_gradient = openmm_utils.get_energies(openmm_system=system2, xyz=xyz)
-        nonbonded_gradient = -nonbonded_gradient # the reference gradient is the negative of the force
+        nonbonded_energy, nonbonded_gradient = openmm_utils.get_nonbonded_contribution(openmm_system, xyz)
 
         self.ff_nonbonded_energy[ff_name] = nonbonded_energy
         self.ff_nonbonded_gradient[ff_name] = nonbonded_gradient
@@ -493,27 +487,9 @@ class MolData():
 
             self.gradient_ref = gradient - nonbonded_gradient
 
+        # NOTE: store the other contributions as well, for learning only certain contributions.
 
-        # calculate the contribution from improper torsions in the system:
-        # remove all forces but periodic torsions
-        openmm_system = openmm_utils.remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
-
-        # get a list of sets of improper torsion tuples:
-        improper_set = {tuple(sorted(t)) for t in self.molecule.impropers}
-
-        # set all ks to zero that are not impropers:
-        for force in openmm_system.getForces():
-            if not isinstance(force, openmm.PeriodicTorsionForce):
-                raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
-            for i in range(force.getNumTorsions()):
-                atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
-                if not tuple(sorted((self.molecule.atoms[atom1], self.molecule.atoms[atom2], self.molecule.atoms[atom3], self.molecule.atoms[atom4]))) in improper_set:
-                    force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
-
-
-        # get energy and gradient. these are now only sourced from improper torsions.
-        self.improper_energy_ref, self.improper_gradient_ref = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
-        self.improper_gradient_ref = -self.improper_gradient_ref # the reference gradient is the negative of the force
+        self.improper_energy_ref, self.improper_gradient_ref = openmm_utils.get_improper_contribution(openmm_system, xyz)
 
         return self
     

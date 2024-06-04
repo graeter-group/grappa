@@ -3,13 +3,27 @@ from pathlib import Path
 from typing import Union, Dict
 import yaml
 
-def get_rundir()->Path:
+def flatten_dict(d, parent_key='', sep=':'):
     """
-    Returns the path to the directory in which runs are stored
+    Flatten a nested dictionary.
+
+    Args:
+        d (dict): The dictionary to flatten.
+        parent_key (str): The base key string for recursion.
+        sep (str): Separator between keys.
+
+    Returns:
+        dict: The flattened dictionary.
     """
-    rundir = Path(__file__).parents[3] / "runs"
-    rundir.mkdir(parents=True, exist_ok=True)
-    return rundir
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
 
 
 def load_yaml(path:Union[str,Path])->Dict:    

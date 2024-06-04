@@ -25,7 +25,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     from grappa.units import Unit, Quantity
     from grappa import units
     from grappa.constants import GrappaUnits
-    from grappa.utils.loading_utils import model_dict_from_tag
+    from grappa.utils.model_loading_utils import model_dict_from_tag
 
     # define the units that gromacs uses. Toghether with grappa.constants.GrappaUnits, this defines how we will convert the output of the ML model.
     # https://manual.gromacs.org/current/reference-manual/definitions.html

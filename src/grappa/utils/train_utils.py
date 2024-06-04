@@ -1,4 +1,4 @@
-from grappa.models import deploy, Energy
+from grappa.models import Energy, GrappaModel
 
 import torch
 
@@ -15,7 +15,7 @@ def remove_module_prefix(state_dict):
 
 def get_model(model_config, checkpoint_path=None):
 
-    full_model = deploy.model_from_config(model_config=model_config)
+    full_model = GrappaModel.model_from_config(**model_config)
 
     # add energy calculation
     full_model = torch.nn.Sequential(

@@ -7,9 +7,9 @@ from grappa.data.Dataset import Dataset
 from grappa.data.GraphDataLoader import GraphDataLoader
 from grappa.training.evaluation import Evaluator
 from grappa.models.energy import Energy
-from grappa.utils import loading_utils
+from grappa.utils import model_loading_utils
 from pathlib import Path
-from grappa.utils.loading_utils import model_dict_from_tag, model_from_dict
+from grappa.utils.model_loading_utils import model_dict_from_tag, model_from_dict
 #%%
 
 # load a dictionary specifying the model and its training configuration
