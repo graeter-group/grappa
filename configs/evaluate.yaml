@@ -1,0 +1,6 @@
+defaults:
+  - _self_
+
+ckpt_path: null
+n_bootstrap: 1000
+store_data: false

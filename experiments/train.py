@@ -3,7 +3,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
 
-@hydra.main(version_base=None, config_path=str(Path(__file__).parent/"../configs"), config_name="train-default")
+@hydra.main(version_base=None, config_path=str(Path(__file__).parent/"../configs"), config_name="train")
 def main(cfg: DictConfig) -> None:
 
     # Loads the config of the pretrained model and overwrites the current config.

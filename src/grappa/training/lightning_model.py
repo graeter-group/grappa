@@ -111,6 +111,9 @@ class GrappaLightningModel(pl.LightningModule):
 
         self.time_start = time.time()
 
+        self.n_bootstrap = 1000
+        self.store_test_data = False
+
 
     def forward(self, x):
         return self.model(x)
@@ -291,7 +294,11 @@ class GrappaLightningModel(pl.LightningModule):
                 self.test_evaluator.step(g, dsnames)
 
     def on_test_epoch_end(self):
-        metrics = self.test_evaluator.pool(seed=42, n_bootstrap=1000)
+        if self.store_test_data:
+            self.test_evaluator.collect()
+
+            
+        metrics = self.test_evaluator.pool(seed=42, n_bootstrap=self.n_bootstrap)
 
         self.test_summary = metrics
 

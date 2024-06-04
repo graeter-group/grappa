@@ -25,19 +25,11 @@ class MolData():
         - energy: (n_confs,)
         - xyz: (n_confs, n_atoms, 3)
         - gradient: (n_confs, n_atoms, 3)
-        - energy_ref: (n_confs,)
-        - gradient_ref: (n_confs, n_atoms, 3)
     """
     molecule: Molecule
 
     # conformational data:
     xyz: np.ndarray
-    energy: np.ndarray
-    gradient: np.ndarray
-
-    # reference values (centered bonded energy, bonded gradient)
-    energy_ref: np.ndarray
-    gradient_ref: np.ndarray
 
     mol_id: str
 
@@ -46,22 +38,32 @@ class MolData():
     # mol_id is either a smiles string or a sequence string that is also stored
     sequence: Optional[str] = None
     smiles: Optional[str] = None
-
-    # improper contributions of the reference forcefield:
-    improper_energy_ref: Optional[np.ndarray] = None
-    improper_gradient_ref: Optional[np.ndarray] = None
     
     # additional characterizations:
     mapped_smiles: Optional[str] = None
     pdb: Optional[str] = None # pdb file as string. openmm topology can be recovered via openmm_utils.get_topology_from_pdb
 
-    # nonbonded contributions:
-    ff_nonbonded_energy: Dict[str, np.ndarray] = None
-    ff_nonbonded_gradient: Dict[str, np.ndarray] = None
+    # classical forcefield energy contributions: dictionaries mapping a force field name to an array of bonded energies
+    # this will be used in grappa.data.Dataset
+    ff_energy: Dict[str, Dict[str, np.ndarray]] = None
+    ff_gradient: Dict[str, Dict[str, np.ndarray]] = None
 
-    # classical forcefield energies: dictionaries mapping a force field name to an array of bonded energies
-    ff_energy: Dict[str, np.ndarray] = None
-    ff_gradient: Dict[str, np.ndarray] = None
+    # .energy and .gradient are the qm energies and gradients
+    @property
+    def energy(self):
+        return self.ff_energy['qm']['total']
+    
+    @property
+    def gradient(self):
+        return self.ff_gradient['qm']['total']
+    
+    @energy.setter
+    def energy(self, value):
+        self.ff_energy['qm']['total'] = value
+
+    @gradient.setter
+    def gradient(self, value):
+        self.ff_gradient['qm']['total'] = value
 
 
     def _validate(self):
@@ -83,16 +85,12 @@ class MolData():
             self.ff_energy = dict()
         if self.ff_gradient is None:
             self.ff_gradient = dict()
-        if self.ff_nonbonded_energy is None:
-            self.ff_nonbonded_energy = dict()
-        if self.ff_nonbonded_gradient is None:
-            self.ff_nonbonded_gradient = dict()
 
         if not "qm" in self.ff_energy.keys():
-            self.ff_energy["qm"] = self.energy
+            self.ff_energy["qm"] = {"total": self.energy}
 
         if not "qm" in self.ff_gradient.keys():
-            self.ff_gradient["qm"] = self.gradient
+            self.ff_gradient["qm"] = {"total": self.gradient}
 
         if self.classical_parameters is None:
             # create parameters that are all nan but in the correct shape:
@@ -104,22 +102,14 @@ class MolData():
             
 
     @classmethod
-    def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None, ff_energy:np.ndarray=None, ff_gradient:np.ndarray=None):
+    def from_arrays(cls, molecule:Molecule, xyz:np.ndarray, energy:np.ndarray, nonbonded_energy:np.ndarray=None, gradient:np.ndarray=None, nonbonded_gradient:np.ndarray=None, smiles:str=None, sequence:str=None, mol_id:str=None, ff_energy:np.ndarray=None, ff_gradient:np.ndarray=None, ff_name:str='reference_ff'):
         """
         Construct moldata from 'raw' arrays of xyz, energies and nonbonded energies. Sets gradients to zeros if not provided and mol_id to '' if not provided. Note that without gradient or valid mol_id, the moldata should not be used for training or evaluation on unseen test data since 'unseen' is defined via mol_id.
         """
-        energy_ref = energy - nonbonded_energy
-        energy_ref -= energy_ref.mean()
-
-        if not gradient is None:
-            assert nonbonded_gradient is not None, "If gradient is provided, nonbonded_gradient must be provided as well."
 
         if gradient is None:
             gradient = np.zeros_like(xyz)
-            nonbonded_gradient = np.zeros_like(xyz)
-
-        gradient_ref = gradient - nonbonded_gradient
-
+        
         if mol_id is None:
             if smiles is not None:
                 mol_id = smiles
@@ -128,36 +118,33 @@ class MolData():
             else:
                 mol_id = ''
 
-        ff_nonbonded_energy = {'reference_ff': nonbonded_energy}
-        ff_nonbonded_gradient = {'reference_ff': nonbonded_gradient}
-
-        if not ff_energy is None:
-            ff_energy = {'reference_ff': ff_energy}
-        if not ff_gradient is None:
-            ff_gradient = {'reference_ff': ff_gradient}
-
-        return cls(
+        self = cls(
             molecule=molecule,
             xyz=xyz,
             energy=energy,
             gradient=gradient,
-            energy_ref=energy_ref,
-            gradient_ref=gradient_ref,
             mol_id=mol_id,
             smiles=smiles,
             sequence=sequence,
-            ff_nonbonded_energy=ff_nonbonded_energy,
-            ff_nonbonded_gradient=ff_nonbonded_gradient,
-            ff_energy=ff_energy,
-            ff_gradient=ff_gradient,
         )
+
+
+        if not ff_energy is None:
+            self.ff_energy[ff_name] = {'total': ff_energy}
+        if not ff_gradient is None:
+            self.ff_gradient[ff_name] = {'total': ff_gradient}
+
+        if not nonbonded_energy is None:
+            self.ff_energy[ff_name]['nonbonded'] = nonbonded_energy
+        if not nonbonded_gradient is None:
+            self.ff_gradient[ff_name]['nonbonded'] = nonbonded_gradient
 
 
 
     def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:list[str]=[])->DGLGraph:
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
-        Also creates entries 'xyz', 'energy_ref' and 'gradient_ref' in the global node type g and in the atom node type n1, which contain the reference energy and gradient, respectively. The shapes are different than in the class attributes, namely (1, n_confs) and (n_atoms, n_confs, 3) respectively. (This is done because feature tensors must have len == num_nodes)
+        Also creates entries 'xyz', 'energy_qm' and 'gradient_qm' in the global node type g and in the atom node type n1 respectively. The shapes are different than in the class attributes, namely (1, n_confs) and (n_atoms, n_confs, 3) respectively. (This is done because feature tensors must have len == num_nodes)
 
         The dgl graph has the following node types:
             - g: global
@@ -171,28 +158,23 @@ class MolData():
         """
         g = self.molecule.to_dgl(max_element=max_element, exclude_feats=exclude_feats)
         
-        # write reference energy and gradient in the shape (1, n_confs) and (n_atoms, n_confs, 3) respectively
-        g.nodes['g'].data['energy_ref'] = torch.tensor(self.energy_ref.reshape(1, -1), dtype=torch.float32)
-        
-        g.nodes['g'].data['energy_ref'] -= g.nodes['g'].data['energy_ref'].mean(dim=1)
-
-        g.nodes['n1'].data['gradient_ref'] = torch.tensor(self.gradient_ref.transpose(1, 0, 2), dtype=torch.float32)
-
-        if not self.improper_energy_ref is None:
-            g.nodes['g'].data['improper_energy_ref'] = torch.tensor(self.improper_energy_ref.reshape(1, -1), dtype=torch.float32)
-            g.nodes['g'].data['improper_energy_ref'] -= g.nodes['g'].data['improper_energy_ref'].mean(dim=1)
-
-        if not self.improper_gradient_ref is None:
-            g.nodes['n1'].data['improper_gradient_ref'] = torch.tensor(self.improper_gradient_ref.transpose(1, 0, 2), dtype=torch.float32)
-
-        for k, v in self.ff_energy.items():
-            g.nodes['g'].data[f'energy_{k}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)
-        
-        for k, v in self.ff_gradient.items():
-            g.nodes['n1'].data[f'gradient_{k}'] = torch.tensor(v.transpose(1, 0, 2), dtype=torch.float32)
-
         # write positions in shape (n_atoms, n_confs, 3)
         g.nodes['n1'].data['xyz'] = torch.tensor(self.xyz.transpose(1, 0, 2), dtype=torch.float32)
+
+        # write all stored energy and gradient contributions in the shape (1, n_confs) and (n_atoms, n_confs, 3) respectively
+        for ff_name, ff_dict in self.ff_energy.items():
+            for k, v in ff_dict.items():
+                if ff_name == "qm":
+                    g.nodes['g'].data[f'energy_{ff_name}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)
+                else:
+                    g.nodes['g'].data[f'energy_{ff_name}_{k}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)
+
+        for ff_name, ff_dict in self.ff_gradient.items():
+            for k, v in ff_dict.items():
+                if ff_name == "qm":
+                    g.nodes['n1'].data[f'gradient_{ff_name}'] = torch.tensor(v.transpose(1, 0, 2), dtype=torch.float32)
+                else:
+                    g.nodes['n1'].data[f'gradient_{ff_name}_{k}'] = torch.tensor(v.transpose(1, 0, 2), dtype=torch.float32)
 
         g = self.classical_parameters.write_to_dgl(g=g)
 
@@ -205,10 +187,6 @@ class MolData():
         """
         array_dict = dict()
         array_dict['xyz'] = self.xyz
-        array_dict['energy'] = self.energy
-        array_dict['gradient'] = self.gradient
-        array_dict['energy_ref'] = self.energy_ref
-        array_dict['gradient_ref'] = self.gradient_ref
         array_dict['mol_id'] = np.array(str(self.mol_id))
 
         if not self.mapped_smiles is None:
@@ -219,11 +197,6 @@ class MolData():
             array_dict['smiles'] = np.array(str(self.smiles))
         if not self.sequence is None:
             array_dict['sequence'] = np.array(str(self.sequence))
-
-        if not self.improper_energy_ref is None:
-            array_dict['improper_energy_ref'] = self.improper_energy_ref
-        if not self.improper_gradient_ref is None:
-            array_dict['improper_gradient_ref'] = self.improper_gradient_ref
 
         moldict = self.molecule.to_dict()
         assert set(moldict.keys()).isdisjoint(array_dict.keys()), "Molecule and MolData have overlapping keys."
@@ -241,21 +214,16 @@ class MolData():
 
         # add force field energies and gradients
         for v, k in self.ff_energy.items():
-            if f'energy_{v}' in array_dict.keys():
-                raise ValueError(f"Duplicate key: energy_{v}")
-            array_dict[f'energy_{v}'] = k
+            for kk, vv in k.items():
+                if f'energy_{v}_{kk}' in array_dict.keys():
+                    raise ValueError(f"Key {f'energy_{v}_{kk}'} already exists in array_dict.")
+                array_dict[f'energy_{v}_{kk}'] = vv
+
         for v, k in self.ff_gradient.items():
-            if f'gradient_{v}' in array_dict.keys():
-                raise ValueError(f"Duplicate key: gradient_{v}")
-            array_dict[f'gradient_{v}'] = k
-        for v, k in self.ff_nonbonded_energy.items():
-            if f'nonbonded_energy_{v}' in array_dict.keys():
-                raise ValueError(f"Duplicate key: nonbonded_energy_{v}")
-            array_dict[f'nonbonded_energy_{v}'] = k
-        for v, k in self.ff_nonbonded_gradient.items():
-            if f'nonbonded_gradient_{v}' in array_dict.keys():
-                raise ValueError(f"Duplicate key: nonbonded_gradient_{v}")
-            array_dict[f'nonbonded_gradient_{v}'] = k
+            for kk, vv in k.items():
+                if f'gradient_{v}_{kk}' in array_dict.keys():
+                    raise ValueError(f"Key {f'gradient_{v}_{kk}'} already exists in array_dict.")
+                array_dict[f'gradient_{v}_{kk}'] = vv
 
         return array_dict
     
@@ -266,10 +234,6 @@ class MolData():
         Create a Molecule from a dictionary of arrays.
         """
         xyz = array_dict['xyz']
-        energy = array_dict['energy']
-        gradient = array_dict['gradient']
-        energy_ref = array_dict['energy_ref']
-        gradient_ref = array_dict['gradient_ref']
         mol_id = array_dict['mol_id']
         if isinstance(mol_id, np.ndarray):
             mol_id = str(mol_id)
@@ -291,9 +255,6 @@ class MolData():
             sequence = str(sequence)
 
 
-        improper_energy_ref = array_dict.get('improper_energy_ref', None)
-        improper_gradient_ref = array_dict.get('improper_gradient_ref', None)
-
         param_keys = ['bond_k', 'bond_eq', 'angle_k', 'angle_eq', 'proper_ks', 'proper_phases', 'improper_ks', 'improper_phases']
 
         tuple_keys = ['atoms', 'bonds', 'angles', 'propers', 'impropers']
@@ -310,27 +271,24 @@ class MolData():
         classical_parameters = Parameters.from_dict(param_dict)
 
         # Extract force field energies and gradients
-        ff_energy = {k.split('_', 1)[1]: v for k, v in array_dict.items() if k.startswith('energy_') and not k=='energy_ref'}
-        ff_gradient = {k.split('_', 1)[1]: v for k, v in array_dict.items() if k.startswith('gradient_') and not k == 'gradient_ref'}
-        ff_nonbonded_energy = {k.split('_', 2)[2]: v for k, v in array_dict.items() if k.startswith('nonbonded_energy_')}
-        ff_nonbonded_gradient = {k.split('_', 2)[2]: v for k, v in array_dict.items()if k.startswith('nonbonded_gradient_')}
+        ff_names_energy = set([k.split('_', 1)[0] for k in array_dict.keys() if k.startswith('energy_')])
+        ff_names_gradient = set([k.split('_', 1)[0] for k in array_dict.keys() if k.startswith('gradient_')])
+
+        ff_energy = dict()
+        ff_gradient = dict()
+        for ff_name in ff_names_energy:
+            ff_energy[ff_name] = {k.split('_', 1)[1]: v for k, v in array_dict.items() if k.startswith(f'energy_{ff_name}_')}
+        for ff_name in ff_names_gradient:
+            ff_gradient[ff_name] = {k.split('_', 1)[1]: v for k, v in array_dict.items() if k.startswith(f'gradient_{ff_name}_')}
 
         # Initialize a new MolData object
         return cls(
             xyz=xyz,
-            energy=energy,
-            gradient=gradient,
-            energy_ref=energy_ref,
-            gradient_ref=gradient_ref,
             mol_id=mol_id,
             molecule=molecule,
             classical_parameters=classical_parameters,
             ff_energy=ff_energy,
             ff_gradient=ff_gradient,
-            ff_nonbonded_energy=ff_nonbonded_energy,
-            ff_nonbonded_gradient=ff_nonbonded_gradient,
-            improper_energy_ref=improper_energy_ref,
-            improper_gradient_ref=improper_gradient_ref,
             mapped_smiles=mapped_smiles,
             pdb=pdb,
             smiles=smiles,
@@ -353,10 +311,11 @@ class MolData():
         array_dict = np.load(path, allow_pickle=True)
         return cls.from_dict(array_dict)
 
-
+    # NOTE: here
     @classmethod
     def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False, charge_model:str='amber99'):
         """
+        Constructor for loading from espaloma datasets.
         Create a MolData object from a dictionary containing a mapped_smiles string or pdb and arrays of conformations, energies and gradients, but not necessarily the interaction tuples and classical parameters.
         The forcefield is used to obtain the interaction tuples and classical parameters. If a smiles string is used, the forcefield refers to an openff forcefield. If a pdb file is used, the forcefield refers to an openmm forcefield.
         The following dictionray items are required:
@@ -420,7 +379,7 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, energy_ref=None, gradient_ref=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=False, charge_model='amber99'):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, charge_model:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=False):
         """
         Use an openmm system to obtain classical parameters and interaction tuples.
         If partial charges is None, the charges are obtained from the openmm system.
@@ -435,6 +394,7 @@ class MolData():
             - energy: (n_confs,)
             - gradient: (n_confs, n_atoms, 3)
             - mol_id: str
+            - charge_model: str, A charge model tag that describes how the partial charges were obtained. See grappa.constants.CHARGE_MODELS for possible values.
             - partial_charges: (n_atoms,)
             - energy_ref: (n_confs,)
             - gradient_ref: (n_confs, n_atoms, 3)
@@ -444,7 +404,6 @@ class MolData():
             - sequence: str
             - smiles: str
             - allow_nan_params: bool
-            - charge_model: str, A charge model tag that describes how the partial charges were obtained. See grappa.constants.CHARGE_MODELS for possible values.
         """
         import openmm
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles, charge_model=charge_model)
@@ -458,38 +417,43 @@ class MolData():
                 tb = traceback.format_exc()
                 raise ValueError(f"Could not obtain parameters from openmm system: {e}\n{tb}. Consider setting allow_nan_params=True, then the parameters for this molecule will be set to nans and ignored during training.")
 
-        self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id, sequence=sequence, smiles=smiles)
+        self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id, sequence=sequence, smiles=smiles)
+
+        if ff_name is None:
+            ff_name = 'reference_ff'
 
         if not partial_charges is None:
             # set the partial charges in the openmm system
             openmm_system = openmm_utils.set_partial_charges(system=openmm_system, partial_charges=partial_charges)
 
         # calculate the reference-forcefield's energy and gradient from the openmm system
-        total_ref_energy, total_ref_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
-        total_ref_gradient = -total_ref_gradient # the reference gradient is the negative of the force
-
-        if ff_name is None:
-            ff_name = 'reference_ff'
-
-        self.ff_energy[ff_name] = total_ref_energy
-        self.ff_gradient[ff_name] = total_ref_gradient
+        total_ff_energy, total_ff_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
+        total_ff_gradient = -total_ff_gradient # the reference gradient is the negative of the force
+        self.ff_energy[ff_name]['total'] = total_ff_energy
+        self.ff_gradient[ff_name]['total'] = total_ff_gradient
         
         nonbonded_energy, nonbonded_gradient = openmm_utils.get_nonbonded_contribution(openmm_system, xyz)
+        self.ff_energy[ff_name]['nonbonded'] = nonbonded_energy
+        self.ff_gradient[ff_name]['nonbonded'] = nonbonded_gradient
 
-        self.ff_nonbonded_energy[ff_name] = nonbonded_energy
-        self.ff_nonbonded_gradient[ff_name] = nonbonded_gradient
+        # store the other contributions as well, for learning only certain contributions.
 
+        improper_energy_ff, improper_gradient_ff = openmm_utils.get_improper_contribution(openmm_system, xyz)
+        self.ff_energy[ff_name]['improper'] = improper_energy_ff
+        self.ff_gradient[ff_name]['improper'] = improper_gradient_ff
 
-        if self.energy_ref is None:
-            # calculate reference energy and gradient from the openmm system using the partial charges provided
-            self.energy_ref = energy - nonbonded_energy
-            self.energy_ref -= self.energy_ref.mean()
+        bond_energy_ff, bond_gradient_ff = openmm_utils.get_bond_contribution(openmm_system, xyz)
+        self.ff_energy[ff_name]['bond'] = bond_energy_ff
+        self.ff_gradient[ff_name]['bond'] = bond_gradient_ff
 
-            self.gradient_ref = gradient - nonbonded_gradient
+        angle_energy_ff, angle_gradient_ff = openmm_utils.get_angle_contribution(openmm_system, xyz)
+        self.ff_energy[ff_name]['angle'] = angle_energy_ff
+        self.ff_gradient[ff_name]['angle'] = angle_gradient_ff
 
-        # NOTE: store the other contributions as well, for learning only certain contributions.
+        torsion_energy_ff, torsion_gradient_ff = openmm_utils.get_torsion_contribution(openmm_system, xyz)
+        self.ff_energy[ff_name]['proper'] = torsion_energy_ff - improper_energy_ff
+        self.ff_gradient[ff_name]['proper'] = torsion_gradient_ff - improper_gradient_ff
 
-        self.improper_energy_ref, self.improper_gradient_ref = openmm_utils.get_improper_contribution(openmm_system, xyz)
 
         return self
     

@@ -58,6 +58,8 @@ class Experiment:
 
         self._init_model()
 
+        self.ckpt_dir = Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath
+
 
     def _init_model(self):
         """
@@ -93,7 +95,6 @@ class Experiment:
         )
 
         # Checkpoint directory.
-        self.ckpt_dir = Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath
         self.ckpt_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Checkpoints saved to {self.ckpt_dir}")
         
@@ -124,26 +125,43 @@ class Experiment:
         )
 
 
-    def test(self):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=1000, store_data:bool=False):
+        """
+        Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
+        Args:
+            ckpt_dir: Path, directory containing the checkpoints from which the best checkpoint is loaded
+            ckpt_path: Path, path to the checkpoint to load
+            n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
+        """
 
-        # find best checkpoint:
-        ckpts = list([c for c in self.ckpt_dir.glob('*.ckpt') if '=' in c.name])
-        losses = [float(ckpt.name.split('=')[-1].strip('.ckpt')) for ckpt in ckpts]
-        if len(ckpts) == 0:
-            # last
-            try:
-                best_ckpt = list(self.ckpt_dir.glob('*.ckpt'))[0]
-            except IndexError:
-                logging.error("No checkpoints found.")
-                return
-        else:
-            best_ckpt = ckpts[losses.index(min(losses))] if self._experiment_cfg.checkpointer.mode == 'min' else ckpts[losses.index(max(losses))]
-        logging.info(f"Best checkpoint: {best_ckpt}")
+        self.grappa_module.n_bootstrap = n_bootstrap
+        self.grappa_module.store_test_data = store_data
+
+        if ckpt_path is None:
+            if ckpt_dir is None:
+                ckpt_dir = self.ckpt_dir
+
+            # find best checkpoint:
+            ckpts = list([c for c in ckpt_dir.glob('*.ckpt') if '=' in c.name])
+            losses = [float(ckpt.name.split('=')[-1].strip('.ckpt')) for ckpt in ckpts]
+            if len(ckpts) == 0:
+                # if no checkpoints with = in the name are found, use the first checkpoint
+                all_ckpts = list(ckpt_dir.glob('*.ckpt'))
+                if len(all_ckpts) == 0:
+                    raise RuntimeError("No checkpoints found.")
+                elif len(all_ckpts) > 1:
+                    raise RuntimeError("More than one checkpoint found, but none of them have loss data.")
+                else:
+                    best_ckpt = all_ckpts[0]
+            else:
+                ckpt_path = ckpts[losses.index(min(losses))] if self._experiment_cfg.checkpointer.mode == 'min' else ckpts[losses.index(max(losses))]
+            logging.info(f"Best checkpoint: {best_ckpt}")
+
 
         self.trainer.test(
             model=self.grappa_module,
             datamodule=self.datamodule,
-            ckpt_path=best_ckpt
+            ckpt_path=ckpt_path
         )
 
         summary = self.grappa_module.test_summary
