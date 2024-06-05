@@ -11,7 +11,7 @@ python unmerge_duplicates.py --duplpath "$espaloma_ds_path/duplicated-isomeric-s
 
 # List of dataset names
 datasets=("rna-nucleoside" "gen2" "spice-des-monomers" "spice-dipeptide" "rna-diverse" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem")
-# datasets=("spice-dipeptide")
+datasets=("spice-des-monomers")
 
 # Loop through each dataset name
 for ds in "${datasets[@]}"; do

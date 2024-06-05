@@ -90,6 +90,8 @@ class GrappaData(pl.LightningDataModule):
         self.split_ids = split_ids
         self.keep_features = keep_features
 
+        self.train_cleanup = True # set this to manually to False if you want to keep the reference ff data in the training set (e.g. for evaluating the reference data on the training set)
+
         self.is_set_up = False
 
     def setup(self, stage: str = None):
@@ -170,29 +172,17 @@ class GrappaData(pl.LightningDataModule):
                 logging.warning("Subsampling factor is 0, training set will be empty.")
             self.tr = self.tr.subsampled(self.tr_subsampling_factor, seed=self.seed)
 
+        # write reference data as energy_ref = energy_qm - sum(energy_ref_terms) / gradient_ref = ...
+        self.tr.create_reference(ref_terms=self.ref_terms, cleanup=self.train_cleanup)
+
         # Remove uncommon features for enabling batching
-        self.tr = self._format_dataset(self.tr, ref_terms=self.ref_terms)
-        self.vl = self._format_dataset(self.vl, ref_terms=self.ref_terms)
-        self.te = self._format_dataset(self.te, ref_terms=self.ref_terms)
+        self.tr.remove_uncommon_features()
+        self.vl.remove_uncommon_features()
+        self.te.remove_uncommon_features()
 
         logging.info("Loaded data:\n" + f"Train mols: {len(self.tr)}, Validation mols: {len(self.vl)}, Test mols: {len(self.te)}"+"\n")
 
         self.is_set_up = True
-
-    def _format_dataset(self, ds:Dataset, ref_terms=['nonbonded']):
-        '''
-        Removes uncommon features and all n1 features except those needed as input for the model.
-        '''
-        if len(ds) == 0:
-            return ds
-        ds.create_reference(ref_terms=ref_terms)
-        if not self.keep_features:
-            ds.remove_uncommon_features()
-            keep_feats = None
-            if not self.in_feat_names is None:
-                keep_feats = ['gradient_ref'] + self.in_feat_names
-                ds.clean(keep_feats=keep_feats)
-        return ds
 
     @staticmethod
     def _tags_to_paths(tags: List[Union[str, Path]]) -> List[Path]:

@@ -1,22 +1,12 @@
 #%%
 import dgl
 from pathlib import Path
-import torch
-from typing import List
 import openmm
 import openff.toolkit
 import json
 import numpy as np
-from grappa.utils.openmm_utils import get_energies, remove_forces_from_system
-from grappa.utils.openff_utils import get_peptide_system
-
-from grappa.data import MolData
-
 from openmm.unit import Quantity
 from openmm.unit import mole, hartree, bohr, angstrom, kilocalories_per_mole
-
-import matplotlib.pyplot as plt
-
 
 
 
@@ -108,7 +98,7 @@ def extract_data(g, mol):
 # %%
 
 
-def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[str] = None, skip_deviations: bool = False, force_tolerance: float = 100.0):
+def main(dspath, targetpath):
     print(f"Converting\n{dspath}\nto\n{targetpath}")
     dspath = Path(dspath)
     targetpath = Path(targetpath)
@@ -132,64 +122,6 @@ def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[st
             g, mol = load_graph(molpath), load_mol(molpath)
             data = extract_data(g, mol)
 
-            if exclude_pattern is not None:
-                if any([p in data['smiles'][0] for p in exclude_pattern]):
-                    print(f"Excluding {data['smiles'][0][:20]}...")
-                    continue
-
-            if with_amber99 or with_charmm36:
-
-                assert not (with_amber99 and with_charmm36), "Can only compute one of amber99sbildn and charmm36 energies and forces!"
-
-                if with_amber99:
-                    system = get_peptide_system(mol=mol, ff='amber99sbildn.xml')
-                    tag = 'amber99'
-                elif with_charmm36:
-                    system = get_peptide_system(mol=mol, ff='charmm/toppar_all36_prot_model.xml')
-                    tag = 'charmm36'
-                    
-
-                # get list or residue names per atom from the system:
-
-                energy_amber99, force_amber99 = get_energies(openmm_system=system, xyz=data['xyz'])
-
-                # check whether there is a force with more force_tolerance kcal/mol/A error (averaged over conformations) between reference force field and QM (we assume that the nonbonded part is wrong then and exclude the molecule if the corresponding flag is set)
-                if np.mean(np.linalg.norm(-data['gradient_qm'] - force_amber99, axis=-1), axis=0).max() > force_tolerance:
-                    msg = f"Excluding {data['smiles'][0][:20]}...\n\t(large force deviation between QM and amber99sbildn) for {int(np.sum(np.mean(np.linalg.norm(data['gradient_qm'] - force_amber99, axis=-1), axis=0)>force_tolerance))} atoms"
-                    if skip_deviations:
-                        print()
-                        print(msg)
-                        continue
-                    else:
-                        raise RuntimeError(msg)
-
-                system = remove_forces_from_system(system=system, keep='nonbonded')
-
-                energy_amber99_nonbonded, force_amber99_nonbonded = get_energies(openmm_system=system, xyz=data['xyz'])
-
-                data[f'energy_{tag}'] = energy_amber99
-                data[f'gradient_{tag}'] = -force_amber99
-                data[f'energy_{tag}_nonbonded'] = energy_amber99_nonbonded
-                data[f'gradient_{tag}_nonbonded'] = -force_amber99_nonbonded
-
-                data['energy_ref'] = data['energy_qm'] - data[f'energy_{tag}_nonbonded']
-                data['gradient_ref'] = data['gradient_qm'] - data[f'gradient_{tag}_nonbonded']
-
-                # create moldata from amber99sbildn system
-                moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=mol.to_topology().to_openmm(), mol_id=data['smiles'][0], partial_charges=None, xyz=data['xyz'], energy=data['energy_qm'], gradient=data['gradient_qm'], energy_ref=data['energy_ref'], gradient_ref=data['gradient_ref'], mapped_smiles=data['mapped_smiles'][0], smiles=data['smiles'][0], allow_nan_params=True, charge_model='amber99')
-
-                # add classical ff information
-                moldata.ff_energy.update({k.split('_', 1)[1]: v for k, v in data.items() if k.startswith('energy_') and not k == 'energy_ref'})
-                moldata.ff_gradient.update({k.split('_', 1)[1]: v for k, v in data.items() if k.startswith('gradient_') and not k == 'gradient_ref'})
-                moldata.ff_nonbonded_energy.update({k.split('_', 2)[2]: v for k, v in data.items() if k.startswith('nonbonded_energy_')})
-                moldata.ff_nonbonded_gradient.update({k.split('_', 2)[2]: v for k, v in data.items()if k.startswith('nonbonded_gradient_')})
-
-
-                moldata.save(targetpath/(molpath.stem+'.npz'))
-                total_mols += 1
-                total_confs += data['xyz'].shape[0]
-                num_success += 1
-                continue
 
             total_mols += 1
             total_confs += data['xyz'].shape[0]
@@ -198,7 +130,6 @@ def main(dspath, targetpath, with_amber99: bool = True, exclude_pattern: List[st
             np.savez_compressed(targetpath/(molpath.stem+'.npz'), **data)
             num_success += 1
         except Exception as e:
-            raise
             num_err += 1
             print(f"Failed to process {molpath}: {e}")
             continue
@@ -223,33 +154,6 @@ if __name__ == "__main__":
         default="/hits/fast/mbm/seutelf/data/datasets/spice-dipeptide",
         help="Path to the target folder in which tha dataset is stored as collection of npz files.",
     )
-    parser.add_argument(
-        "--with_amber99",
-        action="store_true",
-        help="Whether to compute amber99sbildn energies and forces and rather use them as reference. Can only be done for peptides. If True, grappa.data.MolData objects will be created and stored directly!",
-    )
-    parser.add_argument(
-        "--with_charmm36",
-        action="store_true",
-        help="Whether to compute charmm36 energies and forces and rather use them as reference. Can only be done for peptides. If True, grappa.data.MolData objects will be created and stored directly!",
-    )
-    parser.add_argument(
-        "--exclude_pattern",
-        type=str,
-        nargs='+',
-        default=None,
-        help="If given, exclude all molecules whose smiles contain this pattern.",
-    )
-    parser.add_argument(
-        "--skip_deviations",
-        action="store_true",
-        help="If True, molecules with large force deviations between QM and amber99sbildn will be skipped instead of raising an error.",
-    )
-    parser.add_argument(
-        "--force_tolerance",
-        type=float,
-        default=100.0,
-        help="If the maximum force deviation between QM and amber99sbildn is larger than this value, the molecule will be skipped (only if skip_deviations is False).",
-    )
+    
     args = parser.parse_args()
-    main(dspath=args.dspath, targetpath=args.targetpath, with_amber99=args.with_amber99, exclude_pattern=args.exclude_pattern, skip_deviations=args.skip_deviations, force_tolerance=args.force_tolerance)
+    main(dspath=args.dspath, targetpath=args.targetpath)

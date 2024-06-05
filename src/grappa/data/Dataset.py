@@ -18,6 +18,7 @@ from typing import List, Union, Tuple, Dict
 import numpy as np
 import logging
 import torch
+from tqdm import tqdm
 
 # inherit from torch ds:
 class Dataset(torch.utils.data.Dataset):
@@ -241,25 +242,6 @@ class Dataset(torch.utils.data.Dataset):
             for feature in set(graph.ndata.keys()).difference(keep):
                 del graph.ndata[feature]
 
-    
-
-    def clean(self, keep_feats:List[str]=None):
-        """
-        Assumes that all graphs have the same node features, i.e. that Dataset.remove_uncommon_features() has been called before.
-        Remove all n1 feats with name that is not in keep_feats. This is to reduce the size of the dataset.
-        """
-        if keep_feats is None:
-            return
-        remove = []
-        graph = self.graphs[0]
-        for feature in graph.nodes['n1'].data.keys():
-            if not feature in keep_feats + ['xyz', 'atomic_number', 'partial_charge', 'ring_encoding', 'charge_model']:
-                remove.append(feature)
-
-        for graph in self.graphs:
-            for feature in remove:
-                del graph.nodes['n1'].data[feature]
-
 
     def get_k_fold_split_ids(self, k:int, seed:int=0, num_folds:int=None):
         """
@@ -326,8 +308,48 @@ class Dataset(torch.utils.data.Dataset):
         return self.where(condition=[i in subsample for i in range(n)])
 
 
-    def create_reference(self, ref_terms:List[str]):
+    def create_reference(self, ref_terms:List[str], ff_lookup:Dict[str,str], cleanup:bool=False):
         """
         Stores QM - MM reference energies and gradients as energy_ref and gradient_ref in the graphs.
+        Then deletes all other energy and gradient data except for the reference data.
+        Args:
+            ref_terms (List[str]): list of terms that should be used for the reference data. E.g. ['bond', 'angle', 'dihedral']
+            ff_lookup (Dict[str,str]): dictionary mapping dataset names to force field names. If a dataset name is not present in the lookup, the force field is determined by the presence of all terms in the dataset.
+            cleanup (bool): if True, all energy and gradient data except for the reference data is deleted from the graphs.
         """
-        pass
+        for dsname, g in tqdm(zip(self.subdataset, self.graphs), desc='Assigning ff reference data'):
+
+            # if the dataset name is present in the lookup, use the reference from there
+            if dsname in ff_lookup.keys():
+                ff = ff_lookup[dsname]
+            # otherwise, check the number of force fields for which data exists
+            else:
+                all_energy_keys = [k for k in g.nodes['g'].data.keys() if 'energy_' in k]
+                # assume that the keys have the form energy_ff_contrib
+                ffs = set([''.join(k.split('_')[1:-1]) for k in all_energy_keys])
+                # filter those out for which not all contribs needed are present:
+                ffs = [r for r in ffs if all([f'energy_{r}_{t}' in all_energy_keys for t in ref_terms])]
+                if len(ffs) == 1:
+                    ff = ffs[0]
+                elif 'reference_ff' in ffs:
+                    ff = 'reference_ff'
+                else:
+                    raise ValueError(f'Could not uniquely determine force field for dataset {dsname}. Found {ffs}.')
+                
+            # assign the reference data to the graph
+            if not all([f'gradient_{ff}_{t}' in g.nodes['n1'].data.keys() for t in ref_terms]) and 'gradient_qm' in g.nodes['n1'].data.keys():
+                raise ValueError(f'Could not find all reference gradients for force field {ff} in dataset {dsname}. and ref terms {ref_terms}.')
+            
+            ref_energy_contribution = torch.sum(torch.stack([g.nodes['g'].data[f'energy_{ff}_{t}' ] for t in ref_terms], dim=0), dim=0)
+            g.nodes['g'].data['energy_ref'] = g.nodes['g'].data['energy_qm'] - ref_energy_contribution
+            if 'gradient_qm' in g.nodes['n1'].data.keys():
+                g.nodes['n1'].data['gradient_ref'] = g.nodes['n1'].data['gradient_qm'] - torch.sum(torch.stack([g.nodes['n1'].data[f'gradient_{ff}_{t}'] for t in ref_terms], dim=0), dim=0)
+
+            if cleanup:
+                # now delete all energy and gradient data except for the reference data:
+                for k in list(g.nodes['g'].data.keys()):
+                    if 'energy_' in k and not k == 'energy_ref':
+                        del g.nodes['g'].data[k]
+                for k in list(g.nodes['n1'].data.keys()):
+                    if 'gradient_' in k and not k == 'gradient_ref':
+                        del g.nodes['n1'].data[k]

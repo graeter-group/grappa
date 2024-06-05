@@ -311,11 +311,10 @@ class MolData():
         array_dict = np.load(path, allow_pickle=True)
         return cls.from_dict(array_dict)
 
-    # NOTE: here
     @classmethod
-    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False, charge_model:str='amber99'):
+    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False, charge_model:str='am1BCC'):
         """
-        Constructor for loading from espaloma datasets.
+        Constructor for loading from espaloma datasets. Assumes that energy_ref = energy_qm - energy_nonbonded.
         Create a MolData object from a dictionary containing a mapped_smiles string or pdb and arrays of conformations, energies and gradients, but not necessarily the interaction tuples and classical parameters.
         The forcefield is used to obtain the interaction tuples and classical parameters. If a smiles string is used, the forcefield refers to an openff forcefield. If a pdb file is used, the forcefield refers to an openmm forcefield.
         The following dictionray items are required:
@@ -359,21 +358,35 @@ class MolData():
         partial_charges = data_dict.get(partial_charge_key, None)
         energy_ref = data_dict.get('energy_ref', None)
         gradient_ref = data_dict.get('gradient_ref', None)
-        
-
 
         if mapped_smiles is not None:
-            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mol_id=mol_id, forcefield_type='openff', smiles=smiles, allow_nan_params=allow_nan_params, charge_model=charge_model)
+            self = cls.from_smiles(mapped_smiles=mapped_smiles, xyz=xyz, energy=energy, gradient=gradient, forcefield=forcefield, partial_charges=partial_charges, mol_id=mol_id, forcefield_type='openff', smiles=smiles, allow_nan_params=allow_nan_params, charge_model=charge_model)
         else:
-            raise NotImplementedError("pdb files are not supported yet.")
+            raise NotImplementedError("mapped smiles is missing. construction from pdb files is not supported yet.")
 
         self.sequence = sequence
 
         # Extract force field energies and gradients
-        self.ff_energy.update({k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('energy_') and not k == 'energy_ref'})
-        self.ff_gradient.update({k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('gradient_') and not k == 'gradient_ref'})
-        self.ff_nonbonded_energy.update({k.split('_', 2)[2]: v for k, v in data_dict.items() if k.startswith('nonbonded_energy_')})
-        self.ff_nonbonded_gradient.update({k.split('_', 2)[2]: v for k, v in data_dict.items()if k.startswith('nonbonded_gradient_')})
+        ff_energies = {k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('energy_') and k != 'energy_ref'}
+        ff_gradients = {k.split('_', 1)[1]: v for k, v in data_dict.items() if k.startswith('gradient_') and k != 'gradient_ref'}
+        ff_nonbonded_energy = {k.split('_', 2)[2]: v for k, v in data_dict.items() if k.startswith('nonbonded_energy_')}
+        ff_nonbonded_gradient = {k.split('_', 2)[2]: v for k, v in data_dict.items() if k.startswith('nonbonded_gradient_')}
+
+        # assume that the nonbonded energy of the reference ff is the difference between espalomas _qm and _ref contributions:
+        self.ff_energy['reference_ff'] = {'nonbonded': energy - energy_ref}
+        self.ff_gradients['reference_ff'] = {'nonbonded': gradient - gradient_ref}
+
+        for ff_name in ff_energies.keys():
+            if ff_name not in self.ff_energies.keys():
+                self.ff_energies[ff_name] = {"total": ff_energies[ff_name]}
+                if ff_name in ff_nonbonded_energy.keys():
+                    self.ff_energies[ff_name]["nonbonded"] = ff_nonbonded_energy[ff_name]
+
+        for ff_name in ff_gradients.keys():
+            if ff_name not in self.ff_gradients.keys():
+                self.ff_gradients[ff_name] = {"total": ff_gradients[ff_name]}
+                if ff_name in ff_nonbonded_gradient.keys():
+                    self.ff_gradients[ff_name]["nonbonded"] = ff_nonbonded_gradient[ff_name]
 
         return self
 
@@ -459,7 +472,7 @@ class MolData():
     
 
     @classmethod
-    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, energy_ref=None, gradient_ref=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None, allow_nan_params:bool=False, charge_model:str='amber99'):
+    def from_smiles(cls, mapped_smiles, xyz, energy, gradient, partial_charges=None, forcefield='openff_unconstrained-1.2.0.offxml', mol_id=None, forcefield_type='openff', smiles=None, allow_nan_params:bool=False, charge_model:str='amber99'):
         """
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to initialize the interaction tuples, classical parameters and, if partial_charges is None, to obtain the partial charges.
         The forcefield_type can be either openff, openmm or openmmforcefields.
@@ -470,8 +483,6 @@ class MolData():
             - energy: (n_confs,)
             - gradient: (n_confs, n_atoms, 3)
             - partial_charges: (n_atoms,)
-            - energy_ref: (n_confs,)
-            - gradient_ref: (n_confs, n_atoms, 3)
             - forcefield: str
             - mol_id: str
             - forcefield_type: str
@@ -505,7 +516,7 @@ class MolData():
             mol_id = smiles
         
 
-        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, energy_ref=energy_ref, gradient_ref=gradient_ref, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles, allow_nan_params=allow_nan_params, charge_model=charge_model)
+        self = cls.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=xyz, energy=energy, gradient=gradient, partial_charges=partial_charges, mapped_smiles=mapped_smiles, mol_id=mol_id, smiles=smiles, allow_nan_params=allow_nan_params, charge_model=charge_model)
 
         self.molecule.add_features(['ring_encoding', "sp_hybridization", "is_aromatic",'degree'], openff_mol=openff_mol)
 

@@ -14,8 +14,5 @@ bash convert_all.sh
 # convert the npz datasets to MolData
 bash grappa_ds.sh
 
-# create copies of the peptide datasets but with nonbonded parameters from amber99sbildn instead of openff/am1bcc as in espaloma
-bash convert_peptides.sh
-
 # convert the MolData datasets to dgl format
-bash dgl_ds.sh
+# bash dgl_ds.sh

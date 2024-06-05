@@ -1,0 +1,32 @@
+defaults:
+  - _self_
+  - train
+
+experiment:
+  ckpt_path: null
+  wandb:
+    name: example
+    project: grappa
+  progress_bar: true
+
+model:
+  in_feat_name:
+  - atomic_number
+  - ring_encoding
+  - partial_charge
+  - degree
+
+data:
+  datasets:
+  - spice-dipeptide
+  splitpath: espaloma_split
+  ref_terms:
+    - nonbonded
+  seed: 0
+
+energy:
+  terms:
+    - bond
+    - angle
+    - proper
+    - improper
