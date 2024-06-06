@@ -15,8 +15,11 @@ def main(cfg: DictConfig) -> None:
     else:
         raise NotImplementedError(f"Checkpoint config not found at {ckpt_path.parent/'config.yaml'}")
 
+    # replace the checkpoint dir in ckpt_cfg with the one from the checkpoint path:
+    ckpt_cfg.experiment.checkpointer.dirpath = ckpt_path.parent
+
     experiment = Experiment(config=ckpt_cfg)
-    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, store_data=cfg.test_data_path)
+    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path)
 
 
 if __name__ == "__main__":

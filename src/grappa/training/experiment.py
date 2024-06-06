@@ -58,8 +58,12 @@ class Experiment:
 
         self._init_model()
 
-        self.ckpt_dir = Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath
+        if not str(self._experiment_cfg.checkpointer.dirpath).startswith('/'):
+            self.ckpt_dir = Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath
+        else:
+            self.ckpt_dir = Path(self._experiment_cfg.checkpointer.dirpath)
 
+        self.trainer = None
 
     def _init_model(self):
         """
@@ -110,6 +114,10 @@ class Experiment:
         assert isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config), f"Expected wandb config, but got {type(logger.experiment.config)}"
         logger.experiment.config.update(flat_cfg)
 
+        if self._experiment_cfg.trainer.ckpt_path is not None:
+            if not str(self._experiment_cfg.trainer.ckpt_path).startswith('/'):
+                self._experiment_cfg.trainer.ckpt_path = Path(REPO_DIR)/self._experiment_cfg.trainer.ckpt_path
+
         self.trainer = Trainer(
             **self._experiment_cfg.trainer,
             callbacks=callbacks,
@@ -133,6 +141,15 @@ class Experiment:
             ckpt_path: Path, path to the checkpoint to load
             n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
         """
+
+        if self.trainer is None:
+            self.trainer = Trainer(
+                **self._experiment_cfg.trainer,
+                logger=False,
+                enable_progress_bar=self._experiment_cfg.progress_bar,
+                enable_model_summary=True,
+                inference_mode=False # important for test call, force calculation needs autograd
+            )
 
 
         if ckpt_path is None:
