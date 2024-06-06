@@ -1,6 +1,6 @@
 defaults:
-  - _self_
   - train
+  - _self_
 
 experiment:
   ckpt_path: null
@@ -11,27 +11,27 @@ experiment:
 
 model:
   in_feat_name:
-  - atomic_number
-  - ring_encoding
-  - partial_charge
-  - degree
-  - charge_model
+    - atomic_number
+    - ring_encoding
+    - partial_charge
+    - degree
+    - charge_model
 
 data:
   datasets:
-  - spice-des-monomers
-  - spice-pubchem
-  - gen2
-  - gen2-torsion
-  - rna-diverse
-  - spice-dipeptide
-  - protein-torsion
-  - pepconf-dlc
+    - spice-des-monomers
+    - spice-pubchem
+    - gen2
+    - gen2-torsion
+    - rna-diverse
+    - spice-dipeptide
+    - protein-torsion
+    - pepconf-dlc
   pure_test_datasets:
-  - rna-trinucleotide
+    - rna-trinucleotide
   pure_val_datasets: []
   pure_train_datasets:
-  - rna-nucleoside
+    - rna-nucleoside
   splitpath: espaloma_split
   partition: [0.8, 0.1, 0.1]
   ref_terms:

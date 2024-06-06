@@ -1,14 +1,15 @@
 from grappa.training.loss import MolwiseLoss
-from grappa.training.evaluation import FastEvaluator, Evaluator
-from grappa.models.energy import Energy
+from grappa.training.evaluator import FastEvaluator, Evaluator
 import torch
 import pytorch_lightning as pl
 from typing import List, Dict
 import time
 import sys
 import logging
-import wandb
 import json
+from pathlib import Path
+import numpy as np
+from grappa.utils.run_utils import flatten_dict
 
 class GrappaLightningModel(pl.LightningModule):
     def __init__(self,
@@ -112,7 +113,7 @@ class GrappaLightningModel(pl.LightningModule):
         self.time_start = time.time()
 
         self.n_bootstrap = 1000
-        self.store_test_data = False
+        self.test_data_path = None
 
 
     def forward(self, x):
@@ -294,9 +295,24 @@ class GrappaLightningModel(pl.LightningModule):
                 self.test_evaluator.step(g, dsnames)
 
     def on_test_epoch_end(self):
-        if self.store_test_data:
+        if self.test_data_path is not None:
+            # save the data as npz file:
             self.test_evaluator.collect()
 
+            data = {
+                'energies': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_energies.items()},
+                'gradients': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_gradients.items()},
+                'reference_energies': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_reference_energies.items()},
+                'reference_gradients': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_reference_gradients.items()},
+                'mol_idxs': {k:np.array(v) for k,v in self.test_evaluator.mol_idxs.items()},
+            }
+
+            # flatten the dict:
+            data = dict(flatten_dict(data))
+
+            logging.info(f"Saving test data to {self.test_data_path}")
+            Path(self.test_data_path).parent.mkdir(parents=True, exist_ok=True)
+            np.savez(self.test_data_path, **data)
             
         metrics = self.test_evaluator.pool(seed=42, n_bootstrap=self.n_bootstrap)
 

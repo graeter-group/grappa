@@ -5,7 +5,7 @@ mol = Molecule.from_polymer_pdb('HIDHID.pdb')
 
 mol.to_smiles(isomeric=True)
 #%%
-from grappa.data.Dataset import Dataset
+from grappa.data.dataset import Dataset
 
 dataset = Dataset.from_tag('spice-dipeptide')
 # %%

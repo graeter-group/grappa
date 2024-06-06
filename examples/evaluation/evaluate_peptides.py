@@ -3,9 +3,9 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-from grappa.data.Dataset import Dataset
-from grappa.data.GraphDataLoader import GraphDataLoader
-from grappa.training.evaluation import Evaluator
+from grappa.data.dataset import Dataset
+from grappa.data.graph_data_loader import GraphDataLoader
+from grappa.training.evaluator import Evaluator
 from grappa.models.energy import Energy
 from grappa.utils import model_loading_utils
 from pathlib import Path

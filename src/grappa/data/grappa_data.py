@@ -5,7 +5,8 @@ import torch
 import json
 import copy
 import logging
-from grappa.data import Dataset, GraphDataLoader
+from grappa.data.dataset import Dataset
+from grappa.data.graph_data_loader import GraphDataLoader
 from grappa.utils.dataset_utils import get_path_from_tag
 from tqdm import tqdm
 
@@ -24,6 +25,7 @@ class GrappaData(pl.LightningDataModule):
                  val_loader_workers: int = 1,
                  test_loader_workers: int = 1,
                  conf_strategy: Union[str, int] = 32,
+                 ff_lookup: Dict[str, str] = {},
                  seed: int = 0,
                  pin_memory: bool = True,
                  tr_subsampling_factor: float = None,
@@ -43,6 +45,7 @@ class GrappaData(pl.LightningDataModule):
             splitpath (Path, optional): Path to the split file. If provided, the function will load the split from this file. If not, it will generate a new split. Defaults to None.
             partition (Tuple[float, float, float], optional): Partition of the dataset into train, validation, and test splits. Defaults to (0.8, 0.1, 0.1).
             conf_strategy (Union[str, int], optional): Strategy for sampling conformations when batching. Defaults to 32.
+            ff_lookup (Dict[str,str]): dictionary mapping dataset names to force field names. If a dataset name is not present in the lookup, the force field is determined automatically by selecting the force field that provides all necessary terms, or, if this is not unique, by selecting the force field 'reference_ff' if present.
             train_batch_size (int, optional): Batch size for the training dataloader. Defaults to 1.
             val_batch_size (int, optional): Batch size for the validation dataloader. Defaults to 1.
             test_batch_size (int, optional): Batch size for the test dataloader. Defaults to 1.
@@ -89,6 +92,7 @@ class GrappaData(pl.LightningDataModule):
         self.val_conf_strategy = val_conf_strategy
         self.split_ids = split_ids
         self.keep_features = keep_features
+        self.ff_lookup = ff_lookup
 
         self.train_cleanup = True # set this to manually to False if you want to keep the reference ff data in the training set (e.g. for evaluating the reference data on the training set)
 
@@ -173,7 +177,9 @@ class GrappaData(pl.LightningDataModule):
             self.tr = self.tr.subsampled(self.tr_subsampling_factor, seed=self.seed)
 
         # write reference data as energy_ref = energy_qm - sum(energy_ref_terms) / gradient_ref = ...
-        self.tr.create_reference(ref_terms=self.ref_terms, cleanup=self.train_cleanup)
+        self.tr.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=self.train_cleanup)
+        self.vl.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=False)
+        self.te.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=False)
 
         # Remove uncommon features for enabling batching
         self.tr.remove_uncommon_features()
@@ -216,7 +222,7 @@ class GrappaData(pl.LightningDataModule):
 
 
     def train_dataloader(self):
-        return GraphDataLoader(self.tr, batch_size=self.train_batch_size, shuffle=True, num_workers=self.train_loader_workers, pin_memory=self.pin_memory, conf_strategy=self.conf_strategy, weights=self.weights, balance_factor=self.balance_factor, drop_last=True)
+        return GraphDataLoader(self.tr, batch_size=self.train_batch_size, shuffle=True, num_workers=self.train_loader_workers, pin_memory=self.pin_memory, conf_strategy=self.conf_strategy, weights=self.weights, balance_factor=self.balance_factor, drop_last=len(self.tr) > self.train_batch_size)
 
     def val_dataloader(self):
         return GraphDataLoader(self.vl, batch_size=self.val_batch_size, shuffle=False, num_workers=self.val_loader_workers, pin_memory=self.pin_memory, conf_strategy=self.val_conf_strategy, drop_last=False)

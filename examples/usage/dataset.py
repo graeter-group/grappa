@@ -1,5 +1,5 @@
 #%%
-from grappa.data.Dataset import Dataset
+from grappa.data.dataset import Dataset
 #%%
 tags = ['spice-des-monomers', 'spice-dipeptide', 'hyp-dop_amber99sbildn']
 

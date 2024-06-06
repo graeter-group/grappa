@@ -14,7 +14,7 @@ import torch
 from dgl import DGLGraph
 import warnings
 
-from grappa.data.Molecule import Molecule
+from grappa.data.molecule import Molecule
 import matplotlib.pyplot as plt
 from grappa.utils.torch_utils import to_numpy
 
@@ -605,7 +605,7 @@ class Parameters():
         """
         Returns random parameters for a toy molecule.
         """
-        from grappa.data.Molecule import Molecule
+        from grappa.data.molecule import Molecule
         mol = Molecule.random()
         params = cls.get_nan_params(mol)
 

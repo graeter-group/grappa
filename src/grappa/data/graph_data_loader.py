@@ -1,6 +1,6 @@
 import dgl
 from torch.utils.data import DataLoader
-from grappa.data import Dataset
+from grappa.data.dataset import Dataset
 from grappa.utils import dgl_utils
 import copy
 from typing import Dict, List, Union

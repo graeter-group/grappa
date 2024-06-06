@@ -1,6 +1,6 @@
 defaults:
-  - _self_
   - train
+  - _self_
 
 experiment:
   ckpt_path: null
@@ -11,14 +11,17 @@ experiment:
 
 model:
   in_feat_name:
-  - atomic_number
-  - ring_encoding
-  - partial_charge
-  - degree
+    - atomic_number
+    - ring_encoding
+    - partial_charge
+    - degree
 
 data:
   datasets:
-  - spice-dipeptide
+    - spice-dipeptide
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []
   splitpath: espaloma_split
   ref_terms:
     - nonbonded

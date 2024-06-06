@@ -13,6 +13,3 @@ bash convert_all.sh
 
 # convert the npz datasets to MolData
 bash grappa_ds.sh
-
-# convert the MolData datasets to dgl format
-# bash dgl_ds.sh

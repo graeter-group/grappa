@@ -7,7 +7,7 @@ import torch
 from collections import defaultdict
 import copy
 from grappa.data import Parameters
-from grappa.data.Parameters import compare_parameters, plot_parameters
+from grappa.data.parameters import compare_parameters, plot_parameters
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import logging
@@ -282,6 +282,8 @@ class Evaluator:
         self.all_reference_energies = {}
         self.all_reference_gradients = {}
 
+        self.mol_idxs = {} # stores the start indexes of each mol for unconcatenating the data for each molecule in the sense that energies = [all_energies[dsname][mol_idxs[dsname][i]:mol_idxs[dsname][i+1]] for i in range(len(mol_idxs[dsname])-1)] + [all_energies[dsname][mol_idxs[dsname][-1]:]]
+
         if self.log_classical_values:
             self.all_classical_energies = {}
             self.all_classical_gradients = {}
@@ -301,6 +303,8 @@ class Evaluator:
 
             self.all_reference_energies[dsname] = torch.cat([self.reference_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
             self.all_reference_gradients[dsname] = torch.cat([self.reference_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
+
+            self.mol_idxs[dsname] = [0] + [self.all_energies[dsname].shape[0] for i in range(self.n_mols[dsname])]
 
             if self.log_classical_values:
                 self.all_classical_energies[dsname] = torch.cat([self.classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)

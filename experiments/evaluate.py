@@ -16,7 +16,7 @@ def main(cfg: DictConfig) -> None:
         raise NotImplementedError(f"Checkpoint config not found at {ckpt_path.parent/'config.yaml'}")
 
     experiment = Experiment(config=ckpt_cfg)
-    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, store_data=cfg.store_data)
+    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, store_data=cfg.test_data_path)
 
 
 if __name__ == "__main__":

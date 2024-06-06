@@ -130,6 +130,7 @@ def main(dspath, targetpath):
             np.savez_compressed(targetpath/(molpath.stem+'.npz'), **data)
             num_success += 1
         except Exception as e:
+            raise e
             num_err += 1
             print(f"Failed to process {molpath}: {e}")
             continue

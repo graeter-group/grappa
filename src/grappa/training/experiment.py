@@ -125,7 +125,7 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=1000, store_data:bool=False):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=1000, test_data_path:Path=None):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
@@ -134,8 +134,6 @@ class Experiment:
             n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
         """
 
-        self.grappa_module.n_bootstrap = n_bootstrap
-        self.grappa_module.store_test_data = store_data
 
         if ckpt_path is None:
             if ckpt_dir is None:
@@ -152,11 +150,13 @@ class Experiment:
                 elif len(all_ckpts) > 1:
                     raise RuntimeError("More than one checkpoint found, but none of them have loss data.")
                 else:
-                    best_ckpt = all_ckpts[0]
+                    ckpt_path = all_ckpts[0]
             else:
                 ckpt_path = ckpts[losses.index(min(losses))] if self._experiment_cfg.checkpointer.mode == 'min' else ckpts[losses.index(max(losses))]
-            logging.info(f"Best checkpoint: {best_ckpt}")
+            logging.info(f"Evaluating checkpoint: {ckpt_path}")
 
+        self.grappa_module.n_bootstrap = n_bootstrap
+        self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (ckpt_path.stem+'.npz') if test_data_path is None else test_data_path
 
         self.trainer.test(
             model=self.grappa_module,

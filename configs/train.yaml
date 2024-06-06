@@ -27,19 +27,19 @@ experiment:
 
 data:
   datasets:
-  - spice-des-monomers
-  - spice-pubchem
-  - gen2
-  - gen2-torsion
-  - rna-diverse
-  - spice-dipeptide
-  - protein-torsion
-  - pepconf-dlc
+    - spice-des-monomers
+    - spice-pubchem
+    - gen2
+    - gen2-torsion
+    - rna-diverse
+    - spice-dipeptide
+    - protein-torsion
+    - pepconf-dlc
   pure_test_datasets:
-  - rna-trinucleotide
+    - rna-trinucleotide
   pure_val_datasets: []
   pure_train_datasets:
-  - rna-nucleoside
+    - rna-nucleoside
   splitpath: espaloma_split
   partition: [0.8, 0.1, 0.1]
   train_batch_size: 32
@@ -49,6 +49,7 @@ data:
   train_loader_workers: 2
   val_loader_workers: 1
   conf_strategy: 32
+  ff_lookup: {}
   seed: 0
   pin_memory: true
   tr_subsampling_factor: null

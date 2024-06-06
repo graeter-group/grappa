@@ -1,6 +1,6 @@
 #%%
 from grappa.data import MolData
-from grappa.data.Parameters import plot_parameters
+from grappa.data.parameters import plot_parameters
 from pathlib import Path
 
 dspath = Path(__file__).parent.parent / 'data' / 'grappa_datasets' / 'spice-dipeptide_amber99sbildn'

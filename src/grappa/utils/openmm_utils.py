@@ -373,7 +373,8 @@ def get_contribution(openmm_system, xyz, force:str):
 
 
 
-def get_improper_contribution(openmm_system, xyz):
+def get_improper_contribution(openmm_system, xyz, molecule):
+        import openmm
 
         openmm_system = copy.deepcopy(openmm_system)
 
@@ -382,7 +383,7 @@ def get_improper_contribution(openmm_system, xyz):
         openmm_system = remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
 
         # get a list of sets of improper torsion tuples:
-        improper_set = {tuple(sorted(t)) for t in self.molecule.impropers}
+        improper_set = {tuple(sorted(t)) for t in molecule.impropers}
 
         # set all ks to zero that are not impropers:
         for force in openmm_system.getForces():
@@ -390,12 +391,12 @@ def get_improper_contribution(openmm_system, xyz):
                 raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
             for i in range(force.getNumTorsions()):
                 atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
-                if not tuple(sorted((self.molecule.atoms[atom1], self.molecule.atoms[atom2], self.molecule.atoms[atom3], self.molecule.atoms[atom4]))) in improper_set:
+                if not tuple(sorted((molecule.atoms[atom1], molecule.atoms[atom2], molecule.atoms[atom3], molecule.atoms[atom4]))) in improper_set:
                     force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
 
 
         # get energy and gradient. these are now only sourced from improper torsions.
         improper_energy, improper_gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
-        improper_gradient = -self.improper_gradient # the reference gradient is the negative of the force
+        improper_gradient = -improper_gradient # the reference gradient is the negative of the force
 
         return improper_energy, improper_gradient

@@ -1,7 +1,7 @@
 #%%
 from grappa.data import Dataset, GraphDataLoader
 import torch
-from grappa.training.evaluation import Evaluator
+from grappa.training.evaluator import Evaluator
 from pathlib import Path
 import yaml
 import json

@@ -5,7 +5,7 @@ Datasets can be saved and loaded from disk.
 If initialized with a list of MolData objects, stores a list the mol_ids and a list of dgl graphs in corresponding order. These are used to create splits into train, validation and test sets in which no molecule is present in more than one set. The splits are stored as lists of indices.
 """
 
-from grappa.data import MolData
+from grappa.data.mol_data import MolData
 from grappa.utils import torch_utils, dataset_utils
 from grappa import constants
 import dgl
@@ -19,6 +19,7 @@ import numpy as np
 import logging
 import torch
 from tqdm import tqdm
+import logging
 
 # inherit from torch ds:
 class Dataset(torch.utils.data.Dataset):
@@ -41,16 +42,18 @@ class Dataset(torch.utils.data.Dataset):
         self.subdataset = subdataset
         assert len(graphs) == len(mol_ids) == len(subdataset)
 
-    def from_tag(tag:str, data_dir:Union[str, Path]=dataset_utils.get_data_path()/'dgl_datasets'):
+    @classmethod
+    def from_tag(cls, tag:str):
         """
-        Returns a Dataset object from a tag. Downloads the dataset if it is not already present in the data_dir.
+        Returns a Dataset object from a tag.
+        If the dataset if it is not already present in the data_dir as graphs.bin, mol_ids.json and subdataset.json in data_dir/tag/, it is constructed from the MolData objects in grappa/data/datasets/tag/. If there are no MolData objects and the tag is in the list of downloadable datasets, the dataset is downloaded from the grappa repository.
         Args:
             tag (str): tag of the dataset to be loaded
             data_dir (Union[str, Path]): path to the directory where the dataset is stored. Default: 'grappa/data/dgl_datasets'
         Returns:
             dataset (Dataset): Dataset object containing the graphs, mol_ids and subdataset names
 
-        Possible tags are:
+        Possible tags for download are:
         BENCHMARK ESPALOMA:
             - 'spice-dipeptide'
             - 'spice-des-monomers'
@@ -69,9 +72,21 @@ class Dataset(torch.utils.data.Dataset):
             - 'dipeptide_rad'
             - 'uncapped_amber99sbildn'
         """
-        path = dataset_utils.get_path_from_tag(tag=tag, data_dir=data_dir)
-        return Dataset.load(path)
 
+        data_dir=dataset_utils.get_data_path()/'dgl_datasets'
+
+        dir_path = Path(data_dir) / tag
+
+        if dir_path.exists():
+            if not ((dir_path/'graphs.bin').exists() and (dir_path/'mol_ids.json').exists() and (dir_path/'subdataset.json').exists()):
+                raise ValueError(f'Found directory {dir_path} but not all necessary files: graphs.bin, mol_ids.json, subdataset.json.')
+            return Dataset.load(dir_path)
+        
+        # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
+        moldata_path = dataset_utils.get_moldata_path(tag)
+
+        self = Dataset.load(moldata_path)
+        return self
 
     def __len__(self):
         return len(self.graphs)
@@ -159,6 +174,23 @@ class Dataset(torch.utils.data.Dataset):
             dataset (Dataset): Dataset object containing the graphs, mol_ids and subdataset names
         """
         path = Path(path)
+        if not ((path/'graphs.bin').exists() and (path/'mol_ids.json').exists() and (path/'subdataset.json').exists()):
+            # if there are .npz files, assume that this is a moldata path and load the dataset from there:
+            paths = list(path.glob('*.npz'))
+            if len(paths) > 0:
+                logging.info(f'\nProcessing Dataset from {path}:')
+                # create the dgl dataset from moldata objects:
+                moldata = []
+                for molfile in tqdm(paths, desc='Loading .npz files'):
+                    moldata.append(MolData.load(str(molfile)))
+                self = Dataset.from_moldata(moldata, subdataset=path.name)
+                
+                dgl_dir_path = data_dir=dataset_utils.get_data_path()/'dgl_datasets'/path.name
+                logging.info(f"\nSaving dgl dataset to {dgl_dir_path}\n")
+                self.save(dgl_dir_path)
+                return self
+
+
         graphs, _ = dgl.load_graphs(str(path / 'graphs.bin'))
         with open(path / 'mol_ids.json', 'r') as f:
             mol_ids = json.load(f)
@@ -168,7 +200,7 @@ class Dataset(torch.utils.data.Dataset):
     
 
     @classmethod
-    def from_moldata(cls, moldata_list:List[MolData], subdataset:List[str]):
+    def from_moldata(cls, moldata_list:List[MolData], subdataset:Union[str, List[str]]):
         """
         Creates a Dataset object from a list of MolData objects.
         Args:
@@ -177,8 +209,17 @@ class Dataset(torch.utils.data.Dataset):
         Returns:
             dataset (Dataset): Dataset object containing the graphs, mol_ids and subdataset names
         """
-        graphs = [moldata.to_dgl() for moldata in moldata_list]
-        mol_ids = [moldata.mol_id for moldata in moldata_list]
+
+        if isinstance(subdataset, str):
+            subdataset = [subdataset]*len(moldata_list)
+
+        graphs = []
+        mol_ids = []
+
+        for moldata in tqdm(moldata_list, desc='Creating graphs'):
+            graphs.append(moldata.to_dgl())
+            mol_ids.append(moldata.mol_id)
+
         return cls(graphs, mol_ids, subdataset)
     
 
@@ -207,6 +248,9 @@ class Dataset(torch.utils.data.Dataset):
 
         Also fills zeros to the charge_model entry until the length resembles grappa.constants.MAX_NUM_CHARGE_MODELS
         """
+        if len(self.graphs) == 0:
+            return
+        
         for v in create_feats.values():
             if isinstance(v, torch.Tensor):  
                 v.to(self.graphs[0].nodes['n1'].data['xyz'].device)
@@ -314,10 +358,10 @@ class Dataset(torch.utils.data.Dataset):
         Then deletes all other energy and gradient data except for the reference data.
         Args:
             ref_terms (List[str]): list of terms that should be used for the reference data. E.g. ['bond', 'angle', 'dihedral']
-            ff_lookup (Dict[str,str]): dictionary mapping dataset names to force field names. If a dataset name is not present in the lookup, the force field is determined by the presence of all terms in the dataset.
+            ff_lookup (Dict[str,str]): dictionary mapping dataset names to force field names. If a dataset name is not present in the lookup, the force field is determined automatically by selecting the force field that provides all necessary terms, or, if this is not unique, by selecting the force field 'reference_ff' if present.
             cleanup (bool): if True, all energy and gradient data except for the reference data is deleted from the graphs.
         """
-        for dsname, g in tqdm(zip(self.subdataset, self.graphs), desc='Assigning ff reference data'):
+        for dsname, g in zip(self.subdataset, self.graphs):
 
             # if the dataset name is present in the lookup, use the reference from there
             if dsname in ff_lookup.keys():
@@ -326,7 +370,7 @@ class Dataset(torch.utils.data.Dataset):
             else:
                 all_energy_keys = [k for k in g.nodes['g'].data.keys() if 'energy_' in k]
                 # assume that the keys have the form energy_ff_contrib
-                ffs = set([''.join(k.split('_')[1:-1]) for k in all_energy_keys])
+                ffs = set(['_'.join(k.split('_')[1:-1]) for k in all_energy_keys])
                 # filter those out for which not all contribs needed are present:
                 ffs = [r for r in ffs if all([f'energy_{r}_{t}' in all_energy_keys for t in ref_terms])]
                 if len(ffs) == 1:
@@ -336,10 +380,13 @@ class Dataset(torch.utils.data.Dataset):
                 else:
                     raise ValueError(f'Could not uniquely determine force field for dataset {dsname}. Found {ffs}.')
                 
-            # assign the reference data to the graph
-            if not all([f'gradient_{ff}_{t}' in g.nodes['n1'].data.keys() for t in ref_terms]) and 'gradient_qm' in g.nodes['n1'].data.keys():
-                raise ValueError(f'Could not find all reference gradients for force field {ff} in dataset {dsname}. and ref terms {ref_terms}.')
+            if not all([f'energy_{ff}_{t}' in g.nodes['g'].data.keys() for t in ref_terms]):
+                raise ValueError(f'Could not find all reference energies for force field {ff} in dataset {dsname}. and ref terms {ref_terms}. Energies present: {[k for k in g.nodes["g"].data.keys() if "energy_" in k]}')
             
+            if not all([f'gradient_{ff}_{t}' in g.nodes['n1'].data.keys() for t in ref_terms]) and 'gradient_qm' in g.nodes['n1'].data.keys():
+                raise ValueError(f'Could not find all reference gradients for force field {ff} in dataset {dsname}. and ref terms {ref_terms}. Energies present: {[k for k in g.nodes["n1"].data.keys() if "gradient_" in k]}')
+            
+            # assign the reference data to the graph
             ref_energy_contribution = torch.sum(torch.stack([g.nodes['g'].data[f'energy_{ff}_{t}' ] for t in ref_terms], dim=0), dim=0)
             g.nodes['g'].data['energy_ref'] = g.nodes['g'].data['energy_qm'] - ref_energy_contribution
             if 'gradient_qm' in g.nodes['n1'].data.keys():
