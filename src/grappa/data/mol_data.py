@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple, Union
 import numpy as np
 from grappa.data import Molecule, Parameters
-from grappa.utils import openff_utils, openmm_utils
 import torch
 from dgl import DGLGraph
 from grappa import constants
@@ -435,6 +434,7 @@ class MolData():
 
 
         import openmm
+        from grappa.utils import openmm_utils
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles, charge_model=charge_model)
 
         try:        
@@ -509,6 +509,7 @@ class MolData():
             - allow_nan_params: bool: If True, the parameters are set to nans if they cannot be obtained from the forcefield. If False, an error is raised.
         
         """
+        from grappa.utils import openff_utils, openmm_utils
         if forcefield_type == 'openff':
             system, topology, openff_mol = openff_utils.get_openmm_system(mapped_smiles, openff_forcefield=forcefield, partial_charges=partial_charges)
         
@@ -558,8 +559,7 @@ class MolData():
         If partial_charges is None, the charges are obtained from the openmm forcefield.
         """
         assert self.pdb is not None, "MolData.pdb must be provided to calculate energies with openmm."
-        import openmm
-        import openmm.unit as unit
+        from grappa.utils import openmm_utils
 
         openmm_top = openmm_utils.topology_from_pdb(self.pdb)
         openmm_sys = openmm_forcefield.createSystem(topology=openmm_top)
@@ -577,6 +577,7 @@ class MolData():
         Assumes that the openmm_system has the correct order of atoms.
         """
         import openmm.unit as unit
+        from grappa.utils import openmm_utils
 
         xyz = unit.Quantity(self.xyz, grappa_units.DISTANCE_UNIT).value_in_unit(unit.angstrom)
 

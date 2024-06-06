@@ -167,6 +167,7 @@ class Molecule():
         """
         Sort the interation tuples to the convention tuple[0] < tuple[-1] using invariant permutations.
         Impropers are not affected.
+        For propers, this is not unique, since permutation of outer atoms is also allowed if the phase is zero. We do not apply this permutation here.
         """
         for i, bond in enumerate(self.bonds):
             # this notation is agnostic of the data type of self.bonds:

@@ -35,6 +35,8 @@ var/
 
 notes.md
 
+*/mdout.mdp
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt

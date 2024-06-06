@@ -11,7 +11,7 @@ if importlib.util.find_spec('kimmdy') is not None:
     import numpy as np
 
     import math
-    from typing import Union, Optional, Set
+    from typing import Union, Optional, Set, List, Tuple
 
     from kimmdy.topology.topology import Topology
     from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
@@ -147,7 +147,9 @@ if importlib.util.find_spec('kimmdy') is not None:
 
 
     def apply_parameters(top: Topology, parameters: Parameters, apply_nrs: Set[str]):
-        """Applies parameters to topology
+        """
+        Applies parameters to topology. (writes the parameters in the topology)
+        To that end, we check whether equivalent tuple orderings 
 
         parameter structure is defined in grappa.data.Parameters.Parameters
         assume units are according to https://manual.gromacs.org/current/reference-manual/definitions.html
@@ -161,10 +163,10 @@ if importlib.util.find_spec('kimmdy') is not None:
         for i, idx in enumerate(parameters.bonds):
             if all(atom_nr in apply_nrs for atom_nr in idx):
                 tup = tuple(idx)
-                if not top.bonds.get(tup):
-                    # raise KeyError(f"bad index {tup} in {list(top.bonds.keys())}")
-                    logging.warning(f"Ignored parameters with invalid ids: {tup} for bonds")
+                tup = find_bond(tup, top)
+                if not tup:
                     continue
+
                 top.bonds[tup] = Bond(
                     *tup,
                     funct="1",
@@ -176,10 +178,10 @@ if importlib.util.find_spec('kimmdy') is not None:
         for i, idx in enumerate(parameters.angles):
             if all(atom_nr in apply_nrs for atom_nr in idx):
                 tup = tuple(idx)
-                if not top.angles.get(tup):
-                    # raise KeyError(f"bad index {tup} in {list(top.angles.keys())}")
-                    logging.warning(f"Ignored parameters with invalid ids: {tup} for angles")
+                tup = find_angle(tup, top)
+                if not tup:
                     continue
+
                 top.angles[tup] = Angle(
                     *tup,
                     funct="1",
@@ -191,12 +193,12 @@ if importlib.util.find_spec('kimmdy') is not None:
         for i, idx in enumerate(parameters.propers):
             if all(atom_nr in apply_nrs for atom_nr in idx):
                 tup = tuple(idx)
-                if not top.proper_dihedrals.get(tup):
-                    # raise KeyError(f"bad index {tup} in {list(top.proper_dihedrals.keys())}")
-                    logging.warning(
-                        f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
-                    )
+
+                # find the proper dihedral tuple in the topology that is equivalent to the given tuple
+                tup = find_proper(tup, top)
+                if not tup:
                     continue
+
                 dihedral_dict = {}
                 for ii in range(len(parameters.proper_ks[i])):
                     n = str(ii + 1)
@@ -234,6 +236,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 top.improper_dihedrals[tup] = MultipleDihedrals(
                     *tup, funct="4", dihedrals=dihedral_dict
                 )
+
         return
 
 
@@ -285,3 +288,88 @@ if importlib.util.find_spec('kimmdy') is not None:
             # apply parameters
             apply_parameters(current_topology, parameters, build_nrs)
             return current_topology
+            
+    def find_angle(tup: tuple, top: Topology) -> Tuple[int, int, int]:
+        """
+        Find the angle tuple in the topology that is equivalent to the given tuple.
+        If no equivalent tuple is found, it logs a warning and returns False.
+        """
+        if not top.angles.get(tup):
+            # try equivalent tuples using the symmetries of the angle:
+            # angle_{ijk} = angle_{kji} (reversal)
+            equivalent_tups = [
+                tuple(reversed(tup))
+            ]
+            
+            tups_in_topology = [tup_eq for tup_eq in equivalent_tups if top.angles.get(tup_eq)]
+
+            if len(tups_in_topology) == 0:
+                logging.warning(
+                    f"Ignored parameters with invalid ids: {tup} for angles"
+                )
+                return None
+            elif len(tups_in_topology) > 1:
+                logging.warning(
+                    f"Multiple equivalent tuples found for {tup} in angles"
+                )
+            else:
+                tup = tups_in_topology[0]
+        return tup
+    
+    def find_bond(tup: tuple, top: Topology) -> Tuple[int, int]:
+        """
+        Find the bond tuple in the topology that is equivalent to the given tuple.
+        If no equivalent tuple is found, it logs a warning and returns False.
+        """
+        if not top.bonds.get(tup):
+            # try equivalent tuples using the symmetries of the bond:
+            # bond_{ij} = bond_{ji} (reversal)
+            equivalent_tups = [
+                tuple(reversed(tup))
+            ]
+            
+            tups_in_topology = [tup_eq for tup_eq in equivalent_tups if top.bonds.get(tup_eq)]
+
+            if len(tups_in_topology) == 0:
+                logging.warning(
+                    f"Ignored parameters with invalid ids: {tup} for bonds"
+                )
+                return None
+            elif len(tups_in_topology) > 1:
+                logging.warning(
+                    f"Multiple equivalent tuples found for {tup} in bonds"
+                )
+            else:
+                tup = tups_in_topology[0]
+        return tup
+
+
+    def find_proper(tup: tuple, top: Topology) -> Tuple[int, int, int, int]:
+        """
+        Find the proper dihedral tuple in the topology that is equivalent to the given tuple.
+        If no equivalent tuple is found, it logs a warning and returns False.
+        """
+
+        if not top.proper_dihedrals.get(tup):
+            # try equivalent tuples. use the symmetries of the dihedral angle (see Grappa paper appendix):
+            # cos(phi_{ijkl}) = cos(phi_{lkji}) (reversal)
+            # = cos(phi_{ljki}) = cos(phi_{ikjl}) (permutation of the outer atoms)
+            equivalent_tups = [
+                tuple(reversed(tup)),
+                (tup[3], tup[1], tup[2], tup[0]),
+                (tup[0], tup[2], tup[1], tup[3]),
+            ]
+            
+            tups_in_topology = list([tup_eq for tup_eq in equivalent_tups if top.proper_dihedrals.get(tup_eq)])
+
+            if len(tups_in_topology) == 0:
+                logging.warning(
+                    f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
+                )
+                return None
+            elif len(tups_in_topology) > 1:
+                logging.warning(
+                    f"Multiple equivalent tuples found for {tup} in proper dihedrals"
+                )
+            else:
+                tup = tups_in_topology[0]

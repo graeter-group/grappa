@@ -24,6 +24,10 @@ class GromacsGrappa(Grappa):
         - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
     
     """
+    def __init__(self, *args, **kwargs):
+        assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
+        return super().__init__(*args, **kwargs)
+
     def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, charge_model:str='amber99', plot_parameters:bool=False):
         """
         Creates a .top file with the grappa-predicted parameters for the topology
