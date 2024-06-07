@@ -5,7 +5,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
 
 source_path="$SCRIPT_DIR/../../../old_data/datasets/PDBDatasets"
-target_path="$SCRIPT_DIR/../../data/grappa_datasets"
+target_path="$SCRIPT_DIR/../../data/datasets"
 
 
 # List of dataset names
@@ -13,7 +13,7 @@ target_path="$SCRIPT_DIR/../../data/grappa_datasets"
 datasets=('radical_dipeptides')
 
 # target_ds_names=('Capped_AA_opt_rad' 'Capped_AA_scan_rad' 'Capped_AA_rad' 'dipeptide_rad')
-target_ds_names=('dipeptide_rad')
+target_ds_names=('dipeptides-radical-300K')
 
 # Define the string for README.md
 # readme_content=(

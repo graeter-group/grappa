@@ -13,14 +13,11 @@ import json
 import importlib
 
 
-
 class Molecule():
     """
-    A dataclass representing a molecule for use in GRAPPA (Graph-based Parameters for Proteins and beyond) simulations.
+    A class representing a molecular graph.
 
-    This class stores various molecular structures such as atoms, bonds, angles, torsions, and additional features 
-    necessary for molecular dynamics simulations. It includes methods to handle both proper and improper torsions 
-    and maintains an optional internal dictionary for neighbor relationships.
+    This class stores the molecular graph and its subgraphs (ie atoms, bonds, angles, torsions), and additional features such as partial charges and ring membership.
 
     Attributes:
         atoms (np.ndarray[int] of shape (n_atoms)): A list or array of atom identifiers. These identifiers are unique but 

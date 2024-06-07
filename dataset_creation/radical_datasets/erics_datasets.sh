@@ -11,7 +11,7 @@ target_path="$SCRIPT_DIR/../../data/datasets"
 # List of dataset names
 datasets=("AA_radical")
 
-target_ds_names=("AA_bondbreak_rad_amber99sbildn")
+target_ds_names=("bondbreak-radical-peptides-300K")
 
 # Loop through each dataset name
 for i in "${!datasets[@]}"; do

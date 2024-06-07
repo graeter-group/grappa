@@ -12,7 +12,7 @@ target_path="$SCRIPT_DIR/../../data/datasets"
 datasets=('collagen')
 # datasets=("tripeptides")
 
-target_ds_names=('hyp-dop_amber99sbildn')
+target_ds_names=('dipeptides-hyp-dop-300K-amber99')
 # target_ds_names=('tripeptides_openff120')
 
 forcefields=("amber99sbildn*")
