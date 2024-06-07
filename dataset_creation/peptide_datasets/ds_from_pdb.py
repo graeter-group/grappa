@@ -11,6 +11,14 @@ import tempfile
 from openmm.app import PDBFile
 from grappa.utils import openmm_utils, openff_utils
 
+oneletter_code = {
+        "ALA":"A", "ARG":"R", "ASN":"N", "ASP":"D", "CYS":"C", "GLN":"Q", "GLU":"E", "GLY":"G", "HIS":"H", "ILE":"I", "LEU":"L", "LYS":"K", "MET":"M", "PHE":"F", "PRO":"P", "SER":"S", "THR":"T", "TRP":"W", "TYR":"Y", "VAL":"V",
+        "HYP": "O", "DOP": "J",
+        "ACE": "B", "NME": "Z",
+    }
+
+
+
 def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[], charge_model='amber99', with_params=False):
     print(f"Converting\n{source_path}\nto\n{target_path}")
     source_path = Path(source_path)
@@ -41,6 +49,11 @@ def main(source_path, target_path, forcefield, forcefield_type, skip_residues=[]
             pdb = data['pdb'].tolist()
             pdbstring = ''.join(pdb)
             sequence = str(data['sequence'])
+            # convert sequence:
+            # strip ACE and NME:
+            sequence = sequence.replace('ACE-', '').replace('-NME', '')
+            threeletter_AAs = sequence.split('-')
+            sequence = ''.join([oneletter_code[aa] for aa in threeletter_AAs])
 
             print(f"Processing {idx}, sequence {sequence}\t\t")#, end='\r')
             
