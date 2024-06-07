@@ -5,24 +5,23 @@ set -e # exit on first error
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
 
 source_path="$SCRIPT_DIR/../../../old_data/datasets/PDBDatasets"
-target_path="$SCRIPT_DIR/../../data/grappa_datasets"
+target_path="$SCRIPT_DIR/../../data/datasets"
 
 
 # List of dataset names
-datasets=('tripeptides' 'collagen')
+datasets=('collagen')
 # datasets=("tripeptides")
 
-target_ds_names=('tripeptides_amber99sbildn' 'hyp-dop_amber99sbildn')
+target_ds_names=('hyp-dop_amber99sbildn')
 # target_ds_names=('tripeptides_openff120')
 
-forcefields=("amber99sbildn*" "amber99sbildn*")
+forcefields=("amber99sbildn*")
 # forcefields=("openff_unconstrained-1.2.0.offxml")
 
-forcefield_types=("openmm" "openmm")
+forcefield_types=("openmm")
 # forcefield_types=("openff")
 
 readme_content=(
-    'A dataset of randomly sampled tripeptides with states sampled from MD at 300K using the amber99sbildn forcefield. Charges and thus nonbonded energies are predicted from the amber99sbildn forcefield.'
     'A dataset of all possible capped dipeptides containing hyp or dop with states sampled from MD at 300K using the amber99sbildn* forcefield. Charges and thus nonbonded energies are predicted from the amber99sbildn* forcefield.' 
     # 'A dataset of randomly sampled tripeptides with states sampled from MD at 300K using the amber99sbildn forcefield. Charges and thus nonbonded energies are predicted from the openff-1.2.0 unconstrained forcefield. The states are the same as in the tripeptides_amber99sbildn dataset.' 
     )
