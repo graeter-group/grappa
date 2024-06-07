@@ -22,9 +22,9 @@ target_ds_names=('dipeptide_rad')
 #     'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
 #     'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
 #     )
-# readme_content=(
-#     'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
-#     )
+readme_content=(
+    'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
+    )
 
 # Loop through each dataset name
 for i in "${!datasets[@]}"; do
