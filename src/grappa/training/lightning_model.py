@@ -36,9 +36,11 @@ class GrappaLightningModel(pl.LightningModule):
                  start_logging:int=0,
                 ):
         """
-        Initialize the GrappaLightningModel with specific configurations.
+        LightningModule for training a Grappa model.
 
+        ----------
         Args:
+        ----------
             model (torch.nn.Module): The neural network model to be trained.
             lr (float): Learning rate for the optimizer. Defaults to 1e-5.
             energy_weight (float): Weight of the energy component in the loss function. Defaults to 1.

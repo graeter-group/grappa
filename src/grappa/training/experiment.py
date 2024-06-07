@@ -31,8 +31,12 @@ REPO_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 class Experiment:
     """
-    Experiment class for training a Grappa model.
-    Experiment config:
+    Experiment class for training and evaluating a Grappa model.
+    
+    Application: See experiments/train.py or examples/evaluate.py.
+    Initialization: Config files as in configs/train.yaml
+    
+    Experiment config entries:
     - ckpt_path: str, path to the checkpoint to load for a pretrained model (if None, train from scratch)
     - wandb: dict, configuration for wandb logging
     - progress_bar: bool, whether to show a progress bar
@@ -59,9 +63,8 @@ class Experiment:
         self._init_model()
 
         if not str(self._experiment_cfg.checkpointer.dirpath).startswith('/'):
-            self.ckpt_dir = Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath
-        else:
-            self.ckpt_dir = Path(self._experiment_cfg.checkpointer.dirpath)
+            self._experiment_cfg.checkpointer.dirpath = str(Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath)
+        self.ckpt_dir = Path(self._experiment_cfg.checkpointer.dirpath)
 
         self.trainer = None
 
@@ -80,11 +83,13 @@ class Experiment:
         # calculate the statistics of the MM parameters in the training set for scaling NN outputs
         param_statistics = get_param_statistics(self.datamodule.train_dataloader())
 
+        # init the model and append an energy module to it, which implements the MM functional differentiably
         model = torch.nn.Sequential(
             GrappaModel(**model_cfg, param_statistics=param_statistics),
             Energy(suffix='', **energy_cfg)
         )
 
+        # wrap a lightning model around it (which handles the training procedure)
         self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in self._energy_cfg.terms if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
 
 
@@ -114,9 +119,9 @@ class Experiment:
         assert isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config), f"Expected wandb config, but got {type(logger.experiment.config)}"
         logger.experiment.config.update(flat_cfg)
 
-        if self._experiment_cfg.trainer.ckpt_path is not None:
-            if not str(self._experiment_cfg.trainer.ckpt_path).startswith('/'):
-                self._experiment_cfg.trainer.ckpt_path = Path(REPO_DIR)/self._experiment_cfg.trainer.ckpt_path
+        if self._experiment_cfg.ckpt_path is not None:
+            if not str(self._experiment_cfg.ckpt_path).startswith('/'):
+                self._experiment_cfg.ckpt_path = Path(REPO_DIR)/self._experiment_cfg.ckpt_path
 
         self.trainer = Trainer(
             **self._experiment_cfg.trainer,
@@ -163,7 +168,7 @@ class Experiment:
                 # if no checkpoints with = in the name are found, use the first checkpoint
                 all_ckpts = list(ckpt_dir.glob('*.ckpt'))
                 if len(all_ckpts) == 0:
-                    raise RuntimeError("No checkpoints found.")
+                    raise RuntimeError(f"No checkpoints found at {ckpt_dir}")
                 elif len(all_ckpts) > 1:
                     raise RuntimeError("More than one checkpoint found, but none of them have loss data.")
                 else:

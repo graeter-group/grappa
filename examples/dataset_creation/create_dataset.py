@@ -15,7 +15,7 @@ The conformational training data itself is
 
 Additionally, a molecular identifier (a string) is required to make the split into train/val/test set reproducible and reliable in the case of having several conformations of the same molecule in different subdatasets.
 
-Grappa can also be trained to be consistent with nonbonded contributions from several classical force fields. In this case, the data should be annotated by a flag describing which classical force field was used to calculate the repective nonbonded contribution.
+Grappa can also be trained to be consistent with nonbonded contributions from several classical force fields. In this case, the data should be annotated by a flag describing which classical force field was used to calculate the repective nonbonded contribution, given by the charge_model keyword in the Grappa's MolData class.
 
 In this example, we use a small dataset of QM energies and force for peptides and functionality from the grappa package to calculate the nonbonded contribution of the Amber99SBILDN force field in OpenMM. Thus, the OpenMM-Grappa installation is needed.
 """
@@ -25,6 +25,11 @@ from pathlib import Path
 
 from grappa.data import MolData
 from grappa.utils.openmm_utils import get_openmm_forcefield
+
+import logging
+# Create a custom logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 #%%
 
@@ -80,7 +85,7 @@ for i in tqdm(range(len(data))):
     # for charmm, we need a modified version that can deal with ACE and NME caps:
     system = get_openmm_forcefield('charmm36').createSystem(topology)
 
-    moldata = MolData.from_openmm_system(openmm_topology=topology, openmm_system=system, xyz=xyz, energy=energy_qm, gradient=gradient_qm, mol_id=sequence, charge_model='amber99')
+    moldata = MolData.from_openmm_system(openmm_topology=topology, openmm_system=system, xyz=xyz, energy=energy_qm, gradient=gradient_qm, mol_id=sequence, charge_model='charmm')
 
     # while not necessary for training the model, it is usually a good idea to also store the pdbfile in the MolData object to enable other users the reconstruction of the system, which will be much more difficult if residue information is lost. (simply set pdb=pdbstring as kwarg in the MolData.from_openmm_system call)
 
@@ -105,61 +110,73 @@ moldata_own_charges = MolData.from_openmm_system(openmm_topology=topology, openm
 #%%
 """
 If we want to train a grappa model, we need to store the dataset as dgl graphs and point the model towards the dataset.
-The easiest way to do so is to store the dataset at grappa.utils.dataset_utils.get_data_path()/dgl_datasets/<some_name> and give the model <some_name> as dataset tag. Then, it can be loaded by grappa.data.Dataset.from_tag('<some_name>').
+The easiest way to do so is to store the dataset at grappa.utils.get_data_path()/grappa_datasets/<some_name>/*.npz and give the model <some_name> as dataset tag. Then, it can be loaded by grappa.data.Dataset.from_tag('<some_name>').
 """
 
-from grappa.data import Dataset
 from grappa.utils.dataset_utils import get_data_path
 
-# create dgl graphs from the stored moldata objects:
-
+# load the moldata objects
 moldata_paths = list(dspath.glob("moldata_*.npz"))
+data = [MolData.load(p) for p in moldata_paths]
 
-# loop over the paths, load the moldata objects and convert them to dgl graphs
-# also store the mol_id to be able to split the dataset later on
-graphs = []
-mol_ids = []
-for p in tqdm(moldata_paths):
-    moldata = MolData.load(p)
-    graph = moldata.to_dgl()
-    graphs.append(graph)
-    mol_ids.append(moldata.mol_id)
-
-#%%
+# define the dataset name and the canonical path to store the dataset
 dsname = "example_dataset"
+dataset_folder = get_data_path()/'datasets'/dsname
 
-dataset_folder = get_data_path()/'dgl_datasets'/dsname
-
-# create a Grappa Dataset, which stores the graphs, mol_ids and the dataset name
-dataset = Dataset(graphs, mol_ids, dsname)
-
-# save the dataset
-dataset.save(dataset_folder)
+# store the moldata objects as npz files there:
+for i, moldata in enumerate(data):
+    moldata.save(dataset_folder/f"{i}.npz")
 
 #%%
-# now we can load the dataset again from the tag:
+# now we can load a processed torch dataset from the tag:
+from grappa.data import Dataset, clear_tag
+
+# if you change data, make sure to delete the old processed dataset:
+clear_tag(dsname)
+
 dataset = Dataset.from_tag(dsname)
+print("length of the dataset:", len(dataset))
 # %%
 
-# we can also train a model on this dataset:
-from grappa.training.trainrun import do_trainrun
-import yaml
+# we can also train a model on this dataset by putting its name in the train config file
+from grappa.training import Experiment
+from grappa.utils import get_repo_dir
+from omegaconf import DictConfig, OmegaConf
+from hydra import initialize, compose
+import os
+import torch
 
-# load the config:
-with open(thisdir/"grappa_config.yaml", "r") as f:
-    config = yaml.safe_load(f)
+config_dir = get_repo_dir() / "configs"
 
-config["data_config"]["datasets"] = [dsname, 'spice-dipeptide', 'hyp-dop_amber99sbildn'] # a 0.8/0.1/0.1 tr/vl/te split is used by default
-
-config["trainer_config"]["max_epochs"] = 50
+# Compute the relative path from the current directory to the config directory (hydra needs it to be relative)
+relative_path = os.path.relpath(config_dir, Path.cwd())
 
 #%%
-do_trainrun(config=config, project="grappa_example_dataset")
+initialize(config_path=relative_path)
+#%%
 
+# Get the default config for training
+config = compose(config_name="train")
+
+# set the datasets
+config.data.datasets = [dsname, 'spice-dipeptide']
+config.data.pure_train_datasets = []
+config.data.pure_val_datasets = []
+config.data.pure_test_datasets = []
+
+config.experiment.trainer.max_epochs = 50 if torch.cuda.is_available() else 5
+config.experiment.trainer.accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
+
+experiment = Experiment(config)
+experiment.train()
+#%%
+experiment.test()
+
+#%%
 """
-In case you want to create a dataset to fine tune grappa for a specific molecule or few molecules and don't want to split the dataset according to the molecule identifier but just according to different conformations, it is best practice to split the dataset yourself and create three datasets for train, val and test set and store them separately with different tags. Then set
-config["data_config"]["pure_train_datasets"] = [train_tag]
-config["data_config"]["pure_val_datasets"] = [val_tag]
-config["data_config"]["pure_test_datasets"] = [test_tag]
+In case you want to create a dataset to fine tune grappa for a single, specific molecule or few molecules and don't want to split the dataset according to the molecule identifier but just according to different conformations, it is best practice to split the dataset yourself and store three datasets for train, val and test set and store them separately with different tags. Then set
+config.data.pure_train_datasets += [train_tag]
+config.data.pure_val_datasets += [val_tag]
+config.data.pure_test_datasets += [test_tag]
 """
 # %%

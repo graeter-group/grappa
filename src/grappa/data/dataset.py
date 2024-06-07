@@ -19,7 +19,6 @@ import numpy as np
 import logging
 import torch
 from tqdm import tqdm
-import logging
 
 # inherit from torch ds:
 class Dataset(torch.utils.data.Dataset):
@@ -400,3 +399,14 @@ class Dataset(torch.utils.data.Dataset):
                 for k in list(g.nodes['n1'].data.keys()):
                     if 'gradient_' in k and not k == 'gradient_ref':
                         del g.nodes['n1'].data[k]
+
+
+def clear_tag(tag:str):
+    """
+    Deletes the dgl dataset with the given tag such that changes in the moldata files are reflected in the dataset.
+    """
+    path = dataset_utils.get_data_path()/'dgl_datasets'/tag
+    if path.exists():
+        import shutil
+        shutil.rmtree(path)
+        logging.info(f'Deleted dataset at {path}.')

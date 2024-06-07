@@ -6,6 +6,9 @@ import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     
     import openmm
+    from openmm.app import Topology
+    from openmm.app import ForceField
+
     import numpy as np
     from typing import Union, Dict, List
     from pathlib import Path
@@ -14,22 +17,23 @@ if importlib.util.find_spec('openmm') is not None:
     from grappa import units
     from typing import Tuple
     import grappa.data
+    import copy
 
 
 
-    def get_subtopology(topology:openmm.app.Topology, exclude_residues:List[str]=None)->'openmm.Topology':
+    def get_subtopology(topology:openmm.app.topology.Topology, exclude_residues:List[str]=None)->openmm.app.topology.Topology:
         """
         Returns a sub-topology of the given topology, excluding certain residues with names given in exclude_residues.
         The atom.id of the atoms in the sub-topology is the same as the atom.index in the original topology.
         """
 
-        assert isinstance(topology, openmm.app.Topology), f"Expected openmm.app.Topology, but got {type(topology)}"
+        assert isinstance(topology, openmm.app.topology.Topology), f"Expected openmm.app.topology.Topology, but got {type(topology)}"
 
         if exclude_residues is None:
             return topology
         
         # create a new topology:
-        new_topology = openmm.app.Topology()
+        new_topology = openmm.app.topology.Topology()
 
         new_topol_idx = {} # maps the old atom index to the new atom index
 
@@ -286,7 +290,7 @@ if importlib.util.find_spec('openmm') is not None:
 
 
 
-    def topology_from_pdb(pdbstring:str)->openmm.Topology:
+    def topology_from_pdb(pdbstring:str)->openmm.app.topology.Topology:
         """
         Returns an openmm topology from a pdb string in which the lines are separated by '\n'.
         """
@@ -308,7 +312,6 @@ if importlib.util.find_spec('openmm') is not None:
         - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP residue type)
         - any standard openmm forcefield
         """
-        from openmm.app import ForceField
 
         if name.endswith('.xml'):
             name = name[:-4]

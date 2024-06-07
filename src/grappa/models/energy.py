@@ -72,12 +72,13 @@ def pool_energy(g, energies, term, suffix):
 
 
 class Energy(torch.nn.Module):
-    """
-    Class that writes the bonded energy of molecule conformations into a graph. First, torsional angles, angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["energy"+write_suffix] and g.nodes["g"].data["energy_"+term+write_suffix] for each term. If gradients is True, the gradients of the total energy w.r.t. the xyz coordinates are calculated and written under g.nodes["n1"].data["gradient"+write_suffix].
-    If the internal coordiantes are not already written in the graph, calculates them using the InternalCoordinates module.
-    """
     def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True):
         """
+        Module that writes the energy of molecular conformations into a dgl graph. First, internal coordinates such as torsional angles, angles and distances are calculated, then their energy contributions are added and stored at g.nodes["g"].data["energy"] and g.nodes["g"].data["energy_"+term] for each term. The gradients of the total energy w.r.t. the xyz coordinates are calculated and stored at g.nodes["n1"].data["gradient"].
+        
+        ----------
+        Args:
+        ----------
         terms: list of terms to be considered. must be a subset of ["bond", "angle", "torsion", "improper"]
         suffix: suffix of the parameters stored in the graph.
         offset_torsion: whether to include the constant offset term (that makes the contribution positive) in the torsion energy calculation

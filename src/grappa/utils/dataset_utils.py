@@ -6,11 +6,17 @@ from pathlib import Path
 from typing import Union
 from tqdm import tqdm
 
+def get_repo_dir()->Path:
+    '''
+    Returns the path to the root of the repository.
+    '''
+    return Path(__file__).parents[3]
+
 def get_data_path()->Path:
     '''
     Returns the default path where to look for datasets.
     '''
-    return Path(__file__).parents[3] / "data"
+    return get_repo_dir() / "data"
 
 
 # NOTE: this is currently only used for the split loading... maybe delete the method.

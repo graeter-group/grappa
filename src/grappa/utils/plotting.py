@@ -1,3 +1,4 @@
+#%%
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
@@ -125,3 +126,18 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
         ax.scatter(x, y, alpha=alpha, s=s, **kwargs)
 
     return ax
+#%%
+
+# example:
+if __name__ == '__main__':
+
+    # generate points along the diagonal with noise:
+    x = np.linspace(0, 10, 100000)
+    y = x + np.random.randn(100000)
+
+    fig, ax = plt.subplots()
+    scatter_plot(ax, x, y, cluster=True, delta_factor=100)
+    plt.show()
+    fig, ax = plt.subplots()
+    scatter_plot(ax, x, y, cluster=False, s=1)
+    plt.show()

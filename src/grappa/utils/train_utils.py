@@ -14,8 +14,10 @@ def remove_module_prefix(state_dict):
 
 
 def get_model(model_config, checkpoint_path=None):
-
-    full_model = GrappaModel.model_from_config(**model_config)
+    """
+    Get the grappa model with loaded state dict, isolated from the lightning module and the energy module.
+    """
+    full_model = GrappaModel(**model_config)
 
     # add energy calculation
     full_model = torch.nn.Sequential(

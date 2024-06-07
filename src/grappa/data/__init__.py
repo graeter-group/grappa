@@ -4,3 +4,4 @@ from .mol_data import MolData
 from .dataset import Dataset
 from .graph_data_loader import GraphDataLoader
 from .grappa_data import GrappaData
+from .dataset import clear_tag

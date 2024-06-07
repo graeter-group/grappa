@@ -11,10 +11,8 @@ from dgl import DGLGraph
 from grappa import constants
 from grappa import units as grappa_units
 import traceback
+from pathlib import Path
 
-import pkgutil
-
-# NOTE: get rid of ref completely, just store all contributions of the reference ff under energy_bond_ref ...
 
 @dataclass(init=False)
 class MolData():
@@ -309,10 +307,11 @@ class MolData():
 
     
 
-    def save(self, path:str):
+    def save(self, path:Union[Path,str]):
         """
         Save the molecule to a npz file.
         """
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         d = self.to_dict()
         np.savez(path, **d)
 

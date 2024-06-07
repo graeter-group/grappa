@@ -2,7 +2,7 @@ defaults:
   - _self_
 
 experiment:
-  ckpt_path: null
+  ckpt_path: null # used for loading pretrained model weights
   wandb:
     name: benchmark-baseline
     project: grappa
@@ -18,7 +18,7 @@ experiment:
   progress_bar: true
   trainer:
     overfit_batches: 0
-    min_epochs: 50
+    min_epochs: 5
     max_epochs: 2000
     accelerator: gpu
     log_every_n_steps: 10

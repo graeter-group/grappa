@@ -26,6 +26,7 @@ methane = Molecule(atoms=atoms, bonds=bonds, impropers=impropers, partial_charge
 # - gradient: (n_confs, n_atoms, 3)     (negative QM forces)
 # - nonbonded_energy: (n_confs,)        (QM - your classical ff contribution)
 # - nonbonded_gradient: (n_confs, n_atoms, 3)
+# - mol_id: str                         (used as identifier for dataset splitting)
 
 # create some random data for the example:
 n_confs = 10
@@ -37,9 +38,4 @@ gradient = np.random.rand(n_confs, n_atoms, 3)
 nonbonded_energy = np.random.rand(n_confs)
 nonbonded_gradient = np.random.rand(n_confs, n_atoms, 3)
 
-moldata = MolData.from_arrays(molecule=methane, xyz=xyz, energy=energy, gradient=gradient, nonbonded_energy=nonbonded_energy, nonbonded_gradient=nonbonded_gradient)
-
-dgl_graph = moldata.to_dgl()
-
-print(f'Reference gradient shape: {dgl_graph.nodes["n1"].data["gradient_ref"].shape}')
-print(f'Number of angles in the DGL graph: {dgl_graph.num_nodes("n3")}')
+moldata = MolData(molecule=methane, xyz=xyz, energy=energy, gradient=gradient, nonbonded_energy=nonbonded_energy, nonbonded_gradient=nonbonded_gradient, mol_id="dummy_smilestring")

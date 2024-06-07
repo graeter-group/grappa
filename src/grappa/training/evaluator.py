@@ -165,11 +165,10 @@ class Evaluator:
     """
     Does the same as the FastEvaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, keep_data=False, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False, plot_dir:str=None):
+    def __init__(self, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False, plot_dir:str=None):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
-        self.keep_data = keep_data
         self.device = device
         self.suffix = suffix
         self.suffix_ref = suffix_ref
@@ -412,3 +411,32 @@ class Evaluator:
             fig.savefig(f'{self.plot_dir}/{dsname}_parameters.png')
 
             plt.close(fig)
+
+
+    def eval_ds(ds, ff_name:str)->Tuple[Dict[str,np.ndarray], Dict[str,np.ndarray]]:
+        """
+        Returns the metrics and the predictions for the given force field as metrics, data.
+        """
+        suffix = "_"+ff_name+"_total"
+        evaluator = Evaluator(suffix=suffix, suffix_ref="_qm")
+        for dsname, g in zip(ds.subdataset, ds.graphs):
+            if not f'energy{suffix}' in g.nodes['g'].data.keys():
+                continue
+            evaluator.step([g], [dsname])
+
+        evaluator.collect()
+
+        data = {
+            'energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_energies.items()},
+            'gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_gradients.items()},
+            'reference_energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_energies.items()},
+            'reference_gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_gradients.items()},
+            'mol_idxs': {k:np.array(v) for k,v in evaluator.mol_idxs.items()},
+        }
+
+        # flatten the dict:
+        data = dict(flatten_dict(data))
+
+        metrics = evaluator.pool(seed=42, n_bootstrap=1000)
+
+        return metrics, data

@@ -111,13 +111,6 @@ npy_charge_dicts/
 **/model.pt
 **/model.pth
 
-mains/runs
-mains/tests/load_splits
-mains/tests/psi4/compare_spice/1
-mains/**.png
-mains/**.npy
-mains/**.out
-
 *.clean
 *.png
 *.pickle
@@ -138,7 +131,7 @@ mains/**.out
 !dataset_creation/get_espaloma_split/te_smiles.json
 !dataset_creation/get_espaloma_split/vl_smiles.json
 !docs/figures/*.png
-!examples/dataset_creation/*/*.npz
+!examples/dataset_creation/*/example_data*.npz
 
 examples/dataset_creation/*/*.pdb
 

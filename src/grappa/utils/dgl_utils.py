@@ -70,6 +70,8 @@ def unbatch(batched_graph: DGLGraph) -> List[DGLGraph]:
     Also deletes all dummy conformations.
     """
     subgraphs = dgl.unbatch(batched_graph)
+    if len(subgraphs) == 1:
+        return subgraphs
     n1_offsets = torch.cumsum(
         torch.tensor([0] + [g.num_nodes('n1') for g in subgraphs[:-1]]), dim=0
     )

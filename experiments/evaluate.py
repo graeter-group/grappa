@@ -2,6 +2,7 @@ from grappa.training.experiment import Experiment
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path
+import torch
 
 @hydra.main(version_base=None, config_path=str(Path(__file__).parent/"../configs"), config_name="evaluate")
 def main(cfg: DictConfig) -> None:
@@ -17,6 +18,11 @@ def main(cfg: DictConfig) -> None:
 
     # replace the checkpoint dir in ckpt_cfg with the one from the checkpoint path:
     ckpt_cfg.experiment.checkpointer.dirpath = ckpt_path.parent
+
+    ckpt_cfg.experiment.trainer.accelerator = cfg.accelerator
+
+    if not torch.cuda.is_available():
+        ckpt_cfg.experiment.trainer.accelerator = 'cpu'
 
     experiment = Experiment(config=ckpt_cfg)
     experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path)
