@@ -74,15 +74,26 @@ def main(source_path, target_path):
             total_mols += 1
             total_confs += len(energy)
 
+            
+            oneletter_code = {
+                "ALA":"A", "ARG":"R", "ASN":"N", "ASP":"D", "CYS":"C", "GLN":"Q", "GLU":"E", "GLY":"G", "HIS":"H", "ILE":"I", "LEU":"L", "LYS":"K", "MET":"M", "PHE":"F", "PRO":"P", "SER":"S", "THR":"T", "TRP":"W", "TYR":"Y", "VAL":"V",
+                "HYP": "O", "DOP": "J",
+                "ACE": "B", "NME": "Z",
+                "HID": "1", "HIP": "2", "HIE": "H",
+                "ASH": "3", "GLH": "4",
+                "LYN": "5", "CYX": "6",
+            }
+            
+            # convert sequence:
+            # strip ACE and NME:
+            sequence = sequence.replace('ACE-', '').replace('-NME', '')
+            threeletter_AAs = sequence.split('-')
+            sequence = ''.join([oneletter_code[aa] for aa in threeletter_AAs])
+            sequence += '_radical'
+
             print(f"Processing {idx}, sequence: {sequence}")
 
-
-            # create moldata object without amber99 parameters
-            moldata = MolData.from_arrays(molecule=mol, xyz=xyz, gradient=gradient, energy=energy, sequence=sequence, nonbonded_energy=energy_nonbonded, nonbonded_gradient=gradient_nonbonded, ff_energy=energy_total_ff-energy_nonbonded, ff_gradient=gradient_total_ff-gradient_nonbonded)
-
-            moldata.molecule.add_features(['ring_encoding'])
-
-            moldata.pdb = pdbstring
+            moldata = MolData(molecule=mol, xyz=xyz, gradient=gradient, energy=energy, sequence=sequence, ff_energy={'reference_ff':{'nonbonded':energy_nonbonded}}, ff_gradient={'reference_ff':{'nonbonded':gradient_nonbonded}}, pdb=pdbstring, mol_id=sequence)
 
             moldata.save(target_path/(molfile.stem+'.npz'))
 
