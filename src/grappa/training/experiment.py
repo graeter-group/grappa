@@ -138,7 +138,7 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=1000, test_data_path:Path=None):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
@@ -187,6 +187,9 @@ class Experiment:
         )
 
         summary = self.grappa_module.test_summary
+        if not self.datamodule.num_test_mols is None:
+            for dsname in summary.keys():
+                summary[dsname]['n_mols'] = self.datamodule.num_test_mols[dsname]
 
         # Save the summary:
         with(open(self.ckpt_dir / 'summary.json', 'w')) as f:
@@ -196,8 +199,8 @@ class Experiment:
         for k, v in summary.items():
             if isinstance(v, dict):
                 for kk, vv in v.items():
-                    if isinstance(vv, dict):
-                        wandb_summary[f"{k}/test/{kk}"] = round(vv['mean'], 3)
+                    wandb_summary[f"{k}/test/{kk}"] = round(vv['mean'], 3) if isinstance(vv, dict) else round(vv, 3)
+
 
         # we do not log via wandb because this will create a chart for each test metric
         logging.info("Test summary:\n\n" + "\n".join([f"{k}:{' '*max(1, 50-len(k))}{v}" for k, v in wandb_summary.items()]))

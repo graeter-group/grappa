@@ -1,7 +1,7 @@
 defaults:
   - _self_
 
-ckpt_path: /local/user/seutelf/grappa/ckpt/grappa/example/2024-06-06_13-11-33/epoch=4-early_stopping_loss=6.078e+01.ckpt
-n_bootstrap: 1000
+ckpt_path: /local/user/seutelf/grappa/ckpt/grappa/benchmark-baseline/2024-06-08_12-50-05/epoch=4-early_stopping_loss=3.820e+01.ckpt
+n_bootstrap: null
 test_data_path: null
-accelerator: 'gpu' # set to 'cpu' for CPU inference
+accelerator: 'gpu'

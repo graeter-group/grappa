@@ -15,6 +15,7 @@ from pathlib import Path
 
 from typing import List, Union, Tuple, Dict
 
+import copy
 import numpy as np
 import logging
 import torch
@@ -40,6 +41,7 @@ class Dataset(torch.utils.data.Dataset):
         self.mol_ids = mol_ids
         self.subdataset = subdataset
         assert len(graphs) == len(mol_ids) == len(subdataset)
+        self.num_mols = None # keep track of original number of molecules if self.apply_max_confs is called
 
     @classmethod
     def from_tag(cls, tag:str):
@@ -399,6 +401,50 @@ class Dataset(torch.utils.data.Dataset):
                 for k in list(g.nodes['n1'].data.keys()):
                     if 'gradient_' in k and not k == 'gradient_ref':
                         del g.nodes['n1'].data[k]
+
+    
+    # since all confs are returned in the test dataloader, batches could become too large for the GPU memory. Therefore, we restrict the number of conformations to val_conf_strategy and split individual molecules into multiple entries if necessary
+    def apply_max_confs(self, confs:Union[int, str]):
+
+        self.num_mols = None # keep track of original number of molecules
+
+        if confs in ['max', 'all']:
+            return self
+        
+        if isinstance(confs, int):
+            self.num_mols = {}
+            new_graphs, new_mol_ids, new_subdatasets = [], [], []
+            for (g, dsname, mol_id) in zip(self.graphs, self.subdataset, self.mol_ids):
+                self.num_mols[dsname] = self.num_mols.get(dsname, 0) + 1
+                if g.nodes['g'].data['energy_qm'].flatten().shape[0] > confs:
+                    num_graphs = g.nodes['g'].data['energy_qm'].flatten().shape[0] // confs
+                    base_graphs = [copy.deepcopy(g) for _ in range(num_graphs)]
+                    # split the tensors with conf dimension:
+                    conf_entries = [('n1', 'xyz')]
+                    for feat in g.nodes['g'].data.keys():
+                        if feat.startswith('energy_'):
+                            conf_entries.append(('g', feat))
+                    for feat in g.nodes['n1'].data.keys():
+                        if feat.startswith('gradient_'):
+                            conf_entries.append(('n1', feat))
+                    for lvl, feat in conf_entries:
+                        base_graphs[0].nodes[lvl].data[feat] = base_graphs[0].nodes[lvl].data[feat][:, :confs]
+                        base_graphs[-1].nodes[lvl].data[feat] = base_graphs[-1].nodes[lvl].data[feat][:, -(g.nodes[lvl].data[feat].shape[1] % confs):]
+                        for i in range(1, num_graphs-1):
+                            base_graphs[i].nodes[lvl].data[feat] = g.nodes[lvl].data[feat][:, i*confs:(i+1)*confs]
+                        
+                    new_graphs += base_graphs
+                    new_mol_ids += [mol_id]*num_graphs
+                    new_subdatasets += [dsname]*num_graphs
+                else:
+                    new_graphs.append(g)
+                    new_mol_ids.append(mol_id)
+                    new_subdatasets.append(dsname)
+
+        self.graphs = new_graphs
+        self.mol_ids = new_mol_ids
+        self.subdataset = new_subdatasets
+        return self        
 
 
 def clear_tag(tag:str):

@@ -21,9 +21,9 @@ class GrappaData(pl.LightningDataModule):
                  val_batch_size: int = 32,
                  test_batch_size: int = 1,
                  ref_terms: List[str] = ['nonbonded'],
-                 train_loader_workers: int = 1,
-                 val_loader_workers: int = 1,
-                 test_loader_workers: int = 1,
+                 train_loader_workers: int = 4,
+                 val_loader_workers: int = 4,
+                 test_loader_workers: int = 4,
                  conf_strategy: Union[str, int] = 32,
                  ff_lookup: Dict[str, str] = {},
                  seed: int = 0,
@@ -95,6 +95,7 @@ class GrappaData(pl.LightningDataModule):
         self.ff_lookup = ff_lookup
 
         self.train_cleanup = True # set this to manually to False if you want to keep the reference ff data in the training set (e.g. for evaluating the reference data on the training set)
+        self.num_test_mols = None # number of molecules in the test set, we might need to keep track of this for the evaluation
 
         self.is_set_up = False
 
@@ -171,6 +172,10 @@ class GrappaData(pl.LightningDataModule):
         self.vl = Dataset.concatenate(self.vl, *pure_val_sets)
         self.te = Dataset.concatenate(self.te, *pure_test_sets)
 
+        # since all confs are returned in the test dataloader, batches could become too large for the GPU memory. Therefore, we restrict the number of conformations to val_conf_strategy and split individual molecules into multiple entries if necessary
+        self.te.apply_max_confs(confs=self.val_conf_strategy)
+        self.num_test_mols = self.te.num_mols
+
         if self.tr_subsampling_factor is not None:
             if self.tr_subsampling_factor == 0.:
                 logging.warning("Subsampling factor is 0, training set will be empty.")
@@ -228,4 +233,6 @@ class GrappaData(pl.LightningDataModule):
         return GraphDataLoader(self.vl, batch_size=self.val_batch_size, shuffle=False, num_workers=self.val_loader_workers, pin_memory=self.pin_memory, conf_strategy=self.val_conf_strategy, drop_last=False)
 
     def test_dataloader(self):
+        # since the conf_strategy is 'max', the test loader will always load all conformations
+        # thus, the batchsize should be 1, otherwise, could throw an error if two molecules form the same batch have different number of conformations
         return GraphDataLoader(self.te, batch_size=self.test_batch_size, shuffle=False, num_workers=self.test_loader_workers, pin_memory=self.pin_memory, conf_strategy='max', drop_last=False)

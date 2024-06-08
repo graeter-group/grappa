@@ -317,13 +317,13 @@ if importlib.util.find_spec('openmm') is not None:
             name = name[:-4]
         
         if name in ['charmm36', 'charmm36-jul2022']:
-            ff_path = Path(__file__).parent / Path("charmm36-jul2022.xml")
+            ff_path = Path(__file__).parent / "classical_forcefields" / Path("charmm36-jul2022.xml")
             return ForceField(str(ff_path))
 
         elif name == 'amber99sbildn*' or name == 'amber99sbildn-star':
             from grappa.utils import hyp_dop_utility
 
-            ff_path = Path(__file__).parent / Path("amber99sbildn-star_.xml")
+            ff_path = Path(__file__).parent / "classical_forcefields" / Path("amber99sbildn-star_.xml")
 
             class HypDopOpenmmForceField:
                 """

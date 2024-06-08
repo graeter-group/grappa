@@ -262,6 +262,10 @@ class Evaluator:
 
 
     def collect(self, bootstrap_seed=None):
+        """
+        Concatenates the tensors for each dataset and stores them in self.all_energies and self.all_gradients.
+        If bootstrap_seed is not None, the data is bootstrapped.
+        """
 
         if bootstrap_seed is not None:
             # choose with replacement:
@@ -315,13 +319,13 @@ class Evaluator:
                     self.all_ref_classical_gradients[dsname] = torch.cat([self.ref_classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
 
-    def pool(self, n_bootstrap=0, seed=0)->dict:
+    def pool(self, n_bootstrap=None, seed=0)->dict:
         """
         If n_bootstrap == 0, the metrics are calculated once and returned.
         If n_bootstrap > 0, the metrics are calculated n_bootstrap times with different bootstrap samples and the mean and std of the metric values averaged over the bootstrap versions of the dataset are returned as {'dsname': {'metric1': {'mean': float, 'std': float}, 'metric2': {'mean': float, 'std': float}, ...}}
         """
 
-        if n_bootstrap > 0:
+        if n_bootstrap is not None and n_bootstrap > 0:
             logging.info("Calculating bootstrapped metrics... This may take a while.")
             # first take the full dataset:
             self.collect()

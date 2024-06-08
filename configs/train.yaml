@@ -31,10 +31,10 @@ data:
     - spice-pubchem
     - gen2
     - gen2-torsion
-    - rna-diverse
     - spice-dipeptide
     - protein-torsion
     - pepconf-dlc
+    - rna-diverse
   pure_test_datasets:
     - rna-trinucleotide
   pure_val_datasets: []
@@ -46,8 +46,9 @@ data:
   val_batch_size: 32
   ref_terms:
     - nonbonded
-  train_loader_workers: 2
-  val_loader_workers: 1
+  train_loader_workers: 4
+  val_loader_workers: 4
+  test_loader_workers: 4
   conf_strategy: 32
   ff_lookup: {}
   seed: 0
