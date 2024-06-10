@@ -11913,7 +11913,7 @@
    <Bond from="4" to="6"/>
    <Bond from="4" to="7"/>
    <Bond from="9" to="8"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="DARG">
@@ -11964,7 +11964,7 @@
    <Bond from="19" to="21"/>
    <Bond from="23" to="22"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="DASN">
@@ -11995,7 +11995,7 @@
    <Bond from="9" to="11"/>
    <Bond from="12" to="13"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="DASP">
@@ -12022,7 +12022,7 @@
    <Bond from="4" to="6"/>
    <Bond from="11" to="10"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="DCYS">
@@ -12047,7 +12047,7 @@
    <Bond from="4" to="6"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="9"/>
-   <ExternalBond from="9"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="DGLN">
@@ -12084,7 +12084,7 @@
    <Bond from="12" to="14"/>
    <Bond from="16" to="15"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DGLU">
@@ -12117,7 +12117,7 @@
    <Bond from="7" to="9"/>
    <Bond from="14" to="13"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="DGLY">
@@ -12134,7 +12134,7 @@
    <Bond from="2" to="3"/>
    <Bond from="2" to="4"/>
    <Bond from="6" to="5"/>
-   <ExternalBond from="5"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="5"/>
   </Residue>
   <Residue name="DHSD">
@@ -12172,7 +12172,7 @@
    <Bond from="16" to="15"/>
    <Bond from="9" to="13"/>
    <Bond from="10" to="12"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DHSE">
@@ -12210,7 +12210,7 @@
    <Bond from="16" to="15"/>
    <Bond from="13" to="8"/>
    <Bond from="9" to="7"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DHSP">
@@ -12250,7 +12250,7 @@
    <Bond from="17" to="16"/>
    <Bond from="7" to="9"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="DILE">
@@ -12291,7 +12291,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DLEU">
@@ -12332,7 +12332,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DLYS">
@@ -12379,7 +12379,7 @@
    <Bond from="16" to="17"/>
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="DMET">
@@ -12416,7 +12416,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DPHE">
@@ -12460,7 +12460,7 @@
    <Bond from="16" to="14"/>
    <Bond from="16" to="17"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DPRO">
@@ -12492,7 +12492,7 @@
    <Bond from="7" to="6"/>
    <Bond from="8" to="6"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="DSER">
@@ -12517,7 +12517,7 @@
    <Bond from="4" to="6"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="9"/>
-   <ExternalBond from="9"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="DTHR">
@@ -12548,7 +12548,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="DTRP">
@@ -12601,7 +12601,7 @@
    <Bond from="12" to="13"/>
    <Bond from="16" to="14"/>
    <Bond from="20" to="18"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="DTYR">
@@ -12647,7 +12647,7 @@
    <Bond from="8" to="7"/>
    <Bond from="10" to="12"/>
    <Bond from="17" to="15"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="DVAL">
@@ -12682,7 +12682,7 @@
    <Bond from="10" to="12"/>
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="FE1A">
@@ -12984,6 +12984,7 @@
    <Bond from="20" to="22"/>
    <Bond from="7" to="19"/>
    <Bond from="5" to="6"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="7"/>
   </Residue>
   <Residue name="CGU">
@@ -13023,7 +13024,7 @@
    <Bond from="9" to="10"/>
    <Bond from="12" to="13"/>
    <Bond from="7" to="12"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="CGUP">
@@ -13065,7 +13066,7 @@
    <Bond from="9" to="10"/>
    <Bond from="13" to="14"/>
    <Bond from="7" to="13"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="CME">
@@ -13096,7 +13097,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="MACE">
@@ -13124,6 +13125,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <ExternalBond from="1"/>
+   <ExternalBond from="2"/>
   </Residue>
   <Residue name="MAMI">
    <Atom name="N1" type="624"/>
@@ -13190,7 +13192,7 @@
    <Bond from="19" to="21"/>
    <Bond from="19" to="22"/>
    <Bond from="24" to="23"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="TP2Z">
@@ -13232,6 +13234,7 @@
    <Bond from="16" to="17"/>
    <Bond from="16" to="18"/>
    <Bond from="7" to="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="7"/>
   </Residue>
   <Residue name="004">
@@ -13269,7 +13272,7 @@
    <Bond from="4" to="7"/>
    <Bond from="5" to="9"/>
    <Bond from="11" to="13"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="0A1">
@@ -13321,7 +13324,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="0AF">
@@ -13376,7 +13379,7 @@
    <Bond from="10" to="13"/>
    <Bond from="17" to="19"/>
    <Bond from="14" to="21"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="0BN">
@@ -13432,7 +13435,7 @@
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
    <Bond from="17" to="21"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="0TD">
@@ -13467,7 +13470,7 @@
    <Bond from="11" to="13"/>
    <Bond from="15" to="14"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="143">
@@ -13525,7 +13528,7 @@
    <Bond from="22" to="23"/>
    <Bond from="26" to="25"/>
    <Bond from="22" to="24"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="26P">
@@ -13568,7 +13571,7 @@
    <Bond from="19" to="18"/>
    <Bond from="13" to="14"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="2AG">
@@ -13599,7 +13602,7 @@
    <Bond from="9" to="11"/>
    <Bond from="13" to="12"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="2AS">
@@ -13632,7 +13635,7 @@
    <Bond from="9" to="12"/>
    <Bond from="14" to="13"/>
    <Bond from="6" to="7"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="2CO">
@@ -13661,7 +13664,7 @@
    <Bond from="8" to="9"/>
    <Bond from="9" to="10"/>
    <Bond from="12" to="11"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="2FM">
@@ -13698,7 +13701,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="2GX">
@@ -13763,7 +13766,7 @@
    <Bond from="6" to="9"/>
    <Bond from="7" to="11"/>
    <Bond from="13" to="15"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="2HF">
@@ -13803,7 +13806,7 @@
    <Bond from="17" to="16"/>
    <Bond from="8" to="12"/>
    <Bond from="7" to="10"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="2HFD">
@@ -13841,7 +13844,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="2HFE">
@@ -13879,7 +13882,7 @@
    <Bond from="16" to="15"/>
    <Bond from="10" to="13"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="2MR">
@@ -13942,7 +13945,7 @@
    <Bond from="24" to="27"/>
    <Bond from="29" to="28"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="2NP">
@@ -13989,7 +13992,7 @@
    <Bond from="21" to="20"/>
    <Bond from="13" to="15"/>
    <Bond from="14" to="18"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="32T">
@@ -14036,7 +14039,7 @@
    <Bond from="7" to="8"/>
    <Bond from="13" to="10"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="3CF">
@@ -14082,7 +14085,7 @@
    <Bond from="10" to="15"/>
    <Bond from="12" to="17"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="3FG">
@@ -14124,7 +14127,7 @@
    <Bond from="4" to="7"/>
    <Bond from="14" to="9"/>
    <Bond from="5" to="11"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="3GL">
@@ -14159,7 +14162,7 @@
    <Bond from="11" to="13"/>
    <Bond from="15" to="14"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="4CF">
@@ -14205,7 +14208,7 @@
    <Bond from="8" to="7"/>
    <Bond from="12" to="16"/>
    <Bond from="17" to="18"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="4CY">
@@ -14238,7 +14241,7 @@
    <Bond from="10" to="11"/>
    <Bond from="14" to="13"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="4FB">
@@ -14270,7 +14273,7 @@
    <Bond from="9" to="10"/>
    <Bond from="9" to="11"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="4FW">
@@ -14323,7 +14326,7 @@
    <Bond from="14" to="18"/>
    <Bond from="20" to="16"/>
    <Bond from="10" to="13"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="4HH">
@@ -14430,7 +14433,7 @@
    <Bond from="8" to="10"/>
    <Bond from="28" to="29"/>
    <Bond from="38" to="39"/>
-   <ExternalBond from="50"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="50"/>
   </Residue>
   <Residue name="4HMP">
@@ -14482,7 +14485,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="4HT">
@@ -14537,7 +14540,7 @@
    <Bond from="10" to="13"/>
    <Bond from="16" to="19"/>
    <Bond from="14" to="21"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="4IN">
@@ -14594,7 +14597,7 @@
    <Bond from="10" to="13"/>
    <Bond from="18" to="16"/>
    <Bond from="14" to="22"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="4PH">
@@ -14644,7 +14647,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="5CS">
@@ -14706,7 +14709,7 @@
    <Bond from="24" to="25"/>
    <Bond from="28" to="27"/>
    <Bond from="24" to="26"/>
-   <ExternalBond from="27"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="27"/>
   </Residue>
   <Residue name="5CT">
@@ -14785,7 +14788,7 @@
    <Bond from="32" to="34"/>
    <Bond from="32" to="35"/>
    <Bond from="37" to="36"/>
-   <ExternalBond from="36"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="36"/>
   </Residue>
   <Residue name="6CL">
@@ -14836,7 +14839,7 @@
    <Bond from="16" to="19"/>
    <Bond from="23" to="22"/>
    <Bond from="15" to="21"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="6V1">
@@ -14894,7 +14897,7 @@
    <Bond from="26" to="25"/>
    <Bond from="10" to="11"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="8LJ">
@@ -14922,7 +14925,7 @@
    <Bond from="7" to="9"/>
    <Bond from="10" to="11"/>
    <Bond from="3" to="5"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="9R1">
@@ -14973,7 +14976,7 @@
    <Bond from="19" to="21"/>
    <Bond from="23" to="22"/>
    <Bond from="19" to="20"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="AA4">
@@ -15010,7 +15013,7 @@
    <Bond from="10" to="13"/>
    <Bond from="13" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="ABA">
@@ -15039,7 +15042,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="12" to="11"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="ACZ">
@@ -15099,7 +15102,7 @@
    <Bond from="27" to="26"/>
    <Bond from="12" to="16"/>
    <Bond from="14" to="18"/>
-   <ExternalBond from="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="26"/>
   </Residue>
   <Residue name="AGM">
@@ -15156,7 +15159,7 @@
    <Bond from="22" to="24"/>
    <Bond from="26" to="25"/>
    <Bond from="18" to="22"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="AGT">
@@ -15227,7 +15230,7 @@
    <Bond from="28" to="30"/>
    <Bond from="28" to="31"/>
    <Bond from="33" to="32"/>
-   <ExternalBond from="32"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="32"/>
   </Residue>
   <Residue name="AHB">
@@ -15260,7 +15263,7 @@
    <Bond from="10" to="12"/>
    <Bond from="14" to="13"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="AHP">
@@ -15307,7 +15310,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="AIB">
@@ -15336,7 +15339,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="AIBD">
@@ -15443,7 +15446,7 @@
    <Bond from="21" to="22"/>
    <Bond from="21" to="23"/>
    <Bond from="25" to="24"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="ALN">
@@ -15500,7 +15503,7 @@
    <Bond from="22" to="16"/>
    <Bond from="7" to="9"/>
    <Bond from="18" to="14"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="ALO">
@@ -15531,7 +15534,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="ALS">
@@ -15564,7 +15567,7 @@
    <Bond from="14" to="13"/>
    <Bond from="9" to="10"/>
    <Bond from="9" to="11"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="ALY">
@@ -15619,7 +15622,7 @@
    <Bond from="20" to="21"/>
    <Bond from="20" to="22"/>
    <Bond from="20" to="23"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="ANTH">
@@ -15689,7 +15692,7 @@
    <Bond from="18" to="13"/>
    <Bond from="14" to="24"/>
    <Bond from="22" to="28"/>
-   <ExternalBond from="30"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="30"/>
   </Residue>
   <Residue name="APD">
@@ -15739,7 +15742,7 @@
    <Bond from="7" to="10"/>
    <Bond from="8" to="12"/>
    <Bond from="14" to="15"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="APK">
@@ -15853,7 +15856,7 @@
    <Bond from="45" to="44"/>
    <Bond from="43" to="42"/>
    <Bond from="39" to="41"/>
-   <ExternalBond from="52"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="52"/>
   </Residue>
   <Residue name="APM">
@@ -15909,7 +15912,7 @@
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
    <Bond from="17" to="18"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="ARO">
@@ -15962,7 +15965,7 @@
    <Bond from="20" to="22"/>
    <Bond from="24" to="23"/>
    <Bond from="16" to="17"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="AS2">
@@ -15989,7 +15992,7 @@
    <Bond from="7" to="8"/>
    <Bond from="11" to="10"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="ASB">
@@ -16028,7 +16031,7 @@
    <Bond from="17" to="16"/>
    <Bond from="13" to="15"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="ASL">
@@ -16073,7 +16076,7 @@
    <Bond from="20" to="19"/>
    <Bond from="7" to="8"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="ASPM">
@@ -16106,7 +16109,7 @@
    <Bond from="3" to="6"/>
    <Bond from="14" to="13"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="AYA">
@@ -16141,7 +16144,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="15"/>
    <Bond from="4" to="5"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="AZDA">
@@ -16168,7 +16171,7 @@
    <Bond from="11" to="10"/>
    <Bond from="7" to="8"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="AZH">
@@ -16201,7 +16204,7 @@
    <Bond from="14" to="13"/>
    <Bond from="10" to="11"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="B2H">
@@ -16291,7 +16294,6 @@
    <Bond from="31" to="33"/>
    <Bond from="12" to="13"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="40"/>
    <ExternalBond from="0"/>
    <ExternalBond from="40"/>
   </Residue>
@@ -16321,7 +16323,6 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="11"/>
    <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
@@ -16361,7 +16362,6 @@
    <Bond from="13" to="16"/>
    <Bond from="16" to="17"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="16"/>
    <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
@@ -16415,7 +16415,6 @@
    <Bond from="20" to="22"/>
    <Bond from="20" to="23"/>
    <Bond from="23" to="24"/>
-   <ExternalBond from="23"/>
    <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
@@ -16447,7 +16446,6 @@
    <Bond from="9" to="11"/>
    <Bond from="9" to="12"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="12"/>
    <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
@@ -16485,7 +16483,6 @@
    <Bond from="12" to="15"/>
    <Bond from="15" to="16"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="15"/>
    <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
@@ -16538,7 +16535,6 @@
    <Bond from="7" to="8"/>
    <Bond from="12" to="15"/>
    <Bond from="10" to="17"/>
-   <ExternalBond from="22"/>
    <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
@@ -16585,7 +16581,7 @@
    <Bond from="8" to="11"/>
    <Bond from="9" to="13"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="BCS">
@@ -16637,7 +16633,7 @@
    <Bond from="11" to="12"/>
    <Bond from="16" to="20"/>
    <Bond from="14" to="18"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="BHD">
@@ -16666,7 +16662,7 @@
    <Bond from="7" to="8"/>
    <Bond from="12" to="11"/>
    <Bond from="6" to="9"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="BIF">
@@ -16731,7 +16727,7 @@
    <Bond from="24" to="26"/>
    <Bond from="22" to="18"/>
    <Bond from="17" to="20"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="BTH3">
@@ -16782,7 +16778,7 @@
    <Bond from="8" to="13"/>
    <Bond from="11" to="15"/>
    <Bond from="17" to="19"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="BUG">
@@ -16823,7 +16819,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="BXT">
@@ -16874,7 +16870,7 @@
    <Bond from="18" to="21"/>
    <Bond from="23" to="22"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="CAN">
@@ -16909,7 +16905,7 @@
    <Bond from="11" to="12"/>
    <Bond from="11" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="CCS">
@@ -16944,7 +16940,7 @@
    <Bond from="11" to="12"/>
    <Bond from="15" to="14"/>
    <Bond from="11" to="13"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="CGV">
@@ -16981,7 +16977,7 @@
    <Bond from="12" to="13"/>
    <Bond from="16" to="15"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="CH6">
@@ -17066,7 +17062,6 @@
    <Bond from="31" to="35"/>
    <Bond from="29" to="33"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="38"/>
    <ExternalBond from="0"/>
    <ExternalBond from="38"/>
   </Residue>
@@ -17117,7 +17112,7 @@
    <Bond from="18" to="19"/>
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="CIR">
@@ -17164,7 +17159,7 @@
    <Bond from="17" to="19"/>
    <Bond from="21" to="20"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="CML">
@@ -17209,7 +17204,7 @@
    <Bond from="20" to="19"/>
    <Bond from="10" to="11"/>
    <Bond from="16" to="18"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="CNP2">
@@ -17255,7 +17250,7 @@
    <Bond from="17" to="13"/>
    <Bond from="11" to="15"/>
    <Bond from="9" to="10"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="CPA3">
@@ -17305,7 +17300,7 @@
    <Bond from="18" to="19"/>
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="CR2">
@@ -17370,7 +17365,6 @@
    <Bond from="21" to="25"/>
    <Bond from="19" to="23"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="28"/>
    <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
@@ -17457,7 +17451,6 @@
    <Bond from="13" to="9"/>
    <Bond from="30" to="33"/>
    <Bond from="37" to="35"/>
-   <ExternalBond from="38"/>
    <ExternalBond from="0"/>
    <ExternalBond from="38"/>
   </Residue>
@@ -17544,7 +17537,6 @@
    <Bond from="9" to="10"/>
    <Bond from="38" to="39"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="38"/>
    <ExternalBond from="0"/>
    <ExternalBond from="38"/>
   </Residue>
@@ -17624,7 +17616,6 @@
    <Bond from="9" to="10"/>
    <Bond from="35" to="36"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="35"/>
    <ExternalBond from="0"/>
    <ExternalBond from="35"/>
   </Residue>
@@ -17706,7 +17697,6 @@
    <Bond from="19" to="20"/>
    <Bond from="8" to="9"/>
    <Bond from="36" to="37"/>
-   <ExternalBond from="36"/>
    <ExternalBond from="0"/>
    <ExternalBond from="36"/>
   </Residue>
@@ -17748,7 +17738,7 @@
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="CSO">
@@ -17775,7 +17765,7 @@
    <Bond from="7" to="8"/>
    <Bond from="8" to="9"/>
    <Bond from="11" to="10"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="CSS">
@@ -17802,7 +17792,7 @@
    <Bond from="7" to="8"/>
    <Bond from="8" to="9"/>
    <Bond from="11" to="10"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="CSU">
@@ -17833,7 +17823,7 @@
    <Bond from="13" to="12"/>
    <Bond from="8" to="9"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="CSX">
@@ -17858,7 +17848,7 @@
    <Bond from="4" to="7"/>
    <Bond from="10" to="9"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="9"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="CXM">
@@ -17901,7 +17891,7 @@
    <Bond from="14" to="17"/>
    <Bond from="18" to="19"/>
    <Bond from="2" to="4"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="CYD">
@@ -17964,7 +17954,7 @@
    <Bond from="29" to="28"/>
    <Bond from="11" to="12"/>
    <Bond from="25" to="26"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="CYF">
@@ -18079,7 +18069,7 @@
    <Bond from="16" to="22"/>
    <Bond from="23" to="24"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="52"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="52"/>
   </Residue>
   <Residue name="CYG">
@@ -18136,7 +18126,7 @@
    <Bond from="22" to="24"/>
    <Bond from="26" to="25"/>
    <Bond from="22" to="23"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="CYQ">
@@ -18173,7 +18163,7 @@
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="CYQP">
@@ -18212,7 +18202,7 @@
    <Bond from="12" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="D4HMP">
@@ -18264,7 +18254,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="D4P">
@@ -18304,7 +18294,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="DA2">
@@ -18367,7 +18357,7 @@
    <Bond from="24" to="27"/>
    <Bond from="29" to="28"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="DAB">
@@ -18402,7 +18392,7 @@
    <Bond from="10" to="12"/>
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="DAH">
@@ -18450,7 +18440,7 @@
    <Bond from="7" to="10"/>
    <Bond from="17" to="14"/>
    <Bond from="8" to="12"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="DANTH">
@@ -18520,7 +18510,7 @@
    <Bond from="18" to="13"/>
    <Bond from="14" to="24"/>
    <Bond from="22" to="28"/>
-   <ExternalBond from="30"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="30"/>
   </Residue>
   <Residue name="DAZDA">
@@ -18547,7 +18537,7 @@
    <Bond from="11" to="10"/>
    <Bond from="7" to="8"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="DBB">
@@ -18576,7 +18566,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="12" to="11"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="DBTH3">
@@ -18627,7 +18617,7 @@
    <Bond from="8" to="13"/>
    <Bond from="11" to="15"/>
    <Bond from="17" to="19"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="DBZ">
@@ -18679,7 +18669,7 @@
    <Bond from="16" to="20"/>
    <Bond from="18" to="14"/>
    <Bond from="9" to="10"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="DCNP2">
@@ -18725,7 +18715,7 @@
    <Bond from="17" to="13"/>
    <Bond from="11" to="15"/>
    <Bond from="9" to="10"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="DCPA3">
@@ -18775,7 +18765,7 @@
    <Bond from="18" to="19"/>
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="DDE">
@@ -18863,7 +18853,7 @@
    <Bond from="7" to="9"/>
    <Bond from="8" to="13"/>
    <Bond from="22" to="23"/>
-   <ExternalBond from="40"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="40"/>
   </Residue>
   <Residue name="DDEP">
@@ -18953,7 +18943,7 @@
    <Bond from="7" to="10"/>
    <Bond from="8" to="14"/>
    <Bond from="23" to="24"/>
-   <ExternalBond from="41"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="41"/>
   </Residue>
   <Residue name="DDILE">
@@ -19000,7 +18990,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="DDIPH">
@@ -19065,7 +19055,7 @@
    <Bond from="7" to="12"/>
    <Bond from="20" to="26"/>
    <Bond from="14" to="22"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="DDMP3">
@@ -19121,7 +19111,7 @@
    <Bond from="7" to="8"/>
    <Bond from="15" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="DDZ">
@@ -19148,7 +19138,7 @@
    <Bond from="6" to="7"/>
    <Bond from="8" to="9"/>
    <Bond from="11" to="10"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="DFGA4">
@@ -19181,7 +19171,7 @@
    <Bond from="9" to="11"/>
    <Bond from="14" to="13"/>
    <Bond from="9" to="12"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="DFPG2">
@@ -19219,7 +19209,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DFPG3">
@@ -19257,7 +19247,7 @@
    <Bond from="4" to="7"/>
    <Bond from="13" to="11"/>
    <Bond from="5" to="9"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DFPG4">
@@ -19295,7 +19285,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DFPH2">
@@ -19339,7 +19329,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="10"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DFPH3">
@@ -19383,7 +19373,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DFUA2">
@@ -19421,7 +19411,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="13" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DFVAL">
@@ -19456,7 +19446,7 @@
    <Bond from="10" to="12"/>
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="DGBUT">
@@ -19501,7 +19491,7 @@
    <Bond from="16" to="18"/>
    <Bond from="20" to="19"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="DGDPR">
@@ -19540,7 +19530,7 @@
    <Bond from="13" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="9" to="10"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="DHIL4">
@@ -19583,7 +19573,7 @@
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DHLEU">
@@ -19630,7 +19620,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="DHSER">
@@ -19661,7 +19651,7 @@
    <Bond from="7" to="10"/>
    <Bond from="10" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="DIAL">
@@ -19708,7 +19698,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="DIPH">
@@ -19773,7 +19763,7 @@
    <Bond from="7" to="12"/>
    <Bond from="20" to="26"/>
    <Bond from="14" to="22"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="DMK">
@@ -19812,7 +19802,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="17" to="16"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="DMOT5">
@@ -19873,7 +19863,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="24"/>
-   <ExternalBond from="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="26"/>
   </Residue>
   <Residue name="DMP3">
@@ -19929,7 +19919,7 @@
    <Bond from="7" to="8"/>
    <Bond from="15" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="DMP34">
@@ -19985,7 +19975,7 @@
    <Bond from="7" to="10"/>
    <Bond from="15" to="14"/>
    <Bond from="8" to="12"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="DMPH2">
@@ -20035,7 +20025,7 @@
    <Bond from="7" to="10"/>
    <Bond from="19" to="13"/>
    <Bond from="8" to="11"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="DMTR5">
@@ -20094,7 +20084,7 @@
    <Bond from="10" to="13"/>
    <Bond from="19" to="16"/>
    <Bond from="14" to="18"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="DMTR6">
@@ -20153,7 +20143,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="20"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="DNAO1">
@@ -20212,7 +20202,7 @@
    <Bond from="8" to="11"/>
    <Bond from="7" to="9"/>
    <Bond from="18" to="14"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="DNAO2">
@@ -20271,7 +20261,7 @@
    <Bond from="15" to="12"/>
    <Bond from="23" to="18"/>
    <Bond from="20" to="16"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="DNP">
@@ -20300,7 +20290,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="12" to="11"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="DORN">
@@ -20341,7 +20331,7 @@
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
    <Bond from="0" to="3"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="15"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DOTYR">
@@ -20387,7 +20377,7 @@
    <Bond from="7" to="10"/>
    <Bond from="17" to="15"/>
    <Bond from="8" to="13"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="DPP">
@@ -20416,7 +20406,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="12" to="11"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="DPYR2">
@@ -20458,7 +20448,7 @@
    <Bond from="7" to="8"/>
    <Bond from="15" to="9"/>
    <Bond from="11" to="13"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DPYR3">
@@ -20500,7 +20490,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="11"/>
    <Bond from="13" to="15"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DPYR4">
@@ -20542,7 +20532,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DPYZ1">
@@ -20580,7 +20570,7 @@
    <Bond from="16" to="15"/>
    <Bond from="10" to="13"/>
    <Bond from="8" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DQU32">
@@ -20635,7 +20625,7 @@
    <Bond from="12" to="14"/>
    <Bond from="17" to="21"/>
    <Bond from="15" to="19"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="DQU33">
@@ -20690,7 +20680,7 @@
    <Bond from="10" to="11"/>
    <Bond from="17" to="21"/>
    <Bond from="15" to="19"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="DQU34">
@@ -20745,7 +20735,7 @@
    <Bond from="13" to="11"/>
    <Bond from="7" to="9"/>
    <Bond from="8" to="14"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="DQU35">
@@ -20800,7 +20790,7 @@
    <Bond from="18" to="12"/>
    <Bond from="21" to="19"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="DQU36">
@@ -20855,7 +20845,7 @@
    <Bond from="10" to="14"/>
    <Bond from="21" to="19"/>
    <Bond from="16" to="18"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="DQX32">
@@ -20908,7 +20898,7 @@
    <Bond from="8" to="9"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="20"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="DSTYA">
@@ -20960,7 +20950,7 @@
    <Bond from="12" to="11"/>
    <Bond from="16" to="20"/>
    <Bond from="18" to="14"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="DTBP4">
@@ -21028,7 +21018,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="30"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="30"/>
   </Residue>
   <Residue name="DTEZA">
@@ -21062,7 +21052,7 @@
    <Bond from="14" to="13"/>
    <Bond from="8" to="10"/>
    <Bond from="9" to="11"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="DTFG2">
@@ -21106,7 +21096,7 @@
    <Bond from="4" to="5"/>
    <Bond from="16" to="10"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DTFG3">
@@ -21150,7 +21140,7 @@
    <Bond from="4" to="7"/>
    <Bond from="14" to="9"/>
    <Bond from="5" to="16"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DTFG4">
@@ -21194,7 +21184,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="DTFLE">
@@ -21235,7 +21225,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="DTFP2">
@@ -21285,7 +21275,7 @@
    <Bond from="7" to="8"/>
    <Bond from="19" to="13"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="DTFP3">
@@ -21335,7 +21325,7 @@
    <Bond from="7" to="8"/>
    <Bond from="19" to="12"/>
    <Bond from="10" to="17"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="DTFP4">
@@ -21385,7 +21375,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="DTHA3">
@@ -21423,7 +21413,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="13"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="DTHG2">
@@ -21455,7 +21445,7 @@
    <Bond from="13" to="12"/>
    <Bond from="4" to="6"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="DTHG3">
@@ -21487,7 +21477,7 @@
    <Bond from="13" to="12"/>
    <Bond from="4" to="5"/>
    <Bond from="7" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="DTHIC">
@@ -21534,7 +21524,7 @@
    <Bond from="17" to="19"/>
    <Bond from="21" to="20"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="DTZA4">
@@ -21570,7 +21560,7 @@
    <Bond from="15" to="14"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="12"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="DYA">
@@ -21593,7 +21583,7 @@
    <Bond from="8" to="9"/>
    <Bond from="2" to="3"/>
    <Bond from="5" to="6"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="DYG">
@@ -21668,7 +21658,6 @@
    <Bond from="10" to="11"/>
    <Bond from="12" to="13"/>
    <Bond from="18" to="20"/>
-   <ExternalBond from="33"/>
    <ExternalBond from="0"/>
    <ExternalBond from="33"/>
   </Residue>
@@ -21712,7 +21701,7 @@
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="F2F">
@@ -21756,7 +21745,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="FGA4">
@@ -21789,7 +21778,7 @@
    <Bond from="9" to="11"/>
    <Bond from="14" to="13"/>
    <Bond from="9" to="12"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="FGL">
@@ -21810,7 +21799,7 @@
    <Bond from="4" to="6"/>
    <Bond from="7" to="8"/>
    <Bond from="4" to="5"/>
-   <ExternalBond from="7"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="7"/>
   </Residue>
   <Residue name="FHO">
@@ -21855,7 +21844,7 @@
    <Bond from="17" to="18"/>
    <Bond from="20" to="19"/>
    <Bond from="14" to="16"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="FLA">
@@ -21884,6 +21873,7 @@
    <Bond from="8" to="9"/>
    <Bond from="10" to="12"/>
    <Bond from="10" to="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="FME">
@@ -21926,7 +21916,7 @@
    <Bond from="14" to="17"/>
    <Bond from="18" to="19"/>
    <Bond from="0" to="2"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="3"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="FP9">
@@ -21958,7 +21948,7 @@
    <Bond from="9" to="10"/>
    <Bond from="9" to="11"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="FPG2">
@@ -21996,7 +21986,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="FPG3">
@@ -22034,7 +22024,7 @@
    <Bond from="4" to="7"/>
    <Bond from="13" to="11"/>
    <Bond from="5" to="9"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="FPG4">
@@ -22072,7 +22062,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="FPH2">
@@ -22116,7 +22106,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="10"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="FPH3">
@@ -22160,7 +22150,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="FT6">
@@ -22213,7 +22203,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="20"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="FTR">
@@ -22266,7 +22256,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="20"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="FUA2">
@@ -22304,7 +22294,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="13" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="FVAL">
@@ -22339,7 +22329,7 @@
    <Bond from="10" to="12"/>
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="FZN">
@@ -22506,7 +22496,7 @@
    <Bond from="70" to="71"/>
    <Bond from="68" to="69"/>
    <Bond from="65" to="67"/>
-   <ExternalBond from="78"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="78"/>
   </Residue>
   <Residue name="GBUT">
@@ -22551,7 +22541,7 @@
    <Bond from="16" to="18"/>
    <Bond from="20" to="19"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="GDPR">
@@ -22590,7 +22580,7 @@
    <Bond from="13" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="9" to="10"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="GGB">
@@ -22635,7 +22625,7 @@
    <Bond from="16" to="18"/>
    <Bond from="20" to="19"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="GGBP">
@@ -22682,7 +22672,7 @@
    <Bond from="17" to="18"/>
    <Bond from="17" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="GHG">
@@ -22721,7 +22711,7 @@
    <Bond from="13" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="GL3">
@@ -22738,7 +22728,7 @@
    <Bond from="2" to="5"/>
    <Bond from="0" to="1"/>
    <Bond from="5" to="6"/>
-   <ExternalBond from="5"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="5"/>
   </Residue>
   <Residue name="GME">
@@ -22779,7 +22769,7 @@
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
    <Bond from="10" to="12"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="GPL">
@@ -22895,7 +22885,7 @@
    <Bond from="39" to="40"/>
    <Bond from="42" to="43"/>
    <Bond from="18" to="19"/>
-   <ExternalBond from="53"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="53"/>
   </Residue>
   <Residue name="GYS">
@@ -22968,7 +22958,6 @@
    <Bond from="4" to="5"/>
    <Bond from="10" to="11"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="32"/>
    <ExternalBond from="0"/>
    <ExternalBond from="32"/>
   </Residue>
@@ -23000,7 +22989,7 @@
    <Bond from="7" to="10"/>
    <Bond from="10" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="HGA">
@@ -23039,7 +23028,7 @@
    <Bond from="14" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="HHK">
@@ -23098,7 +23087,7 @@
    <Bond from="22" to="24"/>
    <Bond from="22" to="25"/>
    <Bond from="27" to="26"/>
-   <ExternalBond from="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="26"/>
   </Residue>
   <Residue name="HIC">
@@ -23142,7 +23131,7 @@
    <Bond from="19" to="18"/>
    <Bond from="8" to="11"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="HICP">
@@ -23188,7 +23177,7 @@
    <Bond from="20" to="19"/>
    <Bond from="8" to="12"/>
    <Bond from="7" to="10"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="HIL4">
@@ -23231,7 +23220,7 @@
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="HIP">
@@ -23275,7 +23264,7 @@
    <Bond from="7" to="8"/>
    <Bond from="15" to="17"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="HIX">
@@ -23311,7 +23300,7 @@
    <Bond from="15" to="14"/>
    <Bond from="7" to="10"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="HL2">
@@ -23354,7 +23343,7 @@
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="HLEU">
@@ -23401,7 +23390,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="HLU">
@@ -23444,7 +23433,7 @@
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="HMR">
@@ -23501,7 +23490,6 @@
    <Bond from="22" to="25"/>
    <Bond from="15" to="19"/>
    <Bond from="25" to="26"/>
-   <ExternalBond from="25"/>
    <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
@@ -23550,7 +23538,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="HPE">
@@ -23600,7 +23588,7 @@
    <Bond from="10" to="13"/>
    <Bond from="19" to="17"/>
    <Bond from="11" to="15"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="HQA">
@@ -23657,7 +23645,7 @@
    <Bond from="15" to="20"/>
    <Bond from="10" to="11"/>
    <Bond from="22" to="17"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="HRG">
@@ -23714,7 +23702,7 @@
    <Bond from="22" to="24"/>
    <Bond from="26" to="25"/>
    <Bond from="18" to="19"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="HRP">
@@ -23769,7 +23757,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="21"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="HSER">
@@ -23800,7 +23788,7 @@
    <Bond from="7" to="10"/>
    <Bond from="10" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="HT7">
@@ -23859,7 +23847,6 @@
    <Bond from="10" to="11"/>
    <Bond from="20" to="16"/>
    <Bond from="12" to="18"/>
-   <ExternalBond from="25"/>
    <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
@@ -23915,7 +23902,7 @@
    <Bond from="21" to="23"/>
    <Bond from="25" to="24"/>
    <Bond from="21" to="22"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="HTR">
@@ -23970,7 +23957,7 @@
    <Bond from="11" to="14"/>
    <Bond from="15" to="19"/>
    <Bond from="17" to="21"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="HVA">
@@ -24007,7 +23994,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="HYP">
@@ -24041,7 +24028,7 @@
    <Bond from="6" to="7"/>
    <Bond from="6" to="8"/>
    <Bond from="14" to="13"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="HZP">
@@ -24075,7 +24062,7 @@
    <Bond from="10" to="11"/>
    <Bond from="10" to="12"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="I2M">
@@ -24122,7 +24109,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="I4G">
@@ -24163,7 +24150,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="17" to="18"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="IAM">
@@ -24237,7 +24224,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
-   <ExternalBond from="33"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="33"/>
   </Residue>
   <Residue name="IAS">
@@ -24264,7 +24251,7 @@
    <Bond from="7" to="8"/>
    <Bond from="11" to="10"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="IGL">
@@ -24317,7 +24304,7 @@
    <Bond from="13" to="16"/>
    <Bond from="18" to="20"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="IIL">
@@ -24358,7 +24345,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="ILX">
@@ -24403,7 +24390,7 @@
    <Bond from="14" to="17"/>
    <Bond from="17" to="18"/>
    <Bond from="20" to="19"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="IT1">
@@ -24491,7 +24478,7 @@
    <Bond from="28" to="29"/>
    <Bond from="16" to="17"/>
    <Bond from="36" to="37"/>
-   <ExternalBond from="40"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="40"/>
   </Residue>
   <Residue name="IT1P">
@@ -24581,7 +24568,7 @@
    <Bond from="28" to="29"/>
    <Bond from="16" to="17"/>
    <Bond from="36" to="37"/>
-   <ExternalBond from="41"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="41"/>
   </Residue>
   <Residue name="JJJ">
@@ -24629,7 +24616,7 @@
    <Bond from="13" to="16"/>
    <Bond from="8" to="9"/>
    <Bond from="15" to="18"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="KCR">
@@ -24692,7 +24679,7 @@
    <Bond from="29" to="28"/>
    <Bond from="18" to="19"/>
    <Bond from="20" to="22"/>
-   <ExternalBond from="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="28"/>
   </Residue>
   <Residue name="KCX">
@@ -24741,7 +24728,7 @@
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
    <Bond from="18" to="19"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="KHB">
@@ -24810,7 +24797,7 @@
    <Bond from="27" to="30"/>
    <Bond from="32" to="31"/>
    <Bond from="18" to="19"/>
-   <ExternalBond from="31"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="31"/>
   </Residue>
   <Residue name="KPI">
@@ -24867,7 +24854,7 @@
    <Bond from="26" to="25"/>
    <Bond from="16" to="17"/>
    <Bond from="22" to="24"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="KYN">
@@ -24919,7 +24906,7 @@
    <Bond from="9" to="14"/>
    <Bond from="18" to="20"/>
    <Bond from="10" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="LA2">
@@ -25014,7 +25001,7 @@
    <Bond from="42" to="43"/>
    <Bond from="45" to="44"/>
    <Bond from="18" to="19"/>
-   <ExternalBond from="44"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="44"/>
   </Residue>
   <Residue name="LDO">
@@ -25057,7 +25044,7 @@
    <Bond from="13" to="16"/>
    <Bond from="16" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="LE1">
@@ -25094,7 +25081,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="LED">
@@ -25133,7 +25120,7 @@
    <Bond from="13" to="14"/>
    <Bond from="17" to="16"/>
    <Bond from="13" to="15"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="LEF">
@@ -25174,7 +25161,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="LEM">
@@ -25221,7 +25208,7 @@
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="LLP">
@@ -25309,7 +25296,7 @@
    <Bond from="31" to="29"/>
    <Bond from="23" to="28"/>
    <Bond from="36" to="37"/>
-   <ExternalBond from="40"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="40"/>
   </Residue>
   <Residue name="LLPP">
@@ -25399,7 +25386,7 @@
    <Bond from="31" to="29"/>
    <Bond from="23" to="28"/>
    <Bond from="36" to="37"/>
-   <ExternalBond from="41"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="41"/>
   </Residue>
   <Residue name="LME">
@@ -25438,7 +25425,7 @@
    <Bond from="13" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="LMQ">
@@ -25481,7 +25468,7 @@
    <Bond from="15" to="17"/>
    <Bond from="19" to="18"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="LVG">
@@ -25506,7 +25493,7 @@
    <Bond from="6" to="8"/>
    <Bond from="10" to="9"/>
    <Bond from="4" to="6"/>
-   <ExternalBond from="9"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="LVN">
@@ -25539,7 +25526,7 @@
    <Bond from="9" to="12"/>
    <Bond from="14" to="13"/>
    <Bond from="6" to="8"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="LYM">
@@ -25592,7 +25579,7 @@
    <Bond from="19" to="20"/>
    <Bond from="19" to="21"/>
    <Bond from="19" to="22"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="LYX">
@@ -25814,7 +25801,7 @@
    <Bond from="95" to="93"/>
    <Bond from="96" to="97"/>
    <Bond from="83" to="84"/>
-   <ExternalBond from="106"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="106"/>
   </Residue>
   <Residue name="LYZ">
@@ -25863,7 +25850,7 @@
    <Bond from="17" to="19"/>
    <Bond from="17" to="20"/>
    <Bond from="22" to="21"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="M0H">
@@ -25896,7 +25883,7 @@
    <Bond from="8" to="11"/>
    <Bond from="11" to="12"/>
    <Bond from="14" to="13"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="M2S">
@@ -25947,7 +25934,7 @@
    <Bond from="18" to="21"/>
    <Bond from="23" to="22"/>
    <Bond from="16" to="17"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="M3L">
@@ -26012,7 +25999,7 @@
    <Bond from="25" to="27"/>
    <Bond from="25" to="28"/>
    <Bond from="30" to="29"/>
-   <ExternalBond from="29"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="29"/>
   </Residue>
   <Residue name="MAA">
@@ -26041,7 +26028,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="MCL">
@@ -26098,7 +26085,7 @@
    <Bond from="26" to="25"/>
    <Bond from="16" to="17"/>
    <Bond from="22" to="23"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="MCS">
@@ -26137,7 +26124,7 @@
    <Bond from="17" to="16"/>
    <Bond from="13" to="15"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="MDO">
@@ -26185,7 +26172,6 @@
    <Bond from="8" to="9"/>
    <Bond from="11" to="12"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="20"/>
    <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
@@ -26225,7 +26211,7 @@
    <Bond from="11" to="14"/>
    <Bond from="14" to="15"/>
    <Bond from="17" to="16"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="MEG">
@@ -26264,7 +26250,7 @@
    <Bond from="6" to="9"/>
    <Bond from="17" to="16"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="MEN">
@@ -26301,7 +26287,7 @@
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="MEQ">
@@ -26344,7 +26330,7 @@
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="MGY">
@@ -26367,7 +26353,6 @@
    <Bond from="5" to="6"/>
    <Bond from="5" to="7"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="8"/>
    <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
@@ -26407,7 +26392,7 @@
    <Bond from="12" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="MHS">
@@ -26451,7 +26436,7 @@
    <Bond from="19" to="18"/>
    <Bond from="7" to="13"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="MHSP">
@@ -26497,7 +26482,7 @@
    <Bond from="20" to="19"/>
    <Bond from="7" to="13"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="MIR">
@@ -26542,7 +26527,7 @@
    <Bond from="15" to="18"/>
    <Bond from="20" to="19"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="MLY">
@@ -26601,7 +26586,7 @@
    <Bond from="22" to="24"/>
    <Bond from="22" to="25"/>
    <Bond from="27" to="26"/>
-   <ExternalBond from="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="26"/>
   </Residue>
   <Residue name="MLZ">
@@ -26654,7 +26639,7 @@
    <Bond from="19" to="21"/>
    <Bond from="19" to="22"/>
    <Bond from="24" to="23"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="MOT5">
@@ -26715,7 +26700,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="24"/>
-   <ExternalBond from="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="26"/>
   </Residue>
   <Residue name="MP34">
@@ -26771,7 +26756,7 @@
    <Bond from="7" to="10"/>
    <Bond from="15" to="14"/>
    <Bond from="8" to="12"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="MP8">
@@ -26809,7 +26794,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="MPH2">
@@ -26859,7 +26844,7 @@
    <Bond from="7" to="10"/>
    <Bond from="19" to="13"/>
    <Bond from="8" to="11"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="MTR5">
@@ -26918,7 +26903,7 @@
    <Bond from="10" to="13"/>
    <Bond from="19" to="16"/>
    <Bond from="14" to="18"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="MTR6">
@@ -26977,7 +26962,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="20"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="MTY">
@@ -27023,7 +27008,7 @@
    <Bond from="7" to="10"/>
    <Bond from="17" to="14"/>
    <Bond from="8" to="12"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="NAL">
@@ -27080,7 +27065,7 @@
    <Bond from="8" to="12"/>
    <Bond from="16" to="20"/>
    <Bond from="18" to="22"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="NAO1">
@@ -27139,7 +27124,7 @@
    <Bond from="8" to="11"/>
    <Bond from="7" to="9"/>
    <Bond from="18" to="14"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="NAO2">
@@ -27198,7 +27183,7 @@
    <Bond from="15" to="12"/>
    <Bond from="23" to="18"/>
    <Bond from="20" to="16"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="NAPH">
@@ -27255,7 +27240,7 @@
    <Bond from="18" to="19"/>
    <Bond from="22" to="23"/>
    <Bond from="20" to="21"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="NEP">
@@ -27299,7 +27284,7 @@
    <Bond from="8" to="11"/>
    <Bond from="7" to="9"/>
    <Bond from="14" to="17"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="NIY">
@@ -27349,7 +27334,7 @@
    <Bond from="10" to="16"/>
    <Bond from="13" to="14"/>
    <Bond from="13" to="15"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="NLE">
@@ -27390,7 +27375,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="NMGLYD">
@@ -27498,7 +27483,7 @@
    <Bond from="21" to="24"/>
    <Bond from="26" to="25"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="NRQ">
@@ -27579,7 +27564,6 @@
    <Bond from="19" to="20"/>
    <Bond from="21" to="22"/>
    <Bond from="0" to="1"/>
-   <ExternalBond from="36"/>
    <ExternalBond from="0"/>
    <ExternalBond from="36"/>
   </Residue>
@@ -27615,7 +27599,7 @@
    <Bond from="10" to="12"/>
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="OAS">
@@ -27650,7 +27634,7 @@
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="OBF">
@@ -27679,7 +27663,7 @@
    <Bond from="7" to="9"/>
    <Bond from="7" to="10"/>
    <Bond from="12" to="11"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="OCS">
@@ -27708,7 +27692,7 @@
    <Bond from="12" to="11"/>
    <Bond from="7" to="8"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="OCY">
@@ -27747,7 +27731,7 @@
    <Bond from="11" to="14"/>
    <Bond from="14" to="15"/>
    <Bond from="17" to="16"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="OLT">
@@ -27784,7 +27768,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="OMT">
@@ -27825,7 +27809,7 @@
    <Bond from="18" to="17"/>
    <Bond from="10" to="11"/>
    <Bond from="10" to="12"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="OMX">
@@ -27873,7 +27857,7 @@
    <Bond from="8" to="9"/>
    <Bond from="17" to="13"/>
    <Bond from="11" to="15"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="ONL">
@@ -27912,7 +27896,7 @@
    <Bond from="12" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="ORN">
@@ -27953,7 +27937,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="OSE">
@@ -27984,7 +27968,7 @@
    <Bond from="13" to="12"/>
    <Bond from="8" to="9"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="OTYR">
@@ -28030,7 +28014,7 @@
    <Bond from="7" to="10"/>
    <Bond from="17" to="15"/>
    <Bond from="8" to="13"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="PBF">
@@ -28099,7 +28083,7 @@
    <Bond from="18" to="20"/>
    <Bond from="28" to="24"/>
    <Bond from="22" to="26"/>
-   <ExternalBond from="30"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="30"/>
   </Residue>
   <Residue name="PF5">
@@ -28143,7 +28127,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="PFF">
@@ -28187,7 +28171,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="PHD">
@@ -28222,7 +28206,7 @@
    <Bond from="15" to="14"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="PHDP">
@@ -28259,7 +28243,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="PIA">
@@ -28330,7 +28314,6 @@
    <Bond from="4" to="5"/>
    <Bond from="10" to="11"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="31"/>
    <ExternalBond from="0"/>
    <ExternalBond from="31"/>
   </Residue>
@@ -28389,7 +28372,7 @@
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
    <Bond from="20" to="22"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="PPN">
@@ -28437,7 +28420,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="PR3">
@@ -28482,7 +28465,7 @@
    <Bond from="15" to="17"/>
    <Bond from="15" to="18"/>
    <Bond from="20" to="19"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="PR4">
@@ -28534,7 +28517,7 @@
    <Bond from="19" to="21"/>
    <Bond from="0" to="2"/>
    <Bond from="22" to="23"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="10"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="PRK">
@@ -28595,7 +28578,7 @@
    <Bond from="23" to="26"/>
    <Bond from="28" to="27"/>
    <Bond from="18" to="19"/>
-   <ExternalBond from="27"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="27"/>
   </Residue>
   <Residue name="PRS">
@@ -28623,7 +28606,7 @@
    <Bond from="7" to="8"/>
    <Bond from="7" to="9"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="PRV">
@@ -28665,7 +28648,7 @@
    <Bond from="15" to="11"/>
    <Bond from="7" to="13"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="PXU">
@@ -28699,7 +28682,7 @@
    <Bond from="10" to="11"/>
    <Bond from="10" to="12"/>
    <Bond from="13" to="14"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="PYR2">
@@ -28741,7 +28724,7 @@
    <Bond from="7" to="8"/>
    <Bond from="15" to="9"/>
    <Bond from="11" to="13"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="PYR3">
@@ -28783,7 +28766,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="11"/>
    <Bond from="13" to="15"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="PYR4">
@@ -28825,7 +28808,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="PYZ1">
@@ -28863,7 +28846,7 @@
    <Bond from="16" to="15"/>
    <Bond from="10" to="13"/>
    <Bond from="8" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="QCS">
@@ -28896,7 +28879,7 @@
    <Bond from="9" to="12"/>
    <Bond from="14" to="13"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="QPA">
@@ -28947,7 +28930,7 @@
    <Bond from="23" to="22"/>
    <Bond from="13" to="14"/>
    <Bond from="17" to="18"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="QU32">
@@ -29002,7 +28985,7 @@
    <Bond from="12" to="14"/>
    <Bond from="17" to="21"/>
    <Bond from="15" to="19"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="QU33">
@@ -29057,7 +29040,7 @@
    <Bond from="10" to="11"/>
    <Bond from="17" to="21"/>
    <Bond from="15" to="19"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="QU34">
@@ -29112,7 +29095,7 @@
    <Bond from="13" to="11"/>
    <Bond from="7" to="9"/>
    <Bond from="8" to="14"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="QU35">
@@ -29167,7 +29150,7 @@
    <Bond from="18" to="12"/>
    <Bond from="21" to="19"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="QU36">
@@ -29222,7 +29205,7 @@
    <Bond from="10" to="14"/>
    <Bond from="21" to="19"/>
    <Bond from="16" to="18"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="QX32">
@@ -29275,7 +29258,7 @@
    <Bond from="8" to="9"/>
    <Bond from="14" to="18"/>
    <Bond from="16" to="20"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="R1A">
@@ -29353,7 +29336,7 @@
    <Bond from="36" to="35"/>
    <Bond from="12" to="22"/>
    <Bond from="24" to="25"/>
-   <ExternalBond from="35"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="35"/>
   </Residue>
   <Residue name="SBG">
@@ -29390,7 +29373,7 @@
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="SCH">
@@ -29423,7 +29406,7 @@
    <Bond from="9" to="11"/>
    <Bond from="9" to="12"/>
    <Bond from="14" to="13"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="SCS">
@@ -29462,7 +29445,7 @@
    <Bond from="12" to="14"/>
    <Bond from="12" to="15"/>
    <Bond from="17" to="16"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="SDP">
@@ -29521,7 +29504,7 @@
    <Bond from="22" to="25"/>
    <Bond from="27" to="26"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="26"/>
   </Residue>
   <Residue name="SEB">
@@ -29579,7 +29562,7 @@
    <Bond from="14" to="15"/>
    <Bond from="19" to="23"/>
    <Bond from="17" to="21"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="SEN">
@@ -29626,7 +29609,7 @@
    <Bond from="16" to="19"/>
    <Bond from="21" to="20"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="SGB">
@@ -29683,7 +29666,7 @@
    <Bond from="21" to="24"/>
    <Bond from="26" to="25"/>
    <Bond from="8" to="13"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="SLZ">
@@ -29726,7 +29709,7 @@
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
    <Bond from="19" to="18"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="SM014">
@@ -29782,6 +29765,7 @@
    <Bond from="22" to="23"/>
    <Bond from="22" to="24"/>
    <Bond from="22" to="25"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="SM023">
@@ -29833,6 +29817,7 @@
    <Bond from="20" to="21"/>
    <Bond from="20" to="22"/>
    <Bond from="20" to="23"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="SM032">
@@ -29879,6 +29864,7 @@
    <Bond from="18" to="19"/>
    <Bond from="18" to="20"/>
    <Bond from="18" to="21"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="SM035">
@@ -29913,6 +29899,7 @@
    <Bond from="12" to="13"/>
    <Bond from="12" to="14"/>
    <Bond from="12" to="15"/>
+   <ExternalBond from="6"/>
   </Residue>
   <Residue name="SM056">
    <Atom name="N" type="8374"/>
@@ -29952,6 +29939,7 @@
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
    <Bond from="15" to="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="SM070">
@@ -29998,6 +29986,7 @@
    <Bond from="18" to="19"/>
    <Bond from="18" to="20"/>
    <Bond from="18" to="21"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="SM071">
@@ -30046,6 +30035,7 @@
    <Bond from="19" to="20"/>
    <Bond from="19" to="21"/>
    <Bond from="19" to="22"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="SM076">
@@ -30090,6 +30080,7 @@
    <Bond from="17" to="18"/>
    <Bond from="17" to="19"/>
    <Bond from="17" to="20"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="SM078">
@@ -30130,6 +30121,7 @@
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
    <Bond from="15" to="18"/>
+   <ExternalBond from="3"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="SM095">
@@ -30180,6 +30172,7 @@
    <Bond from="20" to="21"/>
    <Bond from="20" to="22"/>
    <Bond from="20" to="23"/>
+   <ExternalBond from="6"/>
   </Residue>
   <Residue name="SM114">
    <Atom name="CL" type="8502"/>
@@ -30231,6 +30224,7 @@
    <Bond from="21" to="22"/>
    <Bond from="21" to="23"/>
    <Bond from="21" to="24"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="SM115">
@@ -30263,6 +30257,7 @@
    <Bond from="11" to="12"/>
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
+   <ExternalBond from="6"/>
   </Residue>
   <Residue name="SM119">
    <Atom name="CL" type="8542"/>
@@ -30319,6 +30314,7 @@
    <Bond from="23" to="24"/>
    <Bond from="23" to="25"/>
    <Bond from="23" to="26"/>
+   <ExternalBond from="6"/>
   </Residue>
   <Residue name="SM120">
    <Atom name="HA1" type="8569"/>
@@ -30420,6 +30416,7 @@
    <Bond from="20" to="21"/>
    <Bond from="20" to="22"/>
    <Bond from="20" to="23"/>
+   <ExternalBond from="4"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="SM138">
@@ -30471,6 +30468,7 @@
    <Bond from="20" to="21"/>
    <Bond from="20" to="22"/>
    <Bond from="20" to="23"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="SM140">
@@ -30528,6 +30526,7 @@
    <Bond from="23" to="24"/>
    <Bond from="23" to="25"/>
    <Bond from="23" to="26"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="SM154">
@@ -30589,6 +30588,7 @@
    <Bond from="25" to="26"/>
    <Bond from="25" to="27"/>
    <Bond from="25" to="28"/>
+   <ExternalBond from="6"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="SM155">
@@ -30636,6 +30636,7 @@
    <Bond from="18" to="19"/>
    <Bond from="18" to="20"/>
    <Bond from="18" to="21"/>
+   <ExternalBond from="6"/>
   </Residue>
   <Residue name="SM190">
    <Atom name="N" type="8719"/>
@@ -30683,6 +30684,7 @@
    <Bond from="17" to="20"/>
    <Bond from="17" to="21"/>
    <Bond from="21" to="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="SM191">
@@ -30746,6 +30748,7 @@
    <Bond from="26" to="27"/>
    <Bond from="26" to="28"/>
    <Bond from="26" to="29"/>
+   <ExternalBond from="10"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="SM192">
@@ -30807,6 +30810,7 @@
    <Bond from="23" to="26"/>
    <Bond from="23" to="27"/>
    <Bond from="27" to="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="SM195">
@@ -30861,6 +30865,7 @@
    <Bond from="20" to="23"/>
    <Bond from="20" to="24"/>
    <Bond from="24" to="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="SM206">
@@ -30923,6 +30928,7 @@
    <Bond from="24" to="27"/>
    <Bond from="24" to="28"/>
    <Bond from="28" to="29"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="SM209">
@@ -30981,6 +30987,7 @@
    <Bond from="22" to="25"/>
    <Bond from="22" to="26"/>
    <Bond from="26" to="27"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="SM210">
@@ -31033,6 +31040,7 @@
    <Bond from="19" to="22"/>
    <Bond from="19" to="23"/>
    <Bond from="23" to="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="SM222">
@@ -31090,6 +31098,7 @@
    <Bond from="21" to="24"/>
    <Bond from="21" to="25"/>
    <Bond from="25" to="26"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="SM223">
@@ -31150,6 +31159,7 @@
    <Bond from="23" to="26"/>
    <Bond from="23" to="27"/>
    <Bond from="27" to="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="SM226">
@@ -31210,6 +31220,7 @@
    <Bond from="23" to="26"/>
    <Bond from="23" to="27"/>
    <Bond from="27" to="28"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="SM228">
@@ -31264,6 +31275,7 @@
    <Bond from="20" to="23"/>
    <Bond from="20" to="24"/>
    <Bond from="24" to="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="SM229">
@@ -31340,6 +31352,7 @@
    <Bond from="30" to="33"/>
    <Bond from="30" to="34"/>
    <Bond from="34" to="35"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="SM230">
@@ -31404,6 +31417,7 @@
    <Bond from="25" to="28"/>
    <Bond from="25" to="29"/>
    <Bond from="29" to="30"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="SM231">
@@ -31459,6 +31473,7 @@
    <Bond from="20" to="23"/>
    <Bond from="20" to="24"/>
    <Bond from="24" to="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="SM232">
@@ -31517,6 +31532,7 @@
    <Bond from="22" to="25"/>
    <Bond from="22" to="26"/>
    <Bond from="26" to="27"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="SM235">
@@ -31567,6 +31583,7 @@
    <Bond from="18" to="21"/>
    <Bond from="18" to="22"/>
    <Bond from="22" to="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="SM236">
@@ -31619,6 +31636,7 @@
    <Bond from="19" to="22"/>
    <Bond from="19" to="23"/>
    <Bond from="23" to="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="SMC">
@@ -31649,7 +31667,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="SME">
@@ -31688,7 +31706,7 @@
    <Bond from="12" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="SNC">
@@ -31715,7 +31733,7 @@
    <Bond from="7" to="8"/>
    <Bond from="11" to="10"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="STYA">
@@ -31767,7 +31785,7 @@
    <Bond from="12" to="11"/>
    <Bond from="16" to="20"/>
    <Bond from="18" to="14"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="SUI">
@@ -31805,7 +31823,6 @@
    <Bond from="15" to="16"/>
    <Bond from="9" to="10"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="15"/>
    <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
@@ -31867,7 +31884,7 @@
    <Bond from="23" to="26"/>
    <Bond from="28" to="27"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="27"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="27"/>
   </Residue>
   <Residue name="SVV">
@@ -31902,7 +31919,7 @@
    <Bond from="11" to="13"/>
    <Bond from="15" to="14"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="SVX">
@@ -31953,7 +31970,7 @@
    <Bond from="18" to="21"/>
    <Bond from="23" to="22"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="SVY">
@@ -32024,7 +32041,7 @@
    <Bond from="28" to="31"/>
    <Bond from="33" to="32"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="32"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="32"/>
   </Residue>
   <Residue name="SWG">
@@ -32104,7 +32121,6 @@
    <Bond from="26" to="29"/>
    <Bond from="23" to="27"/>
    <Bond from="33" to="31"/>
-   <ExternalBond from="35"/>
    <ExternalBond from="0"/>
    <ExternalBond from="35"/>
   </Residue>
@@ -32144,7 +32160,7 @@
    <Bond from="12" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="9" to="11"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="TBP4">
@@ -32212,7 +32228,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="30"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="30"/>
   </Residue>
   <Residue name="TEZA">
@@ -32246,7 +32262,7 @@
    <Bond from="14" to="13"/>
    <Bond from="8" to="10"/>
    <Bond from="9" to="11"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="TFG2">
@@ -32290,7 +32306,7 @@
    <Bond from="4" to="5"/>
    <Bond from="16" to="10"/>
    <Bond from="12" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="TFG3">
@@ -32334,7 +32350,7 @@
    <Bond from="4" to="7"/>
    <Bond from="14" to="9"/>
    <Bond from="5" to="16"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="TFG4">
@@ -32378,7 +32394,7 @@
    <Bond from="4" to="5"/>
    <Bond from="13" to="9"/>
    <Bond from="7" to="11"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="TFLE">
@@ -32419,7 +32435,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="TFP2">
@@ -32469,7 +32485,7 @@
    <Bond from="7" to="8"/>
    <Bond from="19" to="13"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="TFP3">
@@ -32519,7 +32535,7 @@
    <Bond from="7" to="8"/>
    <Bond from="19" to="12"/>
    <Bond from="10" to="17"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="TFP4">
@@ -32569,7 +32585,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="TH6">
@@ -32602,7 +32618,7 @@
    <Bond from="8" to="11"/>
    <Bond from="11" to="12"/>
    <Bond from="14" to="13"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="THA3">
@@ -32640,7 +32656,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="13"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="THG2">
@@ -32672,7 +32688,7 @@
    <Bond from="13" to="12"/>
    <Bond from="4" to="6"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="THG3">
@@ -32704,7 +32720,7 @@
    <Bond from="13" to="12"/>
    <Bond from="4" to="5"/>
    <Bond from="7" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="THIC">
@@ -32751,7 +32767,7 @@
    <Bond from="17" to="19"/>
    <Bond from="21" to="20"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="TIH">
@@ -32789,7 +32805,7 @@
    <Bond from="16" to="15"/>
    <Bond from="7" to="8"/>
    <Bond from="11" to="13"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="TOX">
@@ -32846,7 +32862,7 @@
    <Bond from="10" to="15"/>
    <Bond from="16" to="20"/>
    <Bond from="18" to="22"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="TPQ">
@@ -32890,7 +32906,7 @@
    <Bond from="8" to="9"/>
    <Bond from="10" to="12"/>
    <Bond from="14" to="15"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="TPQP">
@@ -32936,7 +32952,7 @@
    <Bond from="8" to="9"/>
    <Bond from="10" to="12"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="TQQ">
@@ -32991,7 +33007,7 @@
    <Bond from="14" to="18"/>
    <Bond from="21" to="20"/>
    <Bond from="16" to="17"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="TRO">
@@ -33046,7 +33062,7 @@
    <Bond from="11" to="14"/>
    <Bond from="15" to="19"/>
    <Bond from="21" to="17"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="TRQ">
@@ -33099,7 +33115,7 @@
    <Bond from="14" to="18"/>
    <Bond from="21" to="20"/>
    <Bond from="16" to="17"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="TRW">
@@ -33183,7 +33199,7 @@
    <Bond from="26" to="27"/>
    <Bond from="29" to="31"/>
    <Bond from="33" to="35"/>
-   <ExternalBond from="37"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="37"/>
   </Residue>
   <Residue name="TRX">
@@ -33238,7 +33254,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="18"/>
    <Bond from="20" to="16"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="TS9">
@@ -33283,7 +33299,7 @@
    <Bond from="15" to="17"/>
    <Bond from="15" to="18"/>
    <Bond from="20" to="19"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="TTQ">
@@ -33342,7 +33358,7 @@
    <Bond from="10" to="13"/>
    <Bond from="14" to="19"/>
    <Bond from="21" to="16"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="TY2">
@@ -33392,7 +33408,7 @@
    <Bond from="7" to="10"/>
    <Bond from="16" to="12"/>
    <Bond from="8" to="19"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="TYQ">
@@ -33444,7 +33460,7 @@
    <Bond from="7" to="8"/>
    <Bond from="19" to="13"/>
    <Bond from="11" to="15"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="TYS">
@@ -33496,7 +33512,7 @@
    <Bond from="7" to="8"/>
    <Bond from="10" to="14"/>
    <Bond from="12" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="TZA4">
@@ -33532,7 +33548,7 @@
    <Bond from="15" to="14"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="12"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="UN1">
@@ -33571,7 +33587,7 @@
    <Bond from="13" to="14"/>
    <Bond from="17" to="16"/>
    <Bond from="13" to="15"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="VAH">
@@ -33608,7 +33624,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="WFP">
@@ -33652,7 +33668,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="XCN">
@@ -33679,7 +33695,7 @@
    <Bond from="7" to="8"/>
    <Bond from="11" to="10"/>
    <Bond from="8" to="9"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="XYG">
@@ -33746,7 +33762,6 @@
    <Bond from="14" to="15"/>
    <Bond from="12" to="13"/>
    <Bond from="0" to="1"/>
-   <ExternalBond from="29"/>
    <ExternalBond from="0"/>
    <ExternalBond from="29"/>
   </Residue>
@@ -33786,7 +33801,7 @@
    <Bond from="13" to="15"/>
    <Bond from="17" to="16"/>
    <Bond from="11" to="12"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="YOF">
@@ -33832,7 +33847,7 @@
    <Bond from="7" to="8"/>
    <Bond from="16" to="12"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="PTR">
@@ -33886,7 +33901,7 @@
    <Bond from="14" to="18"/>
    <Bond from="14" to="15"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="SAM">
@@ -33992,6 +34007,7 @@
    <Bond from="38" to="40"/>
    <Bond from="41" to="33"/>
    <Bond from="34" to="35"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="SEP">
@@ -34024,7 +34040,7 @@
    <Bond from="8" to="9"/>
    <Bond from="8" to="10"/>
    <Bond from="14" to="13"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="TPO">
@@ -34063,7 +34079,7 @@
    <Bond from="10" to="11"/>
    <Bond from="7" to="8"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="13DB">
@@ -34564,7 +34580,7 @@
    <Bond from="64" to="65"/>
    <Bond from="64" to="66"/>
    <Bond from="64" to="67"/>
-   <ExternalBond from="4"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="4"/>
   </Residue>
   <Residue name="MECH">
@@ -35174,7 +35190,6 @@
    <Bond from="0" to="3"/>
    <Bond from="5" to="4"/>
    <ExternalBond from="4"/>
-   <ExternalBond from="4"/>
   </Residue>
   <Residue name="ALA">
    <Atom name="N" type="10850"/>
@@ -35196,7 +35211,7 @@
    <Bond from="4" to="6"/>
    <Bond from="4" to="7"/>
    <Bond from="9" to="8"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="ALAD">
@@ -35292,7 +35307,7 @@
    <Bond from="19" to="21"/>
    <Bond from="23" to="22"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="ARGN">
@@ -35341,7 +35356,7 @@
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="ARGN1">
@@ -35390,7 +35405,7 @@
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
    <Bond from="14" to="15"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="ARGN2">
@@ -35439,7 +35454,7 @@
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="ARGN3">
@@ -35488,7 +35503,7 @@
    <Bond from="18" to="20"/>
    <Bond from="22" to="21"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="21"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="21"/>
   </Residue>
   <Residue name="ASN">
@@ -35519,7 +35534,7 @@
    <Bond from="9" to="11"/>
    <Bond from="12" to="13"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="ASP">
@@ -35546,7 +35561,7 @@
    <Bond from="4" to="6"/>
    <Bond from="11" to="10"/>
    <Bond from="7" to="8"/>
-   <ExternalBond from="10"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="10"/>
   </Residue>
   <Residue name="ASPP">
@@ -35575,7 +35590,7 @@
    <Bond from="12" to="11"/>
    <Bond from="7" to="8"/>
    <Bond from="9" to="10"/>
-   <ExternalBond from="11"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="11"/>
   </Residue>
   <Residue name="CYM">
@@ -35598,7 +35613,7 @@
    <Bond from="2" to="3"/>
    <Bond from="4" to="5"/>
    <Bond from="4" to="6"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="CYN">
@@ -35621,7 +35636,7 @@
    <Bond from="4" to="5"/>
    <Bond from="4" to="6"/>
    <Bond from="9" to="8"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="CYS">
@@ -35646,7 +35661,7 @@
    <Bond from="4" to="6"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="9"/>
-   <ExternalBond from="9"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="CYS2">
@@ -35669,7 +35684,7 @@
    <Bond from="4" to="6"/>
    <Bond from="4" to="7"/>
    <Bond from="9" to="8"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="GLN">
@@ -35706,7 +35721,7 @@
    <Bond from="12" to="14"/>
    <Bond from="16" to="15"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="GLU">
@@ -35739,7 +35754,7 @@
    <Bond from="7" to="9"/>
    <Bond from="14" to="13"/>
    <Bond from="10" to="11"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="GLUP">
@@ -35774,7 +35789,7 @@
    <Bond from="15" to="14"/>
    <Bond from="10" to="11"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
   <Residue name="GLY">
@@ -35791,7 +35806,7 @@
    <Bond from="2" to="3"/>
    <Bond from="2" to="4"/>
    <Bond from="6" to="5"/>
-   <ExternalBond from="5"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="5"/>
   </Residue>
   <Residue name="HSD">
@@ -35829,7 +35844,7 @@
    <Bond from="16" to="15"/>
    <Bond from="9" to="13"/>
    <Bond from="10" to="12"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="HSE">
@@ -35867,7 +35882,7 @@
    <Bond from="16" to="15"/>
    <Bond from="13" to="8"/>
    <Bond from="9" to="7"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="HSP">
@@ -35907,7 +35922,7 @@
    <Bond from="17" to="16"/>
    <Bond from="7" to="9"/>
    <Bond from="10" to="14"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="HSPM">
@@ -35953,7 +35968,7 @@
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
    <Bond from="15" to="18"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="ILE">
@@ -35994,7 +36009,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="KAC">
@@ -36049,7 +36064,7 @@
    <Bond from="22" to="23"/>
    <Bond from="22" to="24"/>
    <Bond from="22" to="25"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="LEU">
@@ -36090,7 +36105,7 @@
    <Bond from="13" to="15"/>
    <Bond from="13" to="16"/>
    <Bond from="18" to="17"/>
-   <ExternalBond from="17"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="LSN">
@@ -36135,7 +36150,7 @@
    <Bond from="20" to="19"/>
    <Bond from="16" to="17"/>
    <Bond from="16" to="18"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="LYS">
@@ -36182,7 +36197,7 @@
    <Bond from="16" to="17"/>
    <Bond from="16" to="18"/>
    <Bond from="16" to="19"/>
-   <ExternalBond from="20"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="MET">
@@ -36219,7 +36234,7 @@
    <Bond from="11" to="13"/>
    <Bond from="11" to="14"/>
    <Bond from="16" to="15"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="MHSD">
@@ -36263,7 +36278,7 @@
    <Bond from="14" to="15"/>
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="MHSE">
@@ -36307,7 +36322,7 @@
    <Bond from="14" to="15"/>
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="NME">
@@ -36365,7 +36380,7 @@
    <Bond from="16" to="14"/>
    <Bond from="16" to="17"/>
    <Bond from="12" to="13"/>
-   <ExternalBond from="18"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="PRO">
@@ -36397,7 +36412,7 @@
    <Bond from="7" to="6"/>
    <Bond from="8" to="6"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="SER">
@@ -36422,7 +36437,7 @@
    <Bond from="4" to="6"/>
    <Bond from="7" to="8"/>
    <Bond from="10" to="9"/>
-   <ExternalBond from="9"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="SERD">
@@ -36445,7 +36460,7 @@
    <Bond from="4" to="5"/>
    <Bond from="4" to="6"/>
    <Bond from="9" to="8"/>
-   <ExternalBond from="8"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="8"/>
   </Residue>
   <Residue name="SP1">
@@ -36478,7 +36493,7 @@
    <Bond from="11" to="12"/>
    <Bond from="8" to="9"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="13"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="13"/>
   </Residue>
   <Residue name="SP2">
@@ -36509,7 +36524,7 @@
    <Bond from="8" to="11"/>
    <Bond from="8" to="9"/>
    <Bond from="8" to="10"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="TDF1">
@@ -36567,7 +36582,7 @@
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
    <Bond from="19" to="20"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="TDF2">
@@ -36623,7 +36638,7 @@
    <Bond from="18" to="21"/>
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="THP1">
@@ -36662,7 +36677,7 @@
    <Bond from="10" to="11"/>
    <Bond from="7" to="8"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="16"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
   <Residue name="THP2">
@@ -36699,7 +36714,7 @@
    <Bond from="7" to="10"/>
    <Bond from="7" to="8"/>
    <Bond from="7" to="9"/>
-   <ExternalBond from="15"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="THR">
@@ -36730,7 +36745,7 @@
    <Bond from="8" to="10"/>
    <Bond from="8" to="11"/>
    <Bond from="13" to="12"/>
-   <ExternalBond from="12"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="TMP1">
@@ -36788,7 +36803,7 @@
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
    <Bond from="19" to="20"/>
-   <ExternalBond from="25"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="25"/>
   </Residue>
   <Residue name="TMP2">
@@ -36844,7 +36859,7 @@
    <Bond from="18" to="21"/>
    <Bond from="15" to="16"/>
    <Bond from="15" to="17"/>
-   <ExternalBond from="24"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="24"/>
   </Residue>
   <Residue name="TP1">
@@ -36898,7 +36913,7 @@
    <Bond from="14" to="17"/>
    <Bond from="14" to="18"/>
    <Bond from="15" to="16"/>
-   <ExternalBond from="23"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="23"/>
   </Residue>
   <Residue name="TP1A">
@@ -36986,7 +37001,7 @@
    <Bond from="14" to="15"/>
    <Bond from="14" to="16"/>
    <Bond from="14" to="17"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="TP2A">
@@ -37073,7 +37088,7 @@
    <Bond from="12" to="13"/>
    <Bond from="16" to="14"/>
    <Bond from="20" to="18"/>
-   <ExternalBond from="22"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="TYR">
@@ -37119,7 +37134,7 @@
    <Bond from="8" to="7"/>
    <Bond from="10" to="12"/>
    <Bond from="17" to="15"/>
-   <ExternalBond from="19"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="VAL">
@@ -37154,7 +37169,7 @@
    <Bond from="10" to="12"/>
    <Bond from="10" to="13"/>
    <Bond from="15" to="14"/>
-   <ExternalBond from="14"/>
+   <ExternalBond from="0"/>
    <ExternalBond from="14"/>
   </Residue>
  </Residues>
