@@ -6,15 +6,13 @@ import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     
     import openmm
-    from openmm.app import Topology
+    from openmm.app import PDBFile
     from openmm.app import ForceField
-
     import numpy as np
     from typing import Union, Dict, List
     from pathlib import Path
     import tempfile
     from grappa.constants import get_grappa_units_in_openmm
-    from grappa import units
     from typing import Tuple
     import grappa.data
     import copy
@@ -294,15 +292,7 @@ if importlib.util.find_spec('openmm') is not None:
         """
         Returns an openmm topology from a pdb string in which the lines are separated by '\n'.
         """
-        from openmm.app import PDBFile
-
-        with tempfile.TemporaryDirectory() as tmp:
-            pdbpath = str(Path(tmp)/'pep.pdb')
-            with open(pdbpath, "w") as pdb_file:
-                pdb_file.write(pdbstring)
-            openmm_pdb = PDBFile(pdbpath)
-
-        return openmm_pdb.topology
+        return get_pdb(pdbstring).getTopology()
 
 
     def get_openmm_forcefield(name:str, *args, **kwargs)->ForceField:
@@ -404,3 +394,16 @@ if importlib.util.find_spec('openmm') is not None:
             improper_gradient = -improper_gradient # the reference gradient is the negative of the force
 
             return improper_energy, improper_gradient
+    
+
+    def get_pdb(pdb_string:str)->PDBFile:
+        """
+        Returns an openmm PDBFile from a pdb string in which the lines are separated by '\n'.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            pdbpath = str(Path(tmp)/'pep.pdb')
+            with open(pdbpath, "w") as pdb_file:
+                pdb_file.write(pdb_string)
+            openmm_pdb = PDBFile(pdbpath)
+
+        return openmm_pdb

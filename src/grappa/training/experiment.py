@@ -133,7 +133,7 @@ class Experiment:
             callbacks=callbacks,
             logger=logger,
             enable_progress_bar=self._experiment_cfg.progress_bar,
-            enable_model_summary=False,
+            enable_model_summary=True,
             inference_mode=False # important for test call, force calculation needs autograd
         )
         self.trainer.fit(
@@ -163,7 +163,7 @@ class Experiment:
                 **self._experiment_cfg.trainer,
                 logger=False,
                 enable_progress_bar=self._experiment_cfg.progress_bar,
-                enable_model_summary=True,
+                enable_model_summary=False,
                 inference_mode=False # important for test call, force calculation needs autograd
             )
 
@@ -211,6 +211,9 @@ class Experiment:
         with(open(self.ckpt_dir / f'summary_{epoch}.json', 'w')) as f:
             json.dump(summary, f, indent=4)
 
+        # finish the wandb run
+        wandb.finish()
+
         wandb_summary = {}
         for k, v in summary.items():
             if isinstance(v, dict):
@@ -220,6 +223,7 @@ class Experiment:
 
         # we do not log via wandb because this will create a chart for each test metric
         logging.info("Test summary:\n\n" + "\n".join([f"{k}:{' '*max(1, 50-len(k))}{v}" for k, v in wandb_summary.items()]))
+
 
 
     def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False):
