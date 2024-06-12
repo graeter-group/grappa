@@ -90,7 +90,7 @@ if importlib.util.find_spec('openmm') is not None:
         return np.array(energies), np.array(forces)
 
 
-    def remove_forces_from_system(system:openmm.System, remove:Union[List[str], str]=None, keep=None, info=False)->openmm.System:
+    def remove_forces_from_system(system:openmm.System, remove:Union[List[str], str]=None, keep:List[str]=None, info=False)->openmm.System:
         """
         Modifies the OpenMM system by removing forces according to the 'remove' and 'keep' lists.
         Forces are identified by their class name. E.g. to remove all nonbonded forces, use remove='nonbonded', to only keep nonbonded forces, use keep='nonbonded'.
@@ -111,7 +111,10 @@ if importlib.util.find_spec('openmm') is not None:
         forces_to_remove = []
         for i, force in enumerate(system.getForces()):
             force_name = force.__class__.__name__.lower()
+            assert force_name in ['nonbondedforce', 'harmonicbondforce', 'harmonicangleforce', 'periodictorsionforce', 'cmaptorsionforce', 'custombondforce', 'customangleforce', 'customtorsionforce', 'customnonbondedforce', 'cmmotionremover'], f"Force found in openmm system ({force_name}) that is not implemented in remove_forces_from_system"
             if keep is not None:
+                assert isinstance(keep, list), f"Expected keep to be a list, but got {type(keep)}"
+                assert len(keep) > 0, "Expected keep to be a list of strings, but got an empty list."
                 if not any([k.lower() in force_name for k in keep]):
                     forces_to_remove.append(i)
                     if info:
@@ -338,28 +341,37 @@ if importlib.util.find_spec('openmm') is not None:
 
 
     def get_nonbonded_contribution(openmm_system:openmm.System, xyz):
-        return get_contribution(openmm_system, xyz, force='NonbondedForce')
+        return get_contribution(openmm_system, xyz, keywords=['nonbonded'])
 
     def get_bond_contribution(openmm_system:openmm.System, xyz:np.ndarray):
-        return get_contribution(openmm_system, xyz, force='HarmonicBondForce')
+        return get_contribution(openmm_system, xyz, keywords=['bond'])
 
     def get_angle_contribution(openmm_system:openmm.System, xyz:np.ndarray):
-        return get_contribution(openmm_system, xyz, force='HarmonicAngleForce')
+        return get_contribution(openmm_system, xyz, keywords=['angle'])
 
     def get_torsion_contribution(openmm_system:openmm.System, xyz:np.ndarray):
         """
-        Proper + Improper contribution!
+        This is Proper + Improper contribution!
         """
-        return get_contribution(openmm_system, xyz, force='PeriodicTorsionForce')
+        return get_contribution(openmm_system, xyz, keywords=['torsion'])
 
 
-    def get_contribution(openmm_system:openmm.System, xyz:np.ndarray, force:str):
+    def get_contribution(openmm_system:openmm.System, xyz:np.ndarray, force:Union[str,List[str]]=None, keywords:List[str]=[])->Tuple[np.ndarray, np.ndarray]:
         """
         Create a deep copy of the openmm system and remove all forces except the force given in the argument. Then calculate the energy and gradient of the states in that system.
+        keywords: if any low(keywords) in force, keep the force.
         """
         openmm_system = copy.deepcopy(openmm_system)
 
-        openmm_system = remove_forces_from_system(openmm_system, keep=[force])
+        keep = force if force is not None else []
+        keep = [keep] if isinstance(keep, str) else keep
+        assert isinstance(keep, list), f"Expected force to be a list, but got {type(force)}"
+        
+        if keywords is not None:
+            assert isinstance(keywords, list), f"Expected keywords to be a list, but got {type(keywords)}"
+            keep += keywords
+
+        openmm_system = remove_forces_from_system(openmm_system, keep=keep)
 
         energy, gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
         gradient = -gradient # the reference gradient is the negative of the force
@@ -369,11 +381,14 @@ if importlib.util.find_spec('openmm') is not None:
 
 
     def get_improper_contribution(openmm_system:openmm.System, xyz:np.ndarray, molecule):
+            """
+            Only works if the impropers are given as PeriodicTorsionForce in the openmm system.
+            """
 
             openmm_system = copy.deepcopy(openmm_system)
 
             # calculate the contribution from improper torsions in the system:
-            # remove all forces but periodic torsions
+            # remove all forces but periodic torsions (we assume that impropers are periodic torsions)
             openmm_system = remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
 
             # get a list of sets of improper torsion tuples:

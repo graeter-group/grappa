@@ -178,6 +178,11 @@ class Parameters():
         # iterate through bond, angle and proper torsion forces in openmm_system, convert to correct unit and append to list:
 
         for force in openmm_system.getForces():
+            name = force.__class__.__name__
+            if not (name in ['HarmonicBondForce', 'HarmonicAngleForce', 'PeriodicTorsionForce'] or 'nonbonded' in name.lower()):
+                raise RuntimeError(f"Force {name} is not supported for parameter calculation, only HarmonicBondForce, HarmonicAngleForce, PeriodicTorsionForce and nonbonded forces are supported.")
+
+        for force in openmm_system.getForces():
             if isinstance(force, HarmonicBondForce):
                 for i in range(force.getNumBonds()):
                     atom1, atom2, bond_eq_, bond_k_ = force.getBondParameters(i)

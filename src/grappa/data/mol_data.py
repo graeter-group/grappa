@@ -404,31 +404,35 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, charge_model:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=False):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, charge_model:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=True):
         """
-        Use an openmm system to obtain classical parameters and interaction tuples.
+        Use an openmm system to obtain classical contributions, classical parameters and the interaction tuples. Calculates the contributions:
+            - total: total energy and gradient
+            - nonbonded: nonbonded energy and gradient
+            - bond: bond energy and gradient
+            - angle: angle energy and gradient
+            - proper: proper torsion energy and gradient
+            - improper: improper torsion energy and gradient (Only works if the impropers are given as PeriodicTorsionForce in the openmm system)
+
         If partial charges is None, the charges are obtained from the openmm system.
-        If energy_ref and gradient_ref are None, they are also calculated from the openmm system.
         mapped_smiles and pdb have no effect on the system, are optional and only required for reproducibility.
         If the improper parameters are incompatible with the openmm system, the improper torsion parameters are all set to zero.
         ----------
         Parameters:
-            - openmm_system: openmm.System
-            - openmm_topology: openmm.Topology
-            - xyz: (n_confs, n_atoms, 3)
-            - energy: (n_confs,)
-            - gradient: (n_confs, n_atoms, 3)
-            - mol_id: str
+            - openmm_system: openmm.System - the openmm system used for energy and gradient calculations
+            - openmm_topology: openmm.Topology - the openmm topology that was used for creating the system
+            - xyz: (n_confs, n_atoms, 3) - coordinates of the molecule
+            - energy: (n_confs,) - qm energies
+            - gradient: (n_confs, n_atoms, 3) - qm gradients
+            - mol_id: str - a unique identifier for the molecule
             - charge_model: str, A charge model tag that describes how the partial charges were obtained. See grappa.constants.CHARGE_MODELS for possible values.
-            - partial_charges: (n_atoms,)
-            - energy_ref: (n_confs,)
-            - gradient_ref: (n_confs, n_atoms, 3)
-            - mapped_smiles: str
-            - pdb: str
-            - ff_name: str
-            - sequence: str
-            - smiles: str
-            - allow_nan_params: bool
+            - partial_charges: (n_atoms,) - partial charges, if None, the charges are obtained from the openmm system
+            - mapped_smiles: str - a mapped smiles string that is not used but only stored in the dataset
+            - pdb: str - a pdb file as string that is not used but only stored in the dataset
+            - ff_name: str - the name of the forcefield that was used to obtain the parameters. If None, the name is set to 'reference_ff'
+            - sequence: str - a sequence string that is not used but only stored in the dataset
+            - smiles: str - a smiles string that is not used but only stored in the dataset
+            - allow_nan_params: bool - If True, the grappa.data.Parameters are set to nans if they cannot be obtained from the forcefield. If False, an error is raised.
         """
 
 
@@ -456,6 +460,9 @@ class MolData():
         if not partial_charges is None:
             # set the partial charges in the openmm system
             openmm_system = openmm_utils.set_partial_charges(system=openmm_system, partial_charges=partial_charges)
+
+        # remove the cmmotionremover force if it exists:
+        openmm_system = openmm_utils.remove_forces_from_system(openmm_system, 'CMMotionRemover')
 
         # calculate the reference-forcefield's energy and gradient from the openmm system
         total_ff_energy, total_ff_gradient = openmm_utils.get_energies(openmm_system=openmm_system, xyz=xyz)
