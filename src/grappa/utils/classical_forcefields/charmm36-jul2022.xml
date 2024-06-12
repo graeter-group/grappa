@@ -162,12 +162,12 @@
   <Type name="159" class="CT2" element="C" mass="12.011000"/>
   <Type name="160" class="HA2" element="H" mass="1.008000"/>
   <Type name="161" class="HA2" element="H" mass="1.008000"/>
-  <Type name="162" class="NR2" element="N" mass="14.007000"/>
-  <Type name="163" class="CPH1" element="C" mass="12.011000"/>
-  <Type name="164" class="CPH2" element="C" mass="12.011000"/>
-  <Type name="165" class="HR1" element="H" mass="1.008000"/>
-  <Type name="166" class="NR1" element="N" mass="14.007000"/>
-  <Type name="167" class="H" element="H" mass="1.008000"/>
+  <Type name="162" class="NR1" element="N" mass="14.007000"/>
+  <Type name="163" class="H" element="H" mass="1.008000"/>
+  <Type name="164" class="CPH1" element="C" mass="12.011000"/>
+  <Type name="165" class="CPH2" element="C" mass="12.011000"/>
+  <Type name="166" class="HR1" element="H" mass="1.008000"/>
+  <Type name="167" class="NR2" element="N" mass="14.007000"/>
   <Type name="168" class="CPH1" element="C" mass="12.011000"/>
   <Type name="169" class="HR3" element="H" mass="1.008000"/>
   <Type name="170" class="C" element="C" mass="12.011000"/>
@@ -176,225 +176,261 @@
   <Type name="173" class="H" element="H" mass="1.008000"/>
   <Type name="174" class="CT1" element="C" mass="12.011000"/>
   <Type name="175" class="HB1" element="H" mass="1.008000"/>
-  <Type name="176" class="CT2A" element="C" mass="12.011000"/>
+  <Type name="176" class="CT2" element="C" mass="12.011000"/>
   <Type name="177" class="HA2" element="H" mass="1.008000"/>
   <Type name="178" class="HA2" element="H" mass="1.008000"/>
-  <Type name="179" class="CPH1" element="C" mass="12.011000"/>
-  <Type name="180" class="HR1" element="H" mass="1.008000"/>
-  <Type name="181" class="CPH1" element="C" mass="12.011000"/>
-  <Type name="182" class="NR3" element="N" mass="14.007000"/>
-  <Type name="183" class="H" element="H" mass="1.008000"/>
-  <Type name="184" class="NR3" element="N" mass="14.007000"/>
-  <Type name="185" class="H" element="H" mass="1.008000"/>
-  <Type name="186" class="CPH2" element="C" mass="12.011000"/>
-  <Type name="187" class="HR2" element="H" mass="1.008000"/>
-  <Type name="188" class="C" element="C" mass="12.011000"/>
-  <Type name="189" class="O" element="O" mass="15.999400"/>
-  <Type name="190" class="NH1" element="N" mass="14.007000"/>
-  <Type name="191" class="H" element="H" mass="1.008000"/>
-  <Type name="192" class="CT1" element="C" mass="12.011000"/>
-  <Type name="193" class="HB1" element="H" mass="1.008000"/>
-  <Type name="194" class="CT2" element="C" mass="12.011000"/>
+  <Type name="179" class="NR2" element="N" mass="14.007000"/>
+  <Type name="180" class="CPH1" element="C" mass="12.011000"/>
+  <Type name="181" class="CPH2" element="C" mass="12.011000"/>
+  <Type name="182" class="HR1" element="H" mass="1.008000"/>
+  <Type name="183" class="NR1" element="N" mass="14.007000"/>
+  <Type name="184" class="H" element="H" mass="1.008000"/>
+  <Type name="185" class="CPH1" element="C" mass="12.011000"/>
+  <Type name="186" class="HR3" element="H" mass="1.008000"/>
+  <Type name="187" class="C" element="C" mass="12.011000"/>
+  <Type name="188" class="O" element="O" mass="15.999400"/>
+  <Type name="189" class="NH1" element="N" mass="14.007000"/>
+  <Type name="190" class="H" element="H" mass="1.008000"/>
+  <Type name="191" class="CT1" element="C" mass="12.011000"/>
+  <Type name="192" class="HB1" element="H" mass="1.008000"/>
+  <Type name="193" class="CT2A" element="C" mass="12.011000"/>
+  <Type name="194" class="HA2" element="H" mass="1.008000"/>
   <Type name="195" class="HA2" element="H" mass="1.008000"/>
-  <Type name="196" class="HA2" element="H" mass="1.008000"/>
-  <Type name="197" class="CT1" element="C" mass="12.011000"/>
-  <Type name="198" class="HA1" element="H" mass="1.008000"/>
-  <Type name="199" class="CT3" element="C" mass="12.011000"/>
-  <Type name="200" class="HA3" element="H" mass="1.008000"/>
-  <Type name="201" class="HA3" element="H" mass="1.008000"/>
-  <Type name="202" class="HA3" element="H" mass="1.008000"/>
-  <Type name="203" class="CT3" element="C" mass="12.011000"/>
-  <Type name="204" class="HA3" element="H" mass="1.008000"/>
-  <Type name="205" class="HA3" element="H" mass="1.008000"/>
-  <Type name="206" class="HA3" element="H" mass="1.008000"/>
-  <Type name="207" class="C" element="C" mass="12.011000"/>
-  <Type name="208" class="O" element="O" mass="15.999400"/>
-  <Type name="209" class="NH1" element="N" mass="14.007000"/>
-  <Type name="210" class="H" element="H" mass="1.008000"/>
+  <Type name="196" class="CPH1" element="C" mass="12.011000"/>
+  <Type name="197" class="HR1" element="H" mass="1.008000"/>
+  <Type name="198" class="CPH1" element="C" mass="12.011000"/>
+  <Type name="199" class="NR3" element="N" mass="14.007000"/>
+  <Type name="200" class="H" element="H" mass="1.008000"/>
+  <Type name="201" class="NR3" element="N" mass="14.007000"/>
+  <Type name="202" class="H" element="H" mass="1.008000"/>
+  <Type name="203" class="CPH2" element="C" mass="12.011000"/>
+  <Type name="204" class="HR2" element="H" mass="1.008000"/>
+  <Type name="205" class="C" element="C" mass="12.011000"/>
+  <Type name="206" class="O" element="O" mass="15.999400"/>
+  <Type name="207" class="NH1" element="N" mass="14.007000"/>
+  <Type name="208" class="H" element="H" mass="1.008000"/>
+  <Type name="209" class="CT1" element="C" mass="12.011000"/>
+  <Type name="210" class="HB1" element="H" mass="1.008000"/>
   <Type name="211" class="CT1" element="C" mass="12.011000"/>
-  <Type name="212" class="HB1" element="H" mass="1.008000"/>
-  <Type name="213" class="CT2" element="C" mass="12.011000"/>
-  <Type name="214" class="HA2" element="H" mass="1.008000"/>
-  <Type name="215" class="HA2" element="H" mass="1.008000"/>
-  <Type name="216" class="CT2" element="C" mass="12.011000"/>
-  <Type name="217" class="HA2" element="H" mass="1.008000"/>
+  <Type name="212" class="HA1" element="H" mass="1.008000"/>
+  <Type name="213" class="CT3" element="C" mass="12.011000"/>
+  <Type name="214" class="HA3" element="H" mass="1.008000"/>
+  <Type name="215" class="HA3" element="H" mass="1.008000"/>
+  <Type name="216" class="HA3" element="H" mass="1.008000"/>
+  <Type name="217" class="CT2" element="C" mass="12.011000"/>
   <Type name="218" class="HA2" element="H" mass="1.008000"/>
-  <Type name="219" class="CT2" element="C" mass="12.011000"/>
-  <Type name="220" class="HA2" element="H" mass="1.008000"/>
-  <Type name="221" class="HA2" element="H" mass="1.008000"/>
-  <Type name="222" class="CT2" element="C" mass="12.011000"/>
-  <Type name="223" class="HA2" element="H" mass="1.008000"/>
-  <Type name="224" class="HA2" element="H" mass="1.008000"/>
-  <Type name="225" class="NH2" element="N" mass="14.007000"/>
-  <Type name="226" class="HC" element="H" mass="1.008000"/>
-  <Type name="227" class="HC" element="H" mass="1.008000"/>
-  <Type name="228" class="C" element="C" mass="12.011000"/>
-  <Type name="229" class="O" element="O" mass="15.999400"/>
-  <Type name="230" class="NH1" element="N" mass="14.007000"/>
-  <Type name="231" class="H" element="H" mass="1.008000"/>
-  <Type name="232" class="CT1" element="C" mass="12.011000"/>
-  <Type name="233" class="HB1" element="H" mass="1.008000"/>
-  <Type name="234" class="CT2" element="C" mass="12.011000"/>
-  <Type name="235" class="HA2" element="H" mass="1.008000"/>
-  <Type name="236" class="HA2" element="H" mass="1.008000"/>
-  <Type name="237" class="CT2" element="C" mass="12.011000"/>
-  <Type name="238" class="HA2" element="H" mass="1.008000"/>
-  <Type name="239" class="HA2" element="H" mass="1.008000"/>
-  <Type name="240" class="CT2" element="C" mass="12.011000"/>
-  <Type name="241" class="HA2" element="H" mass="1.008000"/>
-  <Type name="242" class="HA2" element="H" mass="1.008000"/>
-  <Type name="243" class="CT2" element="C" mass="12.011000"/>
-  <Type name="244" class="HA2" element="H" mass="1.008000"/>
-  <Type name="245" class="HA2" element="H" mass="1.008000"/>
-  <Type name="246" class="NH3" element="N" mass="14.007000"/>
-  <Type name="247" class="HC" element="H" mass="1.008000"/>
-  <Type name="248" class="HC" element="H" mass="1.008000"/>
-  <Type name="249" class="HC" element="H" mass="1.008000"/>
-  <Type name="250" class="C" element="C" mass="12.011000"/>
-  <Type name="251" class="O" element="O" mass="15.999400"/>
-  <Type name="252" class="NH1" element="N" mass="14.007000"/>
-  <Type name="253" class="H" element="H" mass="1.008000"/>
-  <Type name="254" class="CT1" element="C" mass="12.011000"/>
-  <Type name="255" class="HB1" element="H" mass="1.008000"/>
-  <Type name="256" class="CT2" element="C" mass="12.011000"/>
+  <Type name="219" class="HA2" element="H" mass="1.008000"/>
+  <Type name="220" class="CT3" element="C" mass="12.011000"/>
+  <Type name="221" class="HA3" element="H" mass="1.008000"/>
+  <Type name="222" class="HA3" element="H" mass="1.008000"/>
+  <Type name="223" class="HA3" element="H" mass="1.008000"/>
+  <Type name="224" class="C" element="C" mass="12.011000"/>
+  <Type name="225" class="O" element="O" mass="15.999400"/>
+  <Type name="226" class="NH1" element="N" mass="14.007000"/>
+  <Type name="227" class="H" element="H" mass="1.008000"/>
+  <Type name="228" class="CT1" element="C" mass="12.011000"/>
+  <Type name="229" class="HB1" element="H" mass="1.008000"/>
+  <Type name="230" class="CT2" element="C" mass="12.011000"/>
+  <Type name="231" class="HA2" element="H" mass="1.008000"/>
+  <Type name="232" class="HA2" element="H" mass="1.008000"/>
+  <Type name="233" class="CT1" element="C" mass="12.011000"/>
+  <Type name="234" class="HA1" element="H" mass="1.008000"/>
+  <Type name="235" class="CT3" element="C" mass="12.011000"/>
+  <Type name="236" class="HA3" element="H" mass="1.008000"/>
+  <Type name="237" class="HA3" element="H" mass="1.008000"/>
+  <Type name="238" class="HA3" element="H" mass="1.008000"/>
+  <Type name="239" class="CT3" element="C" mass="12.011000"/>
+  <Type name="240" class="HA3" element="H" mass="1.008000"/>
+  <Type name="241" class="HA3" element="H" mass="1.008000"/>
+  <Type name="242" class="HA3" element="H" mass="1.008000"/>
+  <Type name="243" class="C" element="C" mass="12.011000"/>
+  <Type name="244" class="O" element="O" mass="15.999400"/>
+  <Type name="245" class="NH1" element="N" mass="14.007000"/>
+  <Type name="246" class="H" element="H" mass="1.008000"/>
+  <Type name="247" class="CT1" element="C" mass="12.011000"/>
+  <Type name="248" class="HB1" element="H" mass="1.008000"/>
+  <Type name="249" class="CT2" element="C" mass="12.011000"/>
+  <Type name="250" class="HA2" element="H" mass="1.008000"/>
+  <Type name="251" class="HA2" element="H" mass="1.008000"/>
+  <Type name="252" class="CT2" element="C" mass="12.011000"/>
+  <Type name="253" class="HA2" element="H" mass="1.008000"/>
+  <Type name="254" class="HA2" element="H" mass="1.008000"/>
+  <Type name="255" class="CT2" element="C" mass="12.011000"/>
+  <Type name="256" class="HA2" element="H" mass="1.008000"/>
   <Type name="257" class="HA2" element="H" mass="1.008000"/>
-  <Type name="258" class="HA2" element="H" mass="1.008000"/>
-  <Type name="259" class="CT2" element="C" mass="12.011000"/>
+  <Type name="258" class="CT2" element="C" mass="12.011000"/>
+  <Type name="259" class="HA2" element="H" mass="1.008000"/>
   <Type name="260" class="HA2" element="H" mass="1.008000"/>
-  <Type name="261" class="HA2" element="H" mass="1.008000"/>
-  <Type name="262" class="S" element="S" mass="32.060000"/>
-  <Type name="263" class="CT3" element="C" mass="12.011000"/>
-  <Type name="264" class="HA3" element="H" mass="1.008000"/>
-  <Type name="265" class="HA3" element="H" mass="1.008000"/>
-  <Type name="266" class="HA3" element="H" mass="1.008000"/>
-  <Type name="267" class="C" element="C" mass="12.011000"/>
-  <Type name="268" class="O" element="O" mass="15.999400"/>
-  <Type name="269" class="NH1" element="N" mass="14.007000"/>
-  <Type name="270" class="H" element="H" mass="1.008000"/>
-  <Type name="271" class="CT3" element="C" mass="12.011000"/>
-  <Type name="272" class="HA3" element="H" mass="1.008000"/>
-  <Type name="273" class="HA3" element="H" mass="1.008000"/>
-  <Type name="274" class="HA3" element="H" mass="1.008000"/>
-  <Type name="275" class="NH1" element="N" mass="14.007000"/>
-  <Type name="276" class="H" element="H" mass="1.008000"/>
-  <Type name="277" class="CT1" element="C" mass="12.011000"/>
-  <Type name="278" class="HB1" element="H" mass="1.008000"/>
+  <Type name="261" class="NH2" element="N" mass="14.007000"/>
+  <Type name="262" class="HC" element="H" mass="1.008000"/>
+  <Type name="263" class="HC" element="H" mass="1.008000"/>
+  <Type name="264" class="C" element="C" mass="12.011000"/>
+  <Type name="265" class="O" element="O" mass="15.999400"/>
+  <Type name="266" class="NH1" element="N" mass="14.007000"/>
+  <Type name="267" class="H" element="H" mass="1.008000"/>
+  <Type name="268" class="CT1" element="C" mass="12.011000"/>
+  <Type name="269" class="HB1" element="H" mass="1.008000"/>
+  <Type name="270" class="CT2" element="C" mass="12.011000"/>
+  <Type name="271" class="HA2" element="H" mass="1.008000"/>
+  <Type name="272" class="HA2" element="H" mass="1.008000"/>
+  <Type name="273" class="CT2" element="C" mass="12.011000"/>
+  <Type name="274" class="HA2" element="H" mass="1.008000"/>
+  <Type name="275" class="HA2" element="H" mass="1.008000"/>
+  <Type name="276" class="CT2" element="C" mass="12.011000"/>
+  <Type name="277" class="HA2" element="H" mass="1.008000"/>
+  <Type name="278" class="HA2" element="H" mass="1.008000"/>
   <Type name="279" class="CT2" element="C" mass="12.011000"/>
   <Type name="280" class="HA2" element="H" mass="1.008000"/>
   <Type name="281" class="HA2" element="H" mass="1.008000"/>
-  <Type name="282" class="CA" element="C" mass="12.011000"/>
-  <Type name="283" class="CA" element="C" mass="12.011000"/>
-  <Type name="284" class="HP" element="H" mass="1.008000"/>
-  <Type name="285" class="CA" element="C" mass="12.011000"/>
-  <Type name="286" class="HP" element="H" mass="1.008000"/>
-  <Type name="287" class="CA" element="C" mass="12.011000"/>
-  <Type name="288" class="HP" element="H" mass="1.008000"/>
-  <Type name="289" class="CA" element="C" mass="12.011000"/>
-  <Type name="290" class="HP" element="H" mass="1.008000"/>
-  <Type name="291" class="CA" element="C" mass="12.011000"/>
-  <Type name="292" class="HP" element="H" mass="1.008000"/>
-  <Type name="293" class="C" element="C" mass="12.011000"/>
-  <Type name="294" class="O" element="O" mass="15.999400"/>
-  <Type name="295" class="N" element="N" mass="14.007000"/>
-  <Type name="296" class="CP3" element="C" mass="12.011000"/>
+  <Type name="282" class="NH3" element="N" mass="14.007000"/>
+  <Type name="283" class="HC" element="H" mass="1.008000"/>
+  <Type name="284" class="HC" element="H" mass="1.008000"/>
+  <Type name="285" class="HC" element="H" mass="1.008000"/>
+  <Type name="286" class="C" element="C" mass="12.011000"/>
+  <Type name="287" class="O" element="O" mass="15.999400"/>
+  <Type name="288" class="NH1" element="N" mass="14.007000"/>
+  <Type name="289" class="H" element="H" mass="1.008000"/>
+  <Type name="290" class="CT1" element="C" mass="12.011000"/>
+  <Type name="291" class="HB1" element="H" mass="1.008000"/>
+  <Type name="292" class="CT2" element="C" mass="12.011000"/>
+  <Type name="293" class="HA2" element="H" mass="1.008000"/>
+  <Type name="294" class="HA2" element="H" mass="1.008000"/>
+  <Type name="295" class="CT2" element="C" mass="12.011000"/>
+  <Type name="296" class="HA2" element="H" mass="1.008000"/>
   <Type name="297" class="HA2" element="H" mass="1.008000"/>
-  <Type name="298" class="HA2" element="H" mass="1.008000"/>
-  <Type name="299" class="CP1" element="C" mass="12.011000"/>
-  <Type name="300" class="HB1" element="H" mass="1.008000"/>
-  <Type name="301" class="CP2" element="C" mass="12.011000"/>
-  <Type name="302" class="HA2" element="H" mass="1.008000"/>
-  <Type name="303" class="HA2" element="H" mass="1.008000"/>
-  <Type name="304" class="CP2" element="C" mass="12.011000"/>
-  <Type name="305" class="HA2" element="H" mass="1.008000"/>
-  <Type name="306" class="HA2" element="H" mass="1.008000"/>
-  <Type name="307" class="C" element="C" mass="12.011000"/>
-  <Type name="308" class="O" element="O" mass="15.999400"/>
-  <Type name="309" class="NH1" element="N" mass="14.007000"/>
-  <Type name="310" class="H" element="H" mass="1.008000"/>
-  <Type name="311" class="CT1" element="C" mass="12.011000"/>
-  <Type name="312" class="HB1" element="H" mass="1.008000"/>
-  <Type name="313" class="CT2" element="C" mass="12.011000"/>
-  <Type name="314" class="HA2" element="H" mass="1.008000"/>
-  <Type name="315" class="HA2" element="H" mass="1.008000"/>
-  <Type name="316" class="OH1" element="O" mass="15.999400"/>
-  <Type name="317" class="H" element="H" mass="1.008000"/>
-  <Type name="318" class="C" element="C" mass="12.011000"/>
-  <Type name="319" class="O" element="O" mass="15.999400"/>
-  <Type name="320" class="NH1" element="N" mass="14.007000"/>
-  <Type name="321" class="H" element="H" mass="1.008000"/>
-  <Type name="322" class="CT1" element="C" mass="12.011000"/>
-  <Type name="323" class="HB1" element="H" mass="1.008000"/>
-  <Type name="324" class="CT1" element="C" mass="12.011000"/>
-  <Type name="325" class="HA1" element="H" mass="1.008000"/>
-  <Type name="326" class="OH1" element="O" mass="15.999400"/>
-  <Type name="327" class="H" element="H" mass="1.008000"/>
-  <Type name="328" class="CT3" element="C" mass="12.011000"/>
-  <Type name="329" class="HA3" element="H" mass="1.008000"/>
-  <Type name="330" class="HA3" element="H" mass="1.008000"/>
-  <Type name="331" class="HA3" element="H" mass="1.008000"/>
-  <Type name="332" class="C" element="C" mass="12.011000"/>
-  <Type name="333" class="O" element="O" mass="15.999400"/>
-  <Type name="334" class="NH1" element="N" mass="14.007000"/>
-  <Type name="335" class="H" element="H" mass="1.008000"/>
-  <Type name="336" class="CT1" element="C" mass="12.011000"/>
-  <Type name="337" class="HB1" element="H" mass="1.008000"/>
-  <Type name="338" class="CT2" element="C" mass="12.011000"/>
+  <Type name="298" class="S" element="S" mass="32.060000"/>
+  <Type name="299" class="CT3" element="C" mass="12.011000"/>
+  <Type name="300" class="HA3" element="H" mass="1.008000"/>
+  <Type name="301" class="HA3" element="H" mass="1.008000"/>
+  <Type name="302" class="HA3" element="H" mass="1.008000"/>
+  <Type name="303" class="C" element="C" mass="12.011000"/>
+  <Type name="304" class="O" element="O" mass="15.999400"/>
+  <Type name="305" class="NH1" element="N" mass="14.007000"/>
+  <Type name="306" class="H" element="H" mass="1.008000"/>
+  <Type name="307" class="CT3" element="C" mass="12.011000"/>
+  <Type name="308" class="HA3" element="H" mass="1.008000"/>
+  <Type name="309" class="HA3" element="H" mass="1.008000"/>
+  <Type name="310" class="HA3" element="H" mass="1.008000"/>
+  <Type name="311" class="NH1" element="N" mass="14.007000"/>
+  <Type name="312" class="H" element="H" mass="1.008000"/>
+  <Type name="313" class="CT1" element="C" mass="12.011000"/>
+  <Type name="314" class="HB1" element="H" mass="1.008000"/>
+  <Type name="315" class="CT2" element="C" mass="12.011000"/>
+  <Type name="316" class="HA2" element="H" mass="1.008000"/>
+  <Type name="317" class="HA2" element="H" mass="1.008000"/>
+  <Type name="318" class="CA" element="C" mass="12.011000"/>
+  <Type name="319" class="CA" element="C" mass="12.011000"/>
+  <Type name="320" class="HP" element="H" mass="1.008000"/>
+  <Type name="321" class="CA" element="C" mass="12.011000"/>
+  <Type name="322" class="HP" element="H" mass="1.008000"/>
+  <Type name="323" class="CA" element="C" mass="12.011000"/>
+  <Type name="324" class="HP" element="H" mass="1.008000"/>
+  <Type name="325" class="CA" element="C" mass="12.011000"/>
+  <Type name="326" class="HP" element="H" mass="1.008000"/>
+  <Type name="327" class="CA" element="C" mass="12.011000"/>
+  <Type name="328" class="HP" element="H" mass="1.008000"/>
+  <Type name="329" class="C" element="C" mass="12.011000"/>
+  <Type name="330" class="O" element="O" mass="15.999400"/>
+  <Type name="331" class="N" element="N" mass="14.007000"/>
+  <Type name="332" class="CP3" element="C" mass="12.011000"/>
+  <Type name="333" class="HA2" element="H" mass="1.008000"/>
+  <Type name="334" class="HA2" element="H" mass="1.008000"/>
+  <Type name="335" class="CP1" element="C" mass="12.011000"/>
+  <Type name="336" class="HB1" element="H" mass="1.008000"/>
+  <Type name="337" class="CP2" element="C" mass="12.011000"/>
+  <Type name="338" class="HA2" element="H" mass="1.008000"/>
   <Type name="339" class="HA2" element="H" mass="1.008000"/>
-  <Type name="340" class="HA2" element="H" mass="1.008000"/>
-  <Type name="341" class="CY" element="C" mass="12.011000"/>
-  <Type name="342" class="CA" element="C" mass="12.011000"/>
-  <Type name="343" class="HP" element="H" mass="1.008000"/>
-  <Type name="344" class="NY" element="N" mass="14.007000"/>
-  <Type name="345" class="H" element="H" mass="1.008000"/>
-  <Type name="346" class="CPT" element="C" mass="12.011000"/>
-  <Type name="347" class="CPT" element="C" mass="12.011000"/>
-  <Type name="348" class="CAI" element="C" mass="12.011000"/>
-  <Type name="349" class="HP" element="H" mass="1.008000"/>
-  <Type name="350" class="CA" element="C" mass="12.011000"/>
-  <Type name="351" class="HP" element="H" mass="1.008000"/>
-  <Type name="352" class="CAI" element="C" mass="12.011000"/>
-  <Type name="353" class="HP" element="H" mass="1.008000"/>
-  <Type name="354" class="CA" element="C" mass="12.011000"/>
-  <Type name="355" class="HP" element="H" mass="1.008000"/>
-  <Type name="356" class="C" element="C" mass="12.011000"/>
-  <Type name="357" class="O" element="O" mass="15.999400"/>
-  <Type name="358" class="NH1" element="N" mass="14.007000"/>
-  <Type name="359" class="H" element="H" mass="1.008000"/>
+  <Type name="340" class="CP2" element="C" mass="12.011000"/>
+  <Type name="341" class="HA2" element="H" mass="1.008000"/>
+  <Type name="342" class="HA2" element="H" mass="1.008000"/>
+  <Type name="343" class="C" element="C" mass="12.011000"/>
+  <Type name="344" class="O" element="O" mass="15.999400"/>
+  <Type name="345" class="NH1" element="N" mass="14.007000"/>
+  <Type name="346" class="H" element="H" mass="1.008000"/>
+  <Type name="347" class="CT1" element="C" mass="12.011000"/>
+  <Type name="348" class="HB1" element="H" mass="1.008000"/>
+  <Type name="349" class="CT2" element="C" mass="12.011000"/>
+  <Type name="350" class="HA2" element="H" mass="1.008000"/>
+  <Type name="351" class="HA2" element="H" mass="1.008000"/>
+  <Type name="352" class="OH1" element="O" mass="15.999400"/>
+  <Type name="353" class="H" element="H" mass="1.008000"/>
+  <Type name="354" class="C" element="C" mass="12.011000"/>
+  <Type name="355" class="O" element="O" mass="15.999400"/>
+  <Type name="356" class="NH1" element="N" mass="14.007000"/>
+  <Type name="357" class="H" element="H" mass="1.008000"/>
+  <Type name="358" class="CT1" element="C" mass="12.011000"/>
+  <Type name="359" class="HB1" element="H" mass="1.008000"/>
   <Type name="360" class="CT1" element="C" mass="12.011000"/>
-  <Type name="361" class="HB1" element="H" mass="1.008000"/>
-  <Type name="362" class="CT2" element="C" mass="12.011000"/>
-  <Type name="363" class="HA2" element="H" mass="1.008000"/>
-  <Type name="364" class="HA2" element="H" mass="1.008000"/>
-  <Type name="365" class="CA" element="C" mass="12.011000"/>
-  <Type name="366" class="CA" element="C" mass="12.011000"/>
-  <Type name="367" class="HP" element="H" mass="1.008000"/>
-  <Type name="368" class="CA" element="C" mass="12.011000"/>
-  <Type name="369" class="HP" element="H" mass="1.008000"/>
-  <Type name="370" class="CA" element="C" mass="12.011000"/>
-  <Type name="371" class="OH1" element="O" mass="15.999400"/>
-  <Type name="372" class="H" element="H" mass="1.008000"/>
-  <Type name="373" class="CA" element="C" mass="12.011000"/>
-  <Type name="374" class="HP" element="H" mass="1.008000"/>
-  <Type name="375" class="CA" element="C" mass="12.011000"/>
-  <Type name="376" class="HP" element="H" mass="1.008000"/>
-  <Type name="377" class="C" element="C" mass="12.011000"/>
-  <Type name="378" class="O" element="O" mass="15.999400"/>
-  <Type name="379" class="NH1" element="N" mass="14.007000"/>
-  <Type name="380" class="H" element="H" mass="1.008000"/>
-  <Type name="381" class="CT1" element="C" mass="12.011000"/>
-  <Type name="382" class="HB1" element="H" mass="1.008000"/>
-  <Type name="383" class="CT1" element="C" mass="12.011000"/>
-  <Type name="384" class="HA1" element="H" mass="1.008000"/>
-  <Type name="385" class="CT3" element="C" mass="12.011000"/>
-  <Type name="386" class="HA3" element="H" mass="1.008000"/>
-  <Type name="387" class="HA3" element="H" mass="1.008000"/>
-  <Type name="388" class="HA3" element="H" mass="1.008000"/>
-  <Type name="389" class="CT3" element="C" mass="12.011000"/>
-  <Type name="390" class="HA3" element="H" mass="1.008000"/>
-  <Type name="391" class="HA3" element="H" mass="1.008000"/>
-  <Type name="392" class="HA3" element="H" mass="1.008000"/>
-  <Type name="393" class="C" element="C" mass="12.011000"/>
-  <Type name="394" class="O" element="O" mass="15.999400"/>
+  <Type name="361" class="HA1" element="H" mass="1.008000"/>
+  <Type name="362" class="OH1" element="O" mass="15.999400"/>
+  <Type name="363" class="H" element="H" mass="1.008000"/>
+  <Type name="364" class="CT3" element="C" mass="12.011000"/>
+  <Type name="365" class="HA3" element="H" mass="1.008000"/>
+  <Type name="366" class="HA3" element="H" mass="1.008000"/>
+  <Type name="367" class="HA3" element="H" mass="1.008000"/>
+  <Type name="368" class="C" element="C" mass="12.011000"/>
+  <Type name="369" class="O" element="O" mass="15.999400"/>
+  <Type name="370" class="NH1" element="N" mass="14.007000"/>
+  <Type name="371" class="H" element="H" mass="1.008000"/>
+  <Type name="372" class="CT1" element="C" mass="12.011000"/>
+  <Type name="373" class="HB1" element="H" mass="1.008000"/>
+  <Type name="374" class="CT2" element="C" mass="12.011000"/>
+  <Type name="375" class="HA2" element="H" mass="1.008000"/>
+  <Type name="376" class="HA2" element="H" mass="1.008000"/>
+  <Type name="377" class="CY" element="C" mass="12.011000"/>
+  <Type name="378" class="CA" element="C" mass="12.011000"/>
+  <Type name="379" class="HP" element="H" mass="1.008000"/>
+  <Type name="380" class="NY" element="N" mass="14.007000"/>
+  <Type name="381" class="H" element="H" mass="1.008000"/>
+  <Type name="382" class="CPT" element="C" mass="12.011000"/>
+  <Type name="383" class="CPT" element="C" mass="12.011000"/>
+  <Type name="384" class="CAI" element="C" mass="12.011000"/>
+  <Type name="385" class="HP" element="H" mass="1.008000"/>
+  <Type name="386" class="CA" element="C" mass="12.011000"/>
+  <Type name="387" class="HP" element="H" mass="1.008000"/>
+  <Type name="388" class="CAI" element="C" mass="12.011000"/>
+  <Type name="389" class="HP" element="H" mass="1.008000"/>
+  <Type name="390" class="CA" element="C" mass="12.011000"/>
+  <Type name="391" class="HP" element="H" mass="1.008000"/>
+  <Type name="392" class="C" element="C" mass="12.011000"/>
+  <Type name="393" class="O" element="O" mass="15.999400"/>
+  <Type name="394" class="NH1" element="N" mass="14.007000"/>
+  <Type name="395" class="H" element="H" mass="1.008000"/>
+  <Type name="396" class="CT1" element="C" mass="12.011000"/>
+  <Type name="397" class="HB1" element="H" mass="1.008000"/>
+  <Type name="398" class="CT2" element="C" mass="12.011000"/>
+  <Type name="399" class="HA2" element="H" mass="1.008000"/>
+  <Type name="400" class="HA2" element="H" mass="1.008000"/>
+  <Type name="401" class="CA" element="C" mass="12.011000"/>
+  <Type name="402" class="CA" element="C" mass="12.011000"/>
+  <Type name="403" class="HP" element="H" mass="1.008000"/>
+  <Type name="404" class="CA" element="C" mass="12.011000"/>
+  <Type name="405" class="HP" element="H" mass="1.008000"/>
+  <Type name="406" class="CA" element="C" mass="12.011000"/>
+  <Type name="407" class="OH1" element="O" mass="15.999400"/>
+  <Type name="408" class="H" element="H" mass="1.008000"/>
+  <Type name="409" class="CA" element="C" mass="12.011000"/>
+  <Type name="410" class="HP" element="H" mass="1.008000"/>
+  <Type name="411" class="CA" element="C" mass="12.011000"/>
+  <Type name="412" class="HP" element="H" mass="1.008000"/>
+  <Type name="413" class="C" element="C" mass="12.011000"/>
+  <Type name="414" class="O" element="O" mass="15.999400"/>
+  <Type name="415" class="NH1" element="N" mass="14.007000"/>
+  <Type name="416" class="H" element="H" mass="1.008000"/>
+  <Type name="417" class="CT1" element="C" mass="12.011000"/>
+  <Type name="418" class="HB1" element="H" mass="1.008000"/>
+  <Type name="419" class="CT1" element="C" mass="12.011000"/>
+  <Type name="420" class="HA1" element="H" mass="1.008000"/>
+  <Type name="421" class="CT3" element="C" mass="12.011000"/>
+  <Type name="422" class="HA3" element="H" mass="1.008000"/>
+  <Type name="423" class="HA3" element="H" mass="1.008000"/>
+  <Type name="424" class="HA3" element="H" mass="1.008000"/>
+  <Type name="425" class="CT3" element="C" mass="12.011000"/>
+  <Type name="426" class="HA3" element="H" mass="1.008000"/>
+  <Type name="427" class="HA3" element="H" mass="1.008000"/>
+  <Type name="428" class="HA3" element="H" mass="1.008000"/>
+  <Type name="429" class="C" element="C" mass="12.011000"/>
+  <Type name="430" class="O" element="O" mass="15.999400"/>
  </AtomTypes>
  <Residues>
   <Residue name="ACE">
@@ -742,7 +778,7 @@
    <ExternalBond from="0"/>
    <ExternalBond from="5"/>
   </Residue>
-  <Residue name="HSE">
+  <Residue name="HSD">
    <Atom name="N" type="155"/>
    <Atom name="HN" type="156"/>
    <Atom name="CA" type="157"/>
@@ -751,15 +787,53 @@
    <Atom name="HB1" type="160"/>
    <Atom name="HB2" type="161"/>
    <Atom name="ND1" type="162"/>
-   <Atom name="CG" type="163"/>
-   <Atom name="CE1" type="164"/>
-   <Atom name="HE1" type="165"/>
-   <Atom name="NE2" type="166"/>
-   <Atom name="HE2" type="167"/>
+   <Atom name="HD1" type="163"/>
+   <Atom name="CG" type="164"/>
+   <Atom name="CE1" type="165"/>
+   <Atom name="HE1" type="166"/>
+   <Atom name="NE2" type="167"/>
    <Atom name="CD2" type="168"/>
    <Atom name="HD2" type="169"/>
    <Atom name="C" type="170"/>
    <Atom name="O" type="171"/>
+   <Bond from="4" to="2"/>
+   <Bond from="9" to="4"/>
+   <Bond from="7" to="9"/>
+   <Bond from="10" to="7"/>
+   <Bond from="12" to="13"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="15" to="2"/>
+   <Bond from="2" to="3"/>
+   <Bond from="4" to="5"/>
+   <Bond from="4" to="6"/>
+   <Bond from="7" to="8"/>
+   <Bond from="13" to="14"/>
+   <Bond from="10" to="11"/>
+   <Bond from="16" to="15"/>
+   <Bond from="9" to="13"/>
+   <Bond from="10" to="12"/>
+   <ExternalBond from="0"/>
+   <ExternalBond from="15"/>
+  </Residue>
+  <Residue name="HSE">
+   <Atom name="N" type="172"/>
+   <Atom name="HN" type="173"/>
+   <Atom name="CA" type="174"/>
+   <Atom name="HA" type="175"/>
+   <Atom name="CB" type="176"/>
+   <Atom name="HB1" type="177"/>
+   <Atom name="HB2" type="178"/>
+   <Atom name="ND1" type="179"/>
+   <Atom name="CG" type="180"/>
+   <Atom name="CE1" type="181"/>
+   <Atom name="HE1" type="182"/>
+   <Atom name="NE2" type="183"/>
+   <Atom name="HE2" type="184"/>
+   <Atom name="CD2" type="185"/>
+   <Atom name="HD2" type="186"/>
+   <Atom name="C" type="187"/>
+   <Atom name="O" type="188"/>
    <Bond from="4" to="2"/>
    <Bond from="8" to="4"/>
    <Bond from="7" to="8"/>
@@ -781,24 +855,24 @@
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="HSP">
-   <Atom name="N" type="172"/>
-   <Atom name="HN" type="173"/>
-   <Atom name="CA" type="174"/>
-   <Atom name="HA" type="175"/>
-   <Atom name="CB" type="176"/>
-   <Atom name="HB1" type="177"/>
-   <Atom name="HB2" type="178"/>
-   <Atom name="CD2" type="179"/>
-   <Atom name="HD2" type="180"/>
-   <Atom name="CG" type="181"/>
-   <Atom name="NE2" type="182"/>
-   <Atom name="HE2" type="183"/>
-   <Atom name="ND1" type="184"/>
-   <Atom name="HD1" type="185"/>
-   <Atom name="CE1" type="186"/>
-   <Atom name="HE1" type="187"/>
-   <Atom name="C" type="188"/>
-   <Atom name="O" type="189"/>
+   <Atom name="N" type="189"/>
+   <Atom name="HN" type="190"/>
+   <Atom name="CA" type="191"/>
+   <Atom name="HA" type="192"/>
+   <Atom name="CB" type="193"/>
+   <Atom name="HB1" type="194"/>
+   <Atom name="HB2" type="195"/>
+   <Atom name="CD2" type="196"/>
+   <Atom name="HD2" type="197"/>
+   <Atom name="CG" type="198"/>
+   <Atom name="NE2" type="199"/>
+   <Atom name="HE2" type="200"/>
+   <Atom name="ND1" type="201"/>
+   <Atom name="HD1" type="202"/>
+   <Atom name="CE1" type="203"/>
+   <Atom name="HE1" type="204"/>
+   <Atom name="C" type="205"/>
+   <Atom name="O" type="206"/>
    <Bond from="4" to="2"/>
    <Bond from="9" to="4"/>
    <Bond from="12" to="9"/>
@@ -820,26 +894,67 @@
    <ExternalBond from="0"/>
    <ExternalBond from="16"/>
   </Residue>
+  <Residue name="ILE">
+   <Atom name="N" type="207"/>
+   <Atom name="HN" type="208"/>
+   <Atom name="CA" type="209"/>
+   <Atom name="HA" type="210"/>
+   <Atom name="CB" type="211"/>
+   <Atom name="HB" type="212"/>
+   <Atom name="CG2" type="213"/>
+   <Atom name="HG21" type="214"/>
+   <Atom name="HG22" type="215"/>
+   <Atom name="HG23" type="216"/>
+   <Atom name="CG1" type="217"/>
+   <Atom name="HG11" type="218"/>
+   <Atom name="HG12" type="219"/>
+   <Atom name="CD" type="220"/>
+   <Atom name="HD1" type="221"/>
+   <Atom name="HD2" type="222"/>
+   <Atom name="HD3" type="223"/>
+   <Atom name="C" type="224"/>
+   <Atom name="O" type="225"/>
+   <Bond from="4" to="2"/>
+   <Bond from="10" to="4"/>
+   <Bond from="6" to="4"/>
+   <Bond from="13" to="10"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="17" to="2"/>
+   <Bond from="2" to="3"/>
+   <Bond from="4" to="5"/>
+   <Bond from="10" to="11"/>
+   <Bond from="10" to="12"/>
+   <Bond from="6" to="7"/>
+   <Bond from="6" to="8"/>
+   <Bond from="6" to="9"/>
+   <Bond from="13" to="14"/>
+   <Bond from="13" to="15"/>
+   <Bond from="13" to="16"/>
+   <Bond from="18" to="17"/>
+   <ExternalBond from="0"/>
+   <ExternalBond from="17"/>
+  </Residue>
   <Residue name="LEU">
-   <Atom name="N" type="190"/>
-   <Atom name="HN" type="191"/>
-   <Atom name="CA" type="192"/>
-   <Atom name="HA" type="193"/>
-   <Atom name="CB" type="194"/>
-   <Atom name="HB1" type="195"/>
-   <Atom name="HB2" type="196"/>
-   <Atom name="CG" type="197"/>
-   <Atom name="HG" type="198"/>
-   <Atom name="CD1" type="199"/>
-   <Atom name="HD11" type="200"/>
-   <Atom name="HD12" type="201"/>
-   <Atom name="HD13" type="202"/>
-   <Atom name="CD2" type="203"/>
-   <Atom name="HD21" type="204"/>
-   <Atom name="HD22" type="205"/>
-   <Atom name="HD23" type="206"/>
-   <Atom name="C" type="207"/>
-   <Atom name="O" type="208"/>
+   <Atom name="N" type="226"/>
+   <Atom name="HN" type="227"/>
+   <Atom name="CA" type="228"/>
+   <Atom name="HA" type="229"/>
+   <Atom name="CB" type="230"/>
+   <Atom name="HB1" type="231"/>
+   <Atom name="HB2" type="232"/>
+   <Atom name="CG" type="233"/>
+   <Atom name="HG" type="234"/>
+   <Atom name="CD1" type="235"/>
+   <Atom name="HD11" type="236"/>
+   <Atom name="HD12" type="237"/>
+   <Atom name="HD13" type="238"/>
+   <Atom name="CD2" type="239"/>
+   <Atom name="HD21" type="240"/>
+   <Atom name="HD22" type="241"/>
+   <Atom name="HD23" type="242"/>
+   <Atom name="C" type="243"/>
+   <Atom name="O" type="244"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="9" to="7"/>
@@ -862,27 +977,27 @@
    <ExternalBond from="17"/>
   </Residue>
   <Residue name="LSN">
-   <Atom name="N" type="209"/>
-   <Atom name="HN" type="210"/>
-   <Atom name="CA" type="211"/>
-   <Atom name="HA" type="212"/>
-   <Atom name="CB" type="213"/>
-   <Atom name="HB1" type="214"/>
-   <Atom name="HB2" type="215"/>
-   <Atom name="CG" type="216"/>
-   <Atom name="HG1" type="217"/>
-   <Atom name="HG2" type="218"/>
-   <Atom name="CD" type="219"/>
-   <Atom name="HD1" type="220"/>
-   <Atom name="HD2" type="221"/>
-   <Atom name="CE" type="222"/>
-   <Atom name="HE1" type="223"/>
-   <Atom name="HE2" type="224"/>
-   <Atom name="NZ" type="225"/>
-   <Atom name="HZ1" type="226"/>
-   <Atom name="HZ2" type="227"/>
-   <Atom name="C" type="228"/>
-   <Atom name="O" type="229"/>
+   <Atom name="N" type="245"/>
+   <Atom name="HN" type="246"/>
+   <Atom name="CA" type="247"/>
+   <Atom name="HA" type="248"/>
+   <Atom name="CB" type="249"/>
+   <Atom name="HB1" type="250"/>
+   <Atom name="HB2" type="251"/>
+   <Atom name="CG" type="252"/>
+   <Atom name="HG1" type="253"/>
+   <Atom name="HG2" type="254"/>
+   <Atom name="CD" type="255"/>
+   <Atom name="HD1" type="256"/>
+   <Atom name="HD2" type="257"/>
+   <Atom name="CE" type="258"/>
+   <Atom name="HE1" type="259"/>
+   <Atom name="HE2" type="260"/>
+   <Atom name="NZ" type="261"/>
+   <Atom name="HZ1" type="262"/>
+   <Atom name="HZ2" type="263"/>
+   <Atom name="C" type="264"/>
+   <Atom name="O" type="265"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="10" to="7"/>
@@ -907,28 +1022,28 @@
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="LYS">
-   <Atom name="N" type="230"/>
-   <Atom name="HN" type="231"/>
-   <Atom name="CA" type="232"/>
-   <Atom name="HA" type="233"/>
-   <Atom name="CB" type="234"/>
-   <Atom name="HB1" type="235"/>
-   <Atom name="HB2" type="236"/>
-   <Atom name="CG" type="237"/>
-   <Atom name="HG1" type="238"/>
-   <Atom name="HG2" type="239"/>
-   <Atom name="CD" type="240"/>
-   <Atom name="HD1" type="241"/>
-   <Atom name="HD2" type="242"/>
-   <Atom name="CE" type="243"/>
-   <Atom name="HE1" type="244"/>
-   <Atom name="HE2" type="245"/>
-   <Atom name="NZ" type="246"/>
-   <Atom name="HZ1" type="247"/>
-   <Atom name="HZ2" type="248"/>
-   <Atom name="HZ3" type="249"/>
-   <Atom name="C" type="250"/>
-   <Atom name="O" type="251"/>
+   <Atom name="N" type="266"/>
+   <Atom name="HN" type="267"/>
+   <Atom name="CA" type="268"/>
+   <Atom name="HA" type="269"/>
+   <Atom name="CB" type="270"/>
+   <Atom name="HB1" type="271"/>
+   <Atom name="HB2" type="272"/>
+   <Atom name="CG" type="273"/>
+   <Atom name="HG1" type="274"/>
+   <Atom name="HG2" type="275"/>
+   <Atom name="CD" type="276"/>
+   <Atom name="HD1" type="277"/>
+   <Atom name="HD2" type="278"/>
+   <Atom name="CE" type="279"/>
+   <Atom name="HE1" type="280"/>
+   <Atom name="HE2" type="281"/>
+   <Atom name="NZ" type="282"/>
+   <Atom name="HZ1" type="283"/>
+   <Atom name="HZ2" type="284"/>
+   <Atom name="HZ3" type="285"/>
+   <Atom name="C" type="286"/>
+   <Atom name="O" type="287"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="10" to="7"/>
@@ -954,23 +1069,23 @@
    <ExternalBond from="20"/>
   </Residue>
   <Residue name="MET">
-   <Atom name="N" type="252"/>
-   <Atom name="HN" type="253"/>
-   <Atom name="CA" type="254"/>
-   <Atom name="HA" type="255"/>
-   <Atom name="CB" type="256"/>
-   <Atom name="HB1" type="257"/>
-   <Atom name="HB2" type="258"/>
-   <Atom name="CG" type="259"/>
-   <Atom name="HG1" type="260"/>
-   <Atom name="HG2" type="261"/>
-   <Atom name="SD" type="262"/>
-   <Atom name="CE" type="263"/>
-   <Atom name="HE1" type="264"/>
-   <Atom name="HE2" type="265"/>
-   <Atom name="HE3" type="266"/>
-   <Atom name="C" type="267"/>
-   <Atom name="O" type="268"/>
+   <Atom name="N" type="288"/>
+   <Atom name="HN" type="289"/>
+   <Atom name="CA" type="290"/>
+   <Atom name="HA" type="291"/>
+   <Atom name="CB" type="292"/>
+   <Atom name="HB1" type="293"/>
+   <Atom name="HB2" type="294"/>
+   <Atom name="CG" type="295"/>
+   <Atom name="HG1" type="296"/>
+   <Atom name="HG2" type="297"/>
+   <Atom name="SD" type="298"/>
+   <Atom name="CE" type="299"/>
+   <Atom name="HE1" type="300"/>
+   <Atom name="HE2" type="301"/>
+   <Atom name="HE3" type="302"/>
+   <Atom name="C" type="303"/>
+   <Atom name="O" type="304"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="10" to="7"/>
@@ -991,12 +1106,12 @@
    <ExternalBond from="15"/>
   </Residue>
   <Residue name="NME">
-   <Atom name="N" type="269"/>
-   <Atom name="HN" type="270"/>
-   <Atom name="CH3" type="271"/>
-   <Atom name="HH31" type="272"/>
-   <Atom name="HH32" type="273"/>
-   <Atom name="HH33" type="274"/>
+   <Atom name="N" type="305"/>
+   <Atom name="HN" type="306"/>
+   <Atom name="CH3" type="307"/>
+   <Atom name="HH31" type="308"/>
+   <Atom name="HH32" type="309"/>
+   <Atom name="HH33" type="310"/>
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
    <Bond from="2" to="3"/>
@@ -1005,26 +1120,26 @@
    <ExternalBond from="0"/>
   </Residue>
   <Residue name="PHE">
-   <Atom name="N" type="275"/>
-   <Atom name="HN" type="276"/>
-   <Atom name="CA" type="277"/>
-   <Atom name="HA" type="278"/>
-   <Atom name="CB" type="279"/>
-   <Atom name="HB1" type="280"/>
-   <Atom name="HB2" type="281"/>
-   <Atom name="CG" type="282"/>
-   <Atom name="CD1" type="283"/>
-   <Atom name="HD1" type="284"/>
-   <Atom name="CE1" type="285"/>
-   <Atom name="HE1" type="286"/>
-   <Atom name="CZ" type="287"/>
-   <Atom name="HZ" type="288"/>
-   <Atom name="CD2" type="289"/>
-   <Atom name="HD2" type="290"/>
-   <Atom name="CE2" type="291"/>
-   <Atom name="HE2" type="292"/>
-   <Atom name="C" type="293"/>
-   <Atom name="O" type="294"/>
+   <Atom name="N" type="311"/>
+   <Atom name="HN" type="312"/>
+   <Atom name="CA" type="313"/>
+   <Atom name="HA" type="314"/>
+   <Atom name="CB" type="315"/>
+   <Atom name="HB1" type="316"/>
+   <Atom name="HB2" type="317"/>
+   <Atom name="CG" type="318"/>
+   <Atom name="CD1" type="319"/>
+   <Atom name="HD1" type="320"/>
+   <Atom name="CE1" type="321"/>
+   <Atom name="HE1" type="322"/>
+   <Atom name="CZ" type="323"/>
+   <Atom name="HZ" type="324"/>
+   <Atom name="CD2" type="325"/>
+   <Atom name="HD2" type="326"/>
+   <Atom name="CE2" type="327"/>
+   <Atom name="HE2" type="328"/>
+   <Atom name="C" type="329"/>
+   <Atom name="O" type="330"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="14" to="7"/>
@@ -1049,20 +1164,20 @@
    <ExternalBond from="18"/>
   </Residue>
   <Residue name="PRO">
-   <Atom name="N" type="295"/>
-   <Atom name="CD" type="296"/>
-   <Atom name="HD1" type="297"/>
-   <Atom name="HD2" type="298"/>
-   <Atom name="CA" type="299"/>
-   <Atom name="HA" type="300"/>
-   <Atom name="CB" type="301"/>
-   <Atom name="HB1" type="302"/>
-   <Atom name="HB2" type="303"/>
-   <Atom name="CG" type="304"/>
-   <Atom name="HG1" type="305"/>
-   <Atom name="HG2" type="306"/>
-   <Atom name="C" type="307"/>
-   <Atom name="O" type="308"/>
+   <Atom name="N" type="331"/>
+   <Atom name="CD" type="332"/>
+   <Atom name="HD1" type="333"/>
+   <Atom name="HD2" type="334"/>
+   <Atom name="CA" type="335"/>
+   <Atom name="HA" type="336"/>
+   <Atom name="CB" type="337"/>
+   <Atom name="HB1" type="338"/>
+   <Atom name="HB2" type="339"/>
+   <Atom name="CG" type="340"/>
+   <Atom name="HG1" type="341"/>
+   <Atom name="HG2" type="342"/>
+   <Atom name="C" type="343"/>
+   <Atom name="O" type="344"/>
    <Bond from="12" to="4"/>
    <Bond from="0" to="4"/>
    <Bond from="4" to="6"/>
@@ -1081,17 +1196,17 @@
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="SER">
-   <Atom name="N" type="309"/>
-   <Atom name="HN" type="310"/>
-   <Atom name="CA" type="311"/>
-   <Atom name="HA" type="312"/>
-   <Atom name="CB" type="313"/>
-   <Atom name="HB1" type="314"/>
-   <Atom name="HB2" type="315"/>
-   <Atom name="OG" type="316"/>
-   <Atom name="HG1" type="317"/>
-   <Atom name="C" type="318"/>
-   <Atom name="O" type="319"/>
+   <Atom name="N" type="345"/>
+   <Atom name="HN" type="346"/>
+   <Atom name="CA" type="347"/>
+   <Atom name="HA" type="348"/>
+   <Atom name="CB" type="349"/>
+   <Atom name="HB1" type="350"/>
+   <Atom name="HB2" type="351"/>
+   <Atom name="OG" type="352"/>
+   <Atom name="HG1" type="353"/>
+   <Atom name="C" type="354"/>
+   <Atom name="O" type="355"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="0" to="1"/>
@@ -1106,20 +1221,20 @@
    <ExternalBond from="9"/>
   </Residue>
   <Residue name="THR">
-   <Atom name="N" type="320"/>
-   <Atom name="HN" type="321"/>
-   <Atom name="CA" type="322"/>
-   <Atom name="HA" type="323"/>
-   <Atom name="CB" type="324"/>
-   <Atom name="HB" type="325"/>
-   <Atom name="OG1" type="326"/>
-   <Atom name="HG1" type="327"/>
-   <Atom name="CG2" type="328"/>
-   <Atom name="HG21" type="329"/>
-   <Atom name="HG22" type="330"/>
-   <Atom name="HG23" type="331"/>
-   <Atom name="C" type="332"/>
-   <Atom name="O" type="333"/>
+   <Atom name="N" type="356"/>
+   <Atom name="HN" type="357"/>
+   <Atom name="CA" type="358"/>
+   <Atom name="HA" type="359"/>
+   <Atom name="CB" type="360"/>
+   <Atom name="HB" type="361"/>
+   <Atom name="OG1" type="362"/>
+   <Atom name="HG1" type="363"/>
+   <Atom name="CG2" type="364"/>
+   <Atom name="HG21" type="365"/>
+   <Atom name="HG22" type="366"/>
+   <Atom name="HG23" type="367"/>
+   <Atom name="C" type="368"/>
+   <Atom name="O" type="369"/>
    <Bond from="4" to="2"/>
    <Bond from="6" to="4"/>
    <Bond from="8" to="4"/>
@@ -1137,30 +1252,30 @@
    <ExternalBond from="12"/>
   </Residue>
   <Residue name="TRP">
-   <Atom name="N" type="334"/>
-   <Atom name="HN" type="335"/>
-   <Atom name="CA" type="336"/>
-   <Atom name="HA" type="337"/>
-   <Atom name="CB" type="338"/>
-   <Atom name="HB1" type="339"/>
-   <Atom name="HB2" type="340"/>
-   <Atom name="CG" type="341"/>
-   <Atom name="CD1" type="342"/>
-   <Atom name="HD1" type="343"/>
-   <Atom name="NE1" type="344"/>
-   <Atom name="HE1" type="345"/>
-   <Atom name="CE2" type="346"/>
-   <Atom name="CD2" type="347"/>
-   <Atom name="CE3" type="348"/>
-   <Atom name="HE3" type="349"/>
-   <Atom name="CZ3" type="350"/>
-   <Atom name="HZ3" type="351"/>
-   <Atom name="CZ2" type="352"/>
-   <Atom name="HZ2" type="353"/>
-   <Atom name="CH2" type="354"/>
-   <Atom name="HH2" type="355"/>
-   <Atom name="C" type="356"/>
-   <Atom name="O" type="357"/>
+   <Atom name="N" type="370"/>
+   <Atom name="HN" type="371"/>
+   <Atom name="CA" type="372"/>
+   <Atom name="HA" type="373"/>
+   <Atom name="CB" type="374"/>
+   <Atom name="HB1" type="375"/>
+   <Atom name="HB2" type="376"/>
+   <Atom name="CG" type="377"/>
+   <Atom name="CD1" type="378"/>
+   <Atom name="HD1" type="379"/>
+   <Atom name="NE1" type="380"/>
+   <Atom name="HE1" type="381"/>
+   <Atom name="CE2" type="382"/>
+   <Atom name="CD2" type="383"/>
+   <Atom name="CE3" type="384"/>
+   <Atom name="HE3" type="385"/>
+   <Atom name="CZ3" type="386"/>
+   <Atom name="HZ3" type="387"/>
+   <Atom name="CZ2" type="388"/>
+   <Atom name="HZ2" type="389"/>
+   <Atom name="CH2" type="390"/>
+   <Atom name="HH2" type="391"/>
+   <Atom name="C" type="392"/>
+   <Atom name="O" type="393"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="13" to="7"/>
@@ -1190,27 +1305,27 @@
    <ExternalBond from="22"/>
   </Residue>
   <Residue name="TYR">
-   <Atom name="N" type="358"/>
-   <Atom name="HN" type="359"/>
-   <Atom name="CA" type="360"/>
-   <Atom name="HA" type="361"/>
-   <Atom name="CB" type="362"/>
-   <Atom name="HB1" type="363"/>
-   <Atom name="HB2" type="364"/>
-   <Atom name="CG" type="365"/>
-   <Atom name="CD1" type="366"/>
-   <Atom name="HD1" type="367"/>
-   <Atom name="CE1" type="368"/>
-   <Atom name="HE1" type="369"/>
-   <Atom name="CZ" type="370"/>
-   <Atom name="OH" type="371"/>
-   <Atom name="HH" type="372"/>
-   <Atom name="CD2" type="373"/>
-   <Atom name="HD2" type="374"/>
-   <Atom name="CE2" type="375"/>
-   <Atom name="HE2" type="376"/>
-   <Atom name="C" type="377"/>
-   <Atom name="O" type="378"/>
+   <Atom name="N" type="394"/>
+   <Atom name="HN" type="395"/>
+   <Atom name="CA" type="396"/>
+   <Atom name="HA" type="397"/>
+   <Atom name="CB" type="398"/>
+   <Atom name="HB1" type="399"/>
+   <Atom name="HB2" type="400"/>
+   <Atom name="CG" type="401"/>
+   <Atom name="CD1" type="402"/>
+   <Atom name="HD1" type="403"/>
+   <Atom name="CE1" type="404"/>
+   <Atom name="HE1" type="405"/>
+   <Atom name="CZ" type="406"/>
+   <Atom name="OH" type="407"/>
+   <Atom name="HH" type="408"/>
+   <Atom name="CD2" type="409"/>
+   <Atom name="HD2" type="410"/>
+   <Atom name="CE2" type="411"/>
+   <Atom name="HE2" type="412"/>
+   <Atom name="C" type="413"/>
+   <Atom name="O" type="414"/>
    <Bond from="4" to="2"/>
    <Bond from="7" to="4"/>
    <Bond from="15" to="7"/>
@@ -1236,22 +1351,22 @@
    <ExternalBond from="19"/>
   </Residue>
   <Residue name="VAL">
-   <Atom name="N" type="379"/>
-   <Atom name="HN" type="380"/>
-   <Atom name="CA" type="381"/>
-   <Atom name="HA" type="382"/>
-   <Atom name="CB" type="383"/>
-   <Atom name="HB" type="384"/>
-   <Atom name="CG1" type="385"/>
-   <Atom name="HG11" type="386"/>
-   <Atom name="HG12" type="387"/>
-   <Atom name="HG13" type="388"/>
-   <Atom name="CG2" type="389"/>
-   <Atom name="HG21" type="390"/>
-   <Atom name="HG22" type="391"/>
-   <Atom name="HG23" type="392"/>
-   <Atom name="C" type="393"/>
-   <Atom name="O" type="394"/>
+   <Atom name="N" type="415"/>
+   <Atom name="HN" type="416"/>
+   <Atom name="CA" type="417"/>
+   <Atom name="HA" type="418"/>
+   <Atom name="CB" type="419"/>
+   <Atom name="HB" type="420"/>
+   <Atom name="CG1" type="421"/>
+   <Atom name="HG11" type="422"/>
+   <Atom name="HG12" type="423"/>
+   <Atom name="HG13" type="424"/>
+   <Atom name="CG2" type="425"/>
+   <Atom name="HG21" type="426"/>
+   <Atom name="HG22" type="427"/>
+   <Atom name="HG23" type="428"/>
+   <Atom name="C" type="429"/>
+   <Atom name="O" type="430"/>
    <Bond from="4" to="2"/>
    <Bond from="6" to="4"/>
    <Bond from="10" to="4"/>
@@ -3788,241 +3903,277 @@
   <Atom type="156" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
   <Atom type="157" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
   <Atom type="158" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="159" charge="-0.0800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="159" charge="-0.0900" sigma="0.358141284692" epsilon="0.2343040"/>
   <Atom type="160" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
   <Atom type="161" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="162" charge="-0.7000" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="163" charge="0.2200" sigma="0.320723538531" epsilon="0.2092000"/>
-  <Atom type="164" charge="0.2500" sigma="0.320723538531" epsilon="0.2092000"/>
-  <Atom type="165" charge="0.1300" sigma="0.160361769265" epsilon="0.1924640"/>
-  <Atom type="166" charge="-0.3600" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="167" charge="0.3200" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="168" charge="-0.0500" sigma="0.320723538531" epsilon="0.2092000"/>
-  <Atom type="169" charge="0.0900" sigma="0.261567863646" epsilon="0.0326352"/>
+  <Atom type="162" charge="-0.3600" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="163" charge="0.3200" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="164" charge="-0.0500" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="165" charge="0.2500" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="166" charge="0.1300" sigma="0.160361769265" epsilon="0.1924640"/>
+  <Atom type="167" charge="-0.7000" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="168" charge="0.2200" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="169" charge="0.1000" sigma="0.261567863646" epsilon="0.0326352"/>
   <Atom type="170" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
   <Atom type="171" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
   <Atom type="172" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
   <Atom type="173" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
   <Atom type="174" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
   <Atom type="175" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="176" charge="-0.0500" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="176" charge="-0.0800" sigma="0.358141284692" epsilon="0.2343040"/>
   <Atom type="177" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
   <Atom type="178" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="179" charge="0.1900" sigma="0.320723538531" epsilon="0.2092000"/>
-  <Atom type="180" charge="0.1300" sigma="0.160361769265" epsilon="0.1924640"/>
-  <Atom type="181" charge="0.1900" sigma="0.320723538531" epsilon="0.2092000"/>
-  <Atom type="182" charge="-0.5100" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="183" charge="0.4400" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="184" charge="-0.5100" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="185" charge="0.4400" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="186" charge="0.3200" sigma="0.320723538531" epsilon="0.2092000"/>
-  <Atom type="187" charge="0.1800" sigma="0.124725820540" epsilon="0.1924640"/>
-  <Atom type="188" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="189" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="190" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="191" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="192" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="193" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="194" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="179" charge="-0.7000" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="180" charge="0.2200" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="181" charge="0.2500" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="182" charge="0.1300" sigma="0.160361769265" epsilon="0.1924640"/>
+  <Atom type="183" charge="-0.3600" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="184" charge="0.3200" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="185" charge="-0.0500" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="186" charge="0.0900" sigma="0.261567863646" epsilon="0.0326352"/>
+  <Atom type="187" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="188" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="189" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="190" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="191" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="192" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="193" charge="-0.0500" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="194" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
   <Atom type="195" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="196" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="197" charge="-0.0900" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="198" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
-  <Atom type="199" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="200" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="201" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="202" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="203" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="204" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="205" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="206" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="207" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="208" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="209" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="210" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="211" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="212" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="213" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="214" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="215" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="216" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="217" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="196" charge="0.1900" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="197" charge="0.1300" sigma="0.160361769265" epsilon="0.1924640"/>
+  <Atom type="198" charge="0.1900" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="199" charge="-0.5100" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="200" charge="0.4400" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="201" charge="-0.5100" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="202" charge="0.4400" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="203" charge="0.3200" sigma="0.320723538531" epsilon="0.2092000"/>
+  <Atom type="204" charge="0.1800" sigma="0.124725820540" epsilon="0.1924640"/>
+  <Atom type="205" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="206" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="207" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="208" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="209" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="210" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="211" charge="-0.0900" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="212" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
+  <Atom type="213" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="214" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="215" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="216" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="217" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
   <Atom type="218" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="219" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="220" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="221" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="222" charge="0.1300" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="223" charge="0.0750" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="224" charge="0.0750" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="225" charge="-0.9600" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="226" charge="0.3400" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="227" charge="0.3400" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="228" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="229" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="230" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="231" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="232" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="233" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="234" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="235" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="236" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="237" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="238" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="239" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="240" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="241" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="242" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="243" charge="0.2100" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="244" charge="0.0500" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="245" charge="0.0500" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="246" charge="-0.3000" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="247" charge="0.3300" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="248" charge="0.3300" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="249" charge="0.3300" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="250" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="251" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="252" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="253" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="254" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="255" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="256" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="219" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="220" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="221" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="222" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="223" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="224" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="225" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="226" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="227" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="228" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="229" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="230" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="231" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="232" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="233" charge="-0.0900" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="234" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
+  <Atom type="235" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="236" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="237" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="238" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="239" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="240" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="241" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="242" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="243" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="244" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="245" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="246" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="247" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="248" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="249" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="250" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="251" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="252" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="253" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="254" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="255" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="256" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
   <Atom type="257" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="258" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="259" charge="-0.1400" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="260" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="261" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="262" charge="-0.0900" sigma="0.356359487256" epsilon="1.8828000"/>
-  <Atom type="263" charge="-0.2200" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="264" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="265" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="266" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="267" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="268" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="269" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="270" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="271" charge="-0.1100" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="272" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="273" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="274" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="275" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="276" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="277" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="278" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="279" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="280" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="281" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="282" charge="0.0000" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="283" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="284" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="285" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="286" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="287" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="288" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="289" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="290" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="291" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="292" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="293" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="294" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="295" charge="-0.2900" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="296" charge="0.0000" sigma="0.387540942391" epsilon="0.2301200"/>
+  <Atom type="258" charge="0.1300" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="259" charge="0.0750" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="260" charge="0.0750" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="261" charge="-0.9600" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="262" charge="0.3400" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="263" charge="0.3400" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="264" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="265" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="266" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="267" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="268" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="269" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="270" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="271" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="272" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="273" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="274" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="275" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="276" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="277" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="278" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="279" charge="0.2100" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="280" charge="0.0500" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="281" charge="0.0500" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="282" charge="-0.3000" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="283" charge="0.3300" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="284" charge="0.3300" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="285" charge="0.3300" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="286" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="287" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="288" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="289" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="290" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="291" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="292" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="293" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="294" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="295" charge="-0.1400" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="296" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
   <Atom type="297" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="298" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="299" charge="0.0200" sigma="0.405358916754" epsilon="0.0836800"/>
-  <Atom type="300" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="301" charge="-0.1800" sigma="0.387540942391" epsilon="0.2301200"/>
-  <Atom type="302" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="303" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="304" charge="-0.1800" sigma="0.387540942391" epsilon="0.2301200"/>
-  <Atom type="305" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="306" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="307" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="308" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="309" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="310" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="311" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="312" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="313" charge="0.0500" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="314" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="315" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="316" charge="-0.6600" sigma="0.315378146222" epsilon="0.6363864"/>
-  <Atom type="317" charge="0.4300" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="318" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="319" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="320" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="321" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="322" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="323" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="324" charge="0.1400" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="325" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
-  <Atom type="326" charge="-0.6600" sigma="0.315378146222" epsilon="0.6363864"/>
-  <Atom type="327" charge="0.4300" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="328" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="329" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="330" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="331" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="332" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="333" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="334" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="335" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="336" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="337" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="338" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="298" charge="-0.0900" sigma="0.356359487256" epsilon="1.8828000"/>
+  <Atom type="299" charge="-0.2200" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="300" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="301" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="302" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="303" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="304" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="305" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="306" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="307" charge="-0.1100" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="308" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="309" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="310" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="311" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="312" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="313" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="314" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="315" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="316" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="317" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="318" charge="0.0000" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="319" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="320" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="321" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="322" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="323" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="324" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="325" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="326" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="327" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="328" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="329" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="330" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="331" charge="-0.2900" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="332" charge="0.0000" sigma="0.387540942391" epsilon="0.2301200"/>
+  <Atom type="333" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="334" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="335" charge="0.0200" sigma="0.405358916754" epsilon="0.0836800"/>
+  <Atom type="336" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="337" charge="-0.1800" sigma="0.387540942391" epsilon="0.2301200"/>
+  <Atom type="338" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
   <Atom type="339" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="340" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="341" charge="-0.0300" sigma="0.354577689820" epsilon="0.3054320"/>
-  <Atom type="342" charge="-0.1500" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="343" charge="0.2200" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="344" charge="-0.5100" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="345" charge="0.3700" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="346" charge="0.2400" sigma="0.331414323148" epsilon="0.4142160"/>
-  <Atom type="347" charge="0.1100" sigma="0.331414323148" epsilon="0.4142160"/>
-  <Atom type="348" charge="-0.2500" sigma="0.354577689820" epsilon="0.3054320"/>
-  <Atom type="349" charge="0.1700" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="350" charge="-0.2000" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="351" charge="0.1400" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="352" charge="-0.2700" sigma="0.354577689820" epsilon="0.3054320"/>
-  <Atom type="353" charge="0.1600" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="354" charge="-0.1400" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="355" charge="0.1400" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="356" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="357" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="358" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="359" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="360" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="361" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="362" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
-  <Atom type="363" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="364" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
-  <Atom type="365" charge="0.0000" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="366" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="367" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="368" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="369" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="370" charge="0.1100" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="371" charge="-0.5400" sigma="0.315378146222" epsilon="0.6363864"/>
-  <Atom type="372" charge="0.4300" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="373" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="374" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="375" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
-  <Atom type="376" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
-  <Atom type="377" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="378" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
-  <Atom type="379" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
-  <Atom type="380" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
-  <Atom type="381" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="382" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
-  <Atom type="383" charge="-0.0900" sigma="0.356359487256" epsilon="0.1338880"/>
-  <Atom type="384" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
-  <Atom type="385" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="386" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="387" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="388" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="389" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
-  <Atom type="390" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="391" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="392" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
-  <Atom type="393" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
-  <Atom type="394" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="340" charge="-0.1800" sigma="0.387540942391" epsilon="0.2301200"/>
+  <Atom type="341" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="342" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="343" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="344" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="345" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="346" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="347" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="348" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="349" charge="0.0500" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="350" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="351" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="352" charge="-0.6600" sigma="0.315378146222" epsilon="0.6363864"/>
+  <Atom type="353" charge="0.4300" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="354" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="355" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="356" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="357" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="358" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="359" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="360" charge="0.1400" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="361" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
+  <Atom type="362" charge="-0.6600" sigma="0.315378146222" epsilon="0.6363864"/>
+  <Atom type="363" charge="0.4300" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="364" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="365" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="366" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="367" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="368" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="369" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="370" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="371" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="372" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="373" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="374" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="375" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="376" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="377" charge="-0.0300" sigma="0.354577689820" epsilon="0.3054320"/>
+  <Atom type="378" charge="-0.1500" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="379" charge="0.2200" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="380" charge="-0.5100" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="381" charge="0.3700" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="382" charge="0.2400" sigma="0.331414323148" epsilon="0.4142160"/>
+  <Atom type="383" charge="0.1100" sigma="0.331414323148" epsilon="0.4142160"/>
+  <Atom type="384" charge="-0.2500" sigma="0.354577689820" epsilon="0.3054320"/>
+  <Atom type="385" charge="0.1700" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="386" charge="-0.2000" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="387" charge="0.1400" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="388" charge="-0.2700" sigma="0.354577689820" epsilon="0.3054320"/>
+  <Atom type="389" charge="0.1600" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="390" charge="-0.1400" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="391" charge="0.1400" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="392" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="393" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="394" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="395" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="396" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="397" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="398" charge="-0.1800" sigma="0.358141284692" epsilon="0.2343040"/>
+  <Atom type="399" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="400" charge="0.0900" sigma="0.238760856462" epsilon="0.1422560"/>
+  <Atom type="401" charge="0.0000" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="402" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="403" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="404" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="405" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="406" charge="0.1100" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="407" charge="-0.5400" sigma="0.315378146222" epsilon="0.6363864"/>
+  <Atom type="408" charge="0.4300" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="409" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="410" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="411" charge="-0.1150" sigma="0.355005321205" epsilon="0.2928800"/>
+  <Atom type="412" charge="0.1150" sigma="0.242003727796" epsilon="0.1255200"/>
+  <Atom type="413" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="414" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
+  <Atom type="415" charge="-0.4700" sigma="0.329632525712" epsilon="0.8368000"/>
+  <Atom type="416" charge="0.3100" sigma="0.040001352445" epsilon="0.1924640"/>
+  <Atom type="417" charge="0.0700" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="418" charge="0.0900" sigma="0.235197261589" epsilon="0.0920480"/>
+  <Atom type="419" charge="-0.0900" sigma="0.356359487256" epsilon="0.1338880"/>
+  <Atom type="420" charge="0.0900" sigma="0.238760856462" epsilon="0.1882800"/>
+  <Atom type="421" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="422" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="423" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="424" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="425" charge="-0.2700" sigma="0.363486677001" epsilon="0.3263520"/>
+  <Atom type="426" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="427" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="428" charge="0.0900" sigma="0.238760856462" epsilon="0.1004160"/>
+  <Atom type="429" charge="0.5100" sigma="0.356359487256" epsilon="0.4602400"/>
+  <Atom type="430" charge="-0.5100" sigma="0.302905564168" epsilon="0.5020800"/>
  </NonbondedForce>
 </ForceField>
