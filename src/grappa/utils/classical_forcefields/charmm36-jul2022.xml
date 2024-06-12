@@ -3073,9 +3073,10 @@
   <Proper class1="" class2="CT2A" class3="CC" class4="" periodicity1="6" phase1="3.141592653589793" k1="0.209200"/>
   <Proper class1="" class2="CT1" class3="CS" class4="" periodicity1="3" phase1="0.0" k1="0.836800"/>
  </PeriodicTorsionForce>
-<CustomTorsionForce energy="k*(theta-theta0)^2">
+ <CustomTorsionForce energy="k*(theta-theta0)^2">
   <PerTorsionParameter name="k"/>
-  <PerTorsionParameter name="theta0"/>  <Improper class1="NY" class2="CA" class3="CY" class4="CPT" k="836.800000" theta0="0.000000"/>
+  <PerTorsionParameter name="theta0"/>
+  <Improper class1="NY" class2="CA" class3="CY" class4="CPT" k="836.800000" theta0="0.000000"/>
   <Improper class1="HR1" class2="NR1" class3="NR2" class4="CPH2" k="4.184000" theta0="0.000000"/>
   <Improper class1="HR1" class2="NR2" class3="NR1" class4="CPH2" k="4.184000" theta0="0.000000"/>
   <Improper class1="HR3" class2="CPH1" class3="NR1" class4="CPH1" k="4.184000" theta0="0.000000"/>
