@@ -5,7 +5,7 @@ defaults:
 experiment:
   ckpt_path: null
   wandb:
-    name: baseline
+    name: no-charge-as input
     project: grappa-1.3
   progress_bar: true
 
@@ -13,9 +13,9 @@ model:
   in_feat_name:
     - atomic_number
     - ring_encoding
-    - partial_charge
+    # - partial_charge
     - degree
-    - charge_model
+    # - charge_model
 
 data:
   datasets:
@@ -24,10 +24,23 @@ data:
     - gen2
     - gen2-torsion
     - rna-diverse
-    - spice-dipeptide
-    - protein-torsion
     - pepconf-dlc
+    - dipeptides-300K-am1BCC
+    - dipeptides-300K-amber99
+    # - dipeptides-300K-charmm
+    - dipeptides-1000K-am1BCC
+    - dipeptides-1000K-amber99
+    # - dipeptides-1000K-charmm
+    - uncapped-300K-am1BCC
+    - uncapped-300K-amber99
+    # - uncapped-300K-charmm
+    - dipeptides-hyp-dop-300K-amber99
+    - dipeptides-radical-300K
+    - bondbreak-radical-peptides-300K
+
   pure_test_datasets:
+    - protein-torsion
+    - spice-dipeptide
     - rna-trinucleotide
   pure_val_datasets: []
   pure_train_datasets:

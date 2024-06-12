@@ -448,11 +448,15 @@ class ChargeEncoding(torch.nn.Module):
         # Ensure values are within the expected range
         values = torch.clamp(values, self.min_value, self.max_value)
 
-        # Normalize the values to be in range [-1, 1]
-        normalized_values = 2 * ((values - self.min_value) / (self.max_value - self.min_value)) - 1
+        # Normalize the values to be in range [0, 1]
+        normalized_values = ((values - self.min_value) / (self.max_value - self.min_value))
 
         # Bin the normalized values into one-hot vectors
-        binned_indices = torch.floor((normalized_values + 1) * (self.n_bins / 2)).long()
+        binned_indices = torch.floor((normalized_values) * (self.n_bins)).long()
+        
+        # Ensure that binned_indices is within the expected range (necessary for edge cases where values are exactly min or max)
+        binned_indices = torch.clamp(binned_indices, 0, self.n_bins - 1)
+
         one_hot_binned = torch.nn.functional.one_hot(binned_indices, num_classes=self.n_bins)
 
         # Concatenate normalized values with their one-hot encoded bins

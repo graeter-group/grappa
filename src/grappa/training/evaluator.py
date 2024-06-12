@@ -13,6 +13,7 @@ from tqdm import tqdm
 import logging
 from typing import Tuple, Dict
 from grappa.utils import flatten_dict
+from grappa.data import GraphDataLoader
 
 
 class FastEvaluator:
@@ -418,30 +419,32 @@ class Evaluator:
             plt.close(fig)
 
 
-    def eval_ds(ds, ff_name:str)->Tuple[Dict[str,np.ndarray], Dict[str,np.ndarray]]:
-        """
-        Returns the metrics and the predictions for the given force field as metrics, data.
-        """
-        suffix = "_"+ff_name+"_total"
-        evaluator = Evaluator(suffix=suffix, suffix_ref="_qm")
-        for dsname, g in zip(ds.subdataset, ds.graphs):
-            if not f'energy{suffix}' in g.nodes['g'].data.keys():
-                continue
-            evaluator.step([g], [dsname])
+def eval_ds(ds, ff_name:str, n_bootstrap:int=None)->Tuple[Dict[str,np.ndarray], Dict[str,np.ndarray]]:
+    """
+    Returns the metrics and the predictions for the given force field for all datasets with the given force field name.
+    """
+    loader = GraphDataLoader(ds, batch_size=1, shuffle=False, conf_strategy="max", drop_last=False)
 
-        evaluator.collect()
+    suffix = "_"+ff_name+"_total"
+    evaluator = Evaluator(suffix=suffix, suffix_ref="_qm")
+    for g, dsname in tqdm(loader, desc=f'Evaluating {ff_name}'):
+        if not f'energy{suffix}' in g.nodes['g'].data.keys():
+            continue
+        evaluator.step(g, dsname)
 
-        data = {
-            'energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_energies.items()},
-            'gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_gradients.items()},
-            'reference_energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_energies.items()},
-            'reference_gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_gradients.items()},
-            'mol_idxs': {k:np.array(v) for k,v in evaluator.mol_idxs.items()},
-        }
+    evaluator.collect()
 
-        # flatten the dict:
-        data = dict(flatten_dict(data))
+    data = {
+        'energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_energies.items()},
+        'gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_gradients.items()},
+        'reference_energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_energies.items()},
+        'reference_gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_gradients.items()},
+        'mol_idxs': {k:np.array(v) for k,v in evaluator.mol_idxs.items()},
+    }
 
-        metrics = evaluator.pool(seed=42, n_bootstrap=1000)
+    # flatten the dict:
+    data = dict(flatten_dict(data))
 
-        return metrics, data
+    metrics = evaluator.pool(seed=42, n_bootstrap=n_bootstrap)
+
+    return metrics, data

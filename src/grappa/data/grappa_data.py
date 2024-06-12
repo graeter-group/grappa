@@ -183,13 +183,12 @@ class GrappaData(pl.LightningDataModule):
 
         # write reference data as energy_ref = energy_qm - sum(energy_ref_terms) / gradient_ref = ...
         self.tr.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=self.train_cleanup)
-        self.vl.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=False)
+        self.vl.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=self.train_cleanup)
         self.te.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=False)
 
         # Remove uncommon features for enabling batching
         self.tr.remove_uncommon_features()
         self.vl.remove_uncommon_features()
-        self.te.remove_uncommon_features()
 
         logging.info("Loaded data:\n" + f"Train mols: {len(self.tr)}, Validation mols: {len(self.vl)}, Test mols: {len(self.te)}"+"\n")
 

@@ -6,15 +6,16 @@ from pathlib import Path
 @hydra.main(version_base=None, config_path=str(Path(__file__).parent/"../configs"), config_name="train")
 def main(cfg: DictConfig) -> None:
 
-    # Loads the config of the pretrained model and overwrites the current config.
+    # Loads the config of the pretrained model and overwrites the current model config with that of the pretrained model.
     if cfg.experiment.ckpt_path is not None and cfg.experiment.ckpt_cfg_override:
         ckpt_cfg_path = Path(cfg.experiment.warm_start).parent / 'config.yaml'
         ckpt_cfg = OmegaConf.load(ckpt_cfg_path)
         cfg.model = ckpt_cfg.model
 
-    experiment = Experiment(config=cfg)
+    experiment = Experiment(config=cfg, is_train=True)
     experiment.train()
-    experiment.test()
+    experiment.test(n_bootstrap=cfg.experiment.evaluation.n_bootstrap)
+    experiment.eval_classical(classical_force_fields=cfg.experiment.evaluation.classical_force_fields)
 
 
 if __name__ == "__main__":

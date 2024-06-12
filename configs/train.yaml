@@ -3,6 +3,7 @@ defaults:
 
 experiment:
   ckpt_path: null # used for loading pretrained model weights
+  ckpt_cfg_override: false
   wandb:
     name: benchmark-baseline
     project: grappa
@@ -24,6 +25,9 @@ experiment:
     log_every_n_steps: 10
     deterministic: False
     check_val_every_n_epoch: 1
+  evaluation:
+    n_bootstrap: 1000
+    classical_force_fields: []
 
 data:
   datasets:
