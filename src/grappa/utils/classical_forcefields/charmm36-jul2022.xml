@@ -3073,9 +3073,10 @@
   <Proper class1="" class2="CT2A" class3="CC" class4="" periodicity1="6" phase1="3.141592653589793" k1="0.209200"/>
   <Proper class1="" class2="CT1" class3="CS" class4="" periodicity1="3" phase1="0.0" k1="0.836800"/>
  </PeriodicTorsionForce>
-<CustomTorsionForce energy="k*(theta-theta0)^2">
+<CustomTorsionForce energy="0.5*k*min(dtheta, 2*pi-dtheta)^2; dtheta = abs(theta-theta0); pi = 3.1415926535">
   <PerTorsionParameter name="k"/>
-  <PerTorsionParameter name="theta0"/>  <Improper class1="NY" class2="CA" class3="CY" class4="CPT" k="836.800000" theta0="0.000000"/>
+  <PerTorsionParameter name="theta0"/> 
+  <Improper class1="NY" class2="CA" class3="CY" class4="CPT" k="836.800000" theta0="0.000000"/>
   <Improper class1="HR1" class2="NR1" class3="NR2" class4="CPH2" k="4.184000" theta0="0.000000"/>
   <Improper class1="HR1" class2="NR2" class3="NR1" class4="CPH2" k="4.184000" theta0="0.000000"/>
   <Improper class1="HR3" class2="CPH1" class3="NR1" class4="CPH1" k="4.184000" theta0="0.000000"/>
@@ -3106,7 +3107,7 @@
   <Improper class1="N" class2="CT2" class3="CT2" class4="CC" k="0.000000" theta0="0.000000"/>
   <Improper class1="CD" class2="OC" class3="OC" class4="OC" k="895.376000" theta0="0.000000"/>
   <Improper class1="C" class2="CT3" class3="N" class4="O" k="594.128000" theta0="0.000000"/>
-  <Improper class1="NC2" class2="" class3="" class4="C" k="376.560000" theta0="0.000000"/>
+  <!-- <Improper class1="NC2" class2="" class3="" class4="C" k="376.560000" theta0="0.000000"/>
   <Improper class1="NC2" class2="" class3="" class4="HC" k="-16.736000" theta0="0.000000"/>
   <Improper class1="NH1" class2="" class3="" class4="H" k="167.360000" theta0="0.000000"/>
   <Improper class1="NH2" class2="" class3="" class4="H" k="33.472000" theta0="0.000000"/>
@@ -3115,7 +3116,7 @@
   <Improper class1="OC" class2="" class3="" class4="CC" k="803.328000" theta0="0.000000"/>
   <Improper class1="CC" class2="" class3="" class4="CT1" k="803.328000" theta0="0.000000"/>
   <Improper class1="CC" class2="" class3="" class4="CT2" k="803.328000" theta0="0.000000"/>
-  <Improper class1="CC" class2="" class3="" class4="CT3" k="803.328000" theta0="0.000000"/>
+  <Improper class1="CC" class2="" class3="" class4="CT3" k="803.328000" theta0="0.000000"/> -->
  </CustomTorsionForce>
  <CMAPTorsionForce>
    <Map> 0.54392000 3.22168000 4.05848000 5.23000000 8.87008000 11.38048000 8.74456000 7.48936000 3.26352000 -2.88696000 4.18400000 -9.20480000 -20.20872000 -20.16688000 -20.54344000 -15.02056000 -11.58968000 -11.63152000 -10.25080000 -9.83240000 -9.79056000 -6.35968000 -3.97480000 -0.16736000

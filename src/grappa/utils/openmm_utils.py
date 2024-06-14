@@ -59,7 +59,7 @@ if importlib.util.find_spec('openmm') is not None:
 
     def get_energies(openmm_system: openmm.System, xyz:np.ndarray)->Tuple[np.ndarray, np.ndarray]:
         """
-        Returns enegries, forces. in units kcal/mol and kcal/mol/angstroem
+        Returns energies, forces. in units kcal/mol and kcal/mol/angstroem.
         Assume that xyz is in angstroem and has shape (num_confs, num_atoms, 3).
         """
         import openmm
@@ -159,6 +159,29 @@ if importlib.util.find_spec('openmm') is not None:
             nonbonded_force.setParticleParameters(i, charge=charge, sigma=sigma, epsilon=epsilon)
 
         return system
+
+    def get_partial_charges(system:openmm.System)->np.ndarray:
+        """
+        Returns the partial charges of the system in units of elementary charge.
+        """
+        # get the nonbonded force (behaves like a reference not a copy!):
+        nonbonded_force = None
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                if not nonbonded_force is None:
+                    raise ValueError("More than one nonbonded force found.")
+                nonbonded_force = force
+                
+        if nonbonded_force is None:
+            raise ValueError("No nonbonded force found.")
+        
+        charges = []
+        for i in range(nonbonded_force.getNumParticles()):
+            charge, sigma, epsilon = nonbonded_force.getParticleParameters(i)
+            charges.append(charge.value_in_unit(openmm.unit.elementary_charge))
+
+        charges = np.array(charges)
+        return charges
 
 
     def write_to_system(system:openmm.System, parameters:grappa.data.Parameters)->openmm.System:
@@ -344,7 +367,7 @@ if importlib.util.find_spec('openmm') is not None:
         return get_contribution(openmm_system, xyz, keywords=['nonbonded'])
 
     def get_bond_contribution(openmm_system:openmm.System, xyz:np.ndarray):
-        return get_contribution(openmm_system, xyz, keywords=['bond'])
+        return get_contribution(openmm_system, xyz, keywords=['bondforce'])
 
     def get_angle_contribution(openmm_system:openmm.System, xyz:np.ndarray):
         return get_contribution(openmm_system, xyz, keywords=['angle'])

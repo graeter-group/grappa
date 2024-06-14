@@ -144,7 +144,7 @@ class MolData():
         self._validate()
 
 
-    def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:list[str]=[])->DGLGraph:
+    def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:List[str]=[])->DGLGraph:
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
         Also creates entries 'xyz', 'energy_qm' and 'gradient_qm' in the global node type g and in the atom node type n1 respectively. The shapes are different than in the class attributes, namely (1, n_confs) and (n_atoms, n_confs, 3) respectively. (This is done because feature tensors must have len == num_nodes)

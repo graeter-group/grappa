@@ -15,7 +15,6 @@ def main(cfg: DictConfig) -> None:
     experiment = Experiment(config=cfg, is_train=True)
     experiment.train()
     experiment.test(n_bootstrap=cfg.experiment.evaluation.n_bootstrap)
-    experiment.eval_classical(classical_force_fields=cfg.experiment.evaluation.classical_force_fields)
 
 
 if __name__ == "__main__":

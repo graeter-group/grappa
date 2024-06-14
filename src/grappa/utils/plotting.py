@@ -87,7 +87,7 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
 
     ax.set_aspect('equal', 'box')
 
-    ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=1)
+    ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
 
     if num_ticks is not None:
         ax.xaxis.set_major_locator(plt.MaxNLocator(num_ticks))
