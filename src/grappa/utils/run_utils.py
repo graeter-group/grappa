@@ -27,6 +27,28 @@ def flatten_dict(d, parent_key='', sep=':'):
     return dict(items)
 
 
+def unflatten_dict(d: Dict[str, any], sep: str = ':') -> Dict:
+    """
+    Unflatten a dictionary that has been flattened with keys separated by a specified separator.
+
+    Args:
+        d (Dict[str, any]): The flattened dictionary to unflatten.
+        sep (str): Separator used in keys to indicate nested dictionaries.
+
+    Returns:
+        Dict: The unflattened dictionary.
+    """
+    unflattened = {}
+    for composite_key, value in d.items():
+        parts = composite_key.split(sep)
+        target = unflattened
+        for part in parts[:-1]:  # Traverse/create the dictionary except for the last part
+            if part not in target:
+                target[part] = {}
+            target = target[part]
+        target[parts[-1]] = value  # Set the final part as the value
+    return unflattened
+
 
 def load_yaml(path:Union[str,Path])->Dict:    
     with open(str(path), 'r') as f:

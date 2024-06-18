@@ -5,7 +5,7 @@ defaults:
 experiment:
   ckpt_path: null
   wandb:
-    name: charge-as-input
+    name: baseline
     project: grappa-1.3
   progress_bar: true
 
@@ -15,7 +15,6 @@ model:
     - ring_encoding
     - partial_charge
     - degree
-    # - charge_model
 
 data:
   datasets:
@@ -35,14 +34,9 @@ data:
     - dipeptides-1000K-charmm36
     - uncapped-300K-openff-1.2.0
     - uncapped-300K-amber99
-    # - uncapped-300K-charmm36
     - dipeptides-hyp-dop-300K-amber99
     - dipeptides-radical-300K
     - bondbreak-radical-peptides-300K
-    - dipeptides-300K-noise-0.1
-    - dipeptides-300K-noise-0.2
-    - dipeptides-1000K-noise-0.1
-    - dipeptides-1000K-noise-0.2
 
   pure_test_datasets:
     - rna-trinucleotide

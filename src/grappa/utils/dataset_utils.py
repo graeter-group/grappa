@@ -43,24 +43,30 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
     Returns the path to a dataset given a tag. If the dataset is not at the corresponding location, it is downloaded. The tag is the dirname of the dataset, available tags are:
 
     BENCHMARK ESPALOMA:
-        'spice-des-monomers'
-        'spice-pubchem'
-        'gen2'
-        'gen2-torsion'
-        'spice-dipeptide'
-        'protein-torsion'
-        'pepconf-dlc'
-        'rna-diverse'
-        'rna-trinucleotide'
+        - 'spice-des-monomers'
+        - 'spice-pubchem'
+        - 'gen2'
+        - 'gen2-torsion'
+        - 'spice-dipeptide'
+        - 'protein-torsion'
+        - 'pepconf-dlc'
+        - 'rna-diverse'
+        - 'rna-trinucleotide'
 
     PEPTIDE DATASET:
-        'spice-dipeptide_amber99sbildn'
-        'tripeptides_amber99sbildn'
-        'hyp-dop_amber99sbildn'
-        'uncapped_amber99sbildn'
+        - dipeptides-300K-openff-1.2.0
+        - dipeptides-300K-amber99
+        - dipeptides-300K-charmm36
+        - dipeptides-1000K-openff-1.2.0
+        - dipeptides-1000K-amber99
+        - dipeptides-1000K-charmm36
+        - uncapped-300K-openff-1.2.0
+        - uncapped-300K-amber99
+        - dipeptides-hyp-dop-300K-amber99
 
     RADICAL DATASET:
-        'dipeptide_rad'
+        - dipeptides-radical-300K
+        - bondbreak-radical-peptides-300K
 
     SPLITFILE:
         'espaloma_split'

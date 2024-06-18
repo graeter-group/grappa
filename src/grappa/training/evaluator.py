@@ -422,6 +422,8 @@ class Evaluator:
 def eval_ds(ds, ff_name:str, n_bootstrap:int=None)->Tuple[Dict[str,np.ndarray], Dict[str,np.ndarray]]:
     """
     Returns the metrics and the predictions for the given force field for all datasets with the given force field name.
+    data, metrics = eval_ds(ds) -> unflatten_dict(data) is nested dictionary with:
+    {energies: {subdataset_name: energies}, reference_energies: {subdataset_name: reference_energies}, ...}
     """
     loader = GraphDataLoader(ds, batch_size=1, shuffle=False, conf_strategy="max", drop_last=False)
 

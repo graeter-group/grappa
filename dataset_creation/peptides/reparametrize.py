@@ -9,7 +9,7 @@ import numpy as np
 from grappa.utils.plotting import scatter_plot
 
 
-def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str="openmm", charge_model:str="", crmse_limit:float=15., old_ff_name:str="amber99sbildn", charge_noise:float=0.):
+def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str="openmm", charge_model:str="", crmse_limit:float=15., old_ff_name:str="amber99sbildn", charge_noise:float=0., plot_only:bool=False):
     """
     Reparametrize the dataset dspath/*.npz using the force field force_field.
     """
@@ -23,49 +23,53 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str
     assert len(mol_data_paths) > 0
 
     ff_name = forcefield
-    ff_name.strip('.xml')
-    ff_name.strip('.offxml')
-    ff_name.strip('_unconstrained')
+    ff_name = ff_name.replace('.xml', '')
+    ff_name = ff_name.replace('.offxml', '')
+    ff_name = ff_name.replace('_unconstrained', '')
 
     for path in tqdm(list(mol_data_paths), desc="Reparametrizing"):
 
         old_moldata = MolData.load(path)
-        pdbstring = old_moldata.pdb
-        mapped_smiles = old_moldata.mapped_smiles
 
-        if ff_type == 'openmm':
-            # get topology:
-            topology = openmm_utils.topology_from_pdb(pdbstring)
-            ff = openmm_utils.get_openmm_forcefield(forcefield)
-            system = ff.createSystem(topology)
+        if not plot_only:
+            pdbstring = old_moldata.pdb
+            mapped_smiles = old_moldata.mapped_smiles
 
-        elif ff_type == 'openff' or ff_type == 'openmmforcefields': 
-            system, topology, _ = openff_utils.get_openmm_system(mapped_smiles=mapped_smiles, openff_forcefield=forcefield)
+            if ff_type == 'openmm':
+                # get topology:
+                topology = openmm_utils.topology_from_pdb(pdbstring)
+                ff = openmm_utils.get_openmm_forcefield(forcefield)
+                system = ff.createSystem(topology)
+
+            elif ff_type == 'openff' or ff_type == 'openmmforcefields': 
+                system, topology, _ = openff_utils.get_openmm_system(mapped_smiles=mapped_smiles, openff_forcefield=forcefield)
+            else:
+                raise ValueError(f"forcefield_type must be either openmm, openff or openmmforcefields but is {ff_type}")
+
+            if charge_noise > 0.:
+                charges = openmm_utils.get_partial_charges(system)
+                noise = np.random.normal(0, charge_noise, len(charges))
+                # subtract the mean of the noise:
+                noise -= np.mean(noise)
+                charges += noise
+                system = openmm_utils.set_partial_charges(system, charges)
+                ff_name += f"_noise{charge_noise}"
+
+            new_moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=old_moldata.xyz, gradient=old_moldata.gradient, energy=old_moldata.energy, mol_id=old_moldata.mol_id, pdb=old_moldata.pdb, sequence=old_moldata.sequence, allow_nan_params=True, charge_model=charge_model, ff_name=ff_name, smiles=old_moldata.smiles, mapped_smiles=old_moldata.mapped_smiles)
+
+            openmm_gradients = new_moldata.ff_gradient[ff_name]["total"]
+            gradient = new_moldata.gradient
+
+            # calculate the crmse:
+            crmse = np.sqrt(np.mean((openmm_gradients-gradient)**2))
+
+            if crmse > crmse_limit:
+                print(f"Warning: crmse between {forcefield} and QM is {round(crmse, 3)} for {path.stem}, std of gradients is {round(np.std(gradient), 1)}")
+
+            new_moldata.save(Path(outpath)/(path.stem+'.npz'))
         else:
-            raise ValueError(f"forcefield_type must be either openmm, openff or openmmforcefields but is {ff_type}")
+            new_moldata = MolData.load(Path(outpath)/(path.stem+'.npz'))
 
-        if charge_noise > 0.:
-            charges = openmm_utils.get_partial_charges(system)
-            noise = np.random.normal(0, charge_noise, len(charges))
-            # subtract the mean of the noise:
-            noise -= np.mean(noise)
-            charges += noise
-            system = openmm_utils.set_partial_charges(system, charges)
-            ff_name += f"_noise{charge_noise}"
-
-        new_moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=old_moldata.xyz, gradient=old_moldata.gradient, energy=old_moldata.energy, mol_id=old_moldata.mol_id, pdb=old_moldata.pdb, sequence=old_moldata.sequence, allow_nan_params=True, charge_model=charge_model, ff_name=ff_name, smiles=old_moldata.smiles, mapped_smiles=old_moldata.mapped_smiles)
-
-
-        openmm_gradients = new_moldata.ff_gradient[ff_name]["total"]
-        gradient = new_moldata.gradient
-
-        # calculate the crmse:
-        crmse = np.sqrt(np.mean((openmm_gradients-gradient)**2))
-
-        if crmse > crmse_limit:
-            print(f"Warning: crmse between {forcefield} and QM is {round(crmse, 3)} for {path.stem}, std of gradients is {round(np.std(gradient), 1)}")
-
-        new_moldata.save(Path(outpath)/(path.stem+'.npz'))
 
         for contrib in CONTRIBS:
             all_gradients_new[contrib].append(new_moldata.ff_gradient[ff_name][contrib].flatten())
@@ -79,9 +83,11 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str
         grads_old = np.concatenate(all_gradients_old[contrib])
         grads_new = np.concatenate(all_gradients_new[contrib])
 
-        scatter_plot(this_ax, grads_old, grads_new, cluster=True, logscale=True)
+        scatter_plot(this_ax, grads_old, grads_new, cluster=True, logscale=True, show_rmsd=True)
         this_ax.set_xlabel(old_ff_name)
         this_ax.set_ylabel(ff_name)
+
+    plt.tight_layout()
 
     plt.savefig(f"{outpath.stem}.png")
     plt.close()
@@ -98,6 +104,7 @@ if __name__ == "__main__":
     parser.add_argument("--crmse_limit", type=float, default=15., help="Maximum crmse")
     parser.add_argument("--old_ff_name", type=str, default="amber99sbildn", help="Name of the old force field")
     parser.add_argument("--charge_noise", type=float, default=0., help="Add noise to the charges")
+    parser.add_argument("--plot_only", action="store_true", help="Only plot the results")
 
     args = parser.parse_args()
 
@@ -109,4 +116,4 @@ if __name__ == "__main__":
 
     Path(args.outpath).mkdir(exist_ok=True, parents=True)
 
-    reparametrize_dataset(Path(args.dspath), Path(args.outpath), args.forcefield, args.ff_type, args.charge_model, args.crmse_limit, args.old_ff_name, args.charge_noise)
+    reparametrize_dataset(Path(args.dspath), Path(args.outpath), args.forcefield, args.ff_type, args.charge_model, args.crmse_limit, args.old_ff_name, args.charge_noise, args.plot_only)

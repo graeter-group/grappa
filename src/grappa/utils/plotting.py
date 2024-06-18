@@ -45,7 +45,7 @@ def calculate_density_scatter(x, y, delta_factor=100, seed=0):
     return np.array(points), np.array(frequencies)
 
 
-def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, num_ticks=None, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, **kwargs):
+def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, num_ticks=None, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, **kwargs):
     """
     Create a scatter plot of two arrays x and y.
     Args:
@@ -63,6 +63,7 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
         delta_factor: Factor for clustering points
         cmap: Colormap for clustered scatter plot
         logscale: Whether to use a log scale for the colorbar
+        show_rmsd: Whether to show the RMSD
         **kwargs: Additional keyword arguments for ax.scatter call
     """
     if n_max is not None and n_max < len(x):
@@ -124,6 +125,10 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
 
     else:
         ax.scatter(x, y, alpha=alpha, s=s, **kwargs)
+
+    if show_rmsd:
+        rmsd = np.sqrt(np.mean((x - y)**2))
+        ax.text(0.05, 0.95, f'RMSD: {rmsd:.2f}', transform=ax.transAxes, ha='left', va='top')
 
     return ax
 #%%

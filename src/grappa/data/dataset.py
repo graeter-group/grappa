@@ -56,38 +56,47 @@ class Dataset(torch.utils.data.Dataset):
 
         Possible tags for download are:
         BENCHMARK ESPALOMA:
-            - 'spice-dipeptide'
             - 'spice-des-monomers'
             - 'spice-pubchem'
-            - 'rna-trinucleotide'
-            - 'rna-diverse'
             - 'gen2'
-            - 'pepconf-dlc'
             - 'gen2-torsion'
+            - 'spice-dipeptide'
             - 'protein-torsion'
+            - 'pepconf-dlc'
+            - 'rna-diverse'
+            - 'rna-trinucleotide'
+
         PEPTIDE DATASET:
-            - 'spice-dipeptide_amber99sbildn'
-            - 'pepconf-dlc_amber99sbildn'
-            - 'protein-torsion_amber99sbildn'
-            - 'tripeptides_amber99sbildn'
-            - 'dipeptide_rad'
-            - 'uncapped_amber99sbildn'
+            - dipeptides-300K-openff-1.2.0
+            - dipeptides-300K-amber99
+            - dipeptides-300K-charmm36
+            - dipeptides-1000K-openff-1.2.0
+            - dipeptides-1000K-amber99
+            - dipeptides-1000K-charmm36
+            - uncapped-300K-openff-1.2.0
+            - uncapped-300K-amber99
+            - dipeptides-hyp-dop-300K-amber99
+
+        RADICAL DATASET:
+            - dipeptides-radical-300K
+            - bondbreak-radical-peptides-300K
         """
 
         data_dir=dataset_utils.get_data_path()/'dgl_datasets'
 
         dir_path = Path(data_dir) / tag
 
-        if dir_path.exists():
+        # load the dataset directly if it has been created from a moldata path (to ensure that old datasets are overwritten with ones from the new data pipeline)
+        if dir_path.exists() and (dataset_utils.get_data_path()/"datasets"/tag).exists():
             if not ((dir_path/'graphs.bin').exists() and (dir_path/'mol_ids.json').exists() and (dir_path/'subdataset.json').exists()):
                 raise ValueError(f'Found directory {dir_path} but not all necessary files: graphs.bin, mol_ids.json, subdataset.json.')
             return Dataset.load(dir_path)
-        
-        # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
-        moldata_path = dataset_utils.get_moldata_path(tag)
+        else:
+            # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
+            moldata_path = dataset_utils.get_moldata_path(tag)
 
-        self = Dataset.load(moldata_path)
-        return self
+            self = Dataset.load(moldata_path)
+            return self
 
     def __len__(self):
         return len(self.graphs)

@@ -21,7 +21,7 @@ def reparametrize_dataset(dspath:Path):
     assert len(mol_data_paths) > 0
 
     ff_name = "gaff-2.11"
-    forcefield = "gaff-2.11_unconstrained.offxml"
+    forcefield = "gaff-2.11"
 
     for path in tqdm(list(mol_data_paths), desc="Reparametrizing"):
 
@@ -35,24 +35,27 @@ def reparametrize_dataset(dspath:Path):
         gradients = -forces
 
         old_moldata.ff_gradient[ff_name] = {"total": gradients}
-        old_moldata.energy[ff_name] = {"total": energy}
+        old_moldata.ff_energy[ff_name] = {"total": energy}
 
         old_moldata.save(path=path)
 
         all_gradients_new.append(old_moldata.ff_gradient[ff_name]['total'].flatten())
-        all_gradients_old.append(old_moldata.ff_gradient['openff-2.1.0']['total'].flatten())
+        all_gradients_old.append(old_moldata.ff_gradient['openff-1.2.0']['total'].flatten())
 
     # plot the different contributions:
-    fig, ax = plt.subplots(2, 3, figsize=(15, 10))
+    fig, ax = plt.subplots(1,1, figsize=(5,5))
 
     grads_old = np.concatenate(all_gradients_old)
     grads_new = np.concatenate(all_gradients_new)
 
-    scatter_plot(ax, grads_old, grads_new, cluster=True, logscale=True)
-    ax.set_xlabel("openff-2.1.0")
+    scatter_plot(ax, grads_old, grads_new, cluster=True, logscale=True, show_rmsd=True)
+
+    ax.set_xlabel("openff-1.2.0")
     ax.set_ylabel(ff_name)
 
-    plt.savefig(f"{dspath.stem}.png")
+    plt.tight_layout()
+
+    plt.savefig(f"gaff-{dspath.stem}.png")
     plt.close()
 
 
