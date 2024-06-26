@@ -1,9 +1,14 @@
 defaults:
   - _self_
 
-ckpt_path: /local/user/seutelf/grappa/ckpt/grappa-1.3/amber99-bonds-angles-torsions/2024-06-11_14-40-54/epoch=309-early_stopping_loss=2.424e+01.ckpt
-n_bootstrap: null
+ckpt_path: /local/user/seutelf/grappa/ckpt/grappa/baseline/2024-06-26_10-13-48/last.ckpt
+n_bootstrap: 1000
 test_data_path: null
 accelerator: 'gpu'
-classical_force_fields: ["amber99sbildn", "openff-2.1.0", "reference_ff", "amber14"]
+classical_force_fields:
+  - amber99sbildn
+  - openff-1.2.0
+  - amber14
+  - gaff-2.11
+  - reference_ff
 test_datasets: []

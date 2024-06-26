@@ -19,8 +19,8 @@ def main(cfg: DictConfig) -> None:
         raise NotImplementedError(f"Checkpoint config not found at {ckpt_path.parent/'config.yaml'}")
 
     # add the test sets to the config:
-    ckpt_cfg.data.pure_test_datasets += cfg.test_datasets
-    ckpt_cfg.data.pure_test_datasets = list(set(ckpt_cfg.data.pure_test_datasets))
+    ckpt_cfg.data.data_module.pure_test_datasets += cfg.test_datasets
+    ckpt_cfg.data.data_module.pure_test_datasets = list(set(ckpt_cfg.data.data_module.pure_test_datasets))
 
     # replace the checkpoint dir in ckpt_cfg with the one from the checkpoint path:
     ckpt_cfg.experiment.checkpointer.dirpath = ckpt_path.parent

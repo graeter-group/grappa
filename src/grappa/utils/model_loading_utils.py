@@ -3,83 +3,75 @@ from pathlib import Path
 from typing import Union, Dict
 from grappa.models import GrappaModel
 import yaml
+import csv
+import pandas as pd
+from grappa.utils.data_utils import get_repo_dir, download_zipped_dir
+from grappa.training.utils import get_model_from_path
+import logging
 
-def model_from_tag(tag:str, filename=None):
+def model_from_path(path:Union[str,Path])->GrappaModel:
+    """
+    Loads a model from a path to a checkpoint. The parent dir of the checkpoint must contain a config.yaml file that includes the model config.
+    """
+    return get_model_from_path(path, device='cpu')
+
+def model_from_tag(tag:str='latest')->GrappaModel:
     """
     Loads a model from a tag. With each release, the mapping tag to url of model weights is updated such that models returned by this function are always at a version that works in the respective release.
-    Possible tags:
-    - latest
-    - grappa-1.0
+    Possible tags are defined in src/tags.csv.
     """
-    model_dict = model_dict_from_tag(tag, filename=filename)
-    model = model_from_dict(model_dict)
-    return model
+    csv_path = Path(__file__).parent.parent.parent / 'tags.csv'
 
-def url_from_tag(tag:str):
+    df = pd.read_csv(csv_path, comment='#')
+    tags = df['tag'].values
+    if tag not in tags:
+        
+        # if the tag is ...-n.x, try to find n.x.m with m maximal, n,m,x: int
+        new_tag = find_tag(tag, tags)
+        if new_tag is not None:
+            tag = new_tag
+            assert tag in tags, f"Internal error: tag {tag} not found in tags.csv"
+        else:
+            raise ValueError(f"Tag {tag} not found in tags.csv")
+    
+    # tag must be unique:
+    idxs = tags==tag
+    if sum(idxs)!=1:
+        raise ValueError(f"Tag {tag} is not unique in tags.csv: {sum(idxs)} entries found.")
+    idx = idxs.argmax()
+
+    path = df['path'].iloc[idx]
+
+    if not Path(path).is_absolute():
+        path = get_repo_dir()/Path(path)
+    if not Path(path).exists():
+        logging.info(f"Path {path} does not exist. Downloading the model weights.")
+        url = df['url'].iloc[idx]
+        download_zipped_dir(url=url, target_dir=path.parent)
+
+    return model_from_path(path=path)
+
+
+def find_tag(tag, tags):
     """
-    Loads a model from a tag. With each release, the mapping tag to url of model weights is updated such that models returned by this function are always at a version that works in the respective release.
-    Possible tags:
-    - latest
-    - grappa-1.2
-    - grappa-1.1
-    - grappa-1.0
+    Finds the tag in tags that corresponds to the same model as the input tag.
+    if the tag is ...-n.x, try to find n.x.m with m maximal, n,m,x: int
     """
-    MODEL_NAMES = {
-        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.2.0/grappa-1.2.1.pth': ['grappa-1.2', 'grappa-1.2.1', 'latest'],
-        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1.1.pth': ['grappa-1.1', 'grappa-1.1.1'],
-        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1.0.pth': ['grappa-1.1.0',],
-        'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.1.0/grappa-1.1-benchmark.pth': ['grappa-1.1-benchmark',],
-    }
-
-    # first, go through the hard-coded dictionary above:
-    filename = None
-    for name in MODEL_NAMES.keys():
-        if tag == Path(name).stem or tag in MODEL_NAMES[name]:
-            filename = name
-            break
-
-    # if not found, go through all models, a user could have exported:
-    if filename is None:
-        for name in Path(__file__).parent.parent.parent.parent.glob('models/*.pth'):
-            if tag == name.stem:
-                filename = name.name
-                break
-
-    if filename is None:
-        raise ValueError(f"Tag {tag} not found in model names {MODEL_NAMES} and not found in the grappa/models directory.")
-
-
-    return filename
-
-
-def load_from_torchhub(url:str, filename:str=None) -> dict:
-    """
-    Loads a model from a url. If filename is None, the filename is inferred from the url.
-    """
-    models_path = Path(__file__).parents[3] / "models"
-    models_path.mkdir(parents=True, exist_ok=True)
-    model_dict = torch.hub.load_state_dict_from_url(url, model_dir=str(models_path),file_name=filename)
-    return model_dict
-
-def model_from_dict(model_dict:dict):
-    """
-    Loads a model from a dictionary that contains (at least) a state_dict and a config.
-    """
-    state_dict = model_dict['state_dict']
-    config = model_dict['config']
-    model = GrappaModel(**config['model_config'])
-    model.load_state_dict(state_dict)
-    model.eval()
-    return model
-
-
-def model_dict_from_tag(tag:str, filename:str=None):
-    '''
-    Loads a model_dict, that is a dictionary
-    {'state_dict': state_dict, 'config': config, 'split_names': split_names}
-    from a tag. If filename is None, the filename is inferred from the url.
-    '''
-    url = url_from_tag(tag)
-
-    model_dict = load_from_torchhub(url, filename)
-    return model_dict
+    tag_suffix = tag.split('-')[-1]
+    if len(tag_suffix.split('.'))==2:
+        if tag_suffix[-1].isdigit() and tag_suffix[-2].isdigit():
+            n = int(tag_suffix.split('.')[0])
+            x = int(tag_suffix.split('.')[1])
+            # find pattern ...-n.x.m in tags:
+            cond = lambda t: tag in t and len(t.split('-')[-1].split('.'))==3 and t.split('-')[-1].split('.')[0]==str(n) and t.split('-')[-1].split('.')[1]==str(x) and t.split('-')[-1].split('.')[2].isdigit()
+            idxs = [i for i, t in enumerate(tags) if cond(t)]
+            if len(idxs)>0:
+                # find the max m:
+                max_m = -2
+                for i in idxs:
+                    m = int(tags[i].split('-')[-1].split('.')[-1])
+                    if m>max_m:
+                        max_m = m
+                        idx = i
+                return tags[idx]
+    return None

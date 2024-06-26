@@ -5,6 +5,7 @@ from tqdm import tqdm
 from pathlib import Path
 from typing import Union
 from tqdm import tqdm
+import logging
 
 def get_repo_dir()->Path:
     '''
@@ -17,26 +18,6 @@ def get_data_path()->Path:
     Returns the default path where to look for datasets.
     '''
     return get_repo_dir() / "data"
-
-
-# NOTE: this is currently only used for the split loading... maybe delete the method.
-def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_datasets')->Path:
-    '''
-    Returns the path to a dataset given a tag. If the dataset is not at the corresponding location, it is downloaded. The tag is the dirname of the dataset, available tags are:
-
-    SPLITFILES:
-        'espaloma_split'
-    '''
-
-    dir_path = Path(data_dir) / tag
-
-    if dir_path.exists():
-        return dir_path
-    
-    # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
-    moldata_path = get_moldata_path(tag)
-    return moldata_path
-
 
 def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets')->Path:
     '''
@@ -126,44 +107,72 @@ def load_dataset(url:str, data_dir:Path=get_data_path()/'datasets', dirname:str=
 
     data_dir = Path(data_dir).absolute()
 
-    # Create the directory if it doesn't exist
-    data_dir.mkdir(parents=True, exist_ok=True)
-
     # Extract dirname from URL
     if dirname is None:
         dirname = url.split('/')[-1].split('.')[0]
     dir_path = data_dir / dirname
 
 
-    # Download the file if it doesn't exist
+    # Download the folder if it doesn't exist
     if not dir_path.exists():
-        print(f"Downloading {dirname} from:\n'{url}'")
+        logging.info(f"Downloading {dirname} from:\n'{url}'")
 
-        # this is the path to the zip file that is deleted after extraction
-        zip_path = dir_path.with_suffix('.zip')
-
-        # Start the download
-        response = requests.get(url, stream=True)
-        response.raise_for_status()  # Ensure the request was successful
-
-        # Get the total file size from headers
-        total_size = int(response.headers.get('content-length', 0))
-
-        # Initialize the progress bar
-        with tqdm(total=total_size, unit='B', unit_scale=True) as t:
-            with open(zip_path, 'wb') as file:
-                for chunk in response.iter_content(chunk_size=1024):
-                    file.write(chunk)
-                    t.update(len(chunk))
-
-        # print(f"Downloaded {zip_path}")
-
-        # Unzip the file
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(str(data_dir))
-            print(f"Stored dataset at:\n{dir_path}")
-        
-        # delete the zip file
-        os.remove(zip_path)
+        download_zipped_dir(url=url, target_dir=data_dir)
 
     return dir_path
+
+
+
+def download_zipped_dir(url:str, target_dir:Path):
+    # this is the path to the zip file that is deleted after extraction
+    target_dir = Path(target_dir).absolute()
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    zip_path = target_dir.with_suffix('.zip')
+
+    # Start the download
+    response = requests.get(url, stream=True)
+    response.raise_for_status()  # Ensure the request was successful
+
+    # Get the total file size from headers
+    total_size = int(response.headers.get('content-length', 0))
+
+    # Initialize the progress bar
+    with tqdm(total=total_size, unit='B', unit_scale=True) as t:
+        with open(zip_path, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=1024):
+                file.write(chunk)
+                t.update(len(chunk))
+
+    # Unzip the file
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(str(target_dir))
+    
+    # delete the zip file
+    try:
+        os.remove(zip_path)
+    except OSError as e:
+        print(f"Error while deleting the zip file: {e}")
+
+    logging.info(f"Downloaded to {target_dir}")
+
+
+
+# NOTE: this is currently only used for the split loading... maybe delete the method.
+def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_datasets')->Path:
+    '''
+    Returns the path to a dataset given a tag. If the dataset is not at the corresponding location, it is downloaded. The tag is the dirname of the dataset, available tags are:
+
+    SPLITFILES:
+        'espaloma_split'
+    '''
+
+    dir_path = Path(data_dir) / tag
+
+    if dir_path.exists():
+        return dir_path
+    
+    # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
+    moldata_path = get_moldata_path(tag)
+    return moldata_path

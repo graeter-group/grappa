@@ -113,7 +113,7 @@ If we want to train a grappa model, we need to store the dataset as dgl graphs a
 The easiest way to do so is to store the dataset at grappa.utils.get_data_path()/grappa_datasets/<some_name>/*.npz and give the model <some_name> as dataset tag. Then, it can be loaded by grappa.data.Dataset.from_tag('<some_name>').
 """
 
-from grappa.utils.dataset_utils import get_data_path
+from grappa.utils.data_utils import get_data_path
 
 # load the moldata objects
 moldata_paths = list(dspath.glob("moldata_*.npz"))

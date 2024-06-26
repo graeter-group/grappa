@@ -7,7 +7,7 @@ import copy
 import logging
 from grappa.data.dataset import Dataset
 from grappa.data.graph_data_loader import GraphDataLoader
-from grappa.utils.dataset_utils import get_path_from_tag
+from grappa.utils.data_utils import get_path_from_tag
 from tqdm import tqdm
 
 class GrappaData(pl.LightningDataModule):

@@ -15,6 +15,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from grappa.data.grappa_data import GrappaData
 from grappa.training.evaluator import eval_ds
 from grappa.training.lightning_model import GrappaLightningModel
+from grappa.training.utils import to_df
 from grappa.utils.run_utils import flatten_dict
 from grappa.models import GrappaModel, Energy
 import wandb
@@ -27,6 +28,7 @@ from pathlib import Path
 import wandb
 from typing import List, Dict, Union
 from grappa.utils.graph_utils import get_param_statistics
+import copy
 
 
 REPO_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -46,12 +48,12 @@ class Experiment:
     - checkpointer: dict, lightning checkpointing configuration
     """
     def __init__(self, config:DictConfig, is_train:bool=False):
-        self._cfg = config
-        self._data_cfg = config.data
+        self._cfg = copy.deepcopy(config) # store the config for later use
+        self._data_cfg = config.data.data_module
         self._model_cfg = config.model
         self._experiment_cfg = config.experiment
-        self._train_cfg = config.train
-        self._energy_cfg = config.energy
+        self._train_cfg = config.experiment.train
+        self._energy_cfg = config.data.energy
         self.is_train = is_train
 
         # throw an error if energy terms and ref_terms overlap:
@@ -113,12 +115,15 @@ class Experiment:
         logging.info(f"Checkpoints saved to {self.ckpt_dir}")
         
         # Model checkpoints
-        callbacks.append(ModelCheckpoint(**self._experiment_cfg.checkpointer, filename='{epoch}-{'+self._experiment_cfg.checkpointer.monitor+':.3e}'))
+        callbacks.append(ModelCheckpoint(**self._experiment_cfg.checkpointer))
         
         # Save config
         cfg_path = self.ckpt_dir / 'config.yaml'
         with open(cfg_path, 'w') as f:
             OmegaConf.save(config=self._cfg, f=f.name)
+
+        # Log the config to wandb
+        self._cfg.experiment = self._experiment_cfg
         cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
         flat_cfg = dict(flatten_dict(cfg_dict))
         assert isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config), f"Expected wandb config, but got {type(logger.experiment.config)}"
@@ -173,8 +178,9 @@ class Experiment:
                 ckpt_dir = self.ckpt_dir
 
             # find best checkpoint:
-            ckpts = list([c for c in ckpt_dir.glob('*.ckpt') if '=' in c.name])
-            losses = [float(ckpt.name.split('=')[-1].strip('.ckpt')) for ckpt in ckpts]
+            SEP_CHAR=':'
+            ckpts = list([c for c in ckpt_dir.glob('*.ckpt') if SEP_CHAR in c.name])
+            losses = [float(ckpt.name.split(SEP_CHAR)[-1].strip('.ckpt')) for ckpt in ckpts]
             if len(ckpts) == 0:
                 # if no checkpoints with = in the name are found, use the first checkpoint
                 all_ckpts = list(ckpt_dir.glob('*.ckpt'))
@@ -191,10 +197,13 @@ class Experiment:
         if test_data_path is not None:
             epoch = ''
         else:
-            epoch = ckpt_path.name.split('-')[0].replace("=", "-") if not ckpt_path.stem in ['last', 'best'] else ckpt_path.stem
+            epoch = ckpt_path.name.split('-')[0] if not ckpt_path.stem in ['last', 'best'] else ckpt_path.stem
 
         self.grappa_module.n_bootstrap = n_bootstrap
         self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
+
+        # make the list explicit (instead of a generator) to get a good progress bar
+        self.datamodule.te.graphs = list(self.datamodule.te.graphs)
 
         self.trainer.test(
             model=self.grappa_module,
@@ -211,22 +220,20 @@ class Experiment:
         with(open(self.ckpt_dir / f'summary_{epoch}.json', 'w')) as f:
             json.dump(summary, f, indent=4)
 
-        # finish the wandb run
-        wandb.finish()
+        # transform to dataframe such that we get a table:
+        df = to_df(summary, short=True)
+        full_df = to_df(summary, short=False)
 
-        wandb_summary = {}
-        for k, v in summary.items():
-            if isinstance(v, dict):
-                for kk, vv in v.items():
-                    wandb_summary[f"{k}/test/{kk}"] = round(vv['mean'], 3) if isinstance(vv, dict) else round(vv, 3)
-
-
-        # we do not log via wandb because this will create a chart for each test metric
-        logging.info("Test summary:\n\n" + "\n".join([f"{k}:{' '*max(1, 50-len(k))}{v}" for k, v in wandb_summary.items()]))
+        table = df.to_string()
+        logging.info(f"Test summary:\n{table}")
+        
+        full_table = full_df.to_string(columns=['n_mols', 'n_confs', 'rmse_energies', 'crmse_forces', 'mae_energies', 'mae_forces', 'std_energies', 'std_forces'])
+        with open(self.ckpt_dir / f'summary_{epoch}.txt', 'w') as f:
+            f.write(full_table)
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -246,13 +253,12 @@ class Experiment:
 
         for ff in classical_force_fields:
             ff = str(ff)
-            summary, data = eval_ds(self.datamodule.te, ff, n_bootstrap=None)
+            summary, data = eval_ds(self.datamodule.te, ff, n_bootstrap=n_bootstrap)
 
             if len(list(summary.keys())) == 0:
                 logging.info(f"No data found for {ff}.")
                 continue
 
-            summary = self.grappa_module.test_summary
             if not self.datamodule.num_test_mols is None:
                 for dsname in summary.keys():
                     summary[dsname]['n_mols'] = self.datamodule.num_test_mols[dsname]
@@ -263,6 +269,11 @@ class Experiment:
 
             with open(Path(ff_test_data_path).parent / 'summary.json', 'w') as f:
                 json.dump(summary, f, indent=4)
+
+            with open(Path(ff_test_data_path).parent / 'summary.txt', 'w') as f:
+                f.write(to_df(summary, short=False).to_string(columns=['n_mols', 'n_confs', 'rmse_energies', 'crmse_forces', 'mae_energies', 'mae_forces', 'std_energies', 'std_forces']))
+
+            logging.info(f"Test summary for {ff}:\n{to_df(summary, short=True).to_string()}")
 
             np.savez(ff_test_data_path, **data)
 

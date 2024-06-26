@@ -1,143 +1,93 @@
-from grappa.utils.run_utils import load_yaml
 from pathlib import Path
-import torch
-from grappa.models.energy import Energy
-import json
-from grappa.utils.train_utils import remove_module_prefix
-# from grappa.training.resume_trainrun import get_dir_from_id
-import os
 import argparse
+import shutil
+import pandas as pd
+import logging
+logging.basicConfig(level=logging.INFO)
+import os
+
+
+MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
 
 
 def grappa_export():
 
-    parser = argparse.ArgumentParser(description='Export a model such that it can be loaded easily. Stores the model, toghether with a config dict and the dataset partition that is was trained on in a .pth file.\nThen, the model can be loaded via model = grappa.utils.loading_utils.model_from_dict(torch.load(modelpath/modelname.pth)). If executed from within a wandb run directory, the model is expected to be in the files/checkpoints/best-model.ckpt file.')
-    parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0\nIf None, the wandb id is used.', default=None)
-    parser.add_argument('--checkpoint_path', '-cp', type=str, help='Absolute path to the lightning checkpoint that should be exported. Has to be specified if id is not given.', default=None)
-    parser.add_argument('--id', '-i', type=str, help='The wandb id of the run that should be exported. Searches for the oldest best-model.ckpt file that belongs to that run. If you use this argument, the function has to be executed from the dir that contains the wandb folder. Has to be specified if checkpoint_path is not given.', default=None)
-    parser.add_argument('--release_tag', type=str, default=None, help='If not None, uploads the model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.') #
-
-    MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
+    parser = argparse.ArgumentParser(description='Copies a checkpoint, a config.yaml file and all .json and .txt files in children of that dir to grappa/models/modelname/. Adds the modelname and path to grappa/src.tags.csv')
+    parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0\nIf None, the wandb id is used.', required=True)
+    parser.add_argument('--checkpoint_path', '-cp', type=str, help='Absolute path to the lightning checkpoint that should be exported. Has to be specified if id is not given.', required=True)
+    parser.add_argument('--description', '-m', type=str, help='Description of the model.', required=False, default='')
 
     args = parser.parse_args()
 
-    if args.checkpoint_path is not None and args.id is not None:
-        raise ValueError("Either id or checkpoint_path has to be specified, not both.")
+    targetdir = MODELPATH/f'{args.modelname}'
+    if targetdir.exists():
+        logging.warning(f"Model {args.modelname} already exists in {targetdir}. Removing it...")
+        shutil.rmtree(targetdir)
 
-    if args.checkpoint_path is None:
-        if args.id is None:
-            checkpoint_path = Path.cwd() / 'files' / 'checkpoints' / 'best-model.ckpt'
-        else:
-            # checkpoint_path = Path(get_dir_from_id(run_id=args.id, wandb_folder=Path.cwd()/'wandb')) / 'files/checkpoints/best-model.ckpt'
-            pass
+    targetdir.mkdir(exist_ok=True, parents=True)
+
+    # copy files:
+    ckpt_path = Path(args.checkpoint_path)
+    if not ckpt_path.exists():
+        raise FileNotFoundError(f"Checkpoint path {ckpt_path} does not exist.")
+
+    config_path = ckpt_path.parent/'config.yaml'
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config path {config_path} does not exist.")
+
+    ckpt_target = targetdir/'checkpoint.ckpt'
+    logging.info(f"Copying {ckpt_path} to {ckpt_target}...")
+    shutil.copy(ckpt_path, ckpt_target)
+    shutil.copy(config_path, targetdir/'config.yaml')
+
+    # copy all json and txt files in children of ckpt_path (and the containing dirs):
+    for f in list(ckpt_path.parent.rglob('*.json')) + list(ckpt_path.parent.rglob('*.txt')):
+        target = targetdir/f.relative_to(ckpt_path.parent)
+        target.parent.mkdir(exist_ok=True, parents=True)
+        shutil.copy(f, target)
+
+    # read csv:
+    csv_path = MODELPATH.parent/'src'/'tags.csv'
+    if csv_path.exists():
+        csv = pd.read_csv(csv_path, comment='#')
     else:
-        checkpoint_path = Path(args.checkpoint_path)
+        csv = pd.DataFrame(columns=['tag', 'path', 'url', 'description'])
 
-    if args.modelname is None:
-        modelname = checkpoint_path.parent.parent.parent.name.split('-')[-1]
-    else:
-        modelname = args.modelname
+    # remove modeltag if present:
+    if args.modelname in csv.tag.values:
+        logging.warning(f"Model {args.modelname} already exists in {csv_path}. Removing it...")
+    csv = csv[csv.tag != args.modelname]
 
-    model_dict = get_model_dict(checkpoint_path)
+    # append to csv:
+    relpath = targetdir.relative_to(MODELPATH.parent)
+    csv = csv._append({'tag': args.modelname, 'path': relpath, 'url': '', 'description': args.description}, ignore_index=True)
 
-    store_model_dict(model_dict, modelname=modelname, release_tag=args.release_tag, modelpath=MODELPATH)
-
-
-
-
-def get_grappa_model(checkpoint_path):
-
-    chkpt = torch.load(checkpoint_path)
-    state_dict = chkpt['state_dict']
-
-    config = Path(checkpoint_path).parent.parent.parent/'files'/'grappa_config.yaml'
-
-    config = load_yaml(config)
-
-    splitpath = Path(checkpoint_path).parent.parent.parent/'files'/'split.json'
-    if not splitpath.exists():
-        if (Path(checkpoint_path).parent.parent.parent/'files/files'/'split.json').exists():
-            splitpath = Path(checkpoint_path).parent.parent.parent/'files/files'/'split.json'
-            with open(splitpath, 'r') as f:
-                split_names = json.load(f)
-        else:
-            raise RuntimeError(f"split_names.json not found in {splitpath}")
-    else:
-        with open(splitpath, 'r') as f:
-            split_names = json.load(f)
-
-    # model = model_from_config(config['model_config'])
-
-    full_model = torch.nn.Sequential(
-        model,
-        Energy(suffix=''),
-        # Energy(suffix='_ref', write_suffix="_classical_ff")
-    )
-
-    state_dict = remove_module_prefix(state_dict)
-    full_model.load_state_dict(state_dict)
-    model = next(iter(full_model.children()))
-
-    return model, config, split_names
+    COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
+    
+    # Write the csv file with a comment at the top:
+    with open(csv_path, 'w') as f:
+        f.write(COMMENT + '\n')
+        csv.to_csv(f, index=False)
+    logging.info(f"Model {args.modelname} exported to {targetdir} and added to {csv_path}.")
 
 
-def get_model_dict(checkpoint_path):
+def release_model(release_tag:str, modelname:str):
     """
-    Returns a dictionary {state_dict: state_dict, config: config, split_names: split_names} at modelpath/modelname.pth
-    The config entails a configuration of the training run that produced the checkpoint, the split names a list of identifiers for the train, validation and test molecules.
-    """
-    model, config, split_names = get_grappa_model(checkpoint_path)
-    model = model.eval()
-    model = model.cpu()
-
-    state_dict = model.state_dict()
-
-    model_dict = {'state_dict': state_dict, 'config': config, 'split_names': split_names}
-
-    return model_dict
-
-
-def store_model_dict(model_dict, modelname, modelpath=Path(__file__).parent.parent.parent.parent/'models', release_tag=None):
-    """
-    Stores a dictionary {state_dict: state_dict, config: config, split_names: split_names} at modelpath/modelname.pth
-    The config entails a configuration of the training run that produced the checkpoint, the split names a list of identifiers for the train, validation and test molecules.
-    """
-    modelpath = Path(modelpath)
-
-    if not modelpath.exists():
-        modelpath.mkdir()
-
-    if Path(modelpath/f'{modelname}.pth').exists():
-        # ask the user for confirmation:
-        print(f"Model {modelname} already exists at {modelpath/f'{modelname}.pth'}.")
-        if input("Do you want to overwrite it? (y/n): ") != 'y':
-            print("Aborting.")
-            return
-        else:
-            print("Overwriting.")
-            # remove the old model:
-            os.remove(modelpath/f'{modelname}.pth')
-
-    print(f"Saving model {modelname} to {modelpath/f'{modelname}.pth'}")
-
-    torch.save(model_dict, modelpath/f'{modelname}.pth')
-
-    if not release_tag is None:
-        release_model(release_tag, modelname, modelpath=modelpath)
-
-
-def release_model(release_tag:str, modelname:str, modelpath=Path(__file__).parent.parent.parent.parent/'models'):
-    """
-    Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already.
+    Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already. The model dir is zipped and uploaded to the release. Assumes that the model is already exported, i.e. in the grappa/models/modelname/ directory.
     """
 
-    modelfile = modelpath/f'{modelname}.pth'
-    if not modelfile.exists():
-        modelfile = modelpath/f'{modelname}'
-        if not modelfile.exists():
-            raise FileNotFoundError(f"Model {modelname} not found at {modelfile} or {modelfile}.pth")
+    modeldir = MODELPATH/f'{modelname}'
+    if not modeldir.exists():
+        raise FileNotFoundError(f"Expected model dir {modeldir} does not exist.")
 
-    os.system(f"gh release upload {release_tag} {modelpath/f'{modelname}.pth'} --clobber")
+    # zip model dir:
+    zippath = modeldir.with_suffix('.zip')
+    shutil.make_archive(zippath, 'zip', modeldir)
+
+    # upload to release:
+    logging.info(f"Uploading {zippath} to release {release_tag}...")
+    os.system(f"gh release upload {release_tag} {zippath.absolute()}")
+    os.remove(zippath)
 
 def grappa_release():
 
@@ -148,3 +98,10 @@ def grappa_release():
     args = parser.parse_args()
 
     release_model(args.release_tag, args.modelname)
+
+
+def upload_datasets(release_tag:str, dstags:str, base_url:str):
+    """
+    Uploads datasets to a release of grappa. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already. The dataset dirs at data/datastes/dstag are zipped and uploaded to the release.
+    - base_url: The base url where the datasets are hosted under base_url/dstag.zip
+    """

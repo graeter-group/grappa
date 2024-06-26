@@ -1,8 +1,14 @@
 defaults:
-  - train
+  - data: default
+  - experiment: default
+  - model: default
   - _self_
 
+
 experiment:
+  trainer:
+    min_epochs: 5
+    max_epochs: 50
   ckpt_path: null
   wandb:
     name: example
@@ -26,10 +32,3 @@ data:
   ref_terms:
     - nonbonded
   seed: 0
-
-energy:
-  terms:
-    - bond
-    - angle
-    - proper
-    - improper

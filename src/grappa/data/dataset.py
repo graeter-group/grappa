@@ -6,7 +6,7 @@ If initialized with a list of MolData objects, stores a list the mol_ids and a l
 """
 
 from grappa.data.mol_data import MolData
-from grappa.utils import torch_utils, dataset_utils
+from grappa.utils import data_utils, torch_utils
 from grappa import constants
 import dgl
 from dgl import DGLGraph
@@ -82,18 +82,18 @@ class Dataset(torch.utils.data.Dataset):
             - bondbreak-radical-peptides-300K
         """
 
-        data_dir=dataset_utils.get_data_path()/'dgl_datasets'
+        data_dir=data_utils.get_data_path()/'dgl_datasets'
 
         dir_path = Path(data_dir) / tag
 
         # load the dataset directly if it has been created from a moldata path (to ensure that old datasets are overwritten with ones from the new data pipeline)
-        if dir_path.exists() and (dataset_utils.get_data_path()/"datasets"/tag).exists():
+        if dir_path.exists() and (data_utils.get_data_path()/"datasets"/tag).exists():
             if not ((dir_path/'graphs.bin').exists() and (dir_path/'mol_ids.json').exists() and (dir_path/'subdataset.json').exists()):
                 raise ValueError(f'Found directory {dir_path} but not all necessary files: graphs.bin, mol_ids.json, subdataset.json.')
             return Dataset.load(dir_path)
         else:
             # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
-            moldata_path = dataset_utils.get_moldata_path(tag)
+            moldata_path = data_utils.get_moldata_path(tag)
 
             self = Dataset.load(moldata_path)
             return self
@@ -195,7 +195,7 @@ class Dataset(torch.utils.data.Dataset):
                     moldata.append(MolData.load(str(molfile)))
                 self = Dataset.from_moldata(moldata, subdataset=path.name)
                 
-                dgl_dir_path = data_dir=dataset_utils.get_data_path()/'dgl_datasets'/path.name
+                dgl_dir_path = data_dir=data_utils.get_data_path()/'dgl_datasets'/path.name
                 logging.info(f"\nSaving dgl dataset to {dgl_dir_path}\n")
                 self.save(dgl_dir_path)
                 return self
@@ -460,7 +460,7 @@ def clear_tag(tag:str):
     """
     Deletes the dgl dataset with the given tag such that changes in the moldata files are reflected in the dataset.
     """
-    path = dataset_utils.get_data_path()/'dgl_datasets'/tag
+    path = data_utils.get_data_path()/'dgl_datasets'/tag
     if path.exists():
         import shutil
         shutil.rmtree(path)

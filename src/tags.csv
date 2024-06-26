@@ -1,0 +1,5 @@
+# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.
+# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory.
+tag,path,url,description
+test,/local/user/seutelf/grappa/ckpt/grappa-1.3/baseline/2024-06-19_04-54-30/last.ckpt,,Small test model
+grappa-1.3,models/grappa-1.3,,

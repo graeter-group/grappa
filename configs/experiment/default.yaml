@@ -1,0 +1,43 @@
+ckpt_path: null
+ckpt_cfg_override: false
+wandb:
+  name: baseline
+  project: grappa
+  save_code: True
+  tags: []
+checkpointer:
+  dirpath: ckpt/${experiment.wandb.project}/${experiment.wandb.name}/${now:%Y-%m-%d}_${now:%H-%M-%S}
+  monitor: early_stopping_loss
+  mode: min
+  save_top_k: 2
+  save_last: True
+  every_n_epochs: 5
+  auto_insert_metric_name: False
+  filename: 'epoch:{epoch}-early_stop_loss:{early_stopping_loss:.2f}'
+progress_bar: true
+trainer:
+  overfit_batches: 0
+  min_epochs: 5
+  max_epochs: 2000
+  accelerator: gpu
+  log_every_n_steps: 10
+  deterministic: False
+  check_val_every_n_epoch: 1
+evaluation:
+  n_bootstrap: 1000
+train:
+  lr: 1.5e-05
+  energy_weight: 1.0
+  gradient_weight: 0.8
+  start_qm_epochs: 2
+  param_loss_epochs: 100
+  warmup_steps: 500
+  early_stopping_energy_weight: 3.0
+  param_weight: 0.001
+  proper_regularisation: 1.0e-03
+  improper_regularisation: 1.0e-03
+  weight_decay: 0
+  patience: 50
+  lr_decay: 0.8
+  tuplewise_weight: 0.
+  time_limit: 47.5
