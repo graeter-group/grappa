@@ -1,0 +1,3 @@
+tag,url,description
+test,/local/user/seutelf/grappa/ckpt/grappa-1.3/baseline/2024-06-19_04-54-30/last.ckpt,Small test model
+test_,my_url,my_description

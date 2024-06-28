@@ -6,6 +6,14 @@ from pathlib import Path
 from typing import Union
 from tqdm import tqdm
 import logging
+import pandas as pd
+import numpy as np
+
+def get_data_csv_path()->Path:
+    '''
+    Returns the path of the csv file defining tag -> dataset mapping.
+    '''
+    return get_repo_dir() / "data" / "dataset_tags.csv"
 
 def get_repo_dir()->Path:
     '''
@@ -21,7 +29,7 @@ def get_data_path()->Path:
 
 def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets')->Path:
     '''
-    Returns the path to a dataset given a tag. If the dataset is not at the corresponding location, it is downloaded. The tag is the dirname of the dataset, available tags are:
+    Returns the path to a dataset given a tag defined in the csv file at get_data_csv_path(). If the tag is not in the csv file, looks at get_data_path() for a dir with that name and appends the tag and its location to the csv file. If the dataset is not at the corresponding location but a url is specified in the csv file, it is downloaded. Available tags for download are:
 
     BENCHMARK ESPALOMA:
         - 'spice-des-monomers'
@@ -37,10 +45,10 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
     PEPTIDE DATASET:
         - dipeptides-300K-openff-1.2.0
         - dipeptides-300K-amber99
-        - dipeptides-300K-charmm36
+        - dipeptides-300K-charmm36_nonb
         - dipeptides-1000K-openff-1.2.0
         - dipeptides-1000K-amber99
-        - dipeptides-1000K-charmm36
+        - dipeptides-1000K-charmm36_nonb
         - uncapped-300K-openff-1.2.0
         - uncapped-300K-amber99
         - dipeptides-hyp-dop-300K-amber99
@@ -53,43 +61,72 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
         'espaloma_split'
     '''
 
-    RELEASE_URL = 'https://github.com/hits-mbm-dev/grappa/releases/download/v.1.2.0/'
-
-    URL_TAGS = [
-        'spice-des-monomers',
-        'spice-pubchem',
-        'gen2',
-        'gen2-torsion',
-        'rna-diverse',
-        'rna-trinucleotide',
-        'rna-nucleoside',
-        'spice-dipeptide',
-        'protein-torsion',
-        'pepconf-dlc',
-        'spice-dipeptide_amber99sbildn',
-        'tripeptides_amber99sbildn',
-        'dipeptide_rad',
-        'hyp-dop_amber99sbildn',
-        'uncapped_amber99sbildn',
-        'AA_bondbreak_rad_amber99sbildn',
-        'espaloma_split',
-    ]
-
     tag = str(tag)
 
-    if (Path(data_dir)/tag).exists():
-        if not list((Path(data_dir)/tag).iterdir()):
-            raise RuntimeError(f'The dataset path {Path(data_dir)/tag} exists but is empty. Please remove the directory.')
-        return Path(data_dir)/tag
-
-    # Download the files and put them in the dir if it doesn't exist
-    if not (str(tag) in URL_TAGS):
-        raise ValueError(f"Tag {tag} not recognized. Available tags for download are {URL_TAGS}")
+    # Load the csv file
+    csv_path = get_data_csv_path()
+    url_csv_path = get_data_csv_path().with_name('published_datasets.csv')
+    if not csv_path.exists():
+        # create empty csv file:
+        df = pd.DataFrame(columns=['tag', 'path', 'description'])
+        df.to_csv(csv_path, index=False)
     
-    url = RELEASE_URL + tag + '.zip'
+    df = pd.read_csv(csv_path, dtype=str)
+    url_df = pd.read_csv(url_csv_path, dtype=str)
+    url = url_df[url_df['tag']==tag]['url'].values[0] if tag in url_df['tag'].values else None
+    description = url_df[url_df['tag']==tag]['description'].values[0] if tag in url_df['tag'].values else None
 
-    return load_dataset(url=url, data_dir=data_dir, dirname=tag)
+    tags = df['tag'].values
+    tag_present = tag in tags
 
+    if tag_present:
+        row = df[df['tag']==tag]
+        if len(row) > 1:
+            raise ValueError(f"Multiple entries for tag {tag} in the dataset_tags.csv file.")
+        path = str(row['path'].values[0])
+        # if path is specified:
+        if not path in ['nan', '']:
+            if Path(path).exists():
+                found_path = Path(path)
+            else:
+                raise FileNotFoundError(f"Dataset {tag} not found at {path}.")
+        # try to find data_dir/tag:
+        elif (Path(data_dir)/tag).exists():
+            logging.info(f"Dataset {tag} not in the dataset_tags.csv file but found at {Path(data_dir)/tag}. Appending to the csv file...")
+            found_path = Path(data_dir)/tag
+
+            df.loc[df['tag']==tag, 'path'] = str(found_path)
+            df.to_csv(csv_path, index=False)
+        # if not specified and not found at expected location, download from url:
+        else:
+            raise FileNotFoundError(f"Dataset {tag} not found at {path}.")
+
+    else:
+        # try to find data_dir/tag:
+        if (Path(data_dir)/tag).exists():
+            logging.info(f"Dataset {tag} not in the dataset_tags.csv file but found at {Path(data_dir)/tag}. Appending to the csv file...")
+            found_path = Path(data_dir)/tag
+            df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(found_path), 'description': ''}])], ignore_index=True)
+            df.to_csv(csv_path, index=False)
+        # download the dataset from the url if specified:
+        elif url is not None:
+            logging.info(f"Dataset {tag} not found in dataset_tags.csv. Downloading from {url}")
+            found_path = load_dataset(url=url, data_dir=data_dir, dirname=tag)
+            df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(found_path), 'description': description}])], ignore_index=True)
+            # for backwards compatibility, remove the old dgl dataset if present so that it will be overwritten by the new one upon call of Dataset.from_tag:
+            dgl_dir = get_data_path()/'dgl_datasets'/tag
+            if dgl_dir.exists():
+                logging.warning(f"Removing old dgl dataset at {dgl_dir}, which will be overwritten by the downloaded dataset.")
+                shutil.rmtree(dgl_dir)
+            df.to_csv(csv_path, index=False)
+        else:
+            raise FileNotFoundError(f"Dataset {tag} not found in the dataset_tags.csv file and not at {data_dir/tag}.")
+    
+    # if the path is not absolute, concat it with the root dir of grappa:
+    if not found_path.is_absolute():
+        found_path = get_repo_dir() / found_path
+
+    return found_path
 
 
 def load_dataset(url:str, data_dir:Path=get_data_path()/'datasets', dirname:str=None)->Path:

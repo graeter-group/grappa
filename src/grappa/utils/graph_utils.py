@@ -5,7 +5,6 @@ import networkx as nx
 import numpy as np
 import random
 from tqdm import tqdm
-from grappa.data import GraphDataLoader
 import logging
 
 from grappa.constants import BONDED_CONTRIBUTIONS
@@ -206,7 +205,7 @@ def get_tuplewise_energies(g, suffix="", center=False):
     return energies
 
 
-def get_param_statistics(loader:GraphDataLoader, suffix="_ref")->Dict[str,Dict[str,torch.Tensor]]:
+def get_param_statistics(loader:"GraphDataLoader", suffix="_ref")->Dict[str,Dict[str,torch.Tensor]]:
     '''
     Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}. Ignores nan parameters.
     '''

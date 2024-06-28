@@ -47,11 +47,11 @@ def grappa_export():
         shutil.copy(f, target)
 
     # read csv:
-    csv_path = MODELPATH.parent/'src'/'tags.csv'
+    csv_path = MODELPATH.parent/'models.csv'
     if csv_path.exists():
         csv = pd.read_csv(csv_path, comment='#')
     else:
-        csv = pd.DataFrame(columns=['tag', 'path', 'url', 'description'])
+        csv = pd.DataFrame(columns=['tag', 'path', 'description'])
 
     # remove modeltag if present:
     if args.modelname in csv.tag.values:
@@ -60,7 +60,7 @@ def grappa_export():
 
     # append to csv:
     relpath = targetdir.relative_to(MODELPATH.parent)
-    csv = csv._append({'tag': args.modelname, 'path': relpath, 'url': '', 'description': args.description}, ignore_index=True)
+    csv = csv._append({'tag': args.modelname, 'path': relpath, 'description': args.description}, ignore_index=True)
 
     COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
     

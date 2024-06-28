@@ -82,7 +82,7 @@ class Dataset(torch.utils.data.Dataset):
             - bondbreak-radical-peptides-300K
         """
 
-        data_dir=data_utils.get_data_path()/'dgl_datasets'
+        data_dir = data_utils.get_data_path()/'dgl_datasets'
 
         dir_path = Path(data_dir) / tag
 
@@ -95,7 +95,7 @@ class Dataset(torch.utils.data.Dataset):
             # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
             moldata_path = data_utils.get_moldata_path(tag)
 
-            self = Dataset.load(moldata_path)
+            self = Dataset.load(moldata_path, tag=tag)
             return self
 
     def __len__(self):
@@ -175,11 +175,12 @@ class Dataset(torch.utils.data.Dataset):
         
 
     @classmethod
-    def load(cls, path:Union[str, Path]):
+    def load(cls, path:Union[str, Path], tag=None):
         """
         Loads a dataset from disk. Loads the graphs from graphs.bin via dgl and mol_ids, subdataset as json lists.
         Args:
             path (Union[str, Path]): path to a directory where the dataset is saved
+            tag: tag of the dataset for saving if it does not exist yet
         Returns:
             dataset (Dataset): Dataset object containing the graphs, mol_ids and subdataset names
         """
@@ -189,13 +190,14 @@ class Dataset(torch.utils.data.Dataset):
             paths = list(path.glob('*.npz'))
             if len(paths) > 0:
                 logging.info(f'\nProcessing Dataset from {path}:')
+                assert tag is not None, 'Please provide a tag for the dataset.'
                 # create the dgl dataset from moldata objects:
                 moldata = []
                 for molfile in tqdm(paths, desc='Loading .npz files'):
                     moldata.append(MolData.load(str(molfile)))
-                self = Dataset.from_moldata(moldata, subdataset=path.name)
+                self = Dataset.from_moldata(moldata, subdataset=tag)
                 
-                dgl_dir_path = data_dir=data_utils.get_data_path()/'dgl_datasets'/path.name
+                dgl_dir_path =data_utils.get_data_path()/'dgl_datasets'/tag
                 logging.info(f"\nSaving dgl dataset to {dgl_dir_path}\n")
                 self.save(dgl_dir_path)
                 return self

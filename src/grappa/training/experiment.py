@@ -15,7 +15,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from grappa.data.grappa_data import GrappaData
 from grappa.training.evaluator import eval_ds
 from grappa.training.lightning_model import GrappaLightningModel
-from grappa.training.utils import to_df
+from grappa.utils.training_utils import to_df
 from grappa.utils.run_utils import flatten_dict
 from grappa.models import GrappaModel, Energy
 import wandb

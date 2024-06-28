@@ -91,6 +91,8 @@ runs/
 # do not ignore data/ in grappa/src/grappa/data:
 !src/grappa/data/
 !src/grappa/models/
+!data/published_datasets.csv
+!models/published_models.csv
 
 esp_data/
 data_backup/
