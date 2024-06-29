@@ -5,6 +5,8 @@ import pandas as pd
 import logging
 logging.basicConfig(level=logging.INFO)
 import os
+from typing import List
+from grappa.utils import get_data_path
 
 
 MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
@@ -71,9 +73,10 @@ def grappa_export():
     logging.info(f"Model {args.modelname} exported to {targetdir} and added to {csv_path}.")
 
 
-def release_model(release_tag:str, modelname:str):
+def _release_model(release_tag:str, modelname:str):
     """
-    Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already. The model dir is zipped and uploaded to the release. Assumes that the model is already exported, i.e. in the grappa/models/modelname/ directory.
+    Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already (e.g. by gh release create).
+    The model dir is zipped and uploaded to the release. Assumes that the model is already exported, i.e. in the grappa/models/modelname/ directory.
     """
 
     modeldir = MODELPATH/f'{modelname}'
@@ -89,19 +92,40 @@ def release_model(release_tag:str, modelname:str):
     os.system(f"gh release upload {release_tag} {zippath.absolute()}")
     os.remove(zippath)
 
-def grappa_release():
-
+def release_model():
     parser = argparse.ArgumentParser(description='Uploads a model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
     parser.add_argument('--release_tag', '-t', type=str, required=True, help='The tag of the release that the model should be uploaded to.')
     parser.add_argument('--modelname', '-m', type=str, required=True, help='The name of the model that should be uploaded.')
 
     args = parser.parse_args()
 
-    release_model(args.release_tag, args.modelname)
+    _release_model(args.release_tag, args.modelname)
 
 
-def upload_datasets(release_tag:str, dstags:str, base_url:str):
+def _upload_datasets(release_tag:str, dstags:List[str]):
     """
     Uploads datasets to a release of grappa. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already. The dataset dirs at data/datastes/dstag are zipped and uploaded to the release.
-    - base_url: The base url where the datasets are hosted under base_url/dstag.zip
     """
+
+    for dstag in dstags:
+        datasetdir = get_data_path()/dstag
+        if not datasetdir.exists():
+            raise FileNotFoundError(f"Expected dataset dir {datasetdir} does not exist.")
+
+        # zip dataset dir:
+        zippath = datasetdir.with_suffix('.zip')
+        shutil.make_archive(zippath, 'zip', datasetdir)
+
+        # upload to release:
+        logging.info(f"Uploading {zippath} to release {release_tag}...")
+        os.system(f"gh release upload {release_tag} {zippath.absolute()}")
+        os.remove(zippath)
+
+def upload_datasets():
+    parser = argparse.ArgumentParser(description='Uploads datasets to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
+    parser.add_argument('--release_tag', '-t', type=str, required=True, help='The tag of the release that the datasets should be uploaded to.')
+    parser.add_argument('--dstags', '-d', type=str, nargs='+', required=True, help='The names of the datasets that should be uploaded.')
+
+    args = parser.parse_args()
+
+    _upload_datasets(args.release_tag, args.dstags)

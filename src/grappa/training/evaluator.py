@@ -309,7 +309,7 @@ class Evaluator:
             self.all_reference_energies[dsname] = torch.cat([self.reference_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
             self.all_reference_gradients[dsname] = torch.cat([self.reference_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
-            self.mol_idxs[dsname] = [0] + [self.all_energies[dsname].shape[0] for i in range(self.n_mols[dsname])]
+            self.mol_idxs[dsname] = [0] + [self.energies[dsname].shape[0] for i in range(self.n_mols[dsname])]
 
             if self.log_classical_values:
                 self.all_classical_energies[dsname] = torch.cat([self.classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)

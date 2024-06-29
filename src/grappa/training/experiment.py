@@ -231,6 +231,9 @@ class Experiment:
         with open(self.ckpt_dir / f'summary_{epoch}.txt', 'w') as f:
             f.write(full_table)
 
+        # plot the results:
+        
+
 
 
     def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False):

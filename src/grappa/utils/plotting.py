@@ -6,46 +6,11 @@ from tqdm import tqdm
 import copy
 import matplotlib.colors as colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from typing import Tuple, Dict
+from grappa.utils import unflatten_dict
 
 
-def calculate_density_scatter(x, y, delta_factor=100, seed=0):
-    np.random.seed(seed)
-    points = []
-    frequencies = []
-
-    # Create a deep copy of the input arrays
-    x_copy = copy.deepcopy(x)
-    y_copy = copy.deepcopy(y)
-
-    # Calculate delta
-    delta = max(max(x) - min(x), max(y) - min(y)) / delta_factor
-
-    while len(x_copy) > 0:
-        # Pick a random point
-        idx = np.random.randint(len(x_copy))
-        point_x, point_y = x_copy[idx], y_copy[idx]
-
-        # Calculate distances to the random point
-        distances = np.sqrt((x_copy - point_x)**2 + (y_copy - point_y)**2)
-
-        # Find points within the distance delta
-        within_delta = distances < delta
-
-        # Count the number of points within delta
-        frequency = np.sum(within_delta)
-
-        # Store the point and its frequency
-        points.append((point_x, point_y))
-        frequencies.append(frequency)
-
-        # Remove the points within delta from the copied arrays
-        x_copy = x_copy[~within_delta]
-        y_copy = y_copy[~within_delta]
-
-    return np.array(points), np.array(frequencies)
-
-
-def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, num_ticks=None, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, **kwargs):
+def scatter_plot(ax, x, y, n_max=None, seed=0, alpha=1., s=15, num_ticks=None, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, **kwargs):
     """
     Create a scatter plot of two arrays x and y.
     Args:
@@ -54,7 +19,6 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
         y: Array of y values
         n_max: Maximum number of points to plot
         seed: Random seed for selecting n_max points
-        symmetric: Make the plot symmetric around the origin
         alpha: Transparency of the points
         s: Size of the points
         num_ticks: Number of ticks on the axes
@@ -75,13 +39,13 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
     min_val = min(x.min(), y.min())
     max_val = max(x.max(), y.max())
     if ax_symmetric:
-        min_val = -max(abs(min_val), abs(max_val))
-        max_val = max(abs(min_val), abs(max_val))
+        if amplitude is not None:
+            min_val = -amplitude
+            max_val = amplitude
+        else:   
+            min_val = -max(abs(min_val), abs(max_val))
+            max_val = max(abs(min_val), abs(max_val))
 
-    if symmetric:
-        val = max(abs(min_val), abs(max_val))
-        min_val = -val
-        max_val = val
 
     ax.set_ylim(min_val, max_val)
     ax.set_xlim(min_val, max_val)
@@ -131,6 +95,166 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, symmetric=False, alpha=1., s=15, 
         ax.text(0.05, 0.95, f'RMSD: {rmsd:.2f}', transform=ax.transAxes, ha='left', va='top')
 
     return ax
+
+
+def calculate_density_scatter(x, y, delta_factor=100, seed=0):
+    np.random.seed(seed)
+    points = []
+    frequencies = []
+
+    # Create a deep copy of the input arrays
+    x_copy = copy.deepcopy(x)
+    y_copy = copy.deepcopy(y)
+
+    # Calculate delta
+    delta = max(max(x) - min(x), max(y) - min(y)) / delta_factor
+
+    while len(x_copy) > 0:
+        # Pick a random point
+        idx = np.random.randint(len(x_copy))
+        point_x, point_y = x_copy[idx], y_copy[idx]
+
+        # Calculate distances to the random point
+        distances = np.sqrt((x_copy - point_x)**2 + (y_copy - point_y)**2)
+
+        # Find points within the distance delta
+        within_delta = distances < delta
+
+        # Count the number of points within delta
+        frequency = np.sum(within_delta)
+
+        # Store the point and its frequency
+        points.append((point_x, point_y))
+        frequencies.append(frequency)
+
+        # Remove the points within delta from the copied arrays
+        x_copy = x_copy[~within_delta]
+        y_copy = y_copy[~within_delta]
+
+    return np.array(points), np.array(frequencies)
+
+
+def get_default_title_map():
+    d = {
+        'spice-dipeptide': 'SPICE Dipeptides',
+        'spice-pubchem': 'SPICE PubChem',
+        'spice-des-monomers': 'SPICE DES Monomers',
+        'gen2': 'Gen2',
+        'gen2-torsion': 'Gen2 Torsion',
+        'rna-diverse': 'RNA Diverse',
+        'rna-trinucleotide': 'RNA Trinucleotide',
+        'pepconf-dlc': 'PepConf DLC',
+        'protein-torsion': 'Protein Torsion',
+        'dipeptides-300K-charmm36_nonb': 'Dipeptides 300K',
+        'dipeptides-300K-charmm36': 'Dipeptides 300K',
+        'dipeptides-300K-amber99': 'Dipeptides 300K',
+        'dipeptides-300K-openff-1.2.0': 'Dipeptides 300K',
+        'dipeptides-1000K-charmm36_nonb': 'Dipeptides 1000K',
+        'dipeptides-1000K-charmm36': 'Dipeptides 1000K',
+        'dipeptides-1000K-amber99': 'Dipeptides 1000K',
+        'dipeptides-1000K-openff-1.2.0': 'Dipeptides 1000K',
+        'uncapped-300K-amber99': 'Uncapped 300K',
+        'uncapped-300K-openff-1.2.0': 'Uncapped 300K',
+        'dipeptides-radical-300K': 'Radical Dipeptides 300K',
+    }
+
+    return d
+
+
+def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel="QM", logscale:bool=True, ax_symmetric:Tuple[bool,bool]=(False,True), title_map:Dict[str,str]=get_default_title_map(), rmsd_position:Tuple[float,float]=(0.05, 0.95), cluster=True, **kwargs):
+    """
+
+    rmsd_position: Tuple[float,float]: Position of the RMSD text in the plot. If None, the RMSD is not shown.
+    title_map: Dict[str,str]: Dictionary mapping dataset names to titles.
+    """
+    force_x_label = f"{xlabel} Force [kcal/mol/Å]"
+    energy_x_label = f"{xlabel} Energy [kcal/mol]"
+
+    plot_dir = Path(plot_dir)
+
+    for dsname in data['energies'].keys():
+        ds_dir = plot_dir/dsname
+        ds_dir.mkdir(parents=True, exist_ok=True)
+        fig, ax = plt.subplots()
+        scatter_plot(ax, ff_data['reference_energies'][dsname], ff_data['energies'][dsname], logscale=logscale, ax_symmetric=ax_symmetric[0], cluster=cluster, **kwargs)
+        ax.set_xlabel(energy_x_label)
+        ax.set_ylabel(ylabel)
+
+        if dsname in title_map:
+            ax.set_title(title_map[dsname])
+
+        if rmsd_position is not None:
+            rmsd_value = ((ff_data['reference_energies'][dsname] - ff_data['energies'][dsname])**2).mean()**0.5
+            ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+    
+        plt.savefig(ds_dir/"energy.png")
+        plt.close()
+    
+
+    for dsname in data['gradients'].keys():
+        ds_dir = plot_dir/dsname
+        ds_dir.mkdir(parents=True, exist_ok=True)
+        fig, ax = plt.subplots()
+        scatter_plot(ax, ff_data['reference_gradients'][dsname].flatten(), ff_data['gradients'][dsname].flatten(), logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
+        ax.set_xlabel(force_x_label)
+        ax.set_ylabel(ylabel)
+
+        if dsname in title_map:
+            ax.set_title(title_map[dsname])
+
+        if rmsd_position is not None:
+            rmsd_value = ((ff_data['reference_gradients'][dsname].flatten() - ff_data['gradients'][dsname].flatten())**2).mean()**0.5
+            ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+    
+        plt.savefig(ds_dir/"force.png")
+        plt.close()
+
+
+    for dsname in data['energies'].keys():
+        ds_dir = plot_dir/dsname
+        ds_dir.mkdir(parents=True, exist_ok=True)
+        all_energies = data['energies'][dsname]
+        all_ref_energies = data['reference_energies'][dsname]
+        mol_idxs = data['mol_idxs'][dsname]
+            
+        energies_per_mol = [all_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_energies[mol_idxs[-1]:]]
+        ref_energies_per_mol = [all_ref_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_energies[mol_idxs[-1]:]]
+
+        rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
+
+        # Histogram of the energy errors
+        fig, ax = plt.subplots()
+        ax.hist(rmsd_values, bins=100)
+        ax.set_xlabel("RMSD [kcal/mol]")
+        ax.set_ylabel("Frequency")
+        ax.set_title(f"Energy RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
+        plt.savefig(ds_dir/"energy_rmsd_histogram.png")
+        plt.close()
+
+    for dsname in data['gradients'].keys():
+        ds_dir = plot_dir/dsname
+        ds_dir.mkdir(parents=True, exist_ok=True)
+        all_gradients = data['gradients'][dsname]
+        all_ref_gradients = data['reference_gradients'][dsname]
+        mol_idxs = data['mol_idxs'][dsname]
+
+        gradients_per_mol = [all_gradients[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_gradients[mol_idxs[-1]:]]
+        ref_gradients_per_mol = [all_ref_gradients[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_gradients[mol_idxs[-1]:]]
+
+        rmsd_values = [((np.array(ref_gradients_per_mol[i]).flatten() - np.array(gradients_per_mol[i]).flatten())**2).mean()**0.5 for i in range(len(gradients_per_mol))]
+
+        # Histogram of the force errors
+        fig, ax = plt.subplots()
+        ax.hist(rmsd_values, bins=100)
+        ax.set_xlabel("RMSD [kcal/mol/Å]")
+        ax.set_ylabel("Frequency")
+        ax.set_title(f"Force RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
+        plt.savefig(ds_dir/"force_rmsd_histogram.png")
+        plt.close()
+
+        
+
+
 #%%
 
 # example:
@@ -146,3 +270,28 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
     scatter_plot(ax, x, y, cluster=False, s=1)
     plt.show()
+
+    #%%
+    # test:
+    dspath = "/local/user/seutelf/grappa/ckpt/grappa-1.3/baseline/2024-06-19_04-54-30/test_data/epoch-784.npz"
+    data = np.load(dspath)
+    data = unflatten_dict(data)
+    data.keys()
+    #%%
+    dsname = 'dipeptides-300K-charmm36'
+    all_energies = data['energies'][dsname]
+    all_ref_energies = data['reference_energies'][dsname]
+    mol_idxs = data['mol_idxs'][dsname]
+
+    mol_idxs[:5]
+    #%%
+        
+    energies_per_mol = [all_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_energies[mol_idxs[-1]:]]
+    ref_energies_per_mol = [all_ref_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_energies[mol_idxs[-1]:]]
+    rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
+    len(rmsd_values)
+    ref_energies_per_mol[2]
+    #%%
+    make_scatter_plots(data, plot_dir=Path(__file__).parent/'plots')
+
+# %%
