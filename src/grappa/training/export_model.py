@@ -117,17 +117,17 @@ def _upload_datasets(release_tag:str, dstags:List[str]):
     """
 
     for dstag in dstags:
-        datasetdir = get_data_path()/dstag
+        datasetdir = get_data_path()/"datasets"/dstag
         if not datasetdir.exists():
             raise FileNotFoundError(f"Expected dataset dir {datasetdir} does not exist.")
 
         # zip dataset dir:
-        zippath = datasetdir.with_suffix('.zip')
-        shutil.make_archive(zippath, 'zip', datasetdir)
+        shutil.make_archive(datasetdir, 'zip', datasetdir)
+        zippath = str(datasetdir) + '.zip'
 
         # upload to release:
         logging.info(f"Uploading {zippath} to release {release_tag}...")
-        os.system(f"gh release upload {release_tag} {zippath.absolute()}")
+        os.system(f"gh release upload {release_tag} {str(Path(zippath).absolute())}")
         os.remove(zippath)
 
 
