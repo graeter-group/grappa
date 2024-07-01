@@ -9,6 +9,7 @@ ckpt/
 old_experiments/
 outputs/
 reproducility/*.yaml
+reproducility/*.json
 job.sh
 
 # Distribution / packaging

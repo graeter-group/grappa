@@ -30,8 +30,8 @@ Here, we propose a novel machine learning architecture to predict MM parameters 
   
 - [Usage](#usage)
 - [Installation](#installation)
-- [Datasets](#datasets)
 - [Pretrained Models](#pretrained-models)
+- [Datasets](#datasets)
 - [Reproducibility](#reproducibility)
 </details>
 
@@ -150,9 +150,13 @@ The installation of dgl with potentially necessary bugfixes is explained in `ins
 
 ## Pretrained Models
 
-Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded.
+Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a version-dependent url, from which model weights are downloaded.
+Available models are listed in `models/published_models.csv`.
 An example can be found at `examples/usage/openmm_wrapper.py`, available tags are listed in `models/published_models.csv`.
-For full reproducibility, also the respective partition of the dataset and the configuration file used for training is included in the released checkpoints.
+
+For full reproducibility, also the respective partition of the dataset and the configuration file used for training is included in the released checkpoints and can be found at `models/tag/config.yaml` and `models/tag/split.json` after downloading the respective model (see `examples/reproducibility`).
+
+
 
 
 ## Datasets
@@ -162,5 +166,5 @@ An example can be found at `examples/usage/dataset.py`, available tags are liste
 
 To re-create the benchmark experiment, also the splitting into train/val/test sets from Espaloma is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
 
-NOTE
-The datasets 'uncapped_amber99sbildn', 'tripeptides_amber99sbildn', 'hyp-dop_amber99sbildn' and 'dipeptide_rad' from [grappa-1.1](https://github.com/hits-mbm-dev/grappa/releases/tag/v.1.1.0) were generated using scripts at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
+The datasets 'dipeptides-300K-...', 'dipeptides-1000K-...', 'uncapped_...', 'hyp-dop_...' and 'dipeptides_radical-300K' were generated using scripts at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
+

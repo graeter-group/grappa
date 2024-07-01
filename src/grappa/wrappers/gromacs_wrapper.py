@@ -1,5 +1,4 @@
 from grappa.grappa import Grappa
-import pkgutil
 from typing import Union
 from pathlib import Path
 import argparse
