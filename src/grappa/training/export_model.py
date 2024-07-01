@@ -7,6 +7,8 @@ logging.basicConfig(level=logging.INFO)
 import os
 from typing import List
 from grappa.utils import get_data_path
+from grappa.utils.model_loading_utils import get_model_dir
+import yaml
 
 
 MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
@@ -15,8 +17,8 @@ MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
 def grappa_export():
 
     parser = argparse.ArgumentParser(description='Copies a checkpoint, a config.yaml file and all .json and .txt files in children of that dir to grappa/models/modelname/. Adds the modelname and path to grappa/src.tags.csv')
-    parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0\nIf None, the wandb id is used.', required=True)
-    parser.add_argument('--checkpoint_path', '-cp', type=str, help='Absolute path to the lightning checkpoint that should be exported. Has to be specified if id is not given.', required=True)
+    parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0', required=True)
+    parser.add_argument('--checkpoint_path', '-c', type=str, help='Absolute path to the lightning checkpoint that should be exported.', required=True)
     parser.add_argument('--description', '-m', type=str, help='Description of the model.', required=False, default='')
 
     args = parser.parse_args()
@@ -42,6 +44,13 @@ def grappa_export():
     shutil.copy(ckpt_path, ckpt_target)
     shutil.copy(config_path, targetdir/'config.yaml')
 
+    # set the experiment.ckpt_path to null:
+    with open(targetdir/'config.yaml', 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    config['experiment']['ckpt_path'] = None
+    with open(targetdir/'config.yaml', 'w') as f:
+        yaml.dump(config, f)
+
     # copy all json and txt files in children of ckpt_path (and the containing dirs):
     for f in list(ckpt_path.parent.rglob('*.json')) + list(ckpt_path.parent.rglob('*.txt')):
         target = targetdir/f.relative_to(ckpt_path.parent)
@@ -49,7 +58,7 @@ def grappa_export():
         shutil.copy(f, target)
 
     # read csv:
-    csv_path = MODELPATH.parent/'models.csv'
+    csv_path = get_model_dir()/'models.csv'
     if csv_path.exists():
         csv = pd.read_csv(csv_path, comment='#')
     else:
@@ -84,18 +93,18 @@ def _release_model(release_tag:str, modelname:str):
         raise FileNotFoundError(f"Expected model dir {modeldir} does not exist.")
 
     # zip model dir:
-    zippath = modeldir.with_suffix('.zip')
-    shutil.make_archive(zippath, 'zip', modeldir)
+    shutil.make_archive(modeldir, 'zip', modeldir)
+    zippath = Path(str(modeldir) + '.zip')
 
     # upload to release:
-    logging.info(f"Uploading {zippath} to release {release_tag}...")
+    logging.info(f"Uploading {str(zippath)} to release {release_tag}...")
     os.system(f"gh release upload {release_tag} {zippath.absolute()}")
-    os.remove(zippath)
+    os.remove(str(zippath))
 
 def release_model():
     parser = argparse.ArgumentParser(description='Uploads a model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
     parser.add_argument('--release_tag', '-t', type=str, required=True, help='The tag of the release that the model should be uploaded to.')
-    parser.add_argument('--modelname', '-m', type=str, required=True, help='The name of the model that should be uploaded.')
+    parser.add_argument('--modelname', '-n', type=str, required=True, help='The name of the model that should be uploaded.')
 
     args = parser.parse_args()
 
@@ -120,6 +129,7 @@ def _upload_datasets(release_tag:str, dstags:List[str]):
         logging.info(f"Uploading {zippath} to release {release_tag}...")
         os.system(f"gh release upload {release_tag} {zippath.absolute()}")
         os.remove(zippath)
+
 
 def upload_datasets():
     parser = argparse.ArgumentParser(description='Uploads datasets to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')

@@ -32,8 +32,8 @@ def main(cfg: DictConfig) -> None:
         ckpt_cfg.experiment.trainer.accelerator = 'cpu'
 
     experiment = Experiment(config=ckpt_cfg)
-    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path, load_split=True)
-    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.classical_force_fields, test_data_path=cfg.test_data_path, load_split=True, n_bootstrap=cfg.n_bootstrap)
+    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path, load_split=True, plot=cfg.plot)
+    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.classical_force_fields, test_data_path=cfg.test_data_path, load_split=True, n_bootstrap=cfg.n_bootstrap, plot=cfg.plot)
 
 
 if __name__ == "__main__":

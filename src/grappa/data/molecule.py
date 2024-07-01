@@ -70,7 +70,7 @@ class Molecule():
         degree: bool = True,
         mass_encoding: bool = True,
         mapped_smiles: str = None,
-        charge_model: str = 'amber99',
+        charge_model: str = 'None',
     )->None:
         self.atoms = atoms
         self.bonds = bonds
@@ -178,7 +178,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='amber99'):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None'):
         """
         Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.

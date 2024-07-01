@@ -23,6 +23,12 @@ def model_from_tag(tag:str='latest')->GrappaModel:
     Loads a model from a tag. With each release, the mapping tag to url of model weights is updated such that models returned by this function are always at a version that works in the respective release.
     Possible tags are defined in src/tags.csv.
     """
+    path = get_path_from_tag(tag)
+
+    return model_from_path(path=path)
+
+
+def get_path_from_tag(tag:str='latest')->Path:
     csv_path = get_repo_dir() / 'models' / 'models.csv'
     published_csv_path = get_repo_dir() / 'models' / 'published_models.csv'
     COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
@@ -60,14 +66,15 @@ def model_from_tag(tag:str='latest')->GrappaModel:
 
         path = Path(path)
 
-        if not path.exists():
-            raise FileNotFoundError(f"Model {tag} not found at {path}.")
-
         if not path.is_absolute():
             path = get_repo_dir()/path
 
+        if not path.exists():
+            raise FileNotFoundError(f"Model {tag} not found at {path}")
+
         if not str(path).endswith('.ckpt'):
             path = get_ckpt(path)
+
 
     else:
         url = url_df[url_df['tag']==tag]['url'].values[0]
@@ -76,12 +83,10 @@ def model_from_tag(tag:str='latest')->GrappaModel:
         logging.info(f"Downloading model {tag} from {url}")
         download_zipped_dir(url=url, target_dir=path)
         # find a .ckpt file in the directory:
-        get_ckpt(path)
+        path = get_ckpt(path)
         df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(path), 'description': description}])], ignore_index=True)
         store_with_comment(df, csv_path, COMMENT)
-
-    return model_from_path(path=path)
-
+    return path
 
 def find_tag(tag, tags):
     """

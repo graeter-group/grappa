@@ -43,7 +43,7 @@ N_PERIODICITY_IMPROPER = 6
 
 MAX_NUM_CHARGE_MODELS = 10 # the dimension used for one-hot encoding of the charge model. this is larger than the number of charge models to allow for additional charge models in the future while retining backwards compatibility with datasets and model weights that reflect fewer charge models.
 
-CHARGE_MODELS = ['am1BCC', 'amber99', 'charmm', ''] # amber99: amber99ffsbildn-charges for peptides. The idea is that the tag 'amber99' can refer to different charge models for different types of molecules (which grappa can usually distinguish). e.g. one could train for rna on charges from some classical rna forcefield without introducing an additional tag.
+CHARGE_MODELS = ['am1BCC', 'amber99', 'charmm', '', 'None']
 
 BONDED_CONTRIBUTIONS = [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]
 

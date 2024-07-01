@@ -16,6 +16,7 @@ import warnings
 from grappa.data.molecule import Molecule
 import matplotlib.pyplot as plt
 from grappa.utils.torch_utils import to_numpy
+from grappa.utils.plotting import scatter_plot
 
 
 @dataclass
@@ -179,7 +180,7 @@ class Parameters():
 
         for force in openmm_system.getForces():
             name = force.__class__.__name__
-            if not (name in ['HarmonicBondForce', 'HarmonicAngleForce', 'PeriodicTorsionForce'] or 'nonbonded' in name.lower()):
+            if not (name in ['HarmonicBondForce', 'HarmonicAngleForce', 'PeriodicTorsionForce'] or any([keyword in name.lower() for keyword in ['nonbonded', 'remover']])):
                 raise RuntimeError(f"Force {name} is not supported for parameter calculation, only HarmonicBondForce, HarmonicAngleForce, PeriodicTorsionForce and nonbonded forces are supported.")
 
         for force in openmm_system.getForces():
@@ -648,7 +649,7 @@ from matplotlib.colors import LogNorm
 
 
 
-def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, fontsize: int = 27, figsize: int = 7, s:float=4, xlabel:str=None, ylabel:str=None, scatter=True, log=True, gridsize:int=50, density:bool=False, exclude_idxs:List[np.ndarray]=None) -> Tuple[plt.Figure, plt.Axes]:
+def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, figsize: int=5, xlabel:str=None, ylabel:str=None, log=True, exclude_idxs:List[np.ndarray]=None) -> Tuple[plt.Figure, plt.Axes]:
     """
     exclude_idxs: bonds and angles that involve these atoms will be ignored.
     """
@@ -743,40 +744,9 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
 
     axes = ax.flatten()
 
-    if density:
-        import seaborn as sns
-        try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=bond_eq_x, y=bond_eq_y, ax=axes[0], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
-        except:
-            pass
-        try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=bond_k_x, y=bond_k_y, ax=axes[3], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
-        except:
-            pass
-        try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_eq_x, y=angle_eq_y, ax=axes[1], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
-        except:
-            pass
-        try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=angle_k_x, y=angle_k_y, ax=axes[4], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
-        except:
-            pass
-        try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=signed_proper_ks_x_n0, y=signed_proper_ks_y_n0, ax=axes[1], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
-        except:
-            pass
-        try:
-            sns.kdeplot(gridsize=gridsize, thresh=0.001, x=signed_proper_ks_x_n_rest, y=signed_proper_ks_y_n_rest, ax=axes[5], cmap="Blues", fill=True, alpha=1, norm=LogNorm() if log else None)
-        except:
-            pass
-
-    if scatter:
-        axes[0].scatter(bond_eq_x, bond_eq_y, color='blue', s=s)
-        axes[1].scatter(angle_eq_x, angle_eq_y, color='blue', s=s)
-        axes[2].scatter(signed_proper_ks_x_n0, signed_proper_ks_y_n0, color='blue', s=s)
-        axes[3].scatter(bond_k_x, bond_k_y, color='blue', s=s)
-        axes[4].scatter(angle_k_x, angle_k_y, color='blue', s=s)
-        axes[5].scatter(signed_proper_ks_x_n_rest, signed_proper_ks_y_n_rest, color='blue', s=s) 
+    # Scatter plot
+    for i, x, y in zip(range(6), [bond_eq_x, angle_eq_x, signed_proper_ks_x_n0, bond_k_x, angle_k_x, signed_proper_ks_x_n_rest], [bond_eq_y, angle_eq_y, signed_proper_ks_y_n0, bond_k_y, angle_k_y, signed_proper_ks_y_n_rest]):
+        axes[i] = scatter_plot(ax=axes[i], x=x, y=y, logscale=log, cluster=True)
 
     # Titles and labels
     for i, ax in enumerate(axes):
@@ -792,9 +762,9 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
 
         
         if not xlabel is None:
-            ax.set_xlabel(xlabel, fontsize=fontsize)
+            ax.set_xlabel(xlabel)
         if not ylabel is None and i in [0,3]:
-            ax.set_ylabel(ylabel, fontsize=fontsize)
+            ax.set_ylabel(ylabel)
 
         num_ticks = None
 
@@ -803,7 +773,7 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
             ax.yaxis.set_major_locator(plt.MaxNLocator(num_ticks))
 
         # make the ticks go into and out of the plot and make them larger:
-        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1, labelsize=fontsize-3)
+        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1)
         
     # Units dictionary
     UNITS = {
@@ -816,20 +786,22 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
     }
 
     # Set labels with units
-    axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]", fontsize=fontsize)
-    axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
-    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
-    axes[3].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
-    axes[4].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
-    axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]")
+    axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]")
+    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]")
+    axes[3].set_title(f"Bond k [{UNITS['bond_k']}]")
+    axes[4].set_title(f"Angle k [{UNITS['angle_k']}]")
+    axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]")
 
-    plt.tight_layout(pad=3.0)
+    plt.tight_layout(pad=1.0)
+    if title is not None:
+        fig.suptitle(title)
     # plt.subplots_adjust(wspace=0.6, hspace=0.2)
 
     return fig, ax
 
 
-def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsize=7, compare_parameters:List[Parameters]=None, name="Grappa", compare_name="Reference"):
+def plot_parameters(parameters:List[Parameters], title=None, figsize=5, compare_parameters:List[Parameters]=None, name="Grappa", compare_name="Reference"):
 
     if type(parameters) is not list:
         parameters = [parameters]
@@ -839,7 +811,7 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
             compare_parameters = [compare_parameters]
 
     # Create figure and axes with a 2-row, 3-column layout
-    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(figsize*2.8, figsize*2))
+    fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(figsize*3, figsize*2))
     
     # Flatten the axes array for easy iteration
     axes = axes.flatten()
@@ -883,7 +855,7 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
             parts = ax.violinplot([param, data_compare[axes.tolist().index(ax)]], showmeans=False, showextrema=True, points=1000, bw_method=0.05)
 
             ax.set_xticks([1, 2])
-            ax.set_xticklabels([name, compare_name], fontsize=fontsize-3)
+            ax.set_xticklabels([name, compare_name])
 
         else:
             parts = ax.violinplot(param, showmeans=False, showextrema=True, points=1000, bw_method=0.05)
@@ -897,7 +869,7 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
             ax.yaxis.set_major_locator(plt.MaxNLocator(num_ticks))
 
         # make the ticks go into and out of the plot and make them larger:
-        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1, labelsize=fontsize-3)
+        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1)
 
     # Units dictionary
     UNITS = {
@@ -910,19 +882,19 @@ def plot_parameters(parameters:List[Parameters], title=None, fontsize=27, figsiz
     }
 
     # Set labels with units
-    axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]", fontsize=fontsize)
-    axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]", fontsize=fontsize)
-    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]", fontsize=fontsize)
-    axes[3].set_title(f"Bond k [{UNITS['bond_k']}]", fontsize=fontsize)
-    axes[4].set_title(f"Angle k [{UNITS['angle_k']}]", fontsize=fontsize)
-    axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]", fontsize=fontsize)
+    axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]")
+    axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]")
+    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]")
+    axes[3].set_title(f"Bond k [{UNITS['bond_k']}]")
+    axes[4].set_title(f"Angle k [{UNITS['angle_k']}]")
+    axes[5].set_title(f"Torsion k_1-{n_periodicity-1} [{UNITS['proper_ks']}]")
 
     plt.tight_layout(pad=3.0)
 
     # Set the overall title and layout adjustment
     if not title is None:
-        fig.suptitle(title, fontsize=fontsize)
-        plt.subplots_adjust(top=0.85)  # Adjust the top padding to make room for title if necessary
+        fig.suptitle(title)
+        # plt.subplots_adjust(top=0.85)  # Adjust the top padding to make room for title if necessary
     # plt.subplots_adjust(wspace=0.6, hspace=0.2)
     
     return fig, axes
@@ -951,7 +923,5 @@ if __name__ == '__main__':
     fig.savefig('comparison_parameters.png')
 
     plt.close('all')
-
-
 
 # %%

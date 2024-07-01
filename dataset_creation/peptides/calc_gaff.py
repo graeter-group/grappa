@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not "\\" in args.dspath:
+    if not args.dspath.startswith("/"):
         args.dspath = get_data_path()/"datasets"/args.dspath
 
     assert args.dspath.is_dir()

@@ -16,7 +16,8 @@ from grappa.data.grappa_data import GrappaData
 from grappa.training.evaluator import eval_ds
 from grappa.training.lightning_model import GrappaLightningModel
 from grappa.utils.training_utils import to_df
-from grappa.utils.run_utils import flatten_dict
+from grappa.utils.run_utils import flatten_dict, unflatten_dict
+from grappa.utils.plotting import make_scatter_plots
 from grappa.models import GrappaModel, Energy
 import wandb
 import torch
@@ -148,7 +149,7 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
@@ -157,6 +158,7 @@ class Experiment:
             n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
             test_data_path: Path, dir where to store the test data .npz file
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
+            plot: bool, whether to plot the results
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
 
@@ -227,16 +229,25 @@ class Experiment:
         table = df.to_string()
         logging.info(f"Test summary:\n{table}")
         
-        full_table = full_df.to_string(columns=['n_mols', 'n_confs', 'rmse_energies', 'crmse_forces', 'mae_energies', 'mae_forces', 'std_energies', 'std_forces'])
+        full_table = full_df.to_string(columns=['n_mols', 'n_confs', 'rmse_energies', 'crmse_gradients', 'mae_energies', 'mae_gradients', 'std_energies', 'std_gradients'])
         with open(self.ckpt_dir / f'summary_{epoch}.txt', 'w') as f:
             f.write(full_table)
 
         # plot the results:
+        if plot:
+            datapath = self.grappa_module.test_data_path
+            if not datapath.exists():
+                logging.warning(f"Test data not found at {datapath}. Skipping plotting.")
+            else:
+                data = np.load(datapath)
+                data = unflatten_dict(data)
+                make_scatter_plots(data, plot_dir=datapath.parent/'plots', ylabel='Grappa')
+
         
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -246,6 +257,7 @@ class Experiment:
             n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
             test_data_path: Path, path to the test data
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
+            plot: bool, whether to plot the results
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
 
@@ -274,11 +286,16 @@ class Experiment:
                 json.dump(summary, f, indent=4)
 
             with open(Path(ff_test_data_path).parent / 'summary.txt', 'w') as f:
-                f.write(to_df(summary, short=False).to_string(columns=['n_mols', 'n_confs', 'rmse_energies', 'crmse_forces', 'mae_energies', 'mae_forces', 'std_energies', 'std_forces']))
+                f.write(to_df(summary, short=False).to_string(columns=['n_mols', 'n_confs', 'rmse_energies', 'crmse_gradients', 'mae_energies', 'mae_gradients', 'std_energies', 'std_gradients']))
 
             logging.info(f"Test summary for {ff}:\n{to_df(summary, short=True).to_string()}")
 
             np.savez(ff_test_data_path, **data)
+
+            if plot:
+                data = unflatten_dict(data)
+                make_scatter_plots(data, plot_dir=ff_test_data_path.parent/'plots', ylabel=ff)
+
 
 
 

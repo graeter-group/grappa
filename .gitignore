@@ -8,6 +8,7 @@ __pycache__/
 ckpt/
 old_experiments/
 outputs/
+reproducility/*.yaml
 job.sh
 
 # Distribution / packaging

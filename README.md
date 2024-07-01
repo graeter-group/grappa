@@ -84,24 +84,18 @@ system = grappa_ff.parametrize_system(system, topology, charge_model='amber99')
 
 ## Installation
 
-
-### GROMACS
-
-The creation of custom GROMACS topology files is handled by [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed via pip.
-
-For simplicity, we recommend to use Grappa for GROMACS in cpu mode since the inference runtime of Grappa is usually small compared to the simulation runtime, even without a GPU. (Simply create another environment if you also intend to train Grappa.)
+For using Grappa in GROMACS or OPENMM, cpu mode is usually sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime.
 
 To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
 
 ```{bash}
-conda create -n grappa -y python=3.10
-conda activate grappa
 git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
-pip install kimmdy
-pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
-pip install dgl==2.0 -f https://data.dgl.ai/wheels/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
-pip install -r requirements.txt
+
+conda create -n grappa python=3.10 -y
+conda activate grappa
+
+pip install -r installation/cpu_requirements.txt
 pip install -e .
 ```
 
@@ -110,9 +104,23 @@ Verify the installation by running
 python tests/test_installation.py
 ```
 
+### GROMACS
+
+The creation of custom GROMACS topology files is handled by [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as grappa via pip,
+
+```{bash}
+pip install kimmdy==6.8.3
+```
+
 ### OpenMM
 
-Unfortunately, OpenMM is not available on pip and has to be installed via conda. Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and cuda 12.1 and install the following versions:
+Unfortunately, OpenMM is not available on pip and has to be installed via conda in the same environment as grappa,
+
+```{bash}
+conda install -c conda-forge openmm
+```
+
+Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and cuda 12.1 and install the following versions:
 
 | CUDA | Python | Torch | OpenMM  |
 |------|--------|-------|---------|
@@ -121,87 +129,38 @@ Unfortunately, OpenMM is not available on pip and has to be installed via conda.
 | 12.1 | 3.10   | 2.2.0 | 8.1.1   |
 | cpu  | 3.10   | 2.2.0 | 8.1.1   |
 
-Simply activate the target conda environment and run the install script for the cuda version of choice, for pure inference usualluy the cpu version is sufficient.
-
-```{bash}
-git clone https://github.com/hits-mbm-dev/grappa.git
-cd grappa
-conda create -n grappa -y
-conda activate grappa
-bash installation_openmm.sh cpu
-# bash installation_openmm.sh 11.8 # with cuda
-```
-
-Verify the installation by running
-```
-python tests/test_installation.py
-```
 
 ### Development
 
 To facilitate the interface to OpenMM and GROMACS, Grappa has an optional dependency on [OpenMM](https://github.com/openmm/openmm) and [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which is used to create custom GROMACS topology files. To train and evaluate Grappa on existing datasets, neither of these packages are needed.
 
-In this case, Grappa only needs a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice, e.g. with conda by
+In this case, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice is needed. In this environment, Grappa can be installed by
 
 ```{bash}
-conda install pytorch=2.1.0 pytorch-cuda=11.8 dgl -c pytorch -c nvidia -c dglteam/label/cu118
+pip install -r installation/requirements.txt
+pip install -e .
 ```
-
-or with pip,
-
-```{bash}
-pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cu117
-pip install  dgl -f https://data.dgl.ai/wheels/cu117/repo.html dglgo -f https://data.dgl.ai/wheels-test/repo.html
-conda install cuda-toolkit -c "nvidia/label/cuda-11.7.1" -y
-```
-
-To then install Grappa, simply clone the repository, install additional requirements and the package itself:
-
-```{bash}
-git clone git@github.com:hits-mbm-dev/grappa.git
-cd grappa
-pip install -r requirements.txt
-pip install .
-```
-
-Alternatively, install grappa with openmm by running the installation script provided. This will, however, take a bit longer since it will install openmm via conda.
 
 Verify the installation by running
 ```
 python tests/test_installation.py
 ```
 
+The installation of dgl with potentially necessary bugfixes is explained in `installation/README.md`.
 
 ## Pretrained Models
 
-Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded. An example can be found at `examples/usage/openmm_wrapper.py`. For full reproducibility, one can also obtain the model weights toghether with the respective partition of the dataset and the configuration file used for training by `grappa.utils.run_utils.model_dict_from_tag`, which returns a dictionary with the keys `{'state_dict', 'config', 'split_names', 'results','ds_size'}`.
+Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a url that points to a version-dependent release file, from which model weights are downloaded.
+An example can be found at `examples/usage/openmm_wrapper.py`, available tags are listed in `models/published_models.csv`.
+For full reproducibility, also the respective partition of the dataset and the configuration file used for training is included in the released checkpoints.
 
 
 ## Datasets
 
-Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor. An example can be found at `examples/usage/dataset.py`. Available tags are listed in the documentation of the Dataset class.
+Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor.
+An example can be found at `examples/usage/dataset.py`, available tags are listed in `data/published_datasets.csv`.
 
-To re-create the benchmark experiment, also the splitting into train/val/test sets is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
+To re-create the benchmark experiment, also the splitting into train/val/test sets from Espaloma is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
 
+NOTE
 The datasets 'uncapped_amber99sbildn', 'tripeptides_amber99sbildn', 'hyp-dop_amber99sbildn' and 'dipeptide_rad' from [grappa-1.1](https://github.com/hits-mbm-dev/grappa/releases/tag/v.1.1.0) were generated using scripts at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
-
-## Reproducibility
-
-Every Grappa model that is published does not only contain the model weights but also a config dict that describes hyperparameters of the model and training and the split of the dataset into train/val/test molecules. This allows seamless reproducibility in a few lines of code. For example, to reproduce the training of Grappa 1.1, one can simply run:
-
-```{python}
-from grappa.utils.run_utils import model_dict_from_tag
-from grappa.utils.loading_utils import model_dict_from_tag
-from grappa.training.trainrun import do_trainrun
-import json
-
-model_dict = model_dict_from_tag('grappa-1.2') # change tag to grappa-1.1-benchmark to reproduce the benchmark table
-
-split_ids = model_dict['split_names']
-with open('split_ids.json', 'w') as f:
-    json.dump(split_ids, f)
-
-config['data_config']['splitpath'] = splitpath
-
-do_trainrun(config=config, project='reproduce-grappa')
-```

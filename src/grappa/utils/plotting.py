@@ -8,9 +8,10 @@ import matplotlib.colors as colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Tuple, Dict
 from grappa.utils import unflatten_dict
+import matplotlib.ticker as ticker
 
 
-def scatter_plot(ax, x, y, n_max=None, seed=0, alpha=1., s=15, num_ticks=None, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, **kwargs):
+def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, **kwargs) -> plt.Axes:
     """
     Create a scatter plot of two arrays x and y.
     Args:
@@ -22,12 +23,14 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, alpha=1., s=15, num_ticks=None, a
         alpha: Transparency of the points
         s: Size of the points
         num_ticks: Number of ticks on the axes
+        max_ticks: Maximum number of ticks on the axes
         ax_symmetric: Whether to make the axes symmetric
         cluster: Whether to cluster points
         delta_factor: Factor for clustering points
         cmap: Colormap for clustered scatter plot
         logscale: Whether to use a log scale for the colorbar
         show_rmsd: Whether to show the RMSD
+        amplitude: Min and max val for symmetric axes
         **kwargs: Additional keyword arguments for ax.scatter call
     """
     if n_max is not None and n_max < len(x):
@@ -46,7 +49,6 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, alpha=1., s=15, num_ticks=None, a
             min_val = -max(abs(min_val), abs(max_val))
             max_val = max(abs(min_val), abs(max_val))
 
-
     ax.set_ylim(min_val, max_val)
     ax.set_xlim(min_val, max_val)
 
@@ -57,9 +59,14 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, alpha=1., s=15, num_ticks=None, a
     if num_ticks is not None:
         ax.xaxis.set_major_locator(plt.MaxNLocator(num_ticks))
         ax.yaxis.set_major_locator(plt.MaxNLocator(num_ticks))
+    else:
+        ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=max_ticks))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=max_ticks))
+
 
     # Make the ticks go into and out of the plot and make them larger
     ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1)
+    ax.ticklabel_format(style='sci', axis='both', scilimits=(-2,3))
 
     # Re-set the limits
     ax.set_ylim(min_val, max_val)
@@ -85,7 +92,16 @@ def scatter_plot(ax, x, y, n_max=None, seed=0, alpha=1., s=15, num_ticks=None, a
         
         # Add the colorbar
         cbar = plt.colorbar(sc, cax=cax)
-        cbar.set_label('Frequency')
+
+        if max(frequencies) < 1000:
+            # Use ScalarFormatter to avoid scientific notation and set ticks at integers only
+            scalar_formatter = ticker.ScalarFormatter(useMathText=True)
+            scalar_formatter.set_scientific(False)
+            scalar_formatter.set_useOffset(False)
+            cbar.ax.yaxis.set_major_formatter(scalar_formatter)
+
+        if cbar_label:
+            cbar.set_label("Frequency")
 
     else:
         ax.scatter(x, y, alpha=alpha, s=s, **kwargs)
@@ -161,7 +177,7 @@ def get_default_title_map():
     return d
 
 
-def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel="QM", logscale:bool=True, ax_symmetric:Tuple[bool,bool]=(False,True), title_map:Dict[str,str]=get_default_title_map(), rmsd_position:Tuple[float,float]=(0.05, 0.95), cluster=True, **kwargs):
+def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel="QM", logscale:bool=True, ax_symmetric:Tuple[bool,bool]=(False,True), title_map:Dict[str,str]=get_default_title_map(), rmsd_position:Tuple[float,float]=(0.05, 0.95), cluster=True, dpi=200, figsize=5, **kwargs):
     """
 
     rmsd_position: Tuple[float,float]: Position of the RMSD text in the plot. If None, the RMSD is not shown.
@@ -171,11 +187,13 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
     energy_x_label = f"{xlabel} Energy [kcal/mol]"
 
     plot_dir = Path(plot_dir)
+    if not plot_dir.exists():
+        plot_dir.mkdir(parents=True, exist_ok=True)
 
-    for dsname in data['energies'].keys():
+    for dsname in ff_data['energies'].keys():
         ds_dir = plot_dir/dsname
         ds_dir.mkdir(parents=True, exist_ok=True)
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(figsize, figsize))
         scatter_plot(ax, ff_data['reference_energies'][dsname], ff_data['energies'][dsname], logscale=logscale, ax_symmetric=ax_symmetric[0], cluster=cluster, **kwargs)
         ax.set_xlabel(energy_x_label)
         ax.set_ylabel(ylabel)
@@ -187,14 +205,15 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
             rmsd_value = ((ff_data['reference_energies'][dsname] - ff_data['energies'][dsname])**2).mean()**0.5
             ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
     
-        plt.savefig(ds_dir/"energy.png")
+        plt.tight_layout()
+        plt.savefig(ds_dir/"energy.png", dpi=dpi)
         plt.close()
     
 
-    for dsname in data['gradients'].keys():
+    for dsname in ff_data['gradients'].keys():
         ds_dir = plot_dir/dsname
         ds_dir.mkdir(parents=True, exist_ok=True)
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(figsize, figsize))
         scatter_plot(ax, ff_data['reference_gradients'][dsname].flatten(), ff_data['gradients'][dsname].flatten(), logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
         ax.set_xlabel(force_x_label)
         ax.set_ylabel(ylabel)
@@ -206,16 +225,17 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
             rmsd_value = ((ff_data['reference_gradients'][dsname].flatten() - ff_data['gradients'][dsname].flatten())**2).mean()**0.5
             ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
     
-        plt.savefig(ds_dir/"force.png")
+        plt.tight_layout()
+        plt.savefig(ds_dir/"force.png", dpi=dpi)
         plt.close()
 
 
-    for dsname in data['energies'].keys():
+    for dsname in ff_data['energies'].keys():
         ds_dir = plot_dir/dsname
         ds_dir.mkdir(parents=True, exist_ok=True)
-        all_energies = data['energies'][dsname]
-        all_ref_energies = data['reference_energies'][dsname]
-        mol_idxs = data['mol_idxs'][dsname]
+        all_energies = ff_data['energies'][dsname]
+        all_ref_energies = ff_data['reference_energies'][dsname]
+        mol_idxs = ff_data['mol_idxs'][dsname]
             
         energies_per_mol = [all_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_energies[mol_idxs[-1]:]]
         ref_energies_per_mol = [all_ref_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_energies[mol_idxs[-1]:]]
@@ -223,20 +243,22 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
         rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
 
         # Histogram of the energy errors
-        fig, ax = plt.subplots()
-        ax.hist(rmsd_values, bins=100)
+        fig, ax = plt.subplots(figsize=(figsize, figsize))
+        ax.hist(rmsd_values, bins=30)
         ax.set_xlabel("RMSD [kcal/mol]")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Energy RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
-        plt.savefig(ds_dir/"energy_rmsd_histogram.png")
+
+        plt.tight_layout()
+        plt.savefig(ds_dir/"energy_rmsd_histogram.png", dpi=dpi)
         plt.close()
 
-    for dsname in data['gradients'].keys():
+    for dsname in ff_data['gradients'].keys():
         ds_dir = plot_dir/dsname
         ds_dir.mkdir(parents=True, exist_ok=True)
-        all_gradients = data['gradients'][dsname]
-        all_ref_gradients = data['reference_gradients'][dsname]
-        mol_idxs = data['mol_idxs'][dsname]
+        all_gradients = ff_data['gradients'][dsname]
+        all_ref_gradients = ff_data['reference_gradients'][dsname]
+        mol_idxs = ff_data['mol_idxs'][dsname]
 
         gradients_per_mol = [all_gradients[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_gradients[mol_idxs[-1]:]]
         ref_gradients_per_mol = [all_ref_gradients[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_gradients[mol_idxs[-1]:]]
@@ -244,15 +266,15 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
         rmsd_values = [((np.array(ref_gradients_per_mol[i]).flatten() - np.array(gradients_per_mol[i]).flatten())**2).mean()**0.5 for i in range(len(gradients_per_mol))]
 
         # Histogram of the force errors
-        fig, ax = plt.subplots()
-        ax.hist(rmsd_values, bins=100)
+        fig, ax = plt.subplots(figsize=(figsize, figsize))
+        ax.hist(rmsd_values, bins=30)
         ax.set_xlabel("RMSD [kcal/mol/Å]")
         ax.set_ylabel("Frequency")
         ax.set_title(f"Force RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
-        plt.savefig(ds_dir/"force_rmsd_histogram.png")
-        plt.close()
 
-        
+        plt.tight_layout()
+        plt.savefig(ds_dir/"force_rmsd_histogram.png", dpi=dpi)
+        plt.close()
 
 
 #%%
@@ -285,7 +307,7 @@ if __name__ == '__main__':
 
     mol_idxs[:5]
     #%%
-        
+
     energies_per_mol = [all_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_energies[mol_idxs[-1]:]]
     ref_energies_per_mol = [all_ref_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_energies[mol_idxs[-1]:]]
     rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
