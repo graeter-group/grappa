@@ -97,17 +97,17 @@ def get_gradient_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str
     """
     Get the gradient contributions from different MM terms stored in a graph. The shape is (n_atoms, n_confs, 3) for each contribution.
     """
-    grad_dict = {contrib: torch.empty((0,3), device=g.nodes['n1'].data['gradient_ref'].device) for contrib in contributions}
+    grad_dict = {contrib: torch.empty((g.num_nodes('n1'),0,3), device=g.nodes['n1'].data['gradient_ref'].device) for contrib in contributions}
     for contrib in contributions:
         if f"gradient_{contrib}_{suffix}" in g.nodes['n1'].data.keys():
-            grad_dict[contrib] = g.nodes['n1'].data[f"gradient_{contrib}_{suffix}"].view(-1, 3)
+            grad_dict[contrib] = g.nodes['n1'].data[f"gradient_{contrib}_{suffix}"]
         elif contrib=="nonbonded" and suffix=="":
             # NOTE: grappa doesnt predict its reference contributions, this only works in the vanilla case in which nonbonded is the only reference
             if all([e in g.nodes['n1'].data.keys() for e in [f"gradient_ref", f"gradient_qm"]]):
-                grad_dict[contrib] = (g.nodes['n1'].data[f"gradient_qm"] - g.nodes['n1'].data[f"gradient_ref"]).view(-1, 3)
+                grad_dict[contrib] = (g.nodes['n1'].data[f"gradient_qm"] - g.nodes['n1'].data[f"gradient_ref"])
         elif contrib=="total":
             if f"gradient_{suffix}" in g.nodes['n1'].data.keys():
-                grad_dict[contrib] = g.nodes['n1'].data[f"gradient_{suffix}"].view(-1, 3)
+                grad_dict[contrib] = g.nodes['n1'].data[f"gradient_{suffix}"]
         elif not skip_err:
             raise RuntimeError(f"Gradient contribution {contrib} not found in graph.")
     return grad_dict

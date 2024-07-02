@@ -71,3 +71,45 @@ class OpenmmGrappa(Grappa):
     # overwrite the original predict function to throw an error:
     def predict(self, molecule):
         raise NotImplementedError('This method is not available for OpenmmGrappa. Use parametrize_system instead.')
+
+
+
+if importlib.util.find_spec("openmm") is None:
+    def as_openmm(tag, base_forcefield, max_element, device, exclude_residues, plot_dir):
+        """
+        Not defined, cannot find openmm package.
+        """
+        raise ImportError("OpenmmGrappa requires the openmm package to be installed.")
+    
+else:
+    from openmm.app import ForceField
+    def as_openmm(tag:str='latest',
+                  base_forcefield:Union[str,List[str]]=['amber99sbildn.xml', 'tip3p.xml'],
+                  max_element=constants.MAX_ELEMENT,
+                  device:str='cpu',
+                  exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES,
+                  plot_dir:Union[Path,str]=None
+                )->ForceField:
+        """
+        Returns a openmm.app.ForcField object that parametrizes the system using the Grappa model.
+        This is done by building a wrapper class in which the createSystem function creates a system using the base_forcefield and then parametrizes it using the grappa model.
+        """
+        grappa = OpenmmGrappa.from_tag(tag, max_element, device)
+        if isinstance(base_forcefield, ForceField):
+            base_forcefield_ = base_forcefield
+        else:
+            if isinstance(base_forcefield, str):
+                base_forcefield = [base_forcefield]
+            base_forcefield_ = ForceField(*base_forcefield)
+
+        # now build a class in which the createSystem function creates a system using the base_forcefield and then parametrizes it using the grappa model.
+
+        grappa = OpenmmGrappa.from_tag(tag, max_element, device)
+
+        class GrappaForceField(ForceField):
+            def createSystem(self, topology, **kwargs):
+                system = base_forcefield_.createSystem(topology, **kwargs)
+                grappa.parametrize_system(system, topology, exclude_residues, plot_dir)
+                return system
+            
+        return GrappaForceField()

@@ -235,7 +235,8 @@ class Evaluator:
                     gradients_ref_classical = get_gradients(g_, suffix=self.suffix_classical_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             if len(self.contributions) > 0:
-                gradient_contributions = get_gradient_contributions(g_, contributions=self.contributions, suffix=self.suffix, skip_err=True).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                gradient_contributions = get_gradient_contributions(g_, contributions=self.contributions, suffix=self.suffix, skip_err=True)
+                gradient_contributions = {k:v.detach().flatten(start_dim=0, end_dim=1).to(self.device) for k,v in gradient_contributions.items()}
                 
 
             # store everything:
