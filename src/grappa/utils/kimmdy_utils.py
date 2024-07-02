@@ -372,3 +372,4 @@ if importlib.util.find_spec('kimmdy') is not None:
                 )
             else:
                 tup = tups_in_topology[0]
+        return tup
