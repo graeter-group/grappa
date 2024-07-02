@@ -164,7 +164,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 tup = tuple(idx)
                 tup = find_bond(tup, top)
                 if not tup:
-                    continue
+                    raise ValueError(f"Invalid bond tuple {tup}")
 
                 top.bonds[tup] = Bond(
                     *tup,
@@ -179,7 +179,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 tup = tuple(idx)
                 tup = find_angle(tup, top)
                 if not tup:
-                    continue
+                    raise ValueError(f"Invalid angle tuple {tup}")
 
                 top.angles[tup] = Angle(
                     *tup,
@@ -196,7 +196,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 # find the proper dihedral tuple in the topology that is equivalent to the given tuple
                 tup = find_proper(tup, top)
                 if not tup:
-                    continue
+                    raise ValueError(f"Invalid proper dihedral tuple {tup}")
 
                 dihedral_dict = {}
                 for ii in range(len(parameters.proper_ks[i])):
