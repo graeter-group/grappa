@@ -29,6 +29,10 @@ def model_from_tag(tag:str='latest')->GrappaModel:
 
 
 def get_path_from_tag(tag:str='latest')->Path:
+
+    if tag == 'latest':
+        tag = 'grappa-1.3.0'
+
     csv_path = get_repo_dir() / 'models' / 'models.csv'
     published_csv_path = get_repo_dir() / 'models' / 'published_models.csv'
     COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."

@@ -8,6 +8,7 @@ from tqdm import tqdm
 import logging
 import pandas as pd
 import numpy as np
+import shutil
 
 def get_data_csv_path()->Path:
     '''
@@ -154,7 +155,7 @@ def load_dataset(url:str, data_dir:Path=get_data_path()/'datasets', dirname:str=
     if not dir_path.exists():
         logging.info(f"Downloading {dirname} from:\n'{url}'")
 
-        download_zipped_dir(url=url, target_dir=data_dir)
+        download_zipped_dir(url=url, target_dir=dir_path)
 
     return dir_path
 
