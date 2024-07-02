@@ -97,12 +97,6 @@ class Molecule():
         if degree:
             self.add_features(feat_names=['degree'])
 
-        if not mapped_smiles is None:
-            assert importlib.util.find_spec("openff.toolkit") is not None, "openff.toolkit must be installed if you pass a mapped_smiles string to this constructor."
-            from grappa.utils.openff_utils import get_openff_molecule
-            openff_mol = get_openff_molecule(mapped_smiles)
-            self.add_features(feat_names=['sp_hybridization'], openff_mol=openff_mol)
-
     def process_impropers(self):
         """
         Updates the impropers such that they are as described in the class docstring.

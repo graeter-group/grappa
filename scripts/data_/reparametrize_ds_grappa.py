@@ -68,6 +68,9 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot
         this_ax.set_xlabel(old_ff_name)
         this_ax.set_ylabel(ff_name)
 
+    title = "Gradient Contributions [kcal/mol/Å]"
+    fig.suptitle(title)
+
     plt.tight_layout()
 
     plt.savefig(this_dir/f"{outpath.stem}.png")

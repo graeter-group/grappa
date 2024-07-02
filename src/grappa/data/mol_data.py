@@ -436,7 +436,6 @@ class MolData():
         """
 
 
-        import openmm
         from grappa.utils import openmm_utils
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles, charge_model=charge_model)
 

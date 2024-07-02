@@ -121,14 +121,7 @@ Unfortunately, OpenMM is not available on pip and has to be installed via conda 
 conda install -c conda-forge openmm
 ```
 
-Since OpenMM, torch and dgl use cuda, the choice of package-versions is not trivial and is thus handled by installscripts. The installation scripts are tested on Ubuntu 22.04 and cuda 12.1 and install the following versions:
-
-| CUDA | Python | Torch | OpenMM  |
-|------|--------|-------|---------|
-| 11.7 | 3.9    | 2.0.1 | 7.7.0   |
-| 11.8 | 3.10   | 2.2.0 | 8.1.1   |
-| 12.1 | 3.10   | 2.2.0 | 8.1.1   |
-| cpu  | 3.10   | 2.2.0 | 8.1.1   |
+Since the resolution of packages can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
 
 
 ### Development
