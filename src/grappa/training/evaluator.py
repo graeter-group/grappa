@@ -1,6 +1,6 @@
 from grappa.utils.torch_utils import mean_absolute_error, root_mean_squared_error, invariant_mae, invariant_rmse
 import numpy as np
-from grappa.utils.graph_utils import get_energies, get_gradients, get_parameters
+from grappa.utils.graph_utils import get_energies, get_gradients, get_gradient_contributions
 from grappa.utils import dgl_utils
 from typing import List
 import torch
@@ -167,7 +167,7 @@ class Evaluator:
     """
     Does the same as the FastEvaluator but by unbatching the graphs and storing the energies and gradients explicitly on device RAM.
     """
-    def __init__(self, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False, plot_dir:str=None):
+    def __init__(self, device='cpu', suffix='', suffix_ref='_ref', suffix_classical='_classical_ff', suffix_classical_ref:str=None, calculate_classical:bool=False, plot_dir:str=None, contributions:List[str]=[]):
         """
         keep_data: if True, the data is not deleted after pooling and can be used eg for plotting.
         """
@@ -181,6 +181,7 @@ class Evaluator:
         self.suffix_classical_ref = suffix_classical_ref
 
         self.plot_dir = plot_dir
+        self.contributions = contributions
 
         self.init_storage()
 
@@ -191,6 +192,8 @@ class Evaluator:
 
         self.reference_energies = {}
         self.reference_gradients = {}
+
+        self.gradient_contributions = {contrib:{} for contrib in self.contributions}
 
         if self.log_classical_values:
             self.classical_energies = {}
@@ -231,6 +234,10 @@ class Evaluator:
                 if self.suffix_classical_ref is not None:
                     gradients_ref_classical = get_gradients(g_, suffix=self.suffix_classical_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
+            if len(self.contributions) > 0:
+                gradient_contributions = get_gradient_contributions(g_, contributions=self.contributions, suffix=self.suffix, skip_err=True).detach().flatten(start_dim=0, end_dim=1).to(self.device)
+                
+
             # store everything:
             self.energies.setdefault(dsname, []).append(energies)
             self.gradients.setdefault(dsname, []).append(gradients)
@@ -238,6 +245,8 @@ class Evaluator:
             self.reference_energies.setdefault(dsname, []).append(energies_ref)
             self.reference_gradients.setdefault(dsname, []).append(gradients_ref)
 
+            for contrib in self.contributions:
+                self.gradient_contributions[contrib].setdefault(dsname, []).append(gradient_contributions[contrib])
 
             if self.log_classical_values:
                 self.classical_energies.setdefault(dsname, []).append(energies_classical)
@@ -287,7 +296,11 @@ class Evaluator:
         self.all_reference_energies = {}
         self.all_reference_gradients = {}
 
-        self.mol_idxs = {} # stores the start indexes of each mol for unconcatenating the data for each molecule in the sense that energies = [all_energies[dsname][mol_idxs[dsname][i]:mol_idxs[dsname][i+1]] for i in range(len(mol_idxs[dsname])-1)] + [all_energies[dsname][mol_idxs[dsname][-1]:]]
+        self.all_gradient_contributions = {contrib:{} for contrib in self.contributions}
+
+        # stores the start indexes of each mol for unconcatenating the data for each molecule in the sense that energies = [all_energies[dsname][mol_idxs[dsname][i]:mol_idxs[dsname][i+1]] for i in range(len(mol_idxs[dsname])-1)] + [all_energies[dsname][mol_idxs[dsname][-1]:]]
+        self.energy_mol_idxs = {}
+        self.gradient_mol_idxs = {}
 
         if self.log_classical_values:
             self.all_classical_energies = {}
@@ -309,7 +322,15 @@ class Evaluator:
             self.all_reference_energies[dsname] = torch.cat([self.reference_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
             self.all_reference_gradients[dsname] = torch.cat([self.reference_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
-            self.mol_idxs[dsname] = [0] + [self.energies[dsname][i].shape[0] for i in range(self.n_mols[dsname])]
+            # store the start indexes of each molecule for unconcatenating the data later on
+            self.energy_mol_idxs[dsname] = [0] + [self.energies[dsname][i].shape[0] for i in range(self.n_mols[dsname])]
+            self.energy_mol_idxs[dsname] = np.cumsum(self.energy_mol_idxs[dsname])
+            self.gradient_mol_idxs[dsname] = [0] + [self.gradients[dsname][i].shape[0] for i in range(self.n_mols[dsname])]
+            self.gradient_mol_idxs[dsname] = np.cumsum(self.gradient_mol_idxs[dsname])
+
+            if len(self.contributions) > 0:
+                for contrib in self.contributions:
+                    self.all_gradient_contributions[contrib][dsname] = torch.cat([self.gradient_contributions[contrib][dsname][i] for i in mol_indices[dsname]], dim=0)
 
             if self.log_classical_values:
                 self.all_classical_energies[dsname] = torch.cat([self.classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
@@ -419,7 +440,7 @@ class Evaluator:
             plt.close(fig)
 
 
-def eval_ds(ds, ff_name:str, n_bootstrap:int=None)->Tuple[Dict[str,np.ndarray], Dict[str,np.ndarray]]:
+def eval_ds(ds, ff_name:str, n_bootstrap:int=None, gradient_contributions:List[str]=[])->Tuple[Dict[str,np.ndarray], Dict[str,np.ndarray]]:
     """
     Returns the metrics and the predictions for the given force field for all datasets with the given force field name.
     data, metrics = eval_ds(ds) -> unflatten_dict(data) is nested dictionary with:
@@ -428,7 +449,7 @@ def eval_ds(ds, ff_name:str, n_bootstrap:int=None)->Tuple[Dict[str,np.ndarray], 
     loader = GraphDataLoader(ds, batch_size=1, shuffle=False, conf_strategy="max", drop_last=False)
 
     suffix = "_"+ff_name+"_total"
-    evaluator = Evaluator(suffix=suffix, suffix_ref="_qm")
+    evaluator = Evaluator(suffix=suffix, suffix_ref="_qm", contributions=gradient_contributions)
     for g, dsname in tqdm(loader, desc=f'Evaluating {ff_name}'):
         if not f'energy{suffix}' in g.nodes['g'].data.keys():
             continue
@@ -441,8 +462,11 @@ def eval_ds(ds, ff_name:str, n_bootstrap:int=None)->Tuple[Dict[str,np.ndarray], 
         'gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_gradients.items()},
         'reference_energies': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_energies.items()},
         'reference_gradients': {k:v.detach().clone().cpu().numpy() for k,v in evaluator.all_reference_gradients.items()},
-        'mol_idxs': {k:np.array(v) for k,v in evaluator.mol_idxs.items()},
+        'energy_mol_idxs': {k:np.array(v) for k,v in evaluator.energy_mol_idxs.items()},
+        'gradient_mol_idxs': {k:np.array(v) for k,v in evaluator.gradient_mol_idxs.items()},
     }
+
+    data.update(evaluator.all_gradient_contributions)
 
     # flatten the dict:
     data = dict(flatten_dict(data))

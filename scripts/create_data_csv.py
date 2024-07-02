@@ -14,16 +14,15 @@ base_url = "https://github.com/graeter-group/grappa/releases/download/v.1.2.0/"
 tags = [
     "dipeptides-300K-amber99", 
     "dipeptides-1000K-amber99", 
-    "uncapped-300K-amber99", 
+    "dipeptides-300K-openff-1.2.0", 
+    "dipeptides-1000K-openff-1.2.0", 
+    "dipeptides-300K-charmm36_nonb", 
+    "dipeptides-1000K-charmm36_nonb",
+    "uncapped-300K-amber99",
     "dipeptides-hyp-dop-300K-amber99", 
     "dipeptides-radical-300K", 
     "bondbreak-radical-peptides-300K",
-    "dipeptides-300K-openff-1.2.0", 
-    "dipeptides-1000K-openff-1.2.0", 
     "uncapped-300K-openff-1.2.0",
-    "dipeptides-300K-charmm_nonb", 
-    "dipeptides-1000K-charmm_nonb"
-    "espaloma_split",
     "spice-pubchem", 
     "rna-nucleoside", 
     "gen2", 
@@ -34,9 +33,14 @@ tags = [
     "pepconf-dlc", 
     "protein-torsion", 
     "rna-trinucleotide"
+    "espaloma_split",
 ]
 
 for tag in tags:
     df = df._append({'tag': tag, 'url': f"{base_url}{tag}.zip", 'description': ''}, ignore_index=True)
 
+all_tags = df['tag'].tolist()
+assert len(all_tags) == len(set(all_tags)), "Duplicate tags found"
+
 df.to_csv(str(csvpath), index=False)
+# %%

@@ -149,7 +149,7 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[]):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
@@ -159,8 +159,14 @@ class Experiment:
             test_data_path: Path, dir where to store the test data .npz file
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
             plot: bool, whether to plot the results
+            gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
+
+        if len(gradient_contributions) > 0:
+            # set the gradient_contributions flag in the energy module to calculate the gradient contributions of the specified terms
+            self.grappa_module.model[1].gradient_contributions = True
+
 
         if load_split:
             self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path)
@@ -203,6 +209,7 @@ class Experiment:
 
         self.grappa_module.n_bootstrap = n_bootstrap
         self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
+        self.grappa_module.test_evaluator.contributions = gradient_contributions
 
         # make the list explicit (instead of a generator) to get a good progress bar
         self.datamodule.te.graphs = list(self.datamodule.te.graphs)
@@ -213,6 +220,9 @@ class Experiment:
             ckpt_path=ckpt_path
         )
 
+        if not hasattr(self.grappa_module, 'test_summary'):
+            logging.warning("No test summary found. Skipping summary generation.")
+            return
         summary = self.grappa_module.test_summary
         if not self.datamodule.num_test_mols is None:
             for dsname in summary.keys():
@@ -247,7 +257,7 @@ class Experiment:
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[]):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -258,6 +268,7 @@ class Experiment:
             test_data_path: Path, path to the test data
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
             plot: bool, whether to plot the results
+            gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
 
@@ -268,7 +279,7 @@ class Experiment:
 
         for ff in classical_force_fields:
             ff = str(ff)
-            summary, data = eval_ds(self.datamodule.te, ff, n_bootstrap=n_bootstrap)
+            summary, data = eval_ds(self.datamodule.te, ff, n_bootstrap=n_bootstrap, gradient_contributions=gradient_contributions)
 
             if len(list(summary.keys())) == 0:
                 logging.info(f"No data found for {ff}.")

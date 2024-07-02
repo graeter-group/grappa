@@ -2,14 +2,27 @@ defaults:
   - _self_
 
 ckpt_path: /local/user/seutelf/grappa/ckpt/grappa-1.3/published/2024-06-26_01-30-36/epoch:789-early_stop_loss:19.65.ckpt
-n_bootstrap: 1000
+n_bootstrap: 1
 test_data_path: null
 accelerator: 'gpu'
 classical_force_fields:
+  # - gaff-2.11
   - amber99sbildn
-  - openff-1.2.0
-  - amber14
-  - gaff-2.11
-  - reference_ff
-test_datasets: []
+  # - openff-1.2.0
+  # - amber14
+  # - reference_ff
+# datasets: null
+# pure_test_datasets: null
+datasets:
+  - uncapped-300K-amber99
+pure_test_datasets: []
 plot: true
+gradient_contributions:
+- bond
+- angle
+- proper
+- improper
+- nonbonded
+- total
+compare_suffix1: ''
+compare_suffix2: 'amber99sbildn'

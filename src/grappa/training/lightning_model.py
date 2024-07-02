@@ -297,6 +297,9 @@ class GrappaLightningModel(pl.LightningModule):
                 g = self(g)
                 self.test_evaluator.step(g, dsnames)
 
+    def on_test_epoch_start(self):
+        self.test_evaluator.init_storage()
+
     def on_test_epoch_end(self):
         if self.test_data_path is not None:
             # save the data as npz file:
@@ -307,8 +310,11 @@ class GrappaLightningModel(pl.LightningModule):
                 'gradients': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_gradients.items()},
                 'reference_energies': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_reference_energies.items()},
                 'reference_gradients': {k:v.detach().clone().cpu().numpy() for k,v in self.test_evaluator.all_reference_gradients.items()},
-                'mol_idxs': {k:np.array(v) for k,v in self.test_evaluator.mol_idxs.items()},
+                'energy_mol_idxs': {k:np.array(v) for k,v in self.test_evaluator.energy_mol_idxs.items()},
+                'gradient_mol_idxs': {k:np.array(v) for k,v in self.test_evaluator.gradient_mol_idxs.items()},
             }
+
+            data.update(self.test_evaluator.all_gradient_contributions)
 
             # flatten the dict:
             data = dict(flatten_dict(data))

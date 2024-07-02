@@ -168,6 +168,7 @@ class MolData():
         for ff_name, ff_dict in self.ff_energy.items():
             for k, v in ff_dict.items():
                 if ff_name == "qm":
+                    assert k == "total", "Only total qm energy is supported."
                     g.nodes['g'].data[f'energy_{ff_name}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)
                 else:
                     g.nodes['g'].data[f'energy_{ff_name}_{k}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)

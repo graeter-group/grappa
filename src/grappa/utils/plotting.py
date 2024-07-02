@@ -39,23 +39,6 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
         x = x[idxs]
         y = y[idxs]
 
-    min_val = min(x.min(), y.min())
-    max_val = max(x.max(), y.max())
-    if ax_symmetric:
-        if amplitude is not None:
-            min_val = -amplitude
-            max_val = amplitude
-        else:   
-            min_val = -max(abs(min_val), abs(max_val))
-            max_val = max(abs(min_val), abs(max_val))
-
-    ax.set_ylim(min_val, max_val)
-    ax.set_xlim(min_val, max_val)
-
-    ax.set_aspect('equal', 'box')
-
-    ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
-
     if num_ticks is not None:
         ax.xaxis.set_major_locator(plt.MaxNLocator(num_ticks))
         ax.yaxis.set_major_locator(plt.MaxNLocator(num_ticks))
@@ -67,10 +50,6 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
     # Make the ticks go into and out of the plot and make them larger
     ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1)
     ax.ticklabel_format(style='sci', axis='both', scilimits=(-2,3))
-
-    # Re-set the limits
-    ax.set_ylim(min_val, max_val)
-    ax.set_xlim(min_val, max_val)
 
     if cluster:
         points, frequencies = calculate_density_scatter(x, y, delta_factor=delta_factor, seed=seed)
@@ -105,6 +84,29 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
 
     else:
         ax.scatter(x, y, alpha=alpha, s=s, **kwargs)
+
+    # limits and ticks:
+    ax.set_aspect('equal', 'box')
+
+    x_min, y_min = ax.get_xlim()[0], ax.get_ylim()[0]
+    x_max, y_max = ax.get_xlim()[1], ax.get_ylim()[1]
+
+    min_val = min(x_min, y_min)
+    max_val = max(x_max, y_max)
+    if ax_symmetric:
+        if amplitude is not None:
+            min_val = -amplitude
+            max_val = amplitude
+        else:
+            min_val = -max(abs(min_val), abs(max_val))
+            max_val = max(abs(min_val), abs(max_val))
+
+    # reference line
+    ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
+
+    ax.set_ylim(min_val, max_val)
+    ax.set_xlim(min_val, max_val)
+
 
     if show_rmsd:
         rmsd = np.sqrt(np.mean((x - y)**2))
@@ -235,10 +237,10 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
         ds_dir.mkdir(parents=True, exist_ok=True)
         all_energies = ff_data['energies'][dsname]
         all_ref_energies = ff_data['reference_energies'][dsname]
-        mol_idxs = ff_data['mol_idxs'][dsname]
+        energy_mol_idxs = ff_data['energy_mol_idxs'][dsname]
             
-        energies_per_mol = [all_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_energies[mol_idxs[-1]:]]
-        ref_energies_per_mol = [all_ref_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_energies[mol_idxs[-1]:]]
+        energies_per_mol = [all_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
+        ref_energies_per_mol = [all_ref_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
 
         rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
 
@@ -258,10 +260,10 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
         ds_dir.mkdir(parents=True, exist_ok=True)
         all_gradients = ff_data['gradients'][dsname]
         all_ref_gradients = ff_data['reference_gradients'][dsname]
-        mol_idxs = ff_data['mol_idxs'][dsname]
+        gradient_mol_idxs = ff_data['gradient_mol_idxs'][dsname]
 
-        gradients_per_mol = [all_gradients[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_gradients[mol_idxs[-1]:]]
-        ref_gradients_per_mol = [all_ref_gradients[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_gradients[mol_idxs[-1]:]]
+        gradients_per_mol = [all_gradients[gradient_mol_idxs[i]:gradient_mol_idxs[i+1]] for i in range(len(gradient_mol_idxs)-1)]
+        ref_gradients_per_mol = [all_ref_gradients[gradient_mol_idxs[i]:gradient_mol_idxs[i+1]] for i in range(len(gradient_mol_idxs)-1)]
 
         rmsd_values = [((np.array(ref_gradients_per_mol[i]).flatten() - np.array(gradients_per_mol[i]).flatten())**2).mean()**0.5 for i in range(len(gradients_per_mol))]
 
@@ -296,23 +298,24 @@ if __name__ == '__main__':
     #%%
     # test:
     dspath = "/local/user/seutelf/grappa/ckpt/grappa-1.3/baseline/2024-06-19_04-54-30/test_data/epoch-784.npz"
+    dspath = "/local/user/seutelf/grappa/ckpt/grappa-1.3/published/2024-06-26_01-30-36/test_data/epoch:789.npz"
     data = np.load(dspath)
     data = unflatten_dict(data)
     data.keys()
     #%%
-    dsname = 'dipeptides-300K-charmm36'
+    dsname = 'uncapped-300K-amber99'
     all_energies = data['energies'][dsname]
     all_ref_energies = data['reference_energies'][dsname]
-    mol_idxs = data['mol_idxs'][dsname]
+    energy_mol_idxs = data['energy_mol_idxs'][dsname]
+    gradient_mol_idxs = data['gradient_mol_idxs'][dsname]
 
-    mol_idxs[:5]
     #%%
 
-    energies_per_mol = [all_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_energies[mol_idxs[-1]:]]
-    ref_energies_per_mol = [all_ref_energies[mol_idxs[i]:mol_idxs[i+1]] for i in range(len(mol_idxs)-1)] + [all_ref_energies[mol_idxs[-1]:]]
+    energies_per_mol = [all_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
+    ref_energies_per_mol = [all_ref_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
     rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
     len(rmsd_values)
-    ref_energies_per_mol[2]
+    print([e.shape for e in energies_per_mol])
     #%%
     make_scatter_plots(data, plot_dir=Path(__file__).parent/'plots')
 

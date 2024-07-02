@@ -18,9 +18,13 @@ def main(cfg: DictConfig) -> None:
     else:
         raise NotImplementedError(f"Checkpoint config not found at {ckpt_path.parent/'config.yaml'}")
 
-    # add the test sets to the config:
-    ckpt_cfg.data.data_module.pure_test_datasets += cfg.test_datasets
-    ckpt_cfg.data.data_module.pure_test_datasets = list(set(ckpt_cfg.data.data_module.pure_test_datasets))
+    # overwrite the data config (we use the split from the checkpoint to differentiate between training and test data):
+    if cfg.datasets is not None:
+        ckpt_cfg.data.data_module.datasets = cfg.datasets
+    if cfg.pure_test_datasets is not None:
+        ckpt_cfg.data.data_module.pure_test_datasets = cfg.pure_test_datasets
+    ckpt_cfg.data.data_module.pure_train_datasets = []
+    ckpt_cfg.data.data_module.pure_val_datasets = []
 
     # replace the checkpoint dir in ckpt_cfg with the one from the checkpoint path:
     ckpt_cfg.experiment.checkpointer.dirpath = ckpt_path.parent
@@ -32,8 +36,8 @@ def main(cfg: DictConfig) -> None:
         ckpt_cfg.experiment.trainer.accelerator = 'cpu'
 
     experiment = Experiment(config=ckpt_cfg)
-    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path, load_split=True, plot=cfg.plot)
-    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.classical_force_fields, test_data_path=cfg.test_data_path, load_split=True, n_bootstrap=cfg.n_bootstrap, plot=cfg.plot)
+    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path, load_split=True, plot=cfg.plot, gradient_contributions=cfg.gradient_contributions)
+    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.classical_force_fields, test_data_path=cfg.test_data_path, load_split=True, n_bootstrap=cfg.n_bootstrap, plot=cfg.plot, gradient_contributions=cfg.gradient_contributions)
 
 
 if __name__ == "__main__":
