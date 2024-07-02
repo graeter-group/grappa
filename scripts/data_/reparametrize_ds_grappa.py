@@ -12,7 +12,7 @@ from openmm.app import ForceField
 
 this_dir = Path(__file__).parent
 
-def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot_only:bool=False, ff_name:str='new', old_ff_name:str='old', crmse_limit:float=15., n_max:int=None):
+def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot_only:bool=False, ff_name:str='new', old_ff_name:str='old', crmse_limit:float=15., n_max:int=None, skip_if_exists:bool=False):
     """
     Reparametrize the dataset dspath/*.npz using the force field force_field.
     """
@@ -30,9 +30,8 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot
 
         old_moldata = MolData.load(path)
 
-        if not plot_only:
+        if (not plot_only) or (skip_if_exists and (Path(outpath)/(path.stem+'.npz')).exists()):
             pdbstring = old_moldata.pdb
-            mapped_smiles = old_moldata.mapped_smiles
 
             topology = openmm_utils.topology_from_pdb(pdbstring)
             system = forcefield.createSystem(topology)
