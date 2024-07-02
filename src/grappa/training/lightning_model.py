@@ -68,7 +68,8 @@ class GrappaLightningModel(pl.LightningModule):
         
         # first, set energy and gradient weight to zero to only train the parameters. these are re-setted in on_train_epoch_start
         if start_qm_epochs > 0:
-            self.loss_fn = MolwiseLoss(gradient_weight=0, energy_weight=0, param_weight=1e-3, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset, terms=param_loss_terms)
+            self.loss_fn = MolwiseLoss(gradient_weight=1e-8, energy_weight=1e-8, param_weight=1e-3, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset, terms=param_loss_terms)
+            # small values of gradient and energy weight to avoid errors when no MM parameters are present in the dataset
         
         else:
             self.loss_fn = MolwiseLoss(gradient_weight=gradient_weight, energy_weight=energy_weight, param_weight=param_weight, tuplewise_weight=tuplewise_weight, proper_regularisation=proper_regularisation, improper_regularisation=improper_regularisation, param_weights_by_dataset=param_weights_by_dataset, terms=param_loss_terms)

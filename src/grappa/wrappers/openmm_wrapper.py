@@ -55,11 +55,12 @@ class OpenmmGrappa(Grappa):
         if plot_dir is not None:
             plot_dir = Path(plot_dir)
 
-            parameters.plot(filename=plot_dir/'grappa_parameters.png')
             
             if not reference_parameters is None:
-                parameters.plot(filename=plot_dir/'reference_parameters.png', compare_parameters=reference_parameters, name="Grappa", compare_name="Reference")
+                parameters.plot(filename=plot_dir/'grappa_parameters.png', compare_parameters=reference_parameters, name="Grappa", compare_name="Reference")
                 parameters.compare_with(reference_parameters, filename=plot_dir/'parameter_comparison.png', xlabel="Grappa", ylabel="Reference")
+            else:
+                parameters.plot(filename=plot_dir/'grappa_parameters.png')
 
         # write parameters to system
         system = write_to_system(system, parameters)

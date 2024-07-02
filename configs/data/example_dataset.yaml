@@ -1,0 +1,11 @@
+defaults:
+  - default
+
+data_module:
+  datasets: []
+  pure_test_datasets:
+    - example_test_set
+  pure_val_datasets:
+    - example_val_set
+  pure_train_datasets:
+    - example_train_set

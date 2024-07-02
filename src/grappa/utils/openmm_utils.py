@@ -16,6 +16,10 @@ if importlib.util.find_spec('openmm') is not None:
     from typing import Tuple
     import grappa.data
     import copy
+    import warnings
+
+    # Define a custom filter to raise the warning only once
+    warnings.simplefilter("once")
 
 
 
@@ -333,6 +337,7 @@ if importlib.util.find_spec('openmm') is not None:
             name = name[:-4]
         
         if name in ['charmm36', 'charmm36-jul2022']:
+            warnings.warn("The charmm36 forcefield implemented in grappa for dealing with ACE and NME has a faulty improper contribution. Only use the other contributions.", UserWarning)
             ff_path = Path(__file__).parent / "classical_forcefields" / Path("charmm36-jul2022.xml")
             return ForceField(str(ff_path))
 

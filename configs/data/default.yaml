@@ -1,0 +1,33 @@
+data_module:
+  datasets:
+    - spice-dipeptide
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []
+  splitpath: espaloma_split
+  partition: [0.8, 0.1, 0.1]
+  train_batch_size: 32
+  val_batch_size: 32
+  ref_terms:
+    - nonbonded
+  train_loader_workers: 4
+  val_loader_workers: 4
+  test_loader_workers: 4
+  conf_strategy: 32
+  ff_lookup: {}
+  seed: 0
+  pin_memory: true
+  tr_subsampling_factor: null
+  weights:
+    rna-diverse: 3
+    rna-nucleoside: 5
+    spice-pubchem: 0.8
+  balance_factor: 0.0
+  val_conf_strategy: 200
+energy:
+  terms:
+    - bond
+    - angle
+    - proper
+    - improper
+  gradients: true

@@ -7,14 +7,15 @@ import copy
 import logging
 from grappa.data.dataset import Dataset
 from grappa.data.graph_data_loader import GraphDataLoader
-from grappa.utils.data_utils import get_path_from_tag
+from grappa.utils.data_utils import get_moldata_path
 from tqdm import tqdm
 
 class GrappaData(pl.LightningDataModule):
     def __init__(self,
-                 datasets: List[Union[Path, str, Dataset]],
-                 pure_train_datasets: List[Union[Path, str, Dataset]] = [],
-                 pure_val_datasets: List[Union[Path, str, Dataset]] = [], pure_test_datasets: List[Union[Path, str, Dataset]] = [],
+                 datasets: List[str],
+                 pure_train_datasets: List[str] = [],
+                 pure_val_datasets: List[str] = [],
+                 pure_test_datasets: List[str] = [],
                  splitpath: Path = None,
                  partition: Tuple[float, float, float] = (0.8, 0.1, 0.1),
                  train_batch_size: int = 32,
@@ -41,7 +42,7 @@ class GrappaData(pl.LightningDataModule):
         This class handles the preparation of train, validation, and test dataloaders for a given list of datasets.
 
         Args:
-            datasets (List[Union[Path, str, Dataset]]): List of datasets, provided as paths, strings, or Dataset objects.
+            datasets (List[Union[Path, str, Dataset]]): List of dataset tags (defined in the dataset_tags.csv file or located at datasets/tag)
             splitpath (Path, optional): Path to the split file. If provided, the function will load the split from this file. If not, it will generate a new split. Defaults to None.
             partition (Tuple[float, float, float], optional): Partition of the dataset into train, validation, and test splits. Defaults to (0.8, 0.1, 0.1).
             conf_strategy (Union[str, int], optional): Strategy for sampling conformations when batching. Defaults to 32.
@@ -55,9 +56,9 @@ class GrappaData(pl.LightningDataModule):
             test_loader_workers (int, optional): Number of worker processes for the test dataloader. Defaults to 1.
             seed (int, optional): Random seed for reproducibility. Defaults to 0.
             pin_memory (bool, optional): Whether to pin memory for the dataloaders. Defaults to True.
-            pure_train_datasets (List[Union[Path, str, Dataset]], optional): List of datasets specifically for training. Defaults to [].
-            pure_val_datasets (List[Union[Path, str, Dataset]], optional): List of datasets specifically for validation. Defaults to [].
-            pure_test_datasets (List[Union[Path, str, Dataset]], optional): List of datasets specifically for testing. Defaults to [].
+            pure_train_datasets (List[str], optional): List of dataset tags to be used as pure training datasets without using the mol_is for splitting.
+            pure_val_datasets (List[str], optional): List of dataset tags to be used as pure validation datasets without using the mol_is for splitting.
+            pure_test_datasets (List[str], optional): List of dataset tags to be used as pure test datasets without using the mol_is for splitting.
             tr_subsampling_factor (float, optional): Subsampling factor for the training dataset. Defaults to None.
             weights (Dict[str, float], optional): Dictionary mapping subdataset names to weights. Defaults to {}.
             balance_factor (float, optional): Balances sampling of the train datasets between 0 and 1. Defaults to 0.
@@ -102,36 +103,31 @@ class GrappaData(pl.LightningDataModule):
     def setup(self, stage: str = None):
         if self.is_set_up:
             return
-        
-        ds_paths = GrappaData._tags_to_paths([e for e in self.datasets if not isinstance(e, Dataset)])
-        pure_train_paths = GrappaData._tags_to_paths([e for e in self.pure_train_datasets if not isinstance(e, Dataset)])
-        pure_val_paths = GrappaData._tags_to_paths([e for e in self.pure_val_datasets if not isinstance(e, Dataset)])
-        pure_test_paths = GrappaData._tags_to_paths([e for e in self.pure_test_datasets if not isinstance(e, Dataset)])
 
-        GrappaData._check_ds_disjoint(ds_paths, pure_train_paths, pure_val_paths, pure_test_paths)
+        GrappaData._check_ds_disjoint(self.datasets, self.pure_train_datasets, self.pure_val_datasets, self.pure_test_datasets)
 
         # Load and add to the datasets
         ################################################
-        dataset = [ds for ds in self.datasets if isinstance(ds, Dataset)]
-        if len(ds_paths) > 0:
+        dataset = []
+        if len(self.datasets) > 0:
             # Log such that each dspath gets its own line:
-            logging.info('Loading datasets from:\n'+"\n".join([str(p) for p in ds_paths]))
-            dataset += [Dataset.load(p) for p in tqdm(ds_paths, desc='Loading datasets')]
+            logging.info('Loading datasets from:\n'+"\n".join([str(p) for p in self.datasets]))
+            dataset += [Dataset.from_tag(p) for p in tqdm(self.datasets, desc='Loading datasets')]
 
         pure_train_sets = [ds for ds in self.pure_train_datasets if isinstance(ds, Dataset)]
-        if len(pure_train_sets) > 0 or len(pure_train_paths) > 0:
-            logging.info('Loading pure train datasets from:\n'+"\n".join([str(p) for p in pure_train_paths]))
-            pure_train_sets += [Dataset.load(p) for p in tqdm(pure_train_paths, desc='Loading pure train datasets')]
+        if len(pure_train_sets) > 0 or len(self.pure_train_datasets) > 0:
+            logging.info('Loading pure train datasets from:\n'+"\n".join([str(p) for p in self.pure_train_datasets]))
+            pure_train_sets += [Dataset.from_tag(p) for p in tqdm(self.pure_train_datasets, desc='Loading pure train datasets')]
 
         pure_val_sets = [ds for ds in self.pure_val_datasets if isinstance(ds, Dataset)]
-        if len(pure_val_sets) > 0 or len(pure_val_paths) > 0:
-            logging.info('Loading pure val datasets from:\n'+"\n".join([str(p) for p in pure_val_paths]))
-            pure_val_sets += [Dataset.load(p) for p in tqdm(pure_val_paths, desc='Loading pure val datasets')]
+        if len(pure_val_sets) > 0 or len(self.pure_val_datasets) > 0:
+            logging.info('Loading pure val datasets from:\n'+"\n".join([str(p) for p in self.pure_val_datasets]))
+            pure_val_sets += [Dataset.from_tag(p) for p in tqdm(self.pure_val_datasets, desc='Loading pure val datasets')]
 
         pure_test_sets = [ds for ds in self.pure_test_datasets if isinstance(ds, Dataset)]
-        if len(pure_test_sets) > 0 or len(pure_test_paths) > 0:
-            logging.info('Loading pure test datasets from:\n'+"\n".join([str(p) for p in pure_test_paths]))
-            pure_test_sets += [Dataset.load(p) for p in tqdm(pure_test_paths, desc='Loading pure test datasets')]
+        if len(pure_test_sets) > 0 or len(self.pure_test_datasets) > 0:
+            logging.info('Loading pure test datasets from:\n'+"\n".join([str(p) for p in self.pure_test_datasets]))
+            pure_test_sets += [Dataset.from_tag(p) for p in tqdm(self.pure_test_datasets, desc='Loading pure test datasets')]
 
         ################################################
         # transform the dataset to a single dataset:
@@ -148,7 +144,7 @@ class GrappaData(pl.LightningDataModule):
             if isinstance(self.splitpath, str):
                 self.splitpath = Path(self.splitpath)
             if not self.splitpath.exists():
-                self.splitpath = get_path_from_tag(tag=self.splitpath)/'split.json'
+                self.splitpath = get_moldata_path(tag=self.splitpath)/'split.json'
             assert self.splitpath.exists(), f"Split file {self.splitpath} does not exist."
             self.split_ids = json.load(open(self.splitpath, 'r'))
             logging.info(f'Using split ids from {self.splitpath}')
@@ -193,26 +189,6 @@ class GrappaData(pl.LightningDataModule):
         logging.info("Loaded data:\n" + f"Train mols: {len(self.tr)}, Validation mols: {len(self.vl)}, Test mols: {len(self.te)}"+"\n")
 
         self.is_set_up = True
-
-    @staticmethod
-    def _tags_to_paths(tags: List[Union[str, Path]]) -> List[Path]:
-        paths = []
-        for tag in tags:
-            if isinstance(tag, str):
-                try:
-                    paths.append(get_path_from_tag(tag))
-                except ValueError:
-                    if not Path(tag).exists():
-                        raise ValueError(f"Dataset path {tag} does not exist.")
-                    paths.append(Path(tag))
-            elif isinstance(tag, Path):
-                paths.append(tag)
-            else:
-                raise ValueError(f"Dataset must be a Path or tag, but got {type(tag)}")
-            
-        if not len(paths) == len(set(paths)):
-            raise ValueError(f"Duplicate paths in dataset list:\n{paths}\ntags:\n{tags}")
-        return paths
 
     @staticmethod
     def _check_ds_disjoint(ds_paths, pure_train_paths, pure_val_paths, pure_test_paths):

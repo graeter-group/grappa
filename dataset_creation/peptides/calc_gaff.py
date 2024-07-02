@@ -16,6 +16,9 @@ def reparametrize_dataset(dspath:Path):
     all_gradients_new = []
     all_gradients_old = []
 
+    err = None
+    errs = 0
+
     assert dspath.is_dir()
     mol_data_paths = list(dspath.glob("*.npz"))
     assert len(mol_data_paths) > 0
@@ -28,10 +31,19 @@ def reparametrize_dataset(dspath:Path):
         old_moldata = MolData.load(path)
         pdbstring = old_moldata.pdb
         mapped_smiles = old_moldata.mapped_smiles
+        if ff_name in old_moldata.ff_gradient:
+            continue
 
-        system, topology, _ = openff_utils.get_openmm_system(mapped_smiles=mapped_smiles, openff_forcefield=forcefield, partial_charges=old_moldata.molecule.partial_charges)
+        try:
+            system, topology, _ = openff_utils.get_openmm_system(mapped_smiles=mapped_smiles, openff_forcefield=forcefield, partial_charges=old_moldata.molecule.partial_charges)
 
-        energy, forces = openmm_utils.get_energies(system, old_moldata.xyz)
+            energy, forces = openmm_utils.get_energies(system, old_moldata.xyz)
+        except Exception as e:
+            print(f"Error in {path}")
+            errs += 1
+            err = e
+            continue
+
         gradients = -forces
 
         old_moldata.ff_gradient[ff_name] = {"total": gradients}
@@ -41,6 +53,10 @@ def reparametrize_dataset(dspath:Path):
 
         all_gradients_new.append(old_moldata.ff_gradient[ff_name]['total'].flatten())
         all_gradients_old.append(old_moldata.ff_gradient['openff-1.2.0']['total'].flatten())
+
+    if err is not None:
+        print(f"{errs} errors occured for {dspath.stem}")
+        raise err
 
     # plot the different contributions:
     fig, ax = plt.subplots(1,1, figsize=(5,5))

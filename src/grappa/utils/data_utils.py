@@ -193,23 +193,3 @@ def download_zipped_dir(url:str, target_dir:Path):
         print(f"Error while deleting the zip file: {e}")
 
     logging.info(f"Downloaded to {target_dir}")
-
-
-
-# NOTE: this is currently only used for the split loading... maybe delete the method.
-def get_path_from_tag(tag:str, data_dir:Union[Path,str]=get_data_path()/'dgl_datasets')->Path:
-    '''
-    Returns the path to a dataset given a tag. If the dataset is not at the corresponding location, it is downloaded. The tag is the dirname of the dataset, available tags are:
-
-    SPLITFILES:
-        'espaloma_split'
-    '''
-
-    dir_path = Path(data_dir) / tag
-
-    if dir_path.exists():
-        return dir_path
-    
-    # else, construct the dgl dataset from a folder with moldata files, thus, return a moldata path
-    moldata_path = get_moldata_path(tag)
-    return moldata_path

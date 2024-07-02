@@ -324,7 +324,7 @@ class MolData():
         return cls.from_dict(array_dict)
 
     @classmethod
-    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False, charge_model:str='am1BCC'):
+    def from_data_dict(cls, data_dict:Dict[str, Union[np.ndarray, str]], forcefield='openff-1.2.0.offxml', partial_charge_key:str='partial_charges', allow_nan_params:bool=False, charge_model:str='None'):
         """
         Constructor for loading from espaloma datasets. Assumes that energy_ref = energy_qm - energy_nonbonded.
         Create a MolData object from a dictionary containing a mapped_smiles string or pdb and arrays of conformations, energies and gradients, but not necessarily the interaction tuples and classical parameters.
@@ -404,7 +404,7 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, charge_model:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=True):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=True,charge_model:str="None"):
         """
         Use an openmm system to obtain classical contributions, classical parameters and the interaction tuples. Calculates the contributions:
             - total: total energy and gradient
@@ -425,7 +425,6 @@ class MolData():
             - energy: (n_confs,) - qm energies
             - gradient: (n_confs, n_atoms, 3) - qm gradients
             - mol_id: str - a unique identifier for the molecule
-            - charge_model: str, A charge model tag that describes how the partial charges were obtained. See grappa.constants.CHARGE_MODELS for possible values.
             - partial_charges: (n_atoms,) - partial charges, if None, the charges are obtained from the openmm system
             - mapped_smiles: str - a mapped smiles string that is not used but only stored in the dataset
             - pdb: str - a pdb file as string that is not used but only stored in the dataset

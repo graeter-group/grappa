@@ -36,9 +36,6 @@ class Molecule():
         partial_charges (List[float]): A list of partial charges for each atom in units of the elementary charge.
         additional_features (Optional[Dict[str, List]]): A dictionary containing additional features associated with 
             atoms. The dictionary keys are feature names, and values are lists or arrays of shape (n_atoms, feat_dim).
-        charge_model: A tag defining the model from which the partial charges where obtained. can be
-            - 'amber99': the charges are assigned using a classical force field. For grappa-1.0, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
-            - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.0.
 
     Optional Attributes:
         angles (Optional[Union[List[Tuple[int, int, int]], np.ndarray]]): A list or array of tuples, each representing 
@@ -147,7 +144,7 @@ class Molecule():
             assert self.charge_model in constants.CHARGE_MODELS, f"charge_model must be one of {constants.CHARGE_MODELS} but is {self.charge_model}"
             assert len(constants.CHARGE_MODELS) <= constants.MAX_NUM_CHARGE_MODELS, f"the number of charge models must be less than or equal to {constants.MAX_NUM_CHARGE_MODELS}"
             
-            ALL_CHARGE_MODELS = constants.CHARGE_MODELS + ['none'] * (constants.MAX_NUM_CHARGE_MODELS - len(constants.CHARGE_MODELS)) # this is done to ensure that the number of charge models can be modified without making past model weights incompatible.
+            ALL_CHARGE_MODELS = constants.CHARGE_MODELS + ['None'] * (constants.MAX_NUM_CHARGE_MODELS - len(constants.CHARGE_MODELS)) # this is done to ensure that the number of charge models can be modified without making past model weights incompatible.
 
             self.additional_features['charge_model'] = np.tile(np.array([cm == self.charge_model for cm in ALL_CHARGE_MODELS], dtype=np.float32), (len(self.atoms),1))
 
@@ -198,7 +195,6 @@ class Molecule():
             partial_charges ([type], optional): a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system. Defaults to None.
             ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
-            charge_model (str, optional): the model from which the partial charges where obtained. can be 'amber99' or 'am1BCC'. Defaults to 'amber99'.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
@@ -348,7 +344,7 @@ class Molecule():
             
 
     @classmethod
-    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:Union[np.ndarray, int]=None, charge_model:str='am1BCC'):
+    def from_smiles(cls, mapped_smiles:str, openff_forcefield:str='openff-1.2.0.offxml', partial_charges:Union[np.ndarray, int]=None, charge_model:str='None'):
         """
         DEPRECATED, USE from_openff_molecule INSTEAD.
         Create a Molecule from a mapped smiles string and an openff forcefield. The openff_forcefield is used to obtain improper torsions and, if partial_charges is None, to obtain the partial charges.
@@ -370,7 +366,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openff_molecule(cls, openff_mol, partial_charges:Union[np.ndarray, float, List[float]]=None, impropers:Union[str, List[Tuple[int,int,int,int]]]='smirnoff', charge_model:str='am1BCC'):
+    def from_openff_molecule(cls, openff_mol, partial_charges:Union[np.ndarray, float, List[float]]=None, impropers:Union[str, List[Tuple[int,int,int,int]]]='smirnoff', charge_model:str='None'):
         """
         Creates a Molecule from an openff molecule. The openff molecule must have partial charges id partial_charges is None.
         impropers can either be a method, 'smirnoff' or 'amber', or a list of tuples of atom ids.

@@ -32,6 +32,7 @@ Here, we propose a novel machine learning architecture to predict MM parameters 
 - [Installation](#installation)
 - [Pretrained Models](#pretrained-models)
 - [Datasets](#datasets)
+- [Training](#training)
 - [Reproducibility](#reproducibility)
 </details>
 
@@ -168,3 +169,29 @@ To re-create the benchmark experiment, also the splitting into train/val/test se
 
 The datasets 'dipeptides-300K-...', 'dipeptides-1000K-...', 'uncapped_...', 'hyp-dop_...' and 'dipeptides_radical-300K' were generated using scripts at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
 
+For the creation of custom datasets, take a look at the tutorials `examples/dataset_creation/create_dataset.py` and `examples/dataset_creation/uncommon_molecule_dataset.py`.
+
+## Training
+
+Grappa models can be trained with a given configuration specified using hydra by running
+
+```{bash}
+python experiments/train.py
+```
+
+With hydra, configuration files can be defined in a modular way. For Grappa, we have configuration types `model`, `data` and `experiment`, for each of which default values can be overwritten in the command line or in a separate configuration file. For example, to train a model with less node features, one can run
+```{bash}
+python experiments/train.py model.graph_node_features=32
+```
+
+and for training on the datasets of grappa-1.3 (defined in ```configs/data/grappa-1.3```), one can run
+```{bash}
+python experiments/train.py data=grappa-1.3
+```
+
+Training is logged in [wandb](https://docs.wandb.ai/quickstart) and can be safely interrupted by pressing `ctrl+c` at any time. Checkpoints with the best validation loss will be saved in the `ckpt/<project>/<name>/<data>` directory.
+
+For evaluation, modify `configs/evaluate.yaml` and run  
+```{bash}
+python experiments/evaluate.py ckpt_path=<path_to_checkpoint>
+```
