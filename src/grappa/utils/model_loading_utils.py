@@ -55,7 +55,7 @@ def get_path_from_tag(tag:str='latest')->Path:
         # if the tag is ...-n.x, try to find n.x.m with m maximal, n,m,x: int
         new_tag = find_tag(tag, all_tags)
         if new_tag is not None:
-            logging.info(f"Tag {tag} not found. Using {new_tag} instead.")
+            logging.info(f"Tag {tag} not found. Using latest version {new_tag} instead.")
             tag = new_tag
             assert tag in all_tags, f"Internal error: tag {tag} not found"
         else:
