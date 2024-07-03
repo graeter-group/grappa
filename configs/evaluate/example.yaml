@@ -1,0 +1,32 @@
+defaults:
+  - _self_
+
+ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
+n_bootstrap: 1000
+test_data_path: null
+accelerator: 'gpu'
+plot: true
+
+classical_force_fields:
+  - amber99sbildn
+  - gaff-2.11
+
+datasets:
+  - dipeptides-300K-amber99
+  - spice-des-monomers
+pure_test_datasets: []
+
+gradient_contributions:
+- bond
+- angle
+- proper
+- improper
+- nonbonded
+- total
+
+compare_forcefields:
+  - ['amber99sbildn', '']
+  - ['gaff-2.11', '']
+  # - ['openff-1.2.0', '']
+  # - ['amber14', '']
+  # - ['reference_ff', '']

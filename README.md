@@ -200,7 +200,12 @@ python experiments/train.py experiment.ckpt_path=models/grappa-1.3.0/checkpoint.
 
 Training is logged in [wandb](https://docs.wandb.ai/quickstart) and can be safely interrupted by pressing `ctrl+c` at any time. Checkpoints with the best validation loss will be saved in the `ckpt/<project>/<name>/<data>` directory.
 
-For evaluation, modify `configs/evaluate.yaml` and run  
+For evaluation, run
 ```{bash}
-python experiments/evaluate.py ckpt_path=<path_to_checkpoint>
+python experiments/evaluate.py evaluate.ckpt_path=<path_to_checkpoint>
+```
+
+or, for comparing with given classical force fields whose predictions are stored in the dataset, create `configs/evaluate/your_config.yaml` and run  
+```{bash}
+python experiments/evaluate.py evaluate=your_config
 ```

@@ -208,6 +208,10 @@ class Experiment:
         else:
             epoch = ckpt_path.name.split('-')[0] if not ckpt_path.stem in ['last', 'best'] else ckpt_path.stem
 
+        epoch = epoch.replace('.ckpt', '')
+
+        # remove the .ckpt
+
         self.grappa_module.n_bootstrap = n_bootstrap
         self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
         self.grappa_module.test_evaluator.contributions = gradient_contributions
@@ -273,6 +277,9 @@ class Experiment:
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
 
+        if len(classical_force_fields) == 0:
+            logging.info("No classical force fields provided. Skipping their evaluation.")
+            return
         logging.info(f"Evaluating classical force fields: {', '.join(classical_force_fields)}...")
 
         if load_split:
@@ -315,6 +322,8 @@ class Experiment:
         Compare two force fields by loading data from npz files that were created during test() or eval_classical().
         """
         def get_ff_data(ff):
+            if not (Path(ckpt_path).parent / 'test_data' / ff / 'data.npz').exists():
+                return None
             data = np.load(ckpt_path.parent / 'test_data' / ff / 'data.npz') if (ff != '' and ff.lower()!="grappa") else None
             if data is None:
                 npz_paths = list((Path(ckpt_path).parent/'test_data').glob('*.npz'))
@@ -325,6 +334,9 @@ class Experiment:
         for ff1, ff2 in forcefields:
             ff1_data = get_ff_data(ff1)
             ff2_data = get_ff_data(ff2)
+            if any([d is None for d in [ff1_data, ff2_data]]):
+                logging.warning(f"Data not found for {ff1} or {ff2}. Skipping comparison.")
+                continue
             if not 'gradient_contributions' in ff1_data.keys() or not 'gradient_contributions' in ff2_data.keys():
                 continue
 

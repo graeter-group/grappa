@@ -144,6 +144,7 @@ class GrappaData(pl.LightningDataModule):
             if isinstance(self.splitpath, str):
                 self.splitpath = Path(self.splitpath)
             if not self.splitpath.exists():
+                # assume its a tag
                 self.splitpath = get_moldata_path(tag=self.splitpath)/'split.json'
             assert self.splitpath.exists(), f"Split file {self.splitpath} does not exist."
             self.split_ids = json.load(open(self.splitpath, 'r'))

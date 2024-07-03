@@ -1,0 +1,23 @@
+defaults:
+  - _self_
+
+ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
+n_bootstrap: 1000
+test_data_path: null
+accelerator: 'gpu'
+plot: true
+
+classical_force_fields: []
+
+datasets: null
+pure_test_datasets: []
+
+gradient_contributions:
+- bond
+- angle
+- proper
+- improper
+- nonbonded
+- total
+
+compare_forcefields: []

@@ -341,14 +341,14 @@ class Evaluator:
                     self.all_ref_classical_energies[dsname] = torch.cat([self.ref_classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
                     self.all_ref_classical_gradients[dsname] = torch.cat([self.ref_classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
 
-            # reshape the contribution dict such that it is [name][contrib]
-            new_dict = {}
-            for dsname in self.energies.keys():
-                new_dict[dsname] = {}
-                for contrib in self.contributions:
-                    if dsname in self.all_gradient_contributions[contrib].keys() and self.all_gradient_contributions[contrib][dsname].shape[0] > 0:
-                        new_dict[dsname][contrib] = self.all_gradient_contributions[contrib][dsname]
-            self.all_gradient_contributions = new_dict
+        # reshape the contribution dict such that it is [name][contrib]
+        new_dict = {}
+        for dsname in self.energies.keys():
+            new_dict[dsname] = {}
+            for contrib in self.contributions:
+                if dsname in self.all_gradient_contributions[contrib].keys() and self.all_gradient_contributions[contrib][dsname].shape[0] > 0:
+                    new_dict[dsname][contrib] = self.all_gradient_contributions[contrib][dsname]
+        self.all_gradient_contributions = new_dict
 
 
     def pool(self, n_bootstrap=None, seed=0)->dict:

@@ -191,136 +191,163 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
     if not plot_dir.exists():
         plot_dir.mkdir(parents=True, exist_ok=True)
 
-    # SCATTER PLOTS ENERGY
-    for dsname in ff_data['energies'].keys():
-        ds_dir = plot_dir/dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        fig, ax = plt.subplots(figsize=(figsize, figsize))
-        scatter_plot(ax, ff_data['reference_energies'][dsname], ff_data['energies'][dsname], logscale=logscale, ax_symmetric=ax_symmetric[0], cluster=cluster, **kwargs)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    DSNAMES = list(set(list(ff_data['energies'].keys()) + list(ff_data['gradients'].keys())))
 
-        if dsname in title_map:
-            ax.set_title(title_map[dsname] + " - Energy [kcal/mol]")
-        else:
-            ax.set_title(dsname + " - Energy [kcal/mol]")
 
-        if rmsd_position is not None:
-            rmsd_value = ((ff_data['reference_energies'][dsname] - ff_data['energies'][dsname])**2).mean()**0.5
-            ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+    for dsname in tqdm(DSNAMES, desc='Creating plots for datasets'):
+
+        # SCATTER PLOTS ENERGY
+        skip = False
+        if dsname not in ff_data['energies']:
+            skip = True
+        if not skip:
+            ds_dir = plot_dir/dsname
+            ds_dir.mkdir(parents=True, exist_ok=True)
+            fig, ax = plt.subplots(figsize=(figsize, figsize))
+            scatter_plot(ax, ff_data['reference_energies'][dsname], ff_data['energies'][dsname], logscale=logscale, ax_symmetric=ax_symmetric[0], cluster=cluster, **kwargs)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+
+            if dsname in title_map:
+                ax.set_title(title_map[dsname] + " - Energy [kcal/mol]")
+            else:
+                ax.set_title(dsname + " - Energy [kcal/mol]")
+
+            if rmsd_position is not None:
+                rmsd_value = ((ff_data['reference_energies'][dsname] - ff_data['energies'][dsname])**2).mean()**0.5
+                ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+        
+            plt.tight_layout()
+            plt.savefig(ds_dir/"energy.png", dpi=dpi)
+            plt.close()
     
-        plt.tight_layout()
-        plt.savefig(ds_dir/"energy.png", dpi=dpi)
-        plt.close()
-    
-    # SCATTER PLOTS FORCE
-    for dsname in ff_data['gradients'].keys():
-        ds_dir = plot_dir/dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        fig, ax = plt.subplots(figsize=(figsize, figsize))
-        scatter_plot(ax, -ff_data['reference_gradients'][dsname].flatten(), -ff_data['gradients'][dsname].flatten(), logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
 
-        if dsname in title_map:
-            ax.set_title(title_map[dsname] + " - Force [kcal/mol/Å]")
-        else:
-            ax.set_title(dsname + " - Force [kcal/mol/Å]")
+        # SCATTER PLOTS FORCE
+        skip = False
+        if dsname not in ff_data['gradients']:
+            skip = True
+        if not skip:
+            ds_dir = plot_dir/dsname
+            ds_dir.mkdir(parents=True, exist_ok=True)
+            fig, ax = plt.subplots(figsize=(figsize, figsize))
+            scatter_plot(ax, -ff_data['reference_gradients'][dsname].flatten(), -ff_data['gradients'][dsname].flatten(), logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
 
-        if rmsd_position is not None:
-            rmsd_value = ((ff_data['reference_gradients'][dsname].flatten() - ff_data['gradients'][dsname].flatten())**2).mean()**0.5
-            ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
-    
-        plt.tight_layout()
-        plt.savefig(ds_dir/"force.png", dpi=dpi)
-        plt.close()
+            if dsname in title_map:
+                ax.set_title(title_map[dsname] + " - Force [kcal/mol/Å]")
+            else:
+                ax.set_title(dsname + " - Force [kcal/mol/Å]")
 
-    # HISTOGRAMS ENERGY
-    for dsname in ff_data['energies'].keys():
-        ds_dir = plot_dir/dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        all_energies = ff_data['energies'][dsname]
-        all_ref_energies = ff_data['reference_energies'][dsname]
-        energy_mol_idxs = ff_data['energy_mol_idxs'][dsname]
-            
-        energies_per_mol = [all_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
-        ref_energies_per_mol = [all_ref_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
+            if rmsd_position is not None:
+                rmsd_value = ((ff_data['reference_gradients'][dsname].flatten() - ff_data['gradients'][dsname].flatten())**2).mean()**0.5
+                ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+        
+            plt.tight_layout()
+            plt.savefig(ds_dir/"force.png", dpi=dpi)
+            plt.close()
 
-        rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
 
-        # Histogram of the energy errors
-        fig, ax = plt.subplots(figsize=(figsize, figsize))
-        ax.hist(rmsd_values, bins=30)
-        ax.set_xlabel("RMSD [kcal/mol]")
-        ax.set_ylabel("Frequency")
-        ax.set_title(f"Energy RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
+        # HISTOGRAMS ENERGY
+        skip = False
+        if not dsname in ff_data['energies']:
+            skip = True
 
-        plt.tight_layout()
-        plt.savefig(ds_dir/"energy_rmsd_histogram.png", dpi=dpi)
-        plt.close()
+        if not skip:
+            ds_dir = plot_dir/dsname
+            ds_dir.mkdir(parents=True, exist_ok=True)
+            all_energies = ff_data['energies'][dsname]
+            all_ref_energies = ff_data['reference_energies'][dsname]
+            energy_mol_idxs = ff_data['energy_mol_idxs'][dsname]
+                
+            energies_per_mol = [all_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
+            ref_energies_per_mol = [all_ref_energies[energy_mol_idxs[i]:energy_mol_idxs[i+1]] for i in range(len(energy_mol_idxs)-1)]
 
-    # HISTOGRAMS FORCE
-    for dsname in ff_data['gradients'].keys():
-        ds_dir = plot_dir/dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        all_gradients = ff_data['gradients'][dsname]
-        all_ref_gradients = ff_data['reference_gradients'][dsname]
-        gradient_mol_idxs = ff_data['gradient_mol_idxs'][dsname]
+            rmsd_values = [((np.array(ref_energies_per_mol[i]) - np.array(energies_per_mol[i]))**2).mean()**0.5 for i in range(len(energies_per_mol))]
 
-        gradients_per_mol = [all_gradients[gradient_mol_idxs[i]:gradient_mol_idxs[i+1]] for i in range(len(gradient_mol_idxs)-1)]
-        ref_gradients_per_mol = [all_ref_gradients[gradient_mol_idxs[i]:gradient_mol_idxs[i+1]] for i in range(len(gradient_mol_idxs)-1)]
+            # Histogram of the energy errors
+            fig, ax = plt.subplots(figsize=(figsize, figsize))
+            ax.hist(rmsd_values, bins=30)
+            ax.set_xlabel("RMSD [kcal/mol]")
+            ax.set_ylabel("Frequency")
+            ax.set_title(f"Energy RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
 
-        rmsd_values = [((np.array(ref_gradients_per_mol[i]).flatten() - np.array(gradients_per_mol[i]).flatten())**2).mean()**0.5 for i in range(len(gradients_per_mol))]
+            plt.tight_layout()
+            plt.savefig(ds_dir/"energy_rmsd_histogram.png", dpi=dpi)
+            plt.close()
 
-        # Histogram of the force errors
-        fig, ax = plt.subplots(figsize=(figsize, figsize))
-        ax.hist(rmsd_values, bins=30)
-        ax.set_xlabel("RMSD [kcal/mol/Å]")
-        ax.set_ylabel("Frequency")
-        ax.set_title(f"Force RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
 
-        plt.tight_layout()
+        # HISTOGRAMS FORCE
+        skip = False
+        if not dsname in ff_data['gradients']:
+            skip = True
 
-        plt.savefig(ds_dir/"force_rmsd_histogram.png", dpi=dpi)
-        plt.close()
+        if not skip:
+            ds_dir = plot_dir/dsname
+            ds_dir.mkdir(parents=True, exist_ok=True)
+            all_gradients = ff_data['gradients'][dsname]
+            all_ref_gradients = ff_data['reference_gradients'][dsname]
+            gradient_mol_idxs = ff_data['gradient_mol_idxs'][dsname]
 
-    def remove_percentile(data, percentile):
-        threshold = np.percentile(data, percentile)
-        return data[data <= threshold]
+            gradients_per_mol = [all_gradients[gradient_mol_idxs[i]:gradient_mol_idxs[i+1]] for i in range(len(gradient_mol_idxs)-1)]
+            ref_gradients_per_mol = [all_ref_gradients[gradient_mol_idxs[i]:gradient_mol_idxs[i+1]] for i in range(len(gradient_mol_idxs)-1)]
 
-    # ABS CONTRIBUTION VIOLIN PLOTS
-    for dsname, contrib_dict in ff_data['gradient_contributions'].items():
-        if len(list(contrib_dict.keys())) == 0:
-            continue
-        ds_dir = plot_dir / dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        contribs_present = [c for c in contributions if c in contrib_dict.keys()]
+            rmsd_values = [((np.array(ref_gradients_per_mol[i]).flatten() - np.array(gradients_per_mol[i]).flatten())**2).mean()**0.5 for i in range(len(gradients_per_mol))]
 
-        num_contribs = len(contribs_present)
+            # Histogram of the force errors
+            fig, ax = plt.subplots(figsize=(figsize, figsize))
+            ax.hist(rmsd_values, bins=30)
+            ax.set_xlabel("RMSD [kcal/mol/Å]")
+            ax.set_ylabel("Frequency")
+            ax.set_title(f"Force RMSD per molecule" + (f" ({title_map[dsname]})" if dsname in title_map else ""))
 
-        fig, ax = plt.subplots(figsize=(figsize/4*num_contribs, figsize))
+            plt.tight_layout()
 
-        all_norms = []
-        labels = []
-        for contrib_name in contribs_present:
-            contrib = contrib_dict[contrib_name]
-            norm = np.sqrt((contrib**2).sum(axis=-1))
-            norm = remove_percentile(norm, 99)
-            all_norms.append(norm)
-            labels.append(contrib_name.capitalize())
+            plt.savefig(ds_dir/"force_rmsd_histogram.png", dpi=dpi)
+            plt.close()
 
-        # Create the violin plot
-        parts = ax.violinplot(all_norms, showmeans=True, showextrema=True, points=1000, bw_method=0.05)
+        def remove_percentile(data, percentile):
+            threshold = np.percentile(data, percentile)
+            return data[data <= threshold]
 
-        # Set x-axis labels
-        ax.set_xticks(np.arange(1, len(labels) + 1))
-        ax.set_xticklabels(labels)
-        ax.set_ylabel("Force L2 Norm [kcal/mol/Å]")
-        ax.set_title(f"Atomic Forces per Contribution")
+        # ABS CONTRIBUTION VIOLIN PLOTS
+        skip = False
+        if 'gradient_contributions' not in ff_data or dsname not in ff_data['gradient_contributions']:
+            skip = True
+        if not skip:
+            contrib_dict = ff_data['gradient_contributions'][dsname]
+            if len(list(contrib_dict.keys())) == 0:
+                skip = True
+            if not skip:
+                ds_dir = plot_dir / dsname
+                ds_dir.mkdir(parents=True, exist_ok=True)
+                contribs_present = [c for c in contributions if c in contrib_dict.keys()]
 
-        # add some padding:
-        plt.savefig(ds_dir/"contributions.png", dpi=dpi)
-        plt.close()
+                num_contribs = len(contribs_present)
+
+                fig, ax = plt.subplots(figsize=(figsize/4*num_contribs, figsize))
+
+                all_norms = []
+                labels = []
+                for contrib_name in contribs_present:
+                    contrib = contrib_dict[contrib_name]
+                    norm = np.sqrt((contrib**2).sum(axis=-1))
+                    norm = remove_percentile(norm, 99)
+                    all_norms.append(norm)
+                    labels.append(contrib_name.capitalize())
+
+                # Create the violin plot
+                parts = ax.violinplot(all_norms, showmeans=True, showextrema=True, points=1000, bw_method=0.05)
+
+                # Set x-axis labels
+                ax.set_xticks(np.arange(1, len(labels) + 1))
+                ax.set_xticklabels(labels)
+                ax.set_ylabel("Force L2 Norm [kcal/mol/Å]")
+                ax.set_title(f"Atomic Forces per Contribution")
+
+                # add some padding:
+                plt.savefig(ds_dir/"contributions.png", dpi=dpi)
+                plt.close()
 
 
 
@@ -335,109 +362,116 @@ def compare_scatter_plots(ff_data_1, ff_data_2, plot_dir=Path.cwd(), ylabel="Pre
     if not plot_dir.exists():
         plot_dir.mkdir(parents=True, exist_ok=True)
 
-    # SCATTER PLOTS ENERGY
-    for dsname in ff_data_1['energies'].keys():
-        if dsname not in ff_data_2['energies']:
-            continue
+    DSNAMES = list(set(list(ff_data_1['energies'].keys()) + list(ff_data_1['gradients'].keys())))
 
-        ds_dir = plot_dir / dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        fig, ax = plt.subplots(figsize=(figsize, figsize))
-        scatter_plot(ax, ff_data_1['energies'][dsname], ff_data_2['energies'][dsname], logscale=logscale, ax_symmetric=ax_symmetric[0], cluster=cluster, **kwargs)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+    for dsname in tqdm(DSNAMES, desc='Creating comparison plots'):
+        # SCATTER PLOTS ENERGY
+        skip = False
+        if dsname not in ff_data_1['energies'] or dsname not in ff_data_2['energies']:
+            skip = True
 
-        if dsname in title_map:
-            ax.set_title(title_map[dsname] + " - Energy [kcal/mol]")
-        else:
-            ax.set_title(dsname + " - Energy [kcal/mol]")
-
-        if rmsd_position is not None:
-            rmsd_value = ((ff_data_1['energies'][dsname] - ff_data_2['energies'][dsname])**2).mean()**0.5
-            ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
-
-        plt.tight_layout()
-        plt.savefig(ds_dir / "energy_comparison.png", dpi=dpi)
-        plt.close()
-
-    # SCATTER PLOTS FORCE
-    for dsname in ff_data_1['gradients'].keys():
-        if dsname not in ff_data_2['gradients']:
-            continue
-
-        ds_dir = plot_dir / dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        fig, ax = plt.subplots(figsize=(figsize, figsize))
-        scatter_plot(ax, -ff_data_1['gradients'][dsname].flatten(), -ff_data_2['gradients'][dsname].flatten(), logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-
-        if dsname in title_map:
-            ax.set_title(title_map[dsname] + " - Force [kcal/mol/Å]")
-        else:
-            ax.set_title(dsname + " - Force [kcal/mol/Å]")
-
-        if rmsd_position is not None:
-            rmsd_value = ((ff_data_1['gradients'][dsname].flatten() - ff_data_2['gradients'][dsname].flatten())**2).mean()**0.5
-            ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
-
-        plt.tight_layout()
-        plt.savefig(ds_dir / "force_comparison.png", dpi=dpi)
-        plt.close()
-
-    # CONTRIBUTION COMPARISON
-    for dsname, contrib_dict_1 in ff_data_1['gradient_contributions'].items():
-        if len(list(contrib_dict_1.keys())) == 0:
-            continue
-        if dsname not in ff_data_2['gradient_contributions']:
-            continue
-
-        ds_dir = plot_dir / dsname
-        ds_dir.mkdir(parents=True, exist_ok=True)
-        
-        contrib_dict_2 = ff_data_2['gradient_contributions'][dsname]
-
-        contribs_present = [c for c in contributions if c in contrib_dict_1.keys() and c in contrib_dict_2.keys()]
-
-        num_contribs = len(contribs_present)
-
-        if num_contribs <= 1:
-            continue
-
-        num_cols = min(num_contribs, 3)
-        num_rows = num_contribs // num_cols + (1 if num_contribs % num_cols > 0 else 0)
-
-        fig, axs = plt.subplots(num_rows, num_cols, figsize=(figsize*num_cols, figsize*num_rows))
-
-        if isinstance(axs, np.ndarray):
-            axs = axs.flatten()
-
-        for i, contrib_name in enumerate(contribs_present):
-            ax = axs[i]
-            contrib_1 = contrib_dict_1[contrib_name].flatten()
-            contrib_2 = contrib_dict_2[contrib_name].flatten()
-            if not len(contrib_1) == len(contrib_2):
-                logging.warning(f"Length of contributions {contrib_name} in {dsname} does not match. Skipping.")
-                continue
-
-            ax = scatter_plot(ax, contrib_1, contrib_2, logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
-
+        if not skip:
+            ds_dir = plot_dir / dsname
+            ds_dir.mkdir(parents=True, exist_ok=True)
+            fig, ax = plt.subplots(figsize=(figsize, figsize))
+            scatter_plot(ax, ff_data_1['energies'][dsname], ff_data_2['energies'][dsname], logscale=logscale, ax_symmetric=ax_symmetric[0], cluster=cluster, **kwargs)
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
-            ax.set_title(contrib_name.capitalize())
+
+            if dsname in title_map:
+                ax.set_title(title_map[dsname] + " - Energy [kcal/mol]")
+            else:
+                ax.set_title(dsname + " - Energy [kcal/mol]")
 
             if rmsd_position is not None:
-                rmsd_value = ((contrib_1 - contrib_2)**2).mean()**0.5
+                rmsd_value = ((ff_data_1['energies'][dsname] - ff_data_2['energies'][dsname])**2).mean()**0.5
                 ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
 
-        dsname = title_map[dsname] if dsname in title_map else dsname
-        plt.suptitle(f'{dsname} - Force Contributions [kcal/mol/Å]')
+            plt.tight_layout()
+            plt.savefig(ds_dir / "energy_comparison.png", dpi=dpi)
+            plt.close()
 
-        plt.tight_layout(pad=2)
+    
+        # SCATTER PLOTS FORCE
+        skip = False
+        if dsname not in ff_data_1['gradients'] or dsname not in ff_data_2['gradients']:
+            skip = True
 
-        plt.savefig(ds_dir / "contribution_comparison.png", dpi=dpi)
-        plt.close()
+        if not skip:
+            ds_dir = plot_dir / dsname
+            ds_dir.mkdir(parents=True, exist_ok=True)
+            fig, ax = plt.subplots(figsize=(figsize, figsize))
+            scatter_plot(ax, -ff_data_1['gradients'][dsname].flatten(), -ff_data_2['gradients'][dsname].flatten(), logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
 
+            if dsname in title_map:
+                ax.set_title(title_map[dsname] + " - Force [kcal/mol/Å]")
+            else:
+                ax.set_title(dsname + " - Force [kcal/mol/Å]")
+
+            if rmsd_position is not None:
+                rmsd_value = ((ff_data_1['gradients'][dsname].flatten() - ff_data_2['gradients'][dsname].flatten())**2).mean()**0.5
+                ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+
+            plt.tight_layout()
+            plt.savefig(ds_dir / "force_comparison.png", dpi=dpi)
+            plt.close()
+
+        # CONTRIBUTION COMPARISON
+        skip = False
+        if dsname not in ff_data_1['gradient_contributions'] or dsname not in ff_data_2['gradient_contributions']:
+            skip = True
+        
+        if not skip:
+            contrib_dict_1 = ff_data_1['gradient_contributions'][dsname]
+
+            contrib_dict_2 = ff_data_2['gradient_contributions'][dsname]
+
+            contribs_present = [c for c in contributions if c in contrib_dict_1.keys() and c in contrib_dict_2.keys()]
+
+            num_contribs = len(contribs_present)
+
+            if num_contribs <= 1:
+                skip = True
+
+            if not skip:
+                ds_dir = plot_dir / dsname
+                ds_dir.mkdir(parents=True, exist_ok=True)
+
+                num_cols = min(num_contribs, 3)
+                num_rows = num_contribs // num_cols + (1 if num_contribs % num_cols > 0 else 0)
+
+                fig, axs = plt.subplots(num_rows, num_cols, figsize=(figsize*num_cols, figsize*num_rows))
+
+                if isinstance(axs, np.ndarray):
+                    axs = axs.flatten()
+
+                for i, contrib_name in enumerate(contribs_present):
+                    ax = axs[i]
+                    contrib_1 = contrib_dict_1[contrib_name].flatten()
+                    contrib_2 = contrib_dict_2[contrib_name].flatten()
+                    if not len(contrib_1) == len(contrib_2):
+                        logging.warning(f"Length of contributions {contrib_name} in {dsname} does not match. Skipping.")
+                        continue
+
+                    ax = scatter_plot(ax, contrib_1, contrib_2, logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
+
+                    ax.set_xlabel(xlabel)
+                    ax.set_ylabel(ylabel)
+                    ax.set_title(contrib_name.capitalize())
+
+                    if rmsd_position is not None:
+                        rmsd_value = ((contrib_1 - contrib_2)**2).mean()**0.5
+                        ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+
+                dsname = title_map[dsname] if dsname in title_map else dsname
+                plt.suptitle(f'{dsname} - Force Contributions [kcal/mol/Å]')
+
+                plt.tight_layout(pad=2)
+
+                plt.savefig(ds_dir / "contribution_comparison.png", dpi=dpi)
+                plt.close()
             
 
 #%%

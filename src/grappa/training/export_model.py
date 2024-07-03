@@ -54,6 +54,8 @@ def grappa_export():
     # copy all json and txt files in children of ckpt_path (and the containing dirs):
     for f in list(ckpt_path.parent.rglob('*.json')) + list(ckpt_path.parent.rglob('*.txt')):
         target = targetdir/f.relative_to(ckpt_path.parent)
+        # rename the file to filename_orig.* except for the split file:
+        target = target.with_name(target.stem + '_orig' + target.suffix) if target.stem != 'split' else target
         target.parent.mkdir(exist_ok=True, parents=True)
         shutil.copy(f, target)
 
