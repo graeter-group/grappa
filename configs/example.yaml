@@ -1,0 +1,34 @@
+defaults:
+  - data: default
+  - experiment: default
+  - model: default
+  - _self_
+
+
+experiment:
+  trainer:
+    min_epochs: 5
+    max_epochs: 50
+  ckpt_path: null
+  wandb:
+    name: example
+    project: grappa
+  progress_bar: true
+
+model:
+  in_feat_name:
+    - atomic_number
+    - ring_encoding
+    - partial_charge
+    - degree
+
+data:
+  datasets:
+    - spice-dipeptide
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []
+  splitpath: espaloma_split
+  ref_terms:
+    - nonbonded
+  seed: 0

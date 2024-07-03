@@ -7,7 +7,8 @@ from openmm.app import Modeller
 from openmm import unit
 from grappa import OpenmmGrappa
 
-pdbfile = PDBFile('T4.pdb')
+thisdir = Path(__file__).parent
+pdbfile = PDBFile(str(thisdir/'T4.pdb'))
 topology = pdbfile.topology # load your system as openmm.Topology
 
 classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
@@ -25,12 +26,11 @@ system = classical_ff.createSystem(topology)
 ##########################
 
 #%%
-# load the pretrained ML model from a tag. Currently, possible tags are grappa-1.1', 'grappa-1.2' and 'latest'
-grappa_ff = OpenmmGrappa.from_tag('grappa-1.2')
+# load the pretrained ML model from a tag. Currently, possible tags are grappa-1.3' and 'latest'
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.3')
 
-# parametrize the system using grappa. The charge_model tag tells grappa how the charges were obtained, in this case from the classical forcefield amberff99sbildn. possible tags are 'amber99' and 'am1BCC'.
 # grappa will not change the solvant parameters and the nonbonded parameters, e.g. the partial charges, Lennard-Jones parameters and combination rules
-system = grappa_ff.parametrize_system(system, topology, charge_model='amber99', plot_dir='.')
+system = grappa_ff.parametrize_system(system, topology, plot_dir=thisdir)
 
 # %%
 
@@ -42,6 +42,7 @@ orig_system = classical_ff.createSystem(topology)
 from grappa.utils.openmm_utils import get_energies
 import numpy as np
 from grappa.constants import get_grappa_units_in_openmm
+from grappa.utils.plotting import scatter_plot
 
 DISTANCE_UNIT = get_grappa_units_in_openmm()['LENGTH']
 positions = np.array([positions.value_in_unit(DISTANCE_UNIT)])
@@ -55,17 +56,13 @@ grappa_energy, grappa_gradients = get_energies(system, positions)
 
 from matplotlib import pyplot as plt
 
-plt.scatter(original_gradients.flatten(), grappa_gradients.flatten())
-plt.xlabel('FF99SBILDN')
-plt.ylabel('Grappa')
-plt.title('Gradients [kcal/mol/A]')
+fig, ax = plt.subplots()
+ax = scatter_plot(ax=ax, x=original_gradients.flatten(), y=grappa_gradients.flatten(), cluster=True, show_rmsd=True, logscale=True)
+ax.set_xlabel('FF99SBILDN')
+ax.set_ylabel('Grappa')
+ax.set_title('Gradients [kcal/mol/A]')
 
-crmse = np.sqrt(np.mean((original_gradients.flatten() - grappa_gradients.flatten())**2))
-plt.text(0.1, 0.9, f'Component RMSE: {crmse:.2f} kcal/mol/A', transform=plt.gca().transAxes)
-
-plt.plot(original_gradients.flatten(), original_gradients.flatten(), color='black', linestyle='--')
-
-plt.savefig('grappa_vs_classical_gradients_T4.png') 
-print(f'Component RMSE between Grappa and amber99sbildn: {crmse:.2f} kcal/mol/A')
+fig.savefig(str(thisdir/'grappa_vs_classical_gradients_T4.png'))
 print('Saved fig to grappa_vs_classical_gradients.png')
+fig.show()
 # %%

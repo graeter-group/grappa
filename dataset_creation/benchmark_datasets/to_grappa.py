@@ -45,6 +45,7 @@ def main(source_path, target_path, forcefield='openff_unconstrained-2.0.0.offxml
 
             num_success += 1
         except Exception as e:
+            raise e
             num_err += 1
             # get traceback:
             tb = traceback.format_exc()

@@ -3,7 +3,7 @@ print("Testing installation...")
 print("Downloading a dataset to grappa/data/dgl_datasets and a pretrained model to grappa/models.")
 
 from grappa.data import Dataset
-from grappa.utils.loading_utils import model_from_tag
+from grappa.utils.model_loading_utils import model_from_tag
 from grappa.models.energy import Energy
 import torch
 import copy

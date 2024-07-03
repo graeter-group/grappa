@@ -5,6 +5,13 @@ __pycache__/
 # C extensions
 *.so
 
+ckpt/
+old_experiments/
+outputs/
+reproducility/*.yaml
+reproducility/*.json
+job.sh
+
 # Distribution / packaging
 bin/
 build/
@@ -29,6 +36,8 @@ var/
 *.synctex.gz
 
 notes.md
+
+*/mdout.mdp
 
 # Installer logs
 pip-log.txt
@@ -84,6 +93,9 @@ runs/
 # do not ignore data/ in grappa/src/grappa/data:
 !src/grappa/data/
 !src/grappa/models/
+!config/data
+!data/published_datasets.csv
+!models/published_models.csv
 
 esp_data/
 data_backup/
@@ -99,16 +111,10 @@ npy_charge_dicts/
 **/.png
 **/.pickle
 **/metric_data.json
+**/mdout.mdp
 
 **/model.pt
 **/model.pth
-
-mains/runs
-mains/tests/load_splits
-mains/tests/psi4/compare_spice/1
-mains/**.png
-mains/**.npy
-mains/**.out
 
 *.clean
 *.png
@@ -130,6 +136,9 @@ mains/**.out
 !dataset_creation/get_espaloma_split/te_smiles.json
 !dataset_creation/get_espaloma_split/vl_smiles.json
 !docs/figures/*.png
+!examples/dataset_creation/*/example_data*.npz
+
+examples/dataset_creation/*/*.pdb
 
 **.gro**
 **.top**

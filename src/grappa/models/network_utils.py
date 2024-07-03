@@ -98,6 +98,7 @@ class DottedAttWithMLP(nn.Module):
         self.layer_norm = layer_norm
         if self.layer_norm:
             self.norm1 = nn.LayerNorm(n_feats)
+            self.norm2 = nn.LayerNorm(n_feats)
 
         # multihead attention layer with n_heads, each taking n_feats//n_heads features as input.
         # the updated values are returned, not the attention weights
@@ -125,10 +126,12 @@ class DottedAttWithMLP(nn.Module):
 
         x = attn_output + x
 
+        x = self.norm2(x)
+
         if x.isnan().any():
             raise ValueError('nan in attn output')
         
-        x = self.ff(x)
+        x = self.ff(x) + x
 
         return x
     

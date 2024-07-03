@@ -72,13 +72,14 @@ def pool_energy(g, energies, term, suffix):
 
 
 class Energy(torch.nn.Module):
-    """
-    Class that writes the bonded energy of molecule conformations into a graph. First, torsional angles, angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["energy"+write_suffix] and g.nodes["g"].data["energy_"+term+write_suffix] for each term. If gradients is True, the gradients of the total energy w.r.t. the xyz coordinates are calculated and written under g.nodes["n1"].data["gradient"+write_suffix].
-    If the internal coordiantes are not already written in the graph, calculates them using the InternalCoordinates module.
-    """
-    def __init__(self, terms:list=["n2", "n3", "n4", "n4_improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True):
+    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False):
         """
-        terms: list of terms to be considered. must be a subset of ["n2", "n3", "n4", "n4_improper"]
+        Module that writes the energy of molecular conformations into a dgl graph. First, internal coordinates such as torsional angles, angles and distances are calculated, then their energy contributions are added and stored at g.nodes["g"].data["energy"] and g.nodes["g"].data["energy_"+term] for each term. The gradients of the total energy w.r.t. the xyz coordinates are calculated and stored at g.nodes["n1"].data["gradient"].
+        
+        ----------
+        Args:
+        ----------
+        terms: list of terms to be considered. must be a subset of ["bond", "angle", "torsion", "improper"]
         suffix: suffix of the parameters stored in the graph.
         offset_torsion: whether to include the constant offset term (that makes the contribution positive) in the torsion energy calculation
         write_suffix: suffix of the energy and gradient attributes written to the graph. if None, write_suffix is set to suffix.
@@ -91,16 +92,29 @@ class Energy(torch.nn.Module):
         self.offset_torsion = offset_torsion
         self.suffix = suffix
         self.write_suffix = write_suffix if not write_suffix is None else suffix
-        self.terms = terms
         self.gradients = gradients
+        self.gradient_contributions = gradient_contributions
         self.geom = InternalCoordinates()
-
+        
+        self.TERM_TO_LEVEL = {
+            "bond": "n2",
+            "angle": "n3",
+            "proper": "n4",
+            "torsion": "n4", # also allow "torsion" for "proper" for backwards compatibility
+            "improper": "n4_improper"
+        }
+        self.LEVEL_TO_TERM = {v: k for k, v in self.TERM_TO_LEVEL.items()}
+        self.LEVEL_TO_TERM["n4"] = "proper"
+        self.terms = [self.TERM_TO_LEVEL[t] for t in terms]
 
     def forward(self, g):
         """
         First, torsional angles, bonds angles and distances are calculated, then their energy contributions are added and written under g.nodes["g"].data["energy"+write_suffix] and g.nodes["g"].data["energy_"+term+write_suffix] for each term.
         Also stores the individual contributions of shape  at g.nodes[term].data["energy"+write_suffix] for each term.
         """
+        if self.gradient_contributions and not self.gradients:
+            raise ValueError("Gradient contributions cannot be calculated if gradients are not enabled.")
+
         grad_enabled = copy.deepcopy(torch.is_grad_enabled())
         if not grad_enabled and self.gradients:
             torch.set_grad_enabled(True)
@@ -121,15 +135,24 @@ class Energy(torch.nn.Module):
         energy = torch.zeros((num_batch, num_confs), device=g.nodes['n1'].data["xyz"].device)
 
         for term in self.terms:
+            termname = self.LEVEL_TO_TERM[term]
             if not term in g.ntypes:
                 raise ValueError(f"term {term} not in g.ntypes")
-            
+
             # get the energy contribution of this term in shape (num_batch, num_confs)
 
             contrib, tuple_energies = Energy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion)
             if not contrib is None:
+                if self.gradient_contributions and grad_available():
+                    # condition under which we can calculate the gradient:
+                    if contrib.shape[0] > 0 and not torch.all(contrib==0):
+                        grad = torch.autograd.grad(contrib.sum(), g.nodes["n1"].data["xyz"], retain_graph=True, create_graph=True, allow_unused=True)[0]
+                    else:
+                        grad = torch.zeros_like(g.nodes["n1"].data["xyz"])
+                    g.nodes["n1"].data["gradient_"+self.write_suffix+termname] = grad
+                
                 energy += contrib
-                g.nodes["g"].data["energy_"+term+self.write_suffix] = contrib.detach()
+                g.nodes["g"].data["energy_"+self.write_suffix+termname] = contrib.detach()
                 g.nodes[term].data["energy"+self.write_suffix] = tuple_energies
 
         g.nodes["g"].data["energy"+self.write_suffix] = energy
@@ -137,6 +160,7 @@ class Energy(torch.nn.Module):
         if self.gradients and grad_available():
             # calculate gradients
             grad = torch.autograd.grad(energy.sum(), g.nodes["n1"].data["xyz"], retain_graph=True, create_graph=True, allow_unused=True)[0]
+
             g.nodes["n1"].data["gradient"+self.write_suffix] = grad
 
         if self.gradients:

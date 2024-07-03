@@ -3,13 +3,13 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
 
-source_path="$SCRIPT_DIR/../../data/datasets"
-target_path="$SCRIPT_DIR/../../data/grappa_datasets"
+source_path="$SCRIPT_DIR/../../data/esp_npz_datasets"
+target_path="$SCRIPT_DIR/../../data/datasets"
 
 
 # List of dataset names
 datasets=("rna-nucleoside" "gen2" "spice-des-monomers" "spice-dipeptide" "rna-diverse" "gen2-torsion" "pepconf-dlc" "protein-torsion" "rna-trinucleotide" "spice-pubchem")
-# datasets=("spice-dipeptide")
+# datasets=("spice-des-monomers")
 
 # Loop through each dataset name
 for ds in "${datasets[@]}"; do

@@ -156,7 +156,7 @@ def _angle(r0, r1):
     """ Angle between vectors. """
 
     angle = torch.atan2(
-        torch.norm(torch.cross(r0, r1), p=2, dim=-1),
+        torch.norm(torch.cross(r0, r1, dim=-1), p=2, dim=-1),
         torch.sum(torch.mul(r0, r1), dim=-1),
     )
 

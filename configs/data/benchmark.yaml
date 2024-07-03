@@ -1,0 +1,20 @@
+defaults:
+  - default
+
+data_module:
+  datasets:
+    - spice-des-monomers
+    - spice-pubchem
+    - gen2
+    - gen2-torsion
+    - spice-dipeptide
+    - protein-torsion
+    - pepconf-dlc
+    - rna-diverse
+  pure_test_datasets:
+    - rna-trinucleotide
+  pure_val_datasets: []
+  pure_train_datasets:
+    - rna-nucleoside
+  splitpath: espaloma_split
+  seed: 0

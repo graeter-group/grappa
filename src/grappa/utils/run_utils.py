@@ -3,13 +3,51 @@ from pathlib import Path
 from typing import Union, Dict
 import yaml
 
-def get_rundir()->Path:
+def flatten_dict(d, parent_key='', sep=':'):
     """
-    Returns the path to the directory in which runs are stored
+    Flatten a nested dictionary.
+
+    Args:
+        d (dict): The dictionary to flatten.
+        parent_key (str): The base key string for recursion.
+        sep (str): Separator between keys.
+
+    Returns:
+        dict: The flattened dictionary.
     """
-    rundir = Path(__file__).parents[3] / "runs"
-    rundir.mkdir(parents=True, exist_ok=True)
-    return rundir
+    items = []
+    for k, v in d.items():
+        if sep in k:
+            raise ValueError(f"Separator '{sep}' is not allowed in dict keys. Found in key '{k}'")
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def unflatten_dict(d: Dict[str, any], sep: str = ':') -> Dict:
+    """
+    Unflatten a dictionary that has been flattened with keys separated by a specified separator.
+
+    Args:
+        d (Dict[str, any]): The flattened dictionary to unflatten.
+        sep (str): Separator used in keys to indicate nested dictionaries.
+
+    Returns:
+        Dict: The unflattened dictionary.
+    """
+    unflattened = {}
+    for composite_key, value in d.items():
+        parts = composite_key.split(sep)
+        target = unflattened
+        for part in parts[:-1]:  # Traverse/create the dictionary except for the last part
+            if part not in target:
+                target[part] = {}
+            target = target[part]
+        target[parts[-1]] = value  # Set the final part as the value
+    return unflattened
 
 
 def load_yaml(path:Union[str,Path])->Dict:    

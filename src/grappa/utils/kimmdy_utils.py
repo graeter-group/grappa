@@ -25,7 +25,6 @@ if importlib.util.find_spec('kimmdy') is not None:
     from grappa.units import Unit, Quantity
     from grappa import units
     from grappa.constants import GrappaUnits
-    from grappa.utils.loading_utils import model_dict_from_tag
 
     # define the units that gromacs uses. Toghether with grappa.constants.GrappaUnits, this defines how we will convert the output of the ML model.
     # https://manual.gromacs.org/current/reference-manual/definitions.html
@@ -165,7 +164,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 tup = tuple(idx)
                 tup = find_bond(tup, top)
                 if not tup:
-                    continue
+                    raise ValueError(f"Invalid bond tuple {tup}")
 
                 top.bonds[tup] = Bond(
                     *tup,
@@ -180,7 +179,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 tup = tuple(idx)
                 tup = find_angle(tup, top)
                 if not tup:
-                    continue
+                    raise ValueError(f"Invalid angle tuple {tup}")
 
                 top.angles[tup] = Angle(
                     *tup,
@@ -197,7 +196,7 @@ if importlib.util.find_spec('kimmdy') is not None:
                 # find the proper dihedral tuple in the topology that is equivalent to the given tuple
                 tup = find_proper(tup, top)
                 if not tup:
-                    continue
+                    raise ValueError(f"Invalid proper dihedral tuple {tup}")
 
                 dihedral_dict = {}
                 for ii in range(len(parameters.proper_ks[i])):
@@ -373,3 +372,4 @@ if importlib.util.find_spec('kimmdy') is not None:
                 )
             else:
                 tup = tups_in_topology[0]
+        return tup

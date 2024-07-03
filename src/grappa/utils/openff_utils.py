@@ -98,15 +98,19 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
 
 
     if 'openff' in openff_forcefield:
-        ff = ForceField(openff_forcefield)
+        # disable warnings because of some automatic bond upconversion warning:
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ff = ForceField(openff_forcefield)
 
-        if partial_charges is not None:
-            # use the charges given in the raw molecule:
-            openmm_system = ff.create_openmm_system(topology, charge_from_molecules=[mol], **system_kwargs)
-        
-        else:
-            # calculate the charges from the force field (expensive!)
-            openmm_system = ff.create_openmm_system(topology, **system_kwargs)
+            if partial_charges is not None:
+                # use the charges given in the raw molecule:
+                openmm_system = ff.create_openmm_system(topology, charge_from_molecules=[mol], **system_kwargs)
+            
+            else:
+                # calculate the charges from the force field (expensive!)
+                openmm_system = ff.create_openmm_system(topology, **system_kwargs)
 
     elif 'gaff' in openff_forcefield:
         # assert that openmmforcefields is installed:
@@ -115,8 +119,8 @@ def get_openmm_system(mapped_smiles:str, openff_forcefield:str='openff_unconstra
         from openmmforcefields.generators import SystemGenerator
         top = mol.to_topology().to_openmm()
 
-        if partial_charges is not None:
-            raise NotImplementedError("Externally given partial charges are not supported yet for openmmforcefields force fields.")
+        # if partial_charges is not None:
+            # raise NotImplementedError("Externally given partial charges are not supported yet for openmmforcefields force fields.")
         if not len(system_kwargs) == 0:
             raise NotImplementedError("Externally given system kwargs are not supported yet for openmmforcefields force fields.")
 

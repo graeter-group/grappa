@@ -1,11 +1,15 @@
 import torch
 import dgl
-from typing import Tuple, List, Dict, Union
-import copy
+from typing import Tuple, List, Dict, Union, Set
+import networkx as nx
+import numpy as np
+import random
+from tqdm import tqdm
+import logging
 
 from grappa.constants import BONDED_CONTRIBUTIONS
 
-def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
+def get_parameters(g, suffix="", exclude:Tuple[str,str]=[], terms:List[str]=['n2', 'n3', 'n4', 'n4_improper'])->Dict[str,torch.Tensor]:
     """
     Get the parameters of a graph asuming that they are stored at g.nodes[lvl].data[{k}/{eq}+suffix]
     Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}.
@@ -24,15 +28,18 @@ def get_parameters(g, suffix="", exclude:Tuple[str,str]=[]):
     """
     params = {}
     for lvl, param_name in BONDED_CONTRIBUTIONS:
+        if lvl not in terms:
+            continue
         if (lvl, param_name) in exclude:
             continue
 
-        params[f"{lvl}_{param_name}"] = g.nodes[lvl].data[f"{param_name}{suffix}"]
-
+        if lvl in g.ntypes:
+            if f"{param_name}{suffix}" in g.nodes[lvl].data.keys():
+                params[f"{lvl}_{param_name}"] = g.nodes[lvl].data[f"{param_name}{suffix}"]
     return params
 
 
-def get_energies(g, suffix="", center=True):
+def get_energies(g:dgl.DGLGraph, suffix="", center=True)->torch.Tensor:
     """
     Get the energies of a non-batched graph in shape (n_conf) assuming that they are stored at g.nodes['g'].data[energy+suffix] with subtracted mean along conformations for each batch.
 
@@ -64,7 +71,7 @@ def get_energies(g, suffix="", center=True):
 
 
 
-def get_gradients(g, suffix=""):
+def get_gradients(g:dgl.DGLGraph, suffix="")->torch.Tensor:
     """
     Get the gradients of a graph in shape (n_atoms, n_confs, 3) assuming that they are stored at g.nodes[lvl].data[gradient+suffix]. The graph sghould not be batched if it contains nans.
 
@@ -85,6 +92,28 @@ def get_gradients(g, suffix=""):
         raise RuntimeError(f"gradients are nan: {grads.shape}, {grads}")
     return grads
 
+
+def get_gradient_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str]=['bond', 'angle', 'proper', 'improper', 'nonbonded', 'total'], skip_err=False)->Dict[str,torch.Tensor]:
+    """
+    Get the gradient contributions from different MM terms stored in a graph. The shape is (n_atoms, n_confs, 3) for each contribution.
+    """
+    grad_dict = {contrib: torch.empty((g.num_nodes('n1'),0,3), device=g.nodes['n1'].data['gradient_ref'].device) for contrib in contributions}
+    for contrib in contributions:
+        if f"gradient{suffix}_{contrib}" in g.nodes['n1'].data.keys():
+            grad_dict[contrib] = g.nodes['n1'].data[f"gradient{suffix}_{contrib}"]
+
+        # some exceptions:
+        elif contrib=="nonbonded" and suffix=="":
+            # NOTE: grappa doesnt predict its reference contributions, this only works in the vanilla case in which nonbonded is the only reference
+            if all([e in g.nodes['n1'].data.keys() for e in [f"gradient_ref", f"gradient_qm"]]):
+                grad_dict[contrib] = (g.nodes['n1'].data[f"gradient_qm"] - g.nodes['n1'].data[f"gradient_ref"])
+        elif contrib=="total":
+            if f"gradient{suffix}" in g.nodes['n1'].data.keys():
+                grad_dict[contrib] = g.nodes['n1'].data[f"gradient{suffix}"]
+
+        elif not skip_err:
+            raise RuntimeError(f"Gradient contribution {contrib} not found as gradient{suffix}_{contrib} in graph. Keys are: {g.nodes['n1'].data.keys()}")
+    return grad_dict
 
 
 def get_parameter_se(g, suffix1="", suffix2="_ref", l=2):
@@ -198,7 +227,7 @@ def get_tuplewise_energies(g, suffix="", center=False):
     return energies
 
 
-def get_param_statistics(loader, suffix="_ref"):
+def get_param_statistics(loader:"GraphDataLoader", suffix="_ref")->Dict[str,Dict[str,torch.Tensor]]:
     '''
     Returns a dictionary with keys {n2_k, n2_eq, n3_k, n3_eq, n4_k, n4_improper_k}. Ignores nan parameters.
     '''
@@ -211,12 +240,15 @@ def get_param_statistics(loader, suffix="_ref"):
             else:
                 these_params = get_parameters(g,suffix=suffix)
                 for k, v in these_params.items():
+                    if torch.isnan(v).any():
+                        continue
                     # remove the suffix from the key in the stat dict:
                     parameters[k.replace(suffix, "")] = torch.cat((parameters[k.replace(suffix, "")], v), dim=0)
         
         param_statistics = {'mean':{}, 'std':{}}
 
         if parameters is None:
+            logging.warning("No MM parameters found in loader. Returning default statistics.")
             return get_default_statistics()
 
         for k, v in parameters.items():
@@ -227,12 +259,20 @@ def get_param_statistics(loader, suffix="_ref"):
                 assert not torch.isnan(param_statistics['mean'][k]).any(), f"mean of {k} is nan"
                 assert not torch.isnan(param_statistics['std'][k]).any(), f"std of {k} is nan"
 
+
+    # if there are nans, replace them with the default statistics:
+    for m in ['mean', 'std']:
+        for k, v in param_statistics[m].items():
+            if torch.isnan(v).any():
+                param_statistics[m][k] = get_default_statistics()[m][k]
+                logging.warning(f"Found nan in train MM parameter statistics {m} of {k}. Replacing with default statistics.")
+
     return param_statistics
 
 
 def get_default_statistics():
     """
-    Just some example statistics obtained at some point in time from a peptide dataset. Better than nothing but not good.
+    Just some example statistics obtained at some point in time from a peptide dataset. Better than nothing.
     """
     DEFAULT_STATISTICS = {
     'mean':
@@ -240,3 +280,50 @@ def get_default_statistics():
     'std':
         {'n2_k': torch.Tensor([161.2278]), 'n2_eq': torch.Tensor([0.1953]), 'n3_k': torch.Tensor([26.5965]), 'n3_eq': torch.Tensor([0.0917]), 'n4_k': torch.Tensor([0.4977, 1.2465, 0.1466, 0.0192, 0.0075, 0.0066]), 'n4_improper_k': torch.Tensor([0.0000, 4.0571, 0.0000])}}
     return DEFAULT_STATISTICS
+
+
+
+def cannot_be_isomorphic(graph1:nx.Graph, graph2:nx.Graph)->bool:
+    """
+    Check whether the set of elements in the two graphs is different. If it is, the graphs cannot be isomorphic.
+    """
+    atomic_numbers1 = graph1.nodes(data='atomic_number')
+    atomic_numbers2 = graph2.nodes(data='atomic_number')
+    if len(atomic_numbers1) != len(atomic_numbers2):
+        return True
+    atomic_numbers1 = np.argmax(np.array([node[1] for node in atomic_numbers1]), axis=-1)
+    atomic_numbers2 = np.argmax(np.array([node[1] for node in atomic_numbers2]), axis=-1)
+
+    if not set(atomic_numbers1) == set(atomic_numbers2):
+        return True
+
+def get_isomorphisms(graphs1:List[dgl.DGLGraph], graphs2:List[dgl.DGLGraph]=None)->Set[Tuple[int,int]]:
+    """
+    Returns a set of pairs of indices of isomorphic graphs in the two lists of graphs. If only one list is provided, it will return the isomorphisms within that list.
+    This function can be used to validate generated datasets and to assign a consistent mol_id.
+    """
+    homgraphs1 = [dgl.node_type_subgraph(graph, ['n1']) for graph in tqdm(graphs1, desc="Creating homgraphs")]
+    homgraphs2 = [dgl.node_type_subgraph(graph, ['n1']) for graph in tqdm(graphs2, desc="Creating homgraphs")] if graphs2 is not None else homgraphs1
+
+    nx_graphs1 = list([graph.to_networkx(node_attrs=['atomic_number']) for graph in tqdm(homgraphs1, desc="Converting to nx")])
+    nx_graphs2 = list([graph.to_networkx(node_attrs=['atomic_number']) for graph in tqdm(homgraphs2, desc="Converting to nx")]) if graphs2 is not None else nx_graphs1
+
+    # for each graph, check how many graphs are isomorphic to it, based on the element stored in graph.ndata['atomic_number']
+    if graphs2 is None:
+        pairs = [(i, j) for i in tqdm(range(len(nx_graphs1)), desc="Creating pairs") for j in range(i+1, len(nx_graphs1)) if not cannot_be_isomorphic(nx_graphs1[i], nx_graphs1[j])]
+    else:
+        pairs = [(i, j) for i in tqdm(range(len(nx_graphs1)), desc="Creating pairs") for j in range(len(nx_graphs2)) if not cannot_be_isomorphic(nx_graphs1[i], nx_graphs2[j])]
+    # randomly shuffle the pairs to avoid bias in remaining time prediction
+    random.shuffle(pairs)
+    isomorphic_pairs = []
+
+    def node_match(n1, n2):
+        return np.all(n1['atomic_number'].numpy() == n2['atomic_number'].numpy())
+
+    for i, j in tqdm(pairs, desc="Checking isomorphisms"):
+        if len(nx_graphs1[i].nodes) != len(nx_graphs2[j].nodes):
+            continue
+        if nx.is_isomorphic(nx_graphs1[i], nx_graphs2[j], node_match=node_match):
+            isomorphic_pairs.append((i, j))
+
+    return set(isomorphic_pairs)

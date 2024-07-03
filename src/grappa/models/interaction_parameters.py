@@ -14,7 +14,7 @@ class WriteParameters(torch.nn.Module):
 
     Initialization Arguments:
         graph_node_features (int, optional): Number of features in the input graph nodes. Defaults to 256.
-        parameter_dropout (float, optional): Dropout rate applied in all writers. Defaults to 0.
+        symmetric_transformer_dropout (float, optional): Dropout rate applied in all writers. Defaults to 0.
         layer_norm (bool, optional): Flag to apply layer normalization in all writers. Defaults to True.
         positional_encoding (bool, optional): Flag to apply positional encoding in all writers. Defaults to True.
         
@@ -32,10 +32,14 @@ class WriteParameters(torch.nn.Module):
         learnable_statistics (bool): Flag to indicate whether to make the mean and std parameters provided by the param_statistics learnable. In this case, they would be initialised to the values provided by the param_statistics but would be updated during training. Defaults to False.
         param_statistics (dict, optional): Dictionary containing statistics for parameter initialization.
         torsion_cutoff (float, optional): Cutoff value for torsion force constants in kcal/mol. Defaults to 1e-4.
+        ...
+        shifted_elu: whether to use a shifted elu for transforming to positive numbers or the exponential function (only for ablation, elu version is much more stable)
+        stat_scaling: whether to scale the network outputs such that a normal distribution is transformed approximately to a distribution with given mean, std
+
 
     The class initializes and holds four separate writers, each configured for their respective parameter type.
     """
-    def __init__(self, graph_node_features=256, parameter_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False):
+    def __init__(self, graph_node_features=256, symmetric_transformer_dropout=0, layer_norm=True, positional_encoding=True, bond_transformer_depth=2, bond_n_heads=8, bond_transformer_width=512, bond_symmetriser_depth=2, bond_symmetriser_width=256, angle_transformer_depth=2, angle_n_heads=8, angle_transformer_width=512, angle_symmetriser_depth=2, angle_symmetriser_width=256, proper_transformer_depth=2, proper_n_heads=8, proper_transformer_width=512, proper_symmetriser_depth=2, proper_symmetriser_width=256, improper_transformer_depth=2, improper_n_heads=8, improper_transformer_width=512, improper_symmetriser_depth=2, improper_symmetriser_width=256, n_periodicity_proper=6, n_periodicity_improper=3, gated_torsion:bool=False, suffix="", wrong_symmetry=False, learnable_statistics:bool=False, param_statistics:dict=get_default_statistics(), torsion_cutoff=1.e-4, harmonic_gate:bool=False, only_n2_improper=False, shifted_elu:bool=True, stat_scaling:bool=True):
         super().__init__()
 
         if param_statistics is not None:
@@ -53,12 +57,14 @@ class WriteParameters(torch.nn.Module):
             n_att=bond_transformer_depth,
             n_heads=bond_n_heads,
             dense_layers=bond_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=bond_symmetriser_width,
             attention_hidden_feats=bond_transformer_width,
             learnable_statistics=learnable_statistics,
             gate=harmonic_gate,
+            shifted_elu=shifted_elu,
+            stat_scaling=stat_scaling
         )
 
         # Initialize Angle Writer
@@ -70,13 +76,15 @@ class WriteParameters(torch.nn.Module):
             n_att=angle_transformer_depth,
             n_heads=angle_n_heads,
             dense_layers=angle_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=angle_symmetriser_width,
             attention_hidden_feats=angle_transformer_width,
             positional_encoding=positional_encoding,
             learnable_statistics=learnable_statistics,
             gate=harmonic_gate,
+            shifted_elu=shifted_elu,
+            stat_scaling=stat_scaling
         )
 
         # Initialize Proper Torsion Writer
@@ -89,7 +97,7 @@ class WriteParameters(torch.nn.Module):
             n_att=proper_transformer_depth,
             n_heads=proper_n_heads,
             dense_layers=proper_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=proper_symmetriser_width,
             attention_hidden_feats=proper_transformer_width,
@@ -97,7 +105,8 @@ class WriteParameters(torch.nn.Module):
             positional_encoding=positional_encoding,
             gated=gated_torsion,
             learnable_statistics=learnable_statistics,
-            cutoff=torsion_cutoff
+            cutoff=torsion_cutoff,
+            stat_scaling=stat_scaling
         )
 
         # Initialize Improper Torsion Writer
@@ -110,7 +119,7 @@ class WriteParameters(torch.nn.Module):
             n_att=improper_transformer_depth,
             n_heads=improper_n_heads,
             dense_layers=improper_symmetriser_depth,
-            dropout=parameter_dropout,
+            dropout=symmetric_transformer_dropout,
             layer_norm=layer_norm,
             symmetriser_feats=improper_symmetriser_width,
             attention_hidden_feats=improper_transformer_width,
@@ -119,7 +128,9 @@ class WriteParameters(torch.nn.Module):
             gated=gated_torsion,
             learnable_statistics=learnable_statistics,
             wrong_symmetry=wrong_symmetry,
-            cutoff=torsion_cutoff
+            cutoff=torsion_cutoff,
+            only_n2=only_n2_improper,
+            stat_scaling=stat_scaling
         )
 
     def forward(self, g):
@@ -199,6 +210,9 @@ class WriteBondParameters(torch.nn.Module):
         symmetriser_feats (int, optional): Feature dimension for the symmetrizer network.
         attention_hidden_feats (int, optional): Hidden feature dimension in the transformer model.
         learnable_statistics (bool): Flag to indicate whether to make the mean and std parameters provided by the param_statistics learnable. In this case, they would be initialised to the values provided by the param_statistics but would be updated during training. Defaults to False.
+        ...
+        shifted_elu: whether to use a shifted elu for transforming to positive numbers or the exponential function (only for ablation, elu version is much more stable)
+        stat_scaling: whether to scale the network outputs such that a normal distribution is transformed approximately to a distribution with given mean, std
 
     ----------
 
@@ -208,19 +222,25 @@ class WriteBondParameters(torch.nn.Module):
         - a ToPositive layer that transforms the output of the SymmetrisedTransformer to positive values such that a normal distribution of symmetriser outputs would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."]
     For initialization of the model weights, a param_statistics containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
     """
-    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False, gate:bool=False):
+    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False, gate:bool=False, shifted_elu:bool=True, stat_scaling:bool=True):
         super().__init__()
 
-        # the minimum std dviation to which the output of the symmetriser is scaled
+        # the minimum std deviation to which the output of the symmetriser is scaled
         EPSILON_STD = 1e-6
 
         if param_statistics is None:
             param_statistics = get_default_statistics()
 
-        k_mean=param_statistics["mean"]["n2_k"].item()
-        k_std=param_statistics["std"]["n2_k"].item() + EPSILON_STD
-        eq_mean=param_statistics["mean"]["n2_eq"].item()
-        eq_std=param_statistics["std"]["n2_eq"].item() + EPSILON_STD
+        if stat_scaling:
+            k_mean=param_statistics["mean"]["n2_k"].item()
+            k_std=param_statistics["std"]["n2_k"].item() + EPSILON_STD
+            eq_mean=param_statistics["mean"]["n2_eq"].item()
+            eq_std=param_statistics["std"]["n2_eq"].item() + EPSILON_STD
+        else:
+            k_mean=0.
+            k_std=1.
+            eq_mean=0.
+            eq_std=1.
 
         self.suffix = suffix
 
@@ -236,9 +256,13 @@ class WriteBondParameters(torch.nn.Module):
         self.gate = gate
 
         self.bond_model = SymmetrisedTransformer(n_feats=between_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=2+int(gate), permutations=torch.tensor([[0,1],[1,0]], dtype=torch.int32), layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=False)
-        
-        self.to_k = ToPositive(mean=k_mean, std=k_std, min_=0, learnable_statistics=learnable_statistics)
-        self.to_eq = ToPositive(mean=eq_mean, std=eq_std, learnable_statistics=learnable_statistics)
+
+        if shifted_elu:
+            self.to_k = ToPositive(mean=k_mean, std=k_std, min_=0, learnable_statistics=learnable_statistics)
+            self.to_eq = ToPositive(mean=eq_mean, std=eq_std, learnable_statistics=learnable_statistics)
+        else:
+            self.to_k = Exponentiate()
+            self.to_eq = Exponentiate()
 
 
     def forward(self, g):
@@ -248,7 +272,7 @@ class WriteBondParameters(torch.nn.Module):
         inputs = self.rep_projector(g)
 
         coeffs = self.bond_model(inputs)
-
+        
         coeffs[:,0] = self.to_eq(coeffs[:,0])
         coeffs[:,1] = self.to_k(coeffs[:,1])
 
@@ -289,6 +313,9 @@ class WriteAngleParameters(torch.nn.Module):
         attention_hidden_feats (int, optional): Hidden feature dimension in the transformer model.
         positional_encoding (bool): Flag to apply positional encoding. Defaults to True.
         learnable_statistics (bool): Flag to indicate whether to make the mean and std parameters provided by the param_statistics learnable. In this case, they would be initialised to the values provided by the param_statistics but would be updated during training. Defaults to False.
+        ...
+        shifted_elu: whether to use a shifted elu for transforming to positive numbers or the exponential function (only for ablation, elu version is much more stable)
+        stat_scaling: whether to scale the network outputs such that a normal distribution is transformed approximately to a distribution with given mean, std
 
 
 
@@ -300,17 +327,22 @@ class WriteAngleParameters(torch.nn.Module):
     For initialization of the model weights, a param_statistics containing the expected mean and std deviation of the parameters can be given. Then the output of the symmetriser will be approximately a normal distribution with mean 0 and unit std deviation. This is optional, but recommended for achieving faster training convergence.
     """
 
-    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False, gate:bool=False):
+    def __init__(self, rep_feats, between_feats, suffix="", param_statistics=None, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, positional_encoding=True, learnable_statistics:bool=False, gate:bool=False, shifted_elu:bool=True, stat_scaling:bool=True):
         super().__init__()
 
         # the minimum std dviation to which the output of the symmetriser is scaled
         EPSILON_STD = 1e-6
 
-        if param_statistics is None:
-            param_statistics = get_default_statistics()
-        k_mean=param_statistics["mean"]["n3_k"].item()
-        k_std=param_statistics["std"]["n3_k"].item() + EPSILON_STD
-        eq_std=param_statistics["std"]["n3_eq"].item() + EPSILON_STD
+        if stat_scaling:
+            if param_statistics is None:
+                param_statistics = get_default_statistics()
+            k_mean=param_statistics["mean"]["n3_k"].item()
+            k_std=param_statistics["std"]["n3_k"].item() + EPSILON_STD
+            eq_std=param_statistics["std"]["n3_eq"].item() + EPSILON_STD
+        else:
+            k_mean = 0.
+            k_std = 1.
+            eq_std = 1.
 
         self.suffix = suffix
 
@@ -329,8 +361,11 @@ class WriteAngleParameters(torch.nn.Module):
 
         self.angle_model = SymmetrisedTransformer(n_feats=rep_projected_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=2+int(gate), permutations=torch.tensor([[0,1,2],[2,1,0]], dtype=torch.int32), layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=copy.deepcopy(positional_encoding))
         
+        if shifted_elu:
+            self.to_k = ToPositive(mean=k_mean, std=k_std, min_=0, learnable_statistics=learnable_statistics)
+        else:
+            self.to_k = Exponentiate()
 
-        self.to_k = ToPositive(mean=k_mean, std=k_std, min_=0, learnable_statistics=learnable_statistics)
         self.to_eq = ToRange(max_=torch.pi, std=eq_std, learnable_statistics=learnable_statistics)
 
 
@@ -397,7 +432,9 @@ class WriteTorsionParameters(torch.nn.Module):
         positional_encoding (bool): Flag to apply positional encoding. Defaults to True.
         gated (bool): Flag to apply a gating mechanism using sigmoid activation. Defaults to False.
         learnable_statistics (bool): Flag to indicate whether to make the mean and std parameters provided by the param_statistics learnable. In this case, they would be initialised to the values provided by the param_statistics but would be updated during training. Defaults to False.
-        wrong_symmetry (bool): Flag to indicate whether to implement the symmetry of the energy function the wrong way (as is done in espaloma. this is for ablation studies). Defaults to False.
+        wrong_symmetry (bool): Flag to indicate whether to implement the symmetry of the energy function the wrong way (this is for ablation studies). Defaults to False.
+        ...
+        stat_scaling: whether to scale the network outputs such that a normal distribution is transformed approximately to a distribution with given mean, std
 
     ----------
     Returns:
@@ -417,14 +454,11 @@ class WriteTorsionParameters(torch.nn.Module):
 
     The parameter statistics are used to initialize the model weights such that a normally distributed output of the symmetriser network would lead to a Gaussian distribution with mean param_statistics["mean"]["..."] and std param_statistics["std"]["..."].
     """
-    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False, cutoff=1e-4):
+    def __init__(self, rep_feats, between_feats, suffix="", n_periodicity=None, improper=False, n_att=2, n_heads=8, dense_layers=2, dropout=0., layer_norm=True, symmetriser_feats=None, attention_hidden_feats=None, param_statistics=None, positional_encoding=True, gated:bool=False, learnable_statistics:bool=False, wrong_symmetry:bool=False, cutoff=1e-4, only_n2:bool=False, stat_scaling:bool=True):
         super().__init__()
 
         # the minimum std deviation to which torsion parameters are scaled initially. Should be something like the average magnitude of torsion ks ideally. Should be larger than the cutoff!
         EPSILON_STD = 1e-1 if gated else 1e-2
-
-        if param_statistics is None:
-            param_statistics = get_default_statistics()
 
         if improper:
             assert constants.IMPROPER_CENTRAL_IDX in [1,2] # make this more general later on
@@ -439,25 +473,34 @@ class WriteTorsionParameters(torch.nn.Module):
         # make n_periodicity being saved in the state dict: 
         self.register_buffer("n_periodicity", torch.tensor(n_periodicity).long())
 
-        if not improper:
-            k_mean = param_statistics["mean"]["n4_k"]
-            k_std = param_statistics["std"]["n4_k"] + EPSILON_STD
-        else:
-            if not "n4_improper_k" in param_statistics["mean"]:
-                k_mean = torch.zeros(n_periodicity)
-                k_std = torch.ones(n_periodicity)
+
+
+        if stat_scaling:
+            if param_statistics is None:
+                param_statistics = get_default_statistics()
+            if not improper:
+                k_mean = param_statistics["mean"]["n4_k"]
+                k_std = param_statistics["std"]["n4_k"] + EPSILON_STD
             else:
-                k_mean = param_statistics["mean"]["n4_improper_k"]
-                k_std = param_statistics["std"]["n4_improper_k"] + EPSILON_STD
-                
-                if len(k_mean) < n_periodicity:
-                    raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_mean)} values for the mean of the improper torsion parameters.")
-                
-                if len(k_std) < n_periodicity:
-                    raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_std)} values for the std of the improper torsion parameters.")
-                
-        k_mean = k_mean[:n_periodicity]
-        k_std = k_std[:n_periodicity]
+                if not "n4_improper_k" in param_statistics["mean"]:
+                    k_mean = torch.zeros(n_periodicity)
+                    k_std = torch.ones(n_periodicity)
+                else:
+                    k_mean = param_statistics["mean"]["n4_improper_k"]
+                    k_std = param_statistics["std"]["n4_improper_k"] + EPSILON_STD
+                    
+                    if len(k_mean) < n_periodicity:
+                        raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_mean)} values for the mean of the improper torsion parameters.")
+                    
+                    if len(k_std) < n_periodicity:
+                        raise ValueError(f"n_periodicity is {n_periodicity} but the param_statistics contains {len(k_std)} values for the std of the improper torsion parameters.")
+        else:
+            k_mean = torch.zeros(n_periodicity)
+            k_std = torch.ones(n_periodicity)
+
+
+        k_mean = k_mean[:n_periodicity] if not only_n2 else k_mean[1]
+        k_std = k_std[:n_periodicity] if not only_n2 else k_std[1]
 
         k_mean_initial = k_mean.unsqueeze(dim=0)
         k_std_initial = k_std.unsqueeze(dim=0)
@@ -507,6 +550,11 @@ class WriteTorsionParameters(torch.nn.Module):
                 positional_encoding = torch.tensor([[0],[0],[1],[0]], dtype=torch.float32)
 
         n_out_feats = n_periodicity if not gated else 2*n_periodicity
+        if only_n2:
+            n_out_feats = 1 if not gated else 2
+
+        self.n_out_feats = n_out_feats
+        self.only_n2 = only_n2
 
         self.torsion_model = SymmetrisedTransformer(n_feats=rep_projected_feats, n_heads=n_heads, hidden_feats=attention_hidden_feats, n_layers=n_att, out_feats=n_out_feats, permutations=perms, layer_norm=layer_norm, dropout=dropout, symmetriser_layers=dense_layers, symmetriser_hidden_feats=symmetriser_feats, positional_encoding=copy.deepcopy(positional_encoding))
 
@@ -540,10 +588,9 @@ class WriteTorsionParameters(torch.nn.Module):
                 # to obtain the correct statistics, we 
 
                 # shape of coeffs: n_torsions, 2*n_periodicity
-                gate_values = torch.sigmoid(coeffs[:,self.n_periodicity:])
-                coeffs = coeffs[:,:self.n_periodicity]
+                gate_values = torch.sigmoid(coeffs[:,int(self.n_out_feats/2):])
+                coeffs = coeffs[:,:int(self.n_out_feats/2)]
 
-            if self.gated:
                 coeffs = coeffs * gate_values
 
                 # due to the gating, we do not shift by the mean (we want the model to help us predict zero values)
@@ -557,6 +604,21 @@ class WriteTorsionParameters(torch.nn.Module):
             if self.cutoff is not None:
                 coeffs = self.cutoff(coeffs)
 
+            if self.only_n2:
+                # add zeros such that coeffs is of shape n_torsions, n_periodicity with only coeffs[1] != 0
+                coeffs = torch.cat([torch.zeros_like(coeffs[:,:1]), coeffs], dim=1)
+                if self.n_periodicity > 2:
+                    coeffs = torch.cat([coeffs, torch.zeros((coeffs.shape[0], self.n_periodicity-2), dtype=coeffs.dtype, device=coeffs.device)], dim=1)
+
         g.nodes[level].data["k"+self.suffix] = coeffs
 
         return g
+    
+
+
+class Exponentiate(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return torch.exp(x)

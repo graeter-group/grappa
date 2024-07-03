@@ -1,6 +1,10 @@
+"""
+How to create a grappa.data.Molecule representation of a simple system and parametrize it with grappa. These steps are handled internally in the gromacs and openmm wrapper.
+"""
+
 #%%
 # Download a model if not present already:
-from grappa.utils.loading_utils import model_from_tag
+from grappa.utils.model_loading_utils import model_from_tag
 
 model = model_from_tag('latest')
 # %%

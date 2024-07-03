@@ -39,7 +39,10 @@ def batch(graphs: List[DGLGraph], deep_copies_of_same_n_atoms:bool=False) -> DGL
         # deep copy the idxs features since we dont want to change them in the original graph
         # copied_graph.ndata['idxs'] = {ntype: copy.deepcopy(graph.ndata['idxs'][ntype].detach().clone()) for ntype in graph.ndata['idxs'].keys()}
         # this does not work unfortunately, thus we deep copy the whole graph:
-        copied_graph = copy.deepcopy(copied_graph)
+
+        # copied_graph = copy.deepcopy(copied_graph)
+        # NOTE: this caused issues in the past
+        
         
         if deep_copies_of_same_n_atoms:
             # If we have the same graph multiple times in the batch, we need to make a deep copy of the whole graph to avoid autograd errors. Thus, create a deep copy if the shape of xyz did already occur (this is not a sufficient but a necessary condition).
@@ -67,6 +70,8 @@ def unbatch(batched_graph: DGLGraph) -> List[DGLGraph]:
     Also deletes all dummy conformations.
     """
     subgraphs = dgl.unbatch(batched_graph)
+    if len(subgraphs) == 1:
+        return subgraphs
     n1_offsets = torch.cumsum(
         torch.tensor([0] + [g.num_nodes('n1') for g in subgraphs[:-1]]), dim=0
     )

@@ -1,11 +1,30 @@
 [build-system]
-requires = ["setuptools"
-]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "grappa"
-version = "1.2.1"
+version = "1.3.0"
+dependencies = [
+    "numpy<=1.26.4",
+    "pandas",
+    "scipy",
+    "pyyaml",
+    "pydantic",
+    "seaborn",
+    "tqdm",
+    "matplotlib",
+    "rdkit",
+    "wandb",
+    "networkx",
+    "charset-normalizer",
+    "hydra-core",
+    "torch",
+    "dgl",
+    "torchdata",
+    "lightning>=2.2.3"
+]
+
 
 [tool.setuptools]
 include-package-data = true
@@ -15,7 +34,5 @@ where=["src"]
 
 
 [project.scripts]
-grappa_eval = "grappa.training.eval_model:grappa_eval"
-grappa_export = "grappa.training.export_model:grappa_export"
-grappa_release = "grappa.training.export_model:grappa_release"
 grappa_gmx = "grappa.wrappers.gromacs_wrapper:main"
+grappa_export = "grappa.training.export_model:grappa_export"

@@ -1,0 +1,15 @@
+numpy<=1.26.4
+pandas
+scipy
+pyyaml
+pydantic
+torchdata
+seaborn
+tqdm
+rdkit==2023.9.1
+matplotlib
+wandb
+lightning>=2.2.3
+networkx
+charset-normalizer
+hydra-core

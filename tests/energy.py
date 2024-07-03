@@ -12,7 +12,7 @@ import wandb
 from grappa.utils.run_utils import get_rundir, load_yaml
 from grappa import utils
 from typing import List, Dict
-from grappa.training.get_dataloaders import get_dataloaders
+from grappa.data.grappa_data import GrappaData
 from grappa.training.lightning_model import LitModel
 from grappa.training.lightning_trainer import get_lightning_trainer
 from grappa.training.config import default_config
@@ -23,8 +23,10 @@ config = default_config()
 
 config['data_config']['datasets'] = [config['data_config']['datasets'][0]]
 
+data_module = GrappaData(**config['data_config'])
+
 # Get the dataloaders
-tr_loader, val_loader, test_loader = get_dataloaders(**config['data_config'])
+tr_loader, val_loader, test_loader = data_module.train_dataloader(), data_module.val_dataloader(), data_module.test_dataloader()
 
 #%%
 

@@ -5,7 +5,7 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )" # dir in which this script lies
 
 source_path="$SCRIPT_DIR/../../../old_data/datasets/PDBDatasets"
-target_path="$SCRIPT_DIR/../../data/grappa_datasets"
+target_path="$SCRIPT_DIR/../../data/datasets"
 
 
 # List of dataset names
@@ -13,7 +13,7 @@ target_path="$SCRIPT_DIR/../../data/grappa_datasets"
 datasets=('radical_dipeptides')
 
 # target_ds_names=('Capped_AA_opt_rad' 'Capped_AA_scan_rad' 'Capped_AA_rad' 'dipeptide_rad')
-target_ds_names=('dipeptide_rad')
+target_ds_names=('dipeptides-radical-300K')
 
 # Define the string for README.md
 # readme_content=(
@@ -22,9 +22,9 @@ target_ds_names=('dipeptide_rad')
 #     'A Dataset of capped amino acids with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
 #     'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
 #     )
-# readme_content=(
-#     'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
-#     )
+readme_content=(
+    'A Dataset of capped dipeptides with a hydrogen detached (and thus being a radical). The states sampled are from MD at 300K using a version of grappa that was trained on scans and opt trajectories of capped radical amino acids as forcefield.'
+    )
 
 # Loop through each dataset name
 for i in "${!datasets[@]}"; do

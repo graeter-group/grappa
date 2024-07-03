@@ -40,19 +40,27 @@ class SymmetrisedTransformer(nn.Module):
     def __init__(self, n_feats, n_heads, hidden_feats, n_layers, out_feats, permutations:Union[np.ndarray, torch.Tensor], layer_norm=True, dropout=0.0, symmetriser_layers=1, symmetriser_hidden_feats=None, permutation_prefactors=None, positional_encoding:Union[np.ndarray, torch.Tensor, bool]=None):
         super().__init__()
 
+        self.n_feats = n_feats
+
+        self.layer_norm = layer_norm
+
+
         if n_layers > 0:
             self.grappa_transformer = GrappaTransformer(n_feats=n_feats, n_heads=n_heads, hidden_feats=hidden_feats, n_layers=n_layers, out_feats=n_feats, permutations=permutations, layer_norm=layer_norm, dropout=dropout, positional_encoding=positional_encoding)
 
             # the transformer 
-            trafo_out_feats = n_feats + self.grappa_transformer.positional_encoding.shape[1] if not self.grappa_transformer.positional_encoding is None else n_feats
+            self.trafo_out_feats = n_feats + self.grappa_transformer.positional_encoding.shape[1] if not self.grappa_transformer.positional_encoding is None else n_feats
 
         else:
             self.grappa_transformer = None
-            trafo_out_feats = n_feats
+            self.trafo_out_feats = n_feats
 
         assert symmetriser_layers >= 1, "symmetriser_layers must be >= 1"
 
-        self.symmetriser = Symmetriser(in_feats=trafo_out_feats, out_feats=out_feats, permutations=permutations, permutation_prefactors=permutation_prefactors, hidden_feats=symmetriser_hidden_feats, n_layers=symmetriser_layers, layer_norm=layer_norm)
+        if layer_norm:
+            self.norm = nn.LayerNorm(self.trafo_out_feats)
+
+        self.symmetriser = Symmetriser(in_feats=self.trafo_out_feats, out_feats=out_feats, permutations=permutations, permutation_prefactors=permutation_prefactors, hidden_feats=symmetriser_hidden_feats, n_layers=symmetriser_layers, layer_norm=layer_norm)
 
 
 
@@ -62,7 +70,14 @@ class SymmetrisedTransformer(nn.Module):
         """
 
         if not self.grappa_transformer is None:
-            x = self.grappa_transformer(x)
+            add_feats = self.trafo_out_feats - self.n_feats
+            if add_feats > 0:
+                x = self.grappa_transformer(x) + torch.cat([x, torch.zeros(x.size(0), x.size(1), add_feats, device=x.device)], dim=-1)
+            else:                
+                x = self.grappa_transformer(x) + x
+
+        if self.layer_norm:
+            x = self.norm(x)
 
         # send x through the symmetriser:
         x = self.symmetriser(x)
@@ -102,10 +117,13 @@ class GrappaTransformer(nn.Module):
     def __init__(self, n_feats, n_heads, hidden_feats, n_layers, out_feats, permutations:Union[np.ndarray, torch.Tensor], layer_norm=True, dropout=0.0, positional_encoding:Union[np.ndarray, torch.Tensor, bool]=None):
         super().__init__()
 
+        assert out_feats == n_feats, f"out_feats != n_feats not implemented. out_feats: {out_feats}, n_feats: {n_feats}"
+
         self.n_layers = n_layers
 
-        self.out_feats = out_feats
         self.n_feats = n_feats
+
+        self.norm = nn.LayerNorm(n_feats)
 
         self.init_positional_encoding(positional_encoding, permutations=permutations)
 
@@ -144,7 +162,7 @@ class GrappaTransformer(nn.Module):
         assert self.n_feats == x.shape[-1], f"n_feats must be {self.n_feats} but is {x.shape[-1]}"
 
         # send x through the transformer:
-        x = self.transformer(x)
+        x = self.transformer(x) + x
 
         assert self.n_feats == x.shape[-1], f"n_feats must be {self.n_feats} but is {x.shape[-1]}"
 

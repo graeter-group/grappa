@@ -6,30 +6,36 @@ import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     
     import openmm
+    from openmm.app import PDBFile
+    from openmm.app import ForceField
     import numpy as np
     from typing import Union, Dict, List
     from pathlib import Path
     import tempfile
     from grappa.constants import get_grappa_units_in_openmm
-    from grappa import units
     from typing import Tuple
     import grappa.data
+    import copy
+    import warnings
+
+    # Define a custom filter to raise the warning only once
+    warnings.simplefilter("once")
 
 
 
-    def get_subtopology(topology:openmm.app.Topology, exclude_residues:List[str]=None)->'openmm.Topology':
+    def get_subtopology(topology:openmm.app.topology.Topology, exclude_residues:List[str]=None)->openmm.app.topology.Topology:
         """
         Returns a sub-topology of the given topology, excluding certain residues with names given in exclude_residues.
         The atom.id of the atoms in the sub-topology is the same as the atom.index in the original topology.
         """
 
-        assert isinstance(topology, openmm.app.Topology), f"Expected openmm.app.Topology, but got {type(topology)}"
+        assert isinstance(topology, openmm.app.topology.Topology), f"Expected openmm.app.topology.Topology, but got {type(topology)}"
 
         if exclude_residues is None:
             return topology
         
         # create a new topology:
-        new_topology = openmm.app.Topology()
+        new_topology = openmm.app.topology.Topology()
 
         new_topol_idx = {} # maps the old atom index to the new atom index
 
@@ -57,7 +63,7 @@ if importlib.util.find_spec('openmm') is not None:
 
     def get_energies(openmm_system: openmm.System, xyz:np.ndarray)->Tuple[np.ndarray, np.ndarray]:
         """
-        Returns enegries, forces. in units kcal/mol and kcal/mol/angstroem
+        Returns energies, forces. in units kcal/mol and kcal/mol/angstroem.
         Assume that xyz is in angstroem and has shape (num_confs, num_atoms, 3).
         """
         import openmm
@@ -88,7 +94,7 @@ if importlib.util.find_spec('openmm') is not None:
         return np.array(energies), np.array(forces)
 
 
-    def remove_forces_from_system(system:openmm.System, remove:Union[List[str], str]=None, keep=None, info=False)->'openmm.System':
+    def remove_forces_from_system(system:openmm.System, remove:Union[List[str], str]=None, keep:List[str]=None, info=False)->openmm.System:
         """
         Modifies the OpenMM system by removing forces according to the 'remove' and 'keep' lists.
         Forces are identified by their class name. E.g. to remove all nonbonded forces, use remove='nonbonded', to only keep nonbonded forces, use keep='nonbonded'.
@@ -109,7 +115,10 @@ if importlib.util.find_spec('openmm') is not None:
         forces_to_remove = []
         for i, force in enumerate(system.getForces()):
             force_name = force.__class__.__name__.lower()
+            assert force_name in ['nonbondedforce', 'harmonicbondforce', 'harmonicangleforce', 'periodictorsionforce', 'cmaptorsionforce', 'custombondforce', 'customangleforce', 'customtorsionforce', 'customnonbondedforce', 'cmmotionremover'], f"Force found in openmm system ({force_name}) that is not implemented in remove_forces_from_system"
             if keep is not None:
+                assert isinstance(keep, list), f"Expected keep to be a list, but got {type(keep)}"
+                assert len(keep) > 0, "Expected keep to be a list of strings, but got an empty list."
                 if not any([k.lower() in force_name for k in keep]):
                     forces_to_remove.append(i)
                     if info:
@@ -127,11 +136,10 @@ if importlib.util.find_spec('openmm') is not None:
         return system
 
 
-    def set_partial_charges(system:openmm.System, partial_charges:Union[list, np.ndarray])->'openmm.System':
+    def set_partial_charges(system:openmm.System, partial_charges:Union[list, np.ndarray])->openmm.System:
         """
         Set partial charges of a system. The charge must be in units of elementary charge.
         """
-        import openmm
 
         # get the nonbonded force (behaves like a reference not a copy!):
         nonbonded_force = None
@@ -156,8 +164,31 @@ if importlib.util.find_spec('openmm') is not None:
 
         return system
 
+    def get_partial_charges(system:openmm.System)->np.ndarray:
+        """
+        Returns the partial charges of the system in units of elementary charge.
+        """
+        # get the nonbonded force (behaves like a reference not a copy!):
+        nonbonded_force = None
+        for force in system.getForces():
+            if isinstance(force, openmm.NonbondedForce):
+                if not nonbonded_force is None:
+                    raise ValueError("More than one nonbonded force found.")
+                nonbonded_force = force
+                
+        if nonbonded_force is None:
+            raise ValueError("No nonbonded force found.")
+        
+        charges = []
+        for i in range(nonbonded_force.getNumParticles()):
+            charge, sigma, epsilon = nonbonded_force.getParticleParameters(i)
+            charges.append(charge.value_in_unit(openmm.unit.elementary_charge))
 
-    def write_to_system(system:openmm.System, parameters:grappa.data.Parameters)->'openmm.System':
+        charges = np.array(charges)
+        return charges
+
+
+    def write_to_system(system:openmm.System, parameters:grappa.data.Parameters)->openmm.System:
         """
         Writes bonded parameters in an openmm system. For interactions that are already present in the system, overwrite the parameters; otherwise add the interaction to the system. The forces, however, must be already present in the system.
         The ids of the atoms, bonds, etc in the parameters object must be the same as the system indices.
@@ -165,7 +196,6 @@ if importlib.util.find_spec('openmm') is not None:
         """
 
         # handle units:
-        import openmm
         from openmm.unit import Quantity
 
         grappa_units = get_grappa_units_in_openmm()
@@ -288,35 +318,33 @@ if importlib.util.find_spec('openmm') is not None:
 
 
 
-    def topology_from_pdb(pdbstring:str)->'openmm.Topology':
+    def topology_from_pdb(pdbstring:str)->openmm.app.topology.Topology:
         """
         Returns an openmm topology from a pdb string in which the lines are separated by '\n'.
         """
-        from openmm.app import PDBFile
-
-        with tempfile.TemporaryDirectory() as tmp:
-            pdbpath = str(Path(tmp)/'pep.pdb')
-            with open(pdbpath, "w") as pdb_file:
-                pdb_file.write(pdbstring)
-            openmm_pdb = PDBFile(pdbpath)
-
-        return openmm_pdb.topology
+        return get_pdb(pdbstring).getTopology()
 
 
-    def get_openmm_forcefield(name:str, *args, **kwargs):
+    def get_openmm_forcefield(name:str, *args, **kwargs)->ForceField:
         """
         The name can be given either with or without .xml ending. Possible names are all openmm forcefield names and:
-        - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP)
+        - charmm36 (capable of parametrizing ACE and NME caps)
+        - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP residue type)
+        - any standard openmm forcefield
         """
-        from openmm.app import ForceField
 
         if name.endswith('.xml'):
             name = name[:-4]
         
-        if name == 'amber99sbildn*' or name == 'amber99sbildn-star':
+        if name in ['charmm36', 'charmm36-jul2022']:
+            warnings.warn("The charmm36 forcefield implemented in grappa for dealing with ACE and NME has a faulty improper contribution. Only use the other contributions.", UserWarning)
+            ff_path = Path(__file__).parent / "classical_forcefields" / Path("charmm36-jul2022.xml")
+            return ForceField(str(ff_path))
+
+        elif name == 'amber99sbildn*' or name == 'amber99sbildn-star':
             from grappa.utils import hyp_dop_utility
 
-            ff_path = Path(__file__).parent / Path("amber99sbildn-star_.xml")
+            ff_path = Path(__file__).parent / "classical_forcefields" / Path("amber99sbildn-star_.xml")
 
             class HypDopOpenmmForceField:
                 """
@@ -338,3 +366,87 @@ if importlib.util.find_spec('openmm') is not None:
 
         else:
             return ForceField(name+'.xml')
+
+
+    def get_nonbonded_contribution(openmm_system:openmm.System, xyz):
+        return get_contribution(openmm_system, xyz, keywords=['nonbonded'])
+
+    def get_bond_contribution(openmm_system:openmm.System, xyz:np.ndarray):
+        return get_contribution(openmm_system, xyz, keywords=['bondforce'])
+
+    def get_angle_contribution(openmm_system:openmm.System, xyz:np.ndarray):
+        return get_contribution(openmm_system, xyz, keywords=['angle'])
+
+    def get_torsion_contribution(openmm_system:openmm.System, xyz:np.ndarray):
+        """
+        This is Proper + Improper contribution!
+        """
+        return get_contribution(openmm_system, xyz, keywords=['torsion'])
+
+
+    def get_contribution(openmm_system:openmm.System, xyz:np.ndarray, force:Union[str,List[str]]=None, keywords:List[str]=[])->Tuple[np.ndarray, np.ndarray]:
+        """
+        Create a deep copy of the openmm system and remove all forces except the force given in the argument. Then calculate the energy and gradient of the states in that system.
+        keywords: if any low(keywords) in force, keep the force.
+        """
+        openmm_system = copy.deepcopy(openmm_system)
+
+        keep = force if force is not None else []
+        keep = [keep] if isinstance(keep, str) else keep
+        assert isinstance(keep, list), f"Expected force to be a list, but got {type(force)}"
+        
+        if keywords is not None:
+            assert isinstance(keywords, list), f"Expected keywords to be a list, but got {type(keywords)}"
+            keep += keywords
+
+        openmm_system = remove_forces_from_system(openmm_system, keep=keep)
+
+        energy, gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
+        gradient = -gradient # the reference gradient is the negative of the force
+
+        return energy, gradient
+
+
+
+    def get_improper_contribution(openmm_system:openmm.System, xyz:np.ndarray, molecule):
+            """
+            Only works if the impropers are given as PeriodicTorsionForce in the openmm system.
+            """
+
+            openmm_system = copy.deepcopy(openmm_system)
+
+            # calculate the contribution from improper torsions in the system:
+            # remove all forces but periodic torsions (we assume that impropers are periodic torsions)
+            openmm_system = remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
+
+            # get a list of sets of improper torsion tuples:
+            improper_set = {tuple(sorted(t)) for t in molecule.impropers}
+
+            # set all ks to zero that are not impropers:
+            for force in openmm_system.getForces():
+                if not isinstance(force, openmm.PeriodicTorsionForce):
+                    raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
+                for i in range(force.getNumTorsions()):
+                    atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
+                    if not tuple(sorted((molecule.atoms[atom1], molecule.atoms[atom2], molecule.atoms[atom3], molecule.atoms[atom4]))) in improper_set:
+                        force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
+
+
+            # get energy and gradient. these are now only sourced from improper torsions.
+            improper_energy, improper_gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
+            improper_gradient = -improper_gradient # the reference gradient is the negative of the force
+
+            return improper_energy, improper_gradient
+    
+
+    def get_pdb(pdb_string:str)->PDBFile:
+        """
+        Returns an openmm PDBFile from a pdb string in which the lines are separated by '\n'.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            pdbpath = str(Path(tmp)/'pep.pdb')
+            with open(pdbpath, "w") as pdb_file:
+                pdb_file.write(pdb_string)
+            openmm_pdb = PDBFile(pdbpath)
+
+        return openmm_pdb
