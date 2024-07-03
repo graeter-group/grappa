@@ -68,10 +68,10 @@ test_confs.save(get_data_path() / 'datasets' / test_tag / '0.npz')
 #%%
 s = """
 Now we can train and evaluate on these datasets by appending these tags to a config file as done in configs/example_dataset.yaml.
-To train on these datasets, run 'python experiments/train.py data=example_dataset' from the root directory.
+To train on the datasets we just created, run 'python experiments/train.py data=example_dataset' from the root directory.
 Stop the training run by pressing ctrl+c.
 Find the checkpoint path at 'ckpt/grappa/baseline/<date>/...'.
-Evaluate it by running 'python experiments/evaluate.py ckpt_path=<path_to_checkpoint>'.
+Evaluate it by running 'python experiments/evaluate.py evaluate.ckpt_path=<path_to_checkpoint>'.
 """
 print(s)
 # %%

@@ -4,12 +4,15 @@ import pandas as pd
 
 csvpath = Path(__file__).parent.parent/'data'/'published_datasets.csv'
 
+REMOVE_EXISTING = True
+
 if not csvpath.exists():
     df = pd.DataFrame(columns=['tag', 'url', 'description'])
 else:
-    df = pd.read_csv(str(csvpath))
+    df = pd.read_csv(str(csvpath)) if not REMOVE_EXISTING else pd.DataFrame(columns=['tag', 'url', 'description'])
+    
 # %%
-base_url = "https://github.com/graeter-group/grappa/releases/download/v.1.2.0/"
+base_url = "https://github.com/graeter-group/grappa/releases/download/v.1.3.0/"
 
 tags = [
     "dipeptides-300K-amber99", 
