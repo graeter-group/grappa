@@ -144,7 +144,8 @@ class Energy(torch.nn.Module):
             contrib, tuple_energies = Energy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion)
             if not contrib is None:
                 if self.gradient_contributions and grad_available():
-                    if contrib.shape[0] > 0:
+                    # condition under which we can calculate the gradient:
+                    if contrib.shape[0] > 0 and not torch.all(contrib==0):
                         grad = torch.autograd.grad(contrib.sum(), g.nodes["n1"].data["xyz"], retain_graph=True, create_graph=True, allow_unused=True)[0]
                     else:
                         grad = torch.zeros_like(g.nodes["n1"].data["xyz"])

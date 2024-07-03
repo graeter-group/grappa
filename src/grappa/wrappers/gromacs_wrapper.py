@@ -3,6 +3,7 @@ from typing import Union
 from pathlib import Path
 import argparse
 import importlib
+import logging
 
 class GromacsGrappa(Grappa):
     """

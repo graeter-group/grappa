@@ -159,8 +159,10 @@ Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_ta
 Available models are listed in `models/published_models.csv`.
 An example can be found at `examples/usage/openmm_wrapper.py`, available tags are listed in `models/published_models.csv`.
 
-For full reproducibility, also the respective partition of the dataset and the configuration file used for training is included in the released checkpoints and can be found at `models/tag/config.yaml` and `models/tag/split.json` after downloading the respective model (see `examples/reproducibility`). For the case of `grappa-1.3`, this is equivalent to running
-
+For full reproducibility, also the respective partition of the dataset and the configuration file used for training is included in the released checkpoints and can be found at `models/tag/config.yaml` and `models/tag/split.json` after downloading the respective model (see `examples/reproducibility`). In the case of `grappa-1.3`, this is equivalent to running
+```{bash}
+python experiments/train.py data=grappa-1.3 model=default experiment=default
+```
 
 ## Datasets
 

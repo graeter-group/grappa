@@ -5,6 +5,7 @@ from typing import List
 from grappa.utils.torch_utils import to_numpy
 from pathlib import Path
 from typing import Union
+import logging
 import copy
 import importlib.util
 from grappa.utils.openmm_utils import OPENMM_WATER_RESIDUES, OPENMM_ION_RESIDUES
