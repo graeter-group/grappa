@@ -89,6 +89,12 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
         if not path in ['nan', '']:
             if Path(path).exists():
                 found_path = Path(path)
+            elif url is not None:
+                logging.warning(f"Dataset {tag} not found at {path} as specified in the dataset_tags.csv file. Deleting the entry from the csv file and downloading again...")
+                df = df[df['tag']!=tag]
+                found_path = Path(data_dir)/tag
+                df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(found_path), 'description': ''}])], ignore_index=True)
+                df.to_csv(csv_path, index=False)
             else:
                 raise FileNotFoundError(f"Dataset {tag} not found at {path}.")
         # try to find data_dir/tag:
@@ -98,7 +104,6 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
 
             df.loc[df['tag']==tag, 'path'] = str(found_path)
             df.to_csv(csv_path, index=False)
-        # if not specified and not found at expected location, download from url:
         else:
             raise FileNotFoundError(f"Dataset {tag} not found at {path}.")
 

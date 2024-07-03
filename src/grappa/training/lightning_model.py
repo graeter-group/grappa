@@ -314,7 +314,7 @@ class GrappaLightningModel(pl.LightningModule):
                 'gradient_mol_idxs': {k:np.array(v) for k,v in self.test_evaluator.gradient_mol_idxs.items()},
             }
 
-            data.update(self.test_evaluator.all_gradient_contributions)
+            data["gradient_contributions"] = self.test_evaluator.all_gradient_contributions
 
             # flatten the dict:
             data = dict(flatten_dict(data))

@@ -99,19 +99,21 @@ def get_gradient_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str
     """
     grad_dict = {contrib: torch.empty((g.num_nodes('n1'),0,3), device=g.nodes['n1'].data['gradient_ref'].device) for contrib in contributions}
     for contrib in contributions:
-        if f"gradient_{contrib}_{suffix}" in g.nodes['n1'].data.keys():
-            grad_dict[contrib] = g.nodes['n1'].data[f"gradient_{contrib}_{suffix}"]
+        if f"gradient{suffix}_{contrib}" in g.nodes['n1'].data.keys():
+            grad_dict[contrib] = g.nodes['n1'].data[f"gradient{suffix}_{contrib}"]
+
+        # some exceptions:
         elif contrib=="nonbonded" and suffix=="":
             # NOTE: grappa doesnt predict its reference contributions, this only works in the vanilla case in which nonbonded is the only reference
             if all([e in g.nodes['n1'].data.keys() for e in [f"gradient_ref", f"gradient_qm"]]):
                 grad_dict[contrib] = (g.nodes['n1'].data[f"gradient_qm"] - g.nodes['n1'].data[f"gradient_ref"])
         elif contrib=="total":
-            if f"gradient_{suffix}" in g.nodes['n1'].data.keys():
-                grad_dict[contrib] = g.nodes['n1'].data[f"gradient_{suffix}"]
+            if f"gradient{suffix}" in g.nodes['n1'].data.keys():
+                grad_dict[contrib] = g.nodes['n1'].data[f"gradient{suffix}"]
+
         elif not skip_err:
-            raise RuntimeError(f"Gradient contribution {contrib} not found in graph.")
+            raise RuntimeError(f"Gradient contribution {contrib} not found as gradient{suffix}_{contrib} in graph. Keys are: {g.nodes['n1'].data.keys()}")
     return grad_dict
-    pass
 
 
 def get_parameter_se(g, suffix1="", suffix2="_ref", l=2):

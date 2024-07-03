@@ -96,14 +96,16 @@ class Energy(torch.nn.Module):
         self.gradient_contributions = gradient_contributions
         self.geom = InternalCoordinates()
         
-        TERM_TO_LEVEL = {
+        self.TERM_TO_LEVEL = {
             "bond": "n2",
             "angle": "n3",
             "proper": "n4",
-            "torsion": "n4",
+            "torsion": "n4", # also allow "torsion" for "proper" for backwards compatibility
             "improper": "n4_improper"
         }
-        self.terms = [TERM_TO_LEVEL[t] for t in terms]
+        self.LEVEL_TO_TERM = {v: k for k, v in self.TERM_TO_LEVEL.items()}
+        self.LEVEL_TO_TERM["n4"] = "proper"
+        self.terms = [self.TERM_TO_LEVEL[t] for t in terms]
 
     def forward(self, g):
         """
@@ -130,6 +132,7 @@ class Energy(torch.nn.Module):
         energy = torch.zeros((num_batch, num_confs), device=g.nodes['n1'].data["xyz"].device)
 
         for term in self.terms:
+            termname = self.LEVEL_TO_TERM[term]
             if not term in g.ntypes:
                 raise ValueError(f"term {term} not in g.ntypes")
 
@@ -139,10 +142,10 @@ class Energy(torch.nn.Module):
             if not contrib is None:
                 if self.gradient_contributions:
                     grad = torch.autograd.grad(contrib.sum(), g.nodes["n1"].data["xyz"], retain_graph=True, create_graph=True, allow_unused=True)[0]
-                    g.nodes["n1"].data["gradient_"+self.write_suffix+term] = grad
+                    g.nodes["n1"].data["gradient_"+self.write_suffix+termname] = grad
                 
                 energy += contrib
-                g.nodes["g"].data["energy_"+self.write_suffix+term] = contrib.detach()
+                g.nodes["g"].data["energy_"+self.write_suffix+termname] = contrib.detach()
                 g.nodes[term].data["energy"+self.write_suffix] = tuple_energies
 
         g.nodes["g"].data["energy"+self.write_suffix] = energy

@@ -17,9 +17,8 @@ from grappa.training.evaluator import eval_ds
 from grappa.training.lightning_model import GrappaLightningModel
 from grappa.utils.training_utils import to_df
 from grappa.utils.run_utils import flatten_dict, unflatten_dict
-from grappa.utils.plotting import make_scatter_plots
+from grappa.utils.plotting import make_scatter_plots, compare_scatter_plots
 from grappa.models import GrappaModel, Energy
-import wandb
 import torch
 import logging
 import json
@@ -27,7 +26,7 @@ import numpy as np
 
 from pathlib import Path
 import wandb
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 from grappa.utils.graph_utils import get_param_statistics
 import copy
 
@@ -251,7 +250,7 @@ class Experiment:
             else:
                 data = np.load(datapath)
                 data = unflatten_dict(data)
-                make_scatter_plots(data, plot_dir=datapath.parent/'plots', ylabel='Grappa')
+                make_scatter_plots(data, plot_dir=datapath.parent/'plots', ylabel='Grappa', xlabel='QM')
 
         
 
@@ -305,9 +304,34 @@ class Experiment:
 
             if plot:
                 data = unflatten_dict(data)
-                make_scatter_plots(data, plot_dir=ff_test_data_path.parent/'plots', ylabel=ff)
+                make_scatter_plots(data, plot_dir=ff_test_data_path.parent/'plots', ylabel=ff.capitalize(), xlabel='QM', contributions=gradient_contributions)
 
 
+    @staticmethod
+    def compare_forcefields(ckpt_path:Path, forcefields:List[Tuple[str,str]], gradient_contributions:List[str]=[]):
+        """
+        Compare two force fields by loading data from npz files that were created during test() or eval_classical().
+        """
+        def get_ff_data(ff):
+            data = np.load(ckpt_path.parent / 'test_data' / ff / 'data.npz') if (ff != '' and ff.lower()!="grappa") else None
+            if data is None:
+                npz_paths = list((Path(ckpt_path).parent/'test_data').glob('*.npz'))
+                assert len(npz_paths) == 1, f"Multiple or no npz files found: {npz_paths}"
+                data = np.load(npz_paths[0])
+            return unflatten_dict(data)
+
+        for ff1, ff2 in forcefields:
+            ff1_data = get_ff_data(ff1)
+            ff2_data = get_ff_data(ff2)
+            if not 'gradient_contributions' in ff1_data.keys() or not 'gradient_contributions' in ff2_data.keys():
+                continue
+
+            if ff1 == '':
+                ff1 = 'grappa'
+            if ff2 == '':
+                ff2 = 'grappa'
+            dirname = f"{ff1}-{ff2}" if (ff1!='' and ff2!='') else f'{ff1}{ff2}'
+            compare_scatter_plots(ff1_data, ff2_data, plot_dir=ckpt_path.parent / 'compare_plots'/dirname, ylabel=ff1.capitalize(), xlabel=ff2.capitalize(), contributions=gradient_contributions)
 
 
     def load_split(self, ckpt_dir:Path=None, ckpt_path:Path=None):

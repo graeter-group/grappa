@@ -5,18 +5,21 @@ ckpt_path: /local/user/seutelf/grappa/ckpt/grappa-1.3/published/2024-06-26_01-30
 n_bootstrap: 1
 test_data_path: null
 accelerator: 'gpu'
-classical_force_fields:
-  # - gaff-2.11
-  - amber99sbildn
-  # - openff-1.2.0
-  # - amber14
-  # - reference_ff
-# datasets: null
-# pure_test_datasets: null
-datasets:
-  - uncapped-300K-amber99
-pure_test_datasets: []
 plot: true
+
+classical_force_fields:
+  - amber99sbildn
+  - gaff-2.11
+  # - amber14
+  # - openff-1.2.0
+  # - reference_ff
+
+datasets: null
+pure_test_datasets: null
+# datasets:
+#   - uncapped-300K-amber99
+# pure_test_datasets: []
+
 gradient_contributions:
 - bond
 - angle
@@ -24,5 +27,10 @@ gradient_contributions:
 - improper
 - nonbonded
 - total
-compare_suffix1: ''
-compare_suffix2: 'amber99sbildn'
+
+compare_forcefields:
+  - ['amber99sbildn', '']
+  - ['gaff-2.11', '']
+  # - ['openff-1.2.0', '']
+  # - ['amber14', '']
+  # - ['reference_ff', '']

@@ -235,7 +235,7 @@ class Evaluator:
                     gradients_ref_classical = get_gradients(g_, suffix=self.suffix_classical_ref).detach().flatten(start_dim=0, end_dim=1).to(self.device)
 
             if len(self.contributions) > 0:
-                gradient_contributions = get_gradient_contributions(g_, contributions=self.contributions, suffix=self.suffix, skip_err=True)
+                gradient_contributions = get_gradient_contributions(g_, contributions=self.contributions, suffix=self.suffix if not self.suffix.endswith('_total') else self.suffix.replace('_total', ''), skip_err=True)
                 gradient_contributions = {k:v.detach().flatten(start_dim=0, end_dim=1).to(self.device) for k,v in gradient_contributions.items()}
                 
 
@@ -340,6 +340,15 @@ class Evaluator:
                 if self.suffix_classical_ref is not None:
                     self.all_ref_classical_energies[dsname] = torch.cat([self.ref_classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
                     self.all_ref_classical_gradients[dsname] = torch.cat([self.ref_classical_gradients[dsname][i] for i in mol_indices[dsname]], dim=0)
+
+            # reshape the contribution dict such that it is [name][contrib]
+            new_dict = {}
+            for dsname in self.energies.keys():
+                new_dict[dsname] = {}
+                for contrib in self.contributions:
+                    if self.all_gradient_contributions[contrib][dsname].shape[0] > 0:
+                        new_dict[dsname][contrib] = self.all_gradient_contributions[contrib][dsname]
+            self.all_gradient_contributions = new_dict
 
 
     def pool(self, n_bootstrap=None, seed=0)->dict:
@@ -467,7 +476,7 @@ def eval_ds(ds, ff_name:str, n_bootstrap:int=None, gradient_contributions:List[s
         'gradient_mol_idxs': {k:np.array(v) for k,v in evaluator.gradient_mol_idxs.items()},
     }
 
-    data.update(evaluator.all_gradient_contributions)
+    data['gradient_contributions'] = evaluator.all_gradient_contributions
 
     # flatten the dict:
     data = dict(flatten_dict(data))
