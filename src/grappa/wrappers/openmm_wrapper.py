@@ -49,6 +49,7 @@ class OpenmmGrappa(Grappa):
         except:
             reference_parameters = None
 
+        logging.info("Predicting parameters...")
         # predict parameters
         parameters = super().predict(molecule)
 
@@ -62,6 +63,7 @@ class OpenmmGrappa(Grappa):
             else:
                 parameters.plot(filename=plot_dir/'grappa_parameters.png')
 
+        logging.info("Writing parameters to system...")
         # write parameters to system
         system = write_to_system(system, parameters)
 
@@ -107,9 +109,13 @@ else:
         grappa = OpenmmGrappa.from_tag(tag, max_element, device)
 
         class GrappaForceField(ForceField):
+            """
+            Wrapper class for the openmm.app.ForceField class that parametrizes the system using the Grappa model.
+            """
             def createSystem(self, topology, **kwargs):
                 system = base_forcefield_.createSystem(topology, **kwargs)
                 grappa.parametrize_system(system, topology, exclude_residues, plot_dir)
                 return system
-            
+        
+
         return GrappaForceField()

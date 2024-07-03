@@ -27,7 +27,7 @@ import numpy as np
 from pathlib import Path
 import wandb
 from typing import List, Dict, Union, Tuple
-from grappa.utils.graph_utils import get_param_statistics
+from grappa.utils.graph_utils import get_param_statistics, get_default_statistics
 import copy
 
 
@@ -47,7 +47,7 @@ class Experiment:
     - progress_bar: bool, whether to show a progress bar
     - checkpointer: dict, lightning checkpointing configuration
     """
-    def __init__(self, config:DictConfig, is_train:bool=False):
+    def __init__(self, config:DictConfig, is_train:bool=False, load_data:bool=True):
         self._cfg = copy.deepcopy(config) # store the config for later use
         self._data_cfg = config.data.data_module
         self._model_cfg = config.model
@@ -68,8 +68,9 @@ class Experiment:
             self._experiment_cfg.checkpointer.dirpath = str(Path(REPO_DIR)/self._experiment_cfg.checkpointer.dirpath)
         self.ckpt_dir = Path(self._experiment_cfg.checkpointer.dirpath)
         
-        self.datamodule = GrappaData(**data_cfg, save_splits=self.ckpt_dir/'split.json' if self.is_train else None)
-        self.datamodule.setup()
+        if load_data:
+            self.datamodule = GrappaData(**data_cfg, save_splits=self.ckpt_dir/'split.json' if self.is_train else None)
+            self.datamodule.setup()
 
         self._init_model()
 
@@ -88,7 +89,8 @@ class Experiment:
         train_cfg = OmegaConf.to_container(self._train_cfg, resolve=True)
 
         # calculate the statistics of the MM parameters in the training set for scaling NN outputs
-        param_statistics = get_param_statistics(self.datamodule.train_dataloader())
+        # (will be stored in the model dict, only important for random initialization)
+        param_statistics = get_param_statistics(self.datamodule.train_dataloader()) if hasattr(self, 'datamodule') else get_default_statistics()
 
         # init the model and append an energy module to it, which implements the MM functional differentiably
         model = torch.nn.Sequential(
@@ -342,6 +344,6 @@ class Experiment:
         load_path = ckpt_dir / 'split.json' if ckpt_dir is not None else ckpt_path.parent / 'split.json'
         data_cfg = self._data_cfg
         data_cfg.splitpath = str(load_path)
-        data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since its unseen)
+        data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
         self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
         self.datamodule.setup()

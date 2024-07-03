@@ -45,9 +45,9 @@ def main(cfg: DictConfig) -> None:
         cfg.compare_forcefields = []
     OmegaConf.set_struct(cfg, True)
 
-    experiment = Experiment(config=ckpt_cfg)
+    experiment = Experiment(config=ckpt_cfg, load_data=False)
     experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.n_bootstrap, test_data_path=cfg.test_data_path, load_split=True, plot=cfg.plot, gradient_contributions=cfg.gradient_contributions)
-    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.classical_force_fields, test_data_path=cfg.test_data_path, load_split=True, n_bootstrap=cfg.n_bootstrap, plot=cfg.plot, gradient_contributions=cfg.gradient_contributions)
+    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.classical_force_fields, test_data_path=cfg.test_data_path, load_split=False, n_bootstrap=cfg.n_bootstrap, plot=cfg.plot, gradient_contributions=cfg.gradient_contributions)
     experiment.compare_forcefields(ckpt_path=ckpt_path, forcefields=cfg.compare_forcefields, gradient_contributions=cfg.gradient_contributions)
 
 if __name__ == "__main__":

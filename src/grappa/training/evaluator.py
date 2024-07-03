@@ -346,7 +346,7 @@ class Evaluator:
             for dsname in self.energies.keys():
                 new_dict[dsname] = {}
                 for contrib in self.contributions:
-                    if self.all_gradient_contributions[contrib][dsname].shape[0] > 0:
+                    if dsname in self.all_gradient_contributions[contrib].keys() and self.all_gradient_contributions[contrib][dsname].shape[0] > 0:
                         new_dict[dsname][contrib] = self.all_gradient_contributions[contrib][dsname]
             self.all_gradient_contributions = new_dict
 

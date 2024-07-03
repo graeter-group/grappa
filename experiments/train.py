@@ -14,7 +14,7 @@ def main(cfg: DictConfig) -> None:
 
     experiment = Experiment(config=cfg, is_train=True)
     experiment.train()
-    experiment.test(n_bootstrap=cfg.experiment.evaluation.n_bootstrap)
+    experiment.test(n_bootstrap=cfg.experiment.evaluation.n_bootstrap, load_split=False)
 
 
 if __name__ == "__main__":

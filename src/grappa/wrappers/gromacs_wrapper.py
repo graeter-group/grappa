@@ -51,6 +51,7 @@ class GromacsGrappa(Grappa):
         topology.needs_parameterization = True
         
         ## write top file
+        logging.info(f"Writing topology with grappa parameters to {top_outpath}")
         write_top(topology.to_dict(), top_outpath)
         
         return

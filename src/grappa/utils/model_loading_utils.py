@@ -9,6 +9,8 @@ from grappa.utils.data_utils import get_repo_dir, download_zipped_dir
 from grappa.utils.training_utils import get_model_from_path
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 def get_model_dir():
     return get_repo_dir() / 'models'
 

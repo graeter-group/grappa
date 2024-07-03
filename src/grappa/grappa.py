@@ -9,7 +9,8 @@ from grappa.data import Molecule, Parameters
 from grappa.utils.model_loading_utils import model_from_tag
 from grappa.models.grappa import GrappaModel
 from grappa.utils.dgl_utils import check_disconnected_graphs
-
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class Grappa:
     """
@@ -20,16 +21,16 @@ class Grappa:
         self.model.eval()
         self.max_element = max_element
         self.device = device
-        self.field_of_view = model.field_of_view    
+        self.field_of_view = model.field_of_view
 
     @classmethod
     def from_tag(cls, tag:str='latest', max_element=constants.MAX_ELEMENT, device:str='cpu') -> 'Grappa':
         """
         Load a model from a tag. Available tags are:
             - 'latest'
-            - 'grappa-1.1'
-            - 'grappa-1.2'
+            - 'grappa-1.3'
         """
+        logging.info(f"Initializing model with tag {tag}...")
         model = model_from_tag(tag)
         return cls(model, max_element, device)
 
