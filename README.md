@@ -90,6 +90,7 @@ from grappa import as_openmm
 topology = ... # load your system as openmm.Topology
 
 grappa_ff = as_openmm('grappa-1.3', base_forcefield=['amber99sbildn.xml', 'tip3p.xml'])
+assert isinstance(grappa_ff, ForceField)
 
 system = grappa_ff.createSystem(topology)
 ```

@@ -107,8 +107,6 @@ else:
 
         # now build a class in which the createSystem function creates a system using the base_forcefield and then parametrizes it using the grappa model.
 
-        grappa = OpenmmGrappa.from_tag(tag, max_element, device)
-
         class GrappaForceField(ForceField):
             """
             Wrapper class for the openmm.app.ForceField class that parametrizes the system using the Grappa model.
