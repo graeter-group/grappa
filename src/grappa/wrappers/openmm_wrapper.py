@@ -1,10 +1,11 @@
 from grappa.grappa import Grappa
 from grappa.data import Molecule, Parameters
 from grappa import constants
+from grappa.constants import Deprecated
 from typing import List
-from grappa.utils.torch_utils import to_numpy
 from pathlib import Path
 from typing import Union
+import warnings
 import logging
 import copy
 import importlib.util
@@ -31,12 +32,16 @@ class OpenmmGrappa(Grappa):
         """
         return super().from_tag(tag, max_element, device)
     
-    def parametrize_system(self, system:"openmm.System", topology:"openmm.app.Topology", exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES, plot_dir:Union[Path,str]=None):
+    def parametrize_system(self, system:"openmm.System", topology:"openmm.app.Topology", exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES, plot_dir:Union[Path,str]=None, charge_model:Deprecated=None):
         """
         Predicts parameters for the system and writes them to the system.
         system: openmm.System
         topology: openmm.app.Topology
         """
+
+        if not charge_model is None:
+            warnings.warn("The charge_model argument for OpenmmGrappa.parametrize_system is deprecated, has no effect and will be removed in the future.", DeprecationWarning)
+
         # convert openmm_topology (and system due to partial charges and impropers) to a Molecule
 
         # create a sub topology excluding certain residue names (e.g. water, ions)

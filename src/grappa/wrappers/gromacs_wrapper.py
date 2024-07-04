@@ -4,6 +4,8 @@ from pathlib import Path
 import argparse
 import importlib
 import logging
+import warnings
+from grappa.constants import Deprecated
 
 class GromacsGrappa(Grappa):
     """
@@ -21,7 +23,7 @@ class GromacsGrappa(Grappa):
         assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
         return super().__init__(*args, **kwargs)
 
-    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, plot_parameters:bool=False):
+    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, plot_parameters:bool=False, charge_model:Deprecated=None):
         """
         Creates a .top file with the grappa-predicted parameters for the topology
 
@@ -31,6 +33,9 @@ class GromacsGrappa(Grappa):
             plot_parameters (bool, optional): Defaults to False. If True, a plot of the parameters is created and saved in the same directory as the output file.
         """
         assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
+
+        if not charge_model is None:
+            warnings.warn("The charge_model argument for GromacsGrappa.parametrize is deprecated, has no effect and will be removed in the future.", DeprecationWarning)
         
         if not top_outpath:
             top_outpath = Path(top_path).with_stem(Path(top_path).stem + "_grappa")

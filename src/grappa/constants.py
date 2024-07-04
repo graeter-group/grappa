@@ -1,7 +1,7 @@
 '''
 Defines things that are constant across the whole package.
 '''
-
+from typing import NewType
 from grappa import units
 
 
@@ -48,6 +48,7 @@ CHARGE_MODELS = ['am1BCC', 'amber99', 'charmm', '', 'None']
 BONDED_CONTRIBUTIONS = [("n2","k"), ("n2","eq"), ("n3","k"), ("n3","eq"), ("n4","k"), ("n4_improper","k")]
 
 
+Deprecated = NewType('Deprecated', object)
 
 
 # creation: see tests/misc/masses.py

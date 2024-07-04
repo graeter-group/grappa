@@ -83,9 +83,17 @@ fig.show()
 from grappa.data import Parameters, Molecule
 
 mol = Molecule.from_openmm_system(system_grappa_tab, topology)
-params_amber = Parameters.from_openmm_system(system_amber, mol)
 
 params_grappa_tab = Parameters.from_openmm_system(system_grappa_tab, mol)
+#%%
+proper_ks = params_grappa_tab.proper_ks
+print(proper_ks.min(axis=0))
+print(proper_ks.max(axis=0))
+print(proper_ks.mean(axis=0))
+print(proper_ks.std(axis=0))
+h = plt.hist(proper_ks[:,1], bins=100)
+plt.yscale('log')
 # %%
-params_grappa_tab.compare_with(params_amber, filename=thisdir/'parameter_comparison_tab_amber.png', xlabel='Grappa', ylabel='Amber')
+params_amber = Parameters.from_openmm_system(system_amber, mol)
+params_grappa_tab.compare_with(params_amber, filename=thisdir/'parameter_comparison_tab_amber.png', xlabel='Grappa tab', ylabel='Amber')
 # %%
