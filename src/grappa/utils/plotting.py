@@ -138,6 +138,7 @@ def calculate_density_scatter(x, y, delta_factor=100, seed=0):
 
         # Find points within the distance delta
         within_delta = distances < delta
+        within_delta = within_delta | (distances == 0)
 
         # Count the number of points within delta
         frequency = np.sum(within_delta)

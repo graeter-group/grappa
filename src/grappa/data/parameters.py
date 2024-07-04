@@ -788,10 +788,10 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
     # Set labels with units
     axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]")
     axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]")
-    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]")
+    axes[2].set_title(f"Torsion k (n=1) [{UNITS['proper_ks']}]")
     axes[3].set_title(f"Bond k [{UNITS['bond_k']}]")
     axes[4].set_title(f"Angle k [{UNITS['angle_k']}]")
-    axes[5].set_title(f"Torsion k_1-{n_periodicity} [{UNITS['proper_ks']}]")
+    axes[5].set_title(f"Torsion k (n=2-{n_periodicity}) [{UNITS['proper_ks']}]")
 
     plt.tight_layout(pad=1.0)
     if title is not None:
@@ -884,10 +884,10 @@ def plot_parameters(parameters:List[Parameters], title=None, figsize=5, compare_
     # Set labels with units
     axes[0].set_title(f"Bond eq. [{UNITS['bond_eq']}]")
     axes[1].set_title(f"Angle eq. [{UNITS['angle_eq']}]")
-    axes[2].set_title(f"Torsion k_0 [{UNITS['proper_ks']}]")
+    axes[2].set_title(f"Torsion k (n=1) [{UNITS['proper_ks']}]")
     axes[3].set_title(f"Bond k [{UNITS['bond_k']}]")
     axes[4].set_title(f"Angle k [{UNITS['angle_k']}]")
-    axes[5].set_title(f"Torsion k_1-{n_periodicity-1} [{UNITS['proper_ks']}]")
+    axes[5].set_title(f"Torsion k (n=1-{n_periodicity}) [{UNITS['proper_ks']}]")
 
     plt.tight_layout(pad=3.0)
 
