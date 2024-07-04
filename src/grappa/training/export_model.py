@@ -129,8 +129,8 @@ def _upload_datasets(release_tag:str, dstags:List[str]):
 
         # upload to release:
         logging.info(f"Uploading {zippath} to release {release_tag}...")
-        # os.system(f"gh release upload {release_tag} {str(Path(zippath).absolute())}")
-        # os.remove(zippath)
+        os.system(f"gh release upload {release_tag} {str(Path(zippath).absolute())}")
+        os.remove(zippath)
 
 
 def upload_datasets():
