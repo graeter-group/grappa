@@ -136,11 +136,11 @@ conda install -c conda-forge openmm
 Since the resolution of packages can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
 
 
-### Development
+### CUDA Installation
 
 To facilitate the interface to OpenMM and GROMACS, Grappa has an optional dependency on [OpenMM](https://github.com/openmm/openmm) and [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which is used to create custom GROMACS topology files. To train and evaluate Grappa on existing datasets, neither of these packages are needed.
 
-In this case, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice is needed. In this environment, Grappa can be installed by
+In this case, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice is needed, instructions can be found at `installation/README.md`. In this environment, Grappa can be installed by
 
 ```{bash}
 pip install -r installation/requirements.txt

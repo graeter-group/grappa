@@ -6,6 +6,7 @@ import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     
     import openmm
+    from grappa.utils import get_repo_dir
     from openmm.app import PDBFile
     from openmm.app import ForceField
     import numpy as np
@@ -338,13 +339,13 @@ if importlib.util.find_spec('openmm') is not None:
         
         if name in ['charmm36', 'charmm36-jul2022']:
             warnings.warn("The charmm36 forcefield implemented in grappa for dealing with ACE and NME has a faulty improper contribution. Only use the other contributions.", UserWarning)
-            ff_path = Path(__file__).parent / "classical_forcefields" / Path("charmm36-jul2022.xml")
+            ff_path = get_repo_dir() / "src" / "grappa" / "utils" / "classical_forcefields" / "charmm36-jul2022.xml"
             return ForceField(str(ff_path))
 
         elif name == 'amber99sbildn*' or name == 'amber99sbildn-star':
             from grappa.utils import hyp_dop_utility
 
-            ff_path = Path(__file__).parent / "classical_forcefields" / Path("amber99sbildn-star_.xml")
+            ff_path = get_repo_dir() / "src" / "grappa" / "utils" / "classical_forcefields" / "amber99sbildn-star_.xml"
 
             class HypDopOpenmmForceField:
                 """

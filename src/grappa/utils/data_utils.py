@@ -9,6 +9,7 @@ import logging
 import pandas as pd
 import numpy as np
 import shutil
+import pkg_resources
 
 def get_data_csv_path()->Path:
     '''
@@ -16,11 +17,16 @@ def get_data_csv_path()->Path:
     '''
     return get_repo_dir() / "data" / "dataset_tags.csv"
 
-def get_repo_dir()->Path:
+def get_repo_dir() -> Path:
     '''
     Returns the path to the root of the repository.
     '''
-    return Path(__file__).parents[3]
+    try:
+        # If the package is installed
+        return Path(pkg_resources.resource_filename(__name__, '')).resolve().parents[2]
+    except ModuleNotFoundError:
+        # If the package is not installed (development mode)
+        return Path(__file__).resolve().parents[3]
 
 def get_data_path()->Path:
     '''
