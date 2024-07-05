@@ -315,6 +315,7 @@ class GrappaLightningModel(pl.LightningModule):
             }
 
             data["gradient_contributions"] = self.test_evaluator.all_gradient_contributions
+            data["energy_contributions"] = self.test_evaluator.all_energy_contributions
 
             # flatten the dict:
             data = dict(flatten_dict(data))

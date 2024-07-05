@@ -9,10 +9,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from grappa.utils.plotting import scatter_plot
 from openmm.app import ForceField
+from typing import List, Tuple
 
 this_dir = Path(__file__).parent
 
-def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot_only:bool=False, ff_name:str='new', old_ff_name:str='old', crmse_limit:float=15., n_max:int=None, skip_if_exists:bool=False):
+def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot_only:bool=False, ff_name:str='new', old_ff_name:str='old', crmse_limit:float=15., n_max:int=None, skip_if_exists:bool=False, other_ffs:List[Tuple[ForceField,str]]=[]):
     """
     Reparametrize the dataset dspath/*.npz using the force field force_field.
     """
@@ -37,6 +38,19 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot
             system = forcefield.createSystem(topology)
 
             new_moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=topology, xyz=old_moldata.xyz, gradient=old_moldata.gradient, energy=old_moldata.energy, mol_id=old_moldata.mol_id, pdb=old_moldata.pdb, sequence=old_moldata.sequence, allow_nan_params=True, ff_name=ff_name, smiles=old_moldata.smiles, mapped_smiles=old_moldata.mapped_smiles)
+
+            new_moldata.ff_gradient[old_ff_name] = old_moldata.ff_gradient[old_ff_name]
+            new_moldata.ff_energy[old_ff_name] = old_moldata.ff_energy[old_ff_name]
+
+            for other_ff, other_ff_name in other_ffs:
+                # calc contributions for other forcefield:
+                other_system = other_ff.createSystem(topology)
+                other_moldata = MolData.from_openmm_system(openmm_system=other_system, openmm_topology=topology, xyz=old_moldata.xyz, gradient=old_moldata.gradient, energy=old_moldata.energy, mol_id=old_moldata.mol_id, pdb=old_moldata.pdb, sequence=old_moldata.sequence, allow_nan_params=True, ff_name=other_ff_name, smiles=old_moldata.smiles, mapped_smiles=old_moldata.mapped_smiles)
+
+                # write to new_moldata:
+                new_moldata.ff_gradient[other_ff_name] = other_moldata.ff_gradient[other_ff_name]
+                new_moldata.ff_energy[other_ff_name] = other_moldata.ff_energy[other_ff_name]
+                
 
             openmm_gradients = new_moldata.ff_gradient[ff_name]["total"]
             gradient = new_moldata.gradient
@@ -84,17 +98,19 @@ from grappa import as_openmm
 
 grappa_full = as_openmm('grappa-1.3')
 
-orig_ds = get_moldata_path('dipeptides-300K-amber99')
+orig_ds_path = get_moldata_path('dipeptides-300K-amber99')
 
-grappa_full_ds = orig_ds.parent/'dipeptides-300K-grappa'
+grappa_full_ds = orig_ds_path.parent/'dipeptides-300K-grappa-1.3'
 
-reparametrize_dataset(orig_ds, grappa_full_ds, grappa_full, ff_name='Grappa', old_ff_name='amber99sbildn', n_max=10)
+grappa_tabulated = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_ff19SB_trimers.xml')
+
+reparametrize_dataset(orig_ds_path, grappa_full_ds, grappa_full, ff_name='grappa-1.3', old_ff_name='amber99sbildn', n_max=None, other_ffs=[(grappa_tabulated, 'grappa-1.3-tabulated')])
 # %%
-# now, parametrize the system with another forcefield and compare to grappa:
+# # now, parametrize the system with another forcefield and compare to grappa:
 
-new_ff = ForceField('amber99sbildn.xml')
+# new_ff = ForceField('amber99sbildn.xml')
 
-new_ds_path = orig_ds.parent/'dipeptides-300K-new_ff'
+# new_ds_path = orig_ds.parent/'dipeptides-300K-new_ff'
 
-reparametrize_dataset(grappa_full_ds, new_ds_path, new_ff, ff_name='new_ff', old_ff_name='Grappa', n_max=10)
-# %%
+# reparametrize_dataset(grappa_full_ds, new_ds_path, new_ff, ff_name='new_ff', old_ff_name='Grappa', n_max=10)
+# # %%

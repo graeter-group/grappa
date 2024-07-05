@@ -20,19 +20,19 @@ topology = pdbfile.topology # load your system as openmm.Topology
 tip_3p_path = get_repo_dir()/'src/grappa/utils/classical_forcefields/tip3p_standard.xml'
 tip_3p_path = str(tip_3p_path)
 
-# classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
-classical_ff = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_ff99SB.xml', tip_3p_path)
+# grappa_tab_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+grappa_tab_ff = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_ff99SB.xml', tip_3p_path)
 # solvate:
 
 modeller = Modeller(topology, pdbfile.positions)
 modeller.deleteWater()
-# modeller.addHydrogens(classical_ff)
-# modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
+# modeller.addHydrogens(grappa_tab_ff)
+# modeller.addSolvent(grappa_tab_ff, model='tip3p', padding=1.0*unit.nanometers)
 
 topology = modeller.getTopology()
 positions = modeller.getPositions()
 
-system_grappa_tab = classical_ff.createSystem(topology)
+system_grappa_tab = grappa_tab_ff.createSystem(topology)
 ##########################
 
 #%%
@@ -86,14 +86,36 @@ mol = Molecule.from_openmm_system(system_grappa_tab, topology)
 
 params_grappa_tab = Parameters.from_openmm_system(system_grappa_tab, mol)
 #%%
-proper_ks = params_grappa_tab.proper_ks
-print(proper_ks.min(axis=0))
-print(proper_ks.max(axis=0))
-print(proper_ks.mean(axis=0))
-print(proper_ks.std(axis=0))
-h = plt.hist(proper_ks[:,1], bins=100)
-plt.yscale('log')
+def k_hist(params, name=''):
+    proper_ks = params.proper_ks
+
+    # print(proper_ks.min(axis=0))
+    # print(proper_ks.max(axis=0))
+    # print(proper_ks.mean(axis=0))
+    # print(proper_ks.std(axis=0))
+
+    h = plt.hist(proper_ks[:,0], bins=100)
+    plt.title(f'{name} Proper k n=1')
+    plt.yscale('log')
+    plt.savefig(str(thisdir/f'{name}_proper_k_1.png'))
+    plt.show()
+
+    h = plt.hist(proper_ks[:,1], bins=100)
+    plt.title(f'{name} Proper k n=2')
+    plt.yscale('log')
+    plt.savefig(str(thisdir/f'{name}_proper_k_2.png'))
+    plt.show()
+
+    h = plt.hist(proper_ks[:,2], bins=100)
+    plt.title(f'{name} Proper k n=3')
+    plt.yscale('log')	
+    plt.savefig(str(thisdir/f'{name}_proper_k_3.png'))
+    plt.show()
+
+k_hist(params_grappa_tab, name='grappa_tab')
+
 # %%
-params_amber = Parameters.from_openmm_system(system_amber, mol)
-params_grappa_tab.compare_with(params_amber, filename=thisdir/'parameter_comparison_tab_amber.png', xlabel='Grappa tab', ylabel='Amber')
+params_grappa = Parameters.from_openmm_system(system_grappa, mol)
+k_hist(params_grappa, name='grappa')
+params_grappa_tab.compare_with(params_grappa, filename=thisdir/'parameter_comparison_tab_grappa.png', xlabel='Grappa tab', ylabel='grappa')
 # %%

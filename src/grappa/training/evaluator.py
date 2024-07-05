@@ -1,6 +1,6 @@
 from grappa.utils.torch_utils import mean_absolute_error, root_mean_squared_error, invariant_mae, invariant_rmse
 import numpy as np
-from grappa.utils.graph_utils import get_energies, get_gradients, get_gradient_contributions
+from grappa.utils.graph_utils import get_energies, get_gradients, get_gradient_contributions, get_energy_contributions
 from grappa.utils import dgl_utils
 from typing import List
 import torch
@@ -194,6 +194,7 @@ class Evaluator:
         self.reference_gradients = {}
 
         self.gradient_contributions = {contrib:{} for contrib in self.contributions}
+        self.energy_contributions = {contrib:{} for contrib in self.contributions}
 
         if self.log_classical_values:
             self.classical_energies = {}
@@ -237,7 +238,8 @@ class Evaluator:
             if len(self.contributions) > 0:
                 gradient_contributions = get_gradient_contributions(g_, contributions=self.contributions, suffix=self.suffix if not self.suffix.endswith('_total') else self.suffix.replace('_total', ''), skip_err=True)
                 gradient_contributions = {k:v.detach().flatten(start_dim=0, end_dim=1).to(self.device) for k,v in gradient_contributions.items()}
-                
+                energy_contributions = get_energy_contributions(g_, contributions=self.contributions, suffix=self.suffix if not self.suffix.endswith('_total') else self.suffix.replace('_total', ''), skip_err=True, center=True)
+                energy_contributions = {k:v.detach().flatten().to(self.device) for k,v in energy_contributions.items()}
 
             # store everything:
             self.energies.setdefault(dsname, []).append(energies)
@@ -248,6 +250,7 @@ class Evaluator:
 
             for contrib in self.contributions:
                 self.gradient_contributions[contrib].setdefault(dsname, []).append(gradient_contributions[contrib])
+                self.energy_contributions[contrib].setdefault(dsname, []).append(energy_contributions[contrib])
 
             if self.log_classical_values:
                 self.classical_energies.setdefault(dsname, []).append(energies_classical)
@@ -298,6 +301,7 @@ class Evaluator:
         self.all_reference_gradients = {}
 
         self.all_gradient_contributions = {contrib:{} for contrib in self.contributions}
+        self.all_energy_contributions = {contrib:{} for contrib in self.contributions}
 
         # stores the start indexes of each mol for unconcatenating the data for each molecule in the sense that energies = [all_energies[dsname][mol_idxs[dsname][i]:mol_idxs[dsname][i+1]] for i in range(len(mol_idxs[dsname])-1)] + [all_energies[dsname][mol_idxs[dsname][-1]:]]
         self.energy_mol_idxs = {}
@@ -332,6 +336,7 @@ class Evaluator:
             if len(self.contributions) > 0:
                 for contrib in self.contributions:
                     self.all_gradient_contributions[contrib][dsname] = torch.cat([self.gradient_contributions[contrib][dsname][i] for i in mol_indices[dsname]], dim=0)
+                    self.all_energy_contributions[contrib][dsname] = torch.cat([self.energy_contributions[contrib][dsname][i] for i in mol_indices[dsname]], dim=0)
 
             if self.log_classical_values:
                 self.all_classical_energies[dsname] = torch.cat([self.classical_energies[dsname][i] for i in mol_indices[dsname]], dim=0)
@@ -349,6 +354,14 @@ class Evaluator:
                 if dsname in self.all_gradient_contributions[contrib].keys() and self.all_gradient_contributions[contrib][dsname].shape[0] > 0:
                     new_dict[dsname][contrib] = self.all_gradient_contributions[contrib][dsname]
         self.all_gradient_contributions = new_dict
+
+        new_dict = {}
+        for dsname in self.energies.keys():
+            new_dict[dsname] = {}
+            for contrib in self.contributions:
+                if dsname in self.all_energy_contributions[contrib].keys() and self.all_energy_contributions[contrib][dsname].shape[0] > 0:
+                    new_dict[dsname][contrib] = self.all_energy_contributions[contrib][dsname]
+        self.all_energy_contributions = new_dict
 
 
     def pool(self, n_bootstrap=None, seed=0)->dict:
@@ -477,6 +490,7 @@ def eval_ds(ds, ff_name:str, n_bootstrap:int=None, gradient_contributions:List[s
     }
 
     data['gradient_contributions'] = evaluator.all_gradient_contributions
+    data['energy_contributions'] = evaluator.all_energy_contributions
 
     # flatten the dict:
     data = dict(flatten_dict(data))

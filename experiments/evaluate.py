@@ -44,10 +44,14 @@ def main(cfg: DictConfig) -> None:
     if not hasattr(cfg.evaluate,'compare_forcefields') or cfg.evaluate.compare_forcefields is None:
         cfg.evaluate.compare_forcefields = []
     OmegaConf.set_struct(cfg, True)
+    if hasattr(cfg.evaluate,'ff_lookup') and cfg.evaluate.ff_lookup is not None and len(cfg.evaluate.ff_lookup.keys()) > 0:
+        # load the forcefield lookup:
+        ckpt_cfg.data.data_module.ff_lookup.update(cfg.evaluate.ff_lookup)
 
     experiment = Experiment(config=ckpt_cfg, load_data=False)
-    experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=True, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions)
-    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.evaluate.classical_force_fields, test_data_path=cfg.evaluate.test_data_path, load_split=False, n_bootstrap=cfg.evaluate.n_bootstrap, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions)
+    if cfg.evaluate.eval_model:
+        experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=True, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions)
+    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.evaluate.classical_force_fields, test_data_path=cfg.evaluate.test_data_path, load_split=not cfg.evaluate.eval_model, n_bootstrap=cfg.evaluate.n_bootstrap, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions)
     experiment.compare_forcefields(ckpt_path=ckpt_path, forcefields=cfg.evaluate.compare_forcefields, gradient_contributions=cfg.evaluate.gradient_contributions)
 
 if __name__ == "__main__":

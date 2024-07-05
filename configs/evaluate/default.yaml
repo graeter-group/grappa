@@ -11,6 +11,7 @@ classical_force_fields: []
 
 datasets: null
 pure_test_datasets: []
+ff_lookup: {}
 
 gradient_contributions:
 - bond
@@ -21,3 +22,5 @@ gradient_contributions:
 - total
 
 compare_forcefields: []
+
+eval_model: true

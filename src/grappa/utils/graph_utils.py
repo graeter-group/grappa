@@ -116,6 +116,33 @@ def get_gradient_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str
     return grad_dict
 
 
+def get_energy_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str]=['bond', 'angle', 'proper', 'improper', 'nonbonded', 'total'], skip_err=False, center=True)->Dict[str,torch.Tensor]:
+    """
+    Get the energy contributions from different MM terms stored in a graph. The shape is (n_confs) for each contribution.
+    """
+    en_dict = {contrib: torch.empty((0), device=g.nodes['g'].data['energy_ref'].device) for contrib in contributions}
+    for contrib in contributions:
+        if f"energy{suffix}_{contrib}" in g.nodes['g'].data.keys():
+            en_dict[contrib] = g.nodes['g'].data[f"energy{suffix}_{contrib}"]
+
+        # some exceptions:
+        elif contrib=="nonbonded" and suffix=="":
+            # NOTE: grappa doesnt predict its reference contributions, this only works in the vanilla case in which nonbonded is the only reference
+            if all([e in g.nodes['g'].data.keys() for e in [f"energy_ref", f"energy_qm"]]):
+                en_dict[contrib] = (g.nodes['g'].data[f"energy_qm"] - g.nodes['g'].data[f"energy_ref"])
+        elif contrib=="total":
+            if f"energy{suffix}" in g.nodes['g'].data.keys():
+                en_dict[contrib] = g.nodes['g'].data[f"energy{suffix}"]
+
+        elif not skip_err:
+            raise RuntimeError(f"Energy contribution {contrib} not found as energy{suffix}_{contrib} in graph. Keys are: {g.nodes['g'].data.keys()}")
+    if center:
+        for contrib in contributions:
+            en_dict[contrib] = en_dict[contrib] - en_dict[contrib].mean(dim=1, keepdim=True)
+
+    return en_dict
+
+
 def get_parameter_se(g, suffix1="", suffix2="_ref", l=2):
     """
     Get a tensor of squared errors, summed over the atoms of the subgraphs that were used for batching. The shape thus is (n_batch).

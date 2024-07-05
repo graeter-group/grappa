@@ -1,6 +1,5 @@
 #%%
 print("Testing installation...")
-print("Downloading a dataset to grappa/data/dgl_datasets and a pretrained model to grappa/models.")
 
 from grappa.data import Dataset
 from grappa.utils.model_loading_utils import model_from_tag
@@ -9,7 +8,7 @@ import torch
 import copy
 #%%
 ds = Dataset.from_tag('spice-dipeptide')
-model = model_from_tag('grappa-1.1').eval()
+model = model_from_tag('grappa-1.3').eval()
 model = torch.nn.Sequential(model, Energy())
 
 #%%

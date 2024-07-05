@@ -347,9 +347,48 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
                 ax.set_title(f"Atomic Forces per Contribution")
 
                 # add some padding:
-                plt.savefig(ds_dir/"contributions.png", dpi=dpi)
+                plt.savefig(ds_dir/"force_contributions.png", dpi=dpi)
                 plt.close()
 
+
+        # ABS CONTRIBUTION VIOLIN PLOTS
+        skip = False
+        if 'energy_contributions' not in ff_data or dsname not in ff_data['energy_contributions']:
+            skip = True
+        if not skip:
+            contrib_dict = ff_data['energy_contributions'][dsname]
+            if len(list(contrib_dict.keys())) == 0:
+                skip = True
+            if not skip:
+                ds_dir = plot_dir / dsname
+                ds_dir.mkdir(parents=True, exist_ok=True)
+                contribs_present = [c for c in contributions if c in contrib_dict.keys()]
+
+                num_contribs = len(contribs_present)
+
+                fig, ax = plt.subplots(figsize=(figsize/4*num_contribs, figsize))
+
+                all_norms = []
+                labels = []
+                for contrib_name in contribs_present:
+                    contrib = contrib_dict[contrib_name]
+                    norm = np.sqrt((contrib**2).sum(axis=-1))
+                    norm = remove_percentile(norm, 99)
+                    all_norms.append(norm)
+                    labels.append(contrib_name.capitalize())
+
+                # Create the violin plot
+                parts = ax.violinplot(all_norms, showmeans=True, showextrema=True, points=1000, bw_method=0.05)
+
+                # Set x-axis labels
+                ax.set_xticks(np.arange(1, len(labels) + 1))
+                ax.set_xticklabels(labels)
+                ax.set_ylabel("Energy [kcal/mol]")
+                ax.set_title(f"Energy per Contribution")
+
+                # add some padding:
+                plt.savefig(ds_dir/"energy_contributions.png", dpi=dpi)
+                plt.close()
 
 
 def compare_scatter_plots(ff_data_1, ff_data_2, plot_dir=Path.cwd(), ylabel="Prediction 2", xlabel="Prediction 1", logscale:bool=True, ax_symmetric:Tuple[bool,bool]=(False,True), title_map:Dict[str,str]=get_default_title_map(), rmsd_position:Tuple[float,float]=(0.05, 0.95), cluster=True, dpi=200, figsize=5, contributions=['bond', 'angle', 'proper', 'improper', 'nonbonded', 'total'], **kwargs):
@@ -471,7 +510,63 @@ def compare_scatter_plots(ff_data_1, ff_data_2, plot_dir=Path.cwd(), ylabel="Pre
 
                 plt.tight_layout(pad=2)
 
-                plt.savefig(ds_dir / "contribution_comparison.png", dpi=dpi)
+                plt.savefig(ds_dir / "force_contribution_comparison.png", dpi=dpi)
+                plt.close()
+
+
+        # CONTRIBUTION COMPARISON
+        skip = False
+        if dsname not in ff_data_1['energy_contributions'] or dsname not in ff_data_2['energy_contributions']:
+            skip = True
+        
+        if not skip:
+            contrib_dict_1 = ff_data_1['energy_contributions'][dsname]
+
+            contrib_dict_2 = ff_data_2['energy_contributions'][dsname]
+
+            contribs_present = [c for c in contributions if c in contrib_dict_1.keys() and c in contrib_dict_2.keys()]
+
+            num_contribs = len(contribs_present)
+
+            if num_contribs <= 1:
+                skip = True
+
+            if not skip:
+                ds_dir = plot_dir / dsname
+                ds_dir.mkdir(parents=True, exist_ok=True)
+
+                num_cols = min(num_contribs, 3)
+                num_rows = num_contribs // num_cols + (1 if num_contribs % num_cols > 0 else 0)
+
+                fig, axs = plt.subplots(num_rows, num_cols, figsize=(figsize*num_cols, figsize*num_rows))
+
+                if isinstance(axs, np.ndarray):
+                    axs = axs.flatten()
+
+                for i, contrib_name in enumerate(contribs_present):
+                    ax = axs[i]
+                    contrib_1 = contrib_dict_1[contrib_name].flatten()
+                    contrib_2 = contrib_dict_2[contrib_name].flatten()
+                    if not len(contrib_1) == len(contrib_2):
+                        logging.warning(f"Length of contributions {contrib_name} in {dsname} does not match. Skipping.")
+                        continue
+
+                    ax = scatter_plot(ax, contrib_1, contrib_2, logscale=logscale, ax_symmetric=ax_symmetric[1], cluster=cluster, **kwargs)
+
+                    ax.set_xlabel(xlabel)
+                    ax.set_ylabel(ylabel)
+                    ax.set_title(contrib_name.capitalize())
+
+                    if rmsd_position is not None:
+                        rmsd_value = ((contrib_1 - contrib_2)**2).mean()**0.5
+                        ax.text(rmsd_position[0], rmsd_position[1], f'RMSD: {rmsd_value:.2f}', transform=ax.transAxes, verticalalignment='top')
+
+                dsname = title_map[dsname] if dsname in title_map else dsname
+                plt.suptitle(f'{dsname} - Energy Contributions [kcal/mol]')
+
+                plt.tight_layout(pad=2)
+
+                plt.savefig(ds_dir / "energy_contribution_comparison.png", dpi=dpi)
                 plt.close()
             
 
