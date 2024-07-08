@@ -2,12 +2,11 @@
 
 To train grappa on a GPU, a CUDA version of DGL and torch needs to be installed along with as explained in https://www.dgl.ai/pages/start.html, e.g. by running
 ```
-pip install dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
+pip install dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html pyyaml pydantic
 pip install torch==2.1.0
-pip install pyyaml pydantic #misses in dgl-requirements
 ```
 
-### Common Installation Bug
+### A common DGL installation bug
 
 A common installation problem of dgl (as of 2024) is that it installs incompatible torch versions and thus cannot find torch-version-named .so files:
 ```

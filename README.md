@@ -97,9 +97,11 @@ system = grappa_ff.createSystem(topology)
 
 ## Installation
 
-For using Grappa in GROMACS or OPENMM, cpu mode is usually sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime.
+For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime.
 
-To install Grappa, simply clone the repository, install additional requirements and the package itself with pip:
+### CPU mode
+
+To install Grappa in cpu mode, simply clone the repository and install requirements and the package itself with pip:
 
 ```{bash}
 git clone https://github.com/hits-mbm-dev/grappa.git
@@ -133,14 +135,13 @@ Unfortunately, OpenMM is not available on pip and has to be installed via conda 
 conda install -c conda-forge openmm
 ```
 
-Since the resolution of packages can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
+Since the resolution of package dependencies can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
 
 
-### CUDA Installation
+### GPU mode
 
-To facilitate the interface to OpenMM and GROMACS, Grappa has an optional dependency on [OpenMM](https://github.com/openmm/openmm) and [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which is used to create custom GROMACS topology files. To train and evaluate Grappa on existing datasets, neither of these packages are needed.
-
-In this case, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice is needed, instructions can be found at `installation/README.md`. In this environment, Grappa can be installed by
+For training grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice. Instructions for installing dgl with cuda can be found at `installation/README.md`.
+In this environment, Grappa can be installed by
 
 ```{bash}
 pip install -r installation/requirements.txt
@@ -151,8 +152,6 @@ Verify the installation by running
 ```
 python tests/test_installation.py
 ```
-
-The installation of dgl with potentially necessary bugfixes is explained in `installation/README.md`.
 
 ## Pretrained Models
 
