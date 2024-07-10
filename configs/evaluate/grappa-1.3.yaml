@@ -3,7 +3,8 @@ defaults:
   - _self_
 
 ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
-n_bootstrap: 1000
+# n_bootstrap: 1000
+n_bootstrap: 1
 test_data_path: null
 accelerator: 'gpu'
 plot: true
@@ -12,7 +13,7 @@ classical_force_fields:
   - amber99sbildn
   - gaff-2.11
   - amber14
-  - openff-1.2.0
+  # - openff-1.2.0
 
 datasets: null
 pure_test_datasets: null
@@ -28,5 +29,5 @@ gradient_contributions:
 compare_forcefields:
   - ['amber99sbildn', '']
   - ['gaff-2.11', '']
-  - ['openff-1.2.0', '']
-  - ['amber14', '']
+  # - ['openff-1.2.0', '']
+  # - ['amber14', '']

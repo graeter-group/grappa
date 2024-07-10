@@ -35,7 +35,7 @@ tags = [
     "gen2-torsion", 
     "pepconf-dlc", 
     "protein-torsion", 
-    "rna-trinucleotide"
+    "rna-trinucleotide",
     "espaloma_split",
 ]
 
