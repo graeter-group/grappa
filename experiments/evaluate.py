@@ -48,6 +48,12 @@ def main(cfg: DictConfig) -> None:
         # load the forcefield lookup:
         ckpt_cfg.data.data_module.ff_lookup.update(cfg.evaluate.ff_lookup)
 
+    # if specified, only predict certain parameters with grappa (overwrite in data config):
+    if hasattr(cfg.evaluate,'grappa_contributions') and cfg.evaluate.grappa_contributions is not None:
+        complement = list(set(['nonbonded', 'bond', 'angle', 'proper', 'improper']) - set(cfg.evaluate.grappa_contributions))
+        ckpt_cfg.data.data_module.ref_terms = complement
+        ckpt_cfg.data.energy.terms = cfg.evaluate.grappa_contributions
+
     experiment = Experiment(config=ckpt_cfg, load_data=False)
     if cfg.evaluate.eval_model:
         experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=True, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions)
