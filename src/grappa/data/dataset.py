@@ -364,7 +364,7 @@ class Dataset(torch.utils.data.Dataset):
         return self.where(condition=[i in subsample for i in range(n)])
 
 
-    def create_reference(self, ref_terms:List[str], ff_lookup:Dict[str,str], cleanup:bool=False):
+    def create_reference(self, ref_terms:List[str]=["nonbonded"], ff_lookup:Dict[str,str]={}, cleanup:bool=False):
         """
         Stores QM - MM reference energies and gradients as energy_ref and gradient_ref in the graphs.
         Then deletes all other energy and gradient data except for the reference data.

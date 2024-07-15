@@ -588,7 +588,7 @@ if __name__ == '__main__':
 
     #%%
     # test:
-    dspath = "/local/user/seutelf/grappa/ckpt/grappa-1.3/published/2024-06-26_01-30-36/test_data/epoch:789.npz"
+    dspath = "../../../models/grappa-1.3.0/test_data/checkpoint.npz"
     data = np.load(dspath)
     data = unflatten_dict(data)
     data.keys()

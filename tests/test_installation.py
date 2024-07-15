@@ -8,6 +8,8 @@ import torch
 import copy
 #%%
 ds = Dataset.from_tag('spice-dipeptide')
+ds.create_reference()
+
 model = model_from_tag('grappa-1.3').eval()
 model = torch.nn.Sequential(model, Energy())
 
@@ -17,6 +19,7 @@ model = torch.nn.Sequential(model, Energy())
 devices = ['cpu', 'cuda'] if torch.cuda.is_available() else ['cpu']
 
 for device in devices:
+    print('----------')
     print(f"Testing on {device}...\n")
     some_dipeptide = copy.deepcopy(ds[42][0])
     some_dipeptide = some_dipeptide.to(device)
@@ -31,3 +34,4 @@ for device in devices:
         raise ValueError(f"Force crmse of a test-molecule is {crmse:3f} kcal/mol/angstroem, which is too high. Something is wrong.")
     
     print(f"Force crmse of a test-molecule is {crmse:3f} kcal/mol/angstroem. Everything seems to be okay.\n\n")
+    print('----------')
