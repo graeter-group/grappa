@@ -84,7 +84,7 @@ titlesize=fontsize+3
 
 import matplotlib.pyplot as plt
 
-plt.rc('font', family=font)
+# plt.rc('font', family=font)
 plt.rc('font', size=fontsize)
 plt.rc('xtick', labelsize=fontsize)
 plt.rc('ytick', labelsize=fontsize)
@@ -105,61 +105,67 @@ keys = [
     f'Torsion k (n=2-{n_periodicity})'
 ]
 
-fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+with_torsion=True
 
-idxs = [0,1,2,3]
+for with_torsion in [True, False]:
 
+    if with_torsion:
+        fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+        idxs = [0,2,4,1,3,5]
+    else:
+        idxs = [0,2,1,3]
+        fig, axs = plt.subplots(2, 2, figsize=(10, 10))
 
-axs = axs.flatten()
-max_freq = 0
-for idx, ax in zip(idxs, axs):
-    grappa_vals = grappa_data[keys[idx]]
-    ff99_vals = ff99_data[keys[idx]]
-    points, frequencies = calculate_density_scatter(ff99_vals, grappa_vals, delta_factor=60)
-    max_freq = max(max_freq, max(frequencies))
-
-
-for idx, ax in zip(idxs, axs):
-
-    title = TITLES[idx]
-    grappa_vals = grappa_data[keys[idx]]
-    ff99_vals = ff99_data[keys[idx]]
-    points, frequencies = calculate_density_scatter(ff99_vals, grappa_vals, delta_factor=60)
-
-    scatter = ax.scatter(points[:,0], points[:,1], norm=colors.LogNorm(vmin=1, vmax=max_freq), c=frequencies, cmap='viridis', edgecolor='k', linewidths=0.8, **kwargs)
-
-    ax.set_title(title)
-
-    if idx > 1:
-        ax.set_xlabel('ff99SB-ILDN')
-    if idx % 2 == 0:
-        ax.set_ylabel('Grappa-1.3')
-    ax.set_aspect('equal')
-    
-    ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1)
-    ax.ticklabel_format(style='sci', axis='both', scilimits=(-3,4))
+    axs = axs.flatten()
+    max_freq = 0
+    for idx, ax in zip(idxs, axs):
+        grappa_vals = grappa_data[keys[idx]]
+        ff99_vals = ff99_data[keys[idx]]
+        points, frequencies = calculate_density_scatter(ff99_vals, grappa_vals, delta_factor=60)
+        max_freq = max(max_freq, max(frequencies))
 
 
-    x_min, y_min = ax.get_xlim()[0], ax.get_ylim()[0]
-    x_max, y_max = ax.get_xlim()[1], ax.get_ylim()[1]
+    for idx, ax in zip(idxs, axs):
 
-    min_val = min(x_min, y_min)
-    max_val = max(x_max, y_max)
+        title = TITLES[idx]
+        grappa_vals = grappa_data[keys[idx]]
+        ff99_vals = ff99_data[keys[idx]]
+        points, frequencies = calculate_density_scatter(ff99_vals, grappa_vals, delta_factor=60)
 
-    # reference line
-    ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
+        scatter = ax.scatter(points[:,0], points[:,1], norm=colors.LogNorm(vmin=1, vmax=max_freq), c=frequencies, cmap='viridis', edgecolor='k', linewidths=0.8, **kwargs)
 
-    ax.set_ylim(min_val, max_val)
-    ax.set_xlim(min_val, max_val)
+        ax.set_title(title)
+
+        if idx < len(idxs)/2:
+            ax.set_ylabel('Grappa-1.3')
+        if idx % 2 == 1:
+            ax.set_xlabel('ff99SB-ILDN')
+        ax.set_aspect('equal')
+        
+        ax.tick_params(axis='both', which='major', direction='inout', length=10, width=1)
+        ax.ticklabel_format(style='sci', axis='both', scilimits=(-3,4))
 
 
+        x_min, y_min = ax.get_xlim()[0], ax.get_ylim()[0]
+        x_max, y_max = ax.get_xlim()[1], ax.get_ylim()[1]
 
-# Create an axis for the colorbar
-cbar_ax = fig.add_axes([0.92, 0.1, 0.02, 0.8])  # Adjust these values to position your colorbar
-cbar = fig.colorbar(scatter, cax=cbar_ax)
-# cbar.set_label('Frequency')
+        min_val = min(x_min, y_min)
+        max_val = max(x_max, y_max)
 
-plt.tight_layout(rect=[0, 0, 0.9, 1])  # Adjust subplot params to fit the colorbar
-plt.show()
-plt.savefig('param_compare.png', dpi=300)
+        if idx==5:
+            max_val += 4
+
+        # reference line
+        ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
+
+        ax.set_ylim(min_val, max_val)
+        ax.set_xlim(min_val, max_val)
+
+    # Create an axis for the colorbar
+    cbar_ax = fig.add_axes([0.92, 0.105, 0.017 if not with_torsion else 0.013, 0.813])  # Adjust these values to position your colorbar
+    cbar = fig.colorbar(scatter, cax=cbar_ax)
+    # cbar.set_label('Frequency')
+
+    plt.tight_layout(rect=[0, 0, 0.9, 1])  # Adjust subplot params to fit the colorbar
+    plt.savefig('param_compare.png' if not with_torsion else "param_compare_torsion.png", dpi=300)
 # %%
