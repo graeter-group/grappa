@@ -26,8 +26,8 @@ grappa_tab_ff = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/
 
 modeller = Modeller(topology, pdbfile.positions)
 modeller.deleteWater()
-# modeller.addHydrogens(grappa_tab_ff)
-# modeller.addSolvent(grappa_tab_ff, model='tip3p', padding=1.0*unit.nanometers)
+modeller.addHydrogens(grappa_tab_ff)
+modeller.addSolvent(grappa_tab_ff, model='tip3p', padding=1.0*unit.nanometers)
 
 topology = modeller.getTopology()
 positions = modeller.getPositions()

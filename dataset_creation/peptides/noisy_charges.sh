@@ -1,4 +1,4 @@
-NOISE=0.1
+NOISE=0.5
 FF_NAME=noise-${NOISE}
 FF_ORIG=amber99
 FF=amber99sbildn.xml
