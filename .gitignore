@@ -147,3 +147,6 @@ examples/dataset_creation/*/*.pdb
 **.tpr**
 **.trr**
 **.edr**
+
+
+dist/
