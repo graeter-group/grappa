@@ -84,7 +84,7 @@ titlesize=fontsize+3
 
 import matplotlib.pyplot as plt
 
-# plt.rc('font', family=font)
+plt.rc('font', family=font)
 plt.rc('font', size=fontsize)
 plt.rc('xtick', labelsize=fontsize)
 plt.rc('ytick', labelsize=fontsize)
