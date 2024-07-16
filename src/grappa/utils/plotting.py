@@ -9,10 +9,11 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from typing import Tuple, Dict
 from grappa.utils import unflatten_dict
 import matplotlib.ticker as ticker
+from typing import Union
 import logging
 
 
-def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, **kwargs) -> plt.Axes:
+def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, colorbar:Union[bool,list]=True, **kwargs) -> plt.Axes:
     """
     Create a scatter plot of two arrays x and y.
     Args:
@@ -32,6 +33,8 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
         logscale: Whether to use a log scale for the colorbar
         show_rmsd: Whether to show the RMSD
         amplitude: Min and max val for symmetric axes
+        cbar_label: Whether to show a label on the colorbar
+        colorbar: Whether to show the colorbar in clustered mode
         **kwargs: Additional keyword arguments for ax.scatter call
     """
     if n_max is not None and n_max < len(x):
@@ -54,9 +57,6 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
 
     if cluster:
         points, frequencies = calculate_density_scatter(x, y, delta_factor=delta_factor, seed=seed)
-        # revert the order of both to make the high frequency points appear on top:
-        points = points[::-1]
-        frequencies = frequencies[::-1]
         norm = plt.Normalize(vmin=min(frequencies), vmax=max(frequencies))
 
         if logscale:
@@ -70,18 +70,19 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.1)
         
-        # Add the colorbar
-        cbar = plt.colorbar(sc, cax=cax)
+        if colorbar:
+            # Add the colorbar
+            cbar = plt.colorbar(sc, cax=cax)
 
-        if max(frequencies) < 1000:
-            # Use ScalarFormatter to avoid scientific notation and set ticks at integers only
-            scalar_formatter = ticker.ScalarFormatter(useMathText=True)
-            scalar_formatter.set_scientific(False)
-            scalar_formatter.set_useOffset(False)
-            cbar.ax.yaxis.set_major_formatter(scalar_formatter)
+            if max(frequencies) < 1000:
+                # Use ScalarFormatter to avoid scientific notation and set ticks at integers only
+                scalar_formatter = ticker.ScalarFormatter(useMathText=True)
+                scalar_formatter.set_scientific(False)
+                scalar_formatter.set_useOffset(False)
+                cbar.ax.yaxis.set_major_formatter(scalar_formatter)
 
-        if cbar_label:
-            cbar.set_label("Frequency")
+            if cbar_label:
+                cbar.set_label("Frequency")
 
     else:
         ax.scatter(x, y, alpha=alpha, s=s, **kwargs)
@@ -117,6 +118,11 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
 
 
 def calculate_density_scatter(x, y, delta_factor=100, seed=0):
+    """
+    Returns a list of points and their frequencies for a density scatter plot.
+    -> points: List of points
+    -> frequencies: List of frequencies
+    """
     np.random.seed(seed)
     points = []
     frequencies = []
@@ -151,7 +157,11 @@ def calculate_density_scatter(x, y, delta_factor=100, seed=0):
         x_copy = x_copy[~within_delta]
         y_copy = y_copy[~within_delta]
 
-    return np.array(points), np.array(frequencies)
+    # revert the order of both to make the high frequency points appear on top:
+    points = np.array(points[::-1])
+    frequencies = np.array(frequencies[::-1])
+
+    return points, frequencies
 
 
 def get_default_title_map():
