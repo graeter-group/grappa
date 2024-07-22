@@ -120,7 +120,7 @@ def get_energy_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str]=
     """
     Get the energy contributions from different MM terms stored in a graph. The shape is (n_confs) for each contribution.
     """
-    en_dict = {contrib: torch.empty((0), device=g.nodes['g'].data['energy_ref'].device) for contrib in contributions}
+    en_dict = {contrib: torch.empty((g.num_nodes('g'), 0), device=g.nodes['g'].data['energy_ref'].device) for contrib in contributions}
     for contrib in contributions:
         if f"energy{suffix}_{contrib}" in g.nodes['g'].data.keys():
             en_dict[contrib] = g.nodes['g'].data[f"energy{suffix}_{contrib}"]
@@ -138,7 +138,12 @@ def get_energy_contributions(g:dgl.DGLGraph, suffix="", contributions:List[str]=
             raise RuntimeError(f"Energy contribution {contrib} not found as energy{suffix}_{contrib} in graph. Keys are: {g.nodes['g'].data.keys()}")
     if center:
         for contrib in contributions:
-            en_dict[contrib] = en_dict[contrib] - en_dict[contrib].mean(dim=1, keepdim=True)
+            try:
+                en_dict[contrib] = en_dict[contrib] - en_dict[contrib].mean(dim=1, keepdim=True)
+            except:
+                print(f"Could not center {contrib} energy contributions: {en_dict[contrib]}")
+                raise
+
 
     return en_dict
 

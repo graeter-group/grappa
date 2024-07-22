@@ -30,7 +30,7 @@ def get_repo_dir() -> Path:
 
 def get_data_path()->Path:
     '''
-    Returns the default path where to look for datasets.
+    Returns the default path where to look for datasets (grappa/data)
     '''
     return get_repo_dir() / "data"
 
