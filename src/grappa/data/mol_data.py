@@ -592,3 +592,26 @@ class MolData():
 
         self.ff_energy[forcefield_name] = unit.Quantity(total_energy, unit.kilocalorie_per_mole).value_in_unit(grappa_units.ENERGY_UNIT)
         self.ff_gradient[forcefield_name] = unit.Quantity(total_gradient, unit.kilocalorie_per_mole/unit.angstrom).value_in_unit(grappa_units.FORCE_UNIT)
+
+
+    def delete_states(self, delete_idxs:Union[List[int], np.ndarray]):
+        """
+        Delete states from the object. Raises an error if no states are left.
+        """
+        if isinstance(delete_idxs, list):
+            delete_idxs = np.array(delete_idxs)
+        if len(delete_idxs) == 0:
+            return self
+        if len(delete_idxs) == len(self.energy):
+            raise ValueError("Cannot delete all states. At least one state must remain.")
+        
+        for ff_name, v in self.ff_energy.items():
+            for contrib_name, vv in v.items():
+                self.ff_energy[ff_name][contrib_name] = np.delete(vv, delete_idxs, axis=0)
+
+        self.xyz = np.delete(self.xyz, delete_idxs, axis=0)
+        for ff_name, v in self.ff_gradient.items():
+            for contrib_name, vv in v.items():
+                self.ff_gradient[ff_name][contrib_name] = np.delete(vv, delete_idxs, axis=0)
+
+        return self

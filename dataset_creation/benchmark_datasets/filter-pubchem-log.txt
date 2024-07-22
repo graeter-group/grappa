@@ -1,0 +1,9 @@
+Filtering states:  27%|██▋       | 3753/14110 [01:35<04:23, 39.27it/s]
+Filtering molecule [H][O][P](=[O])([O][H])[C]([H])([C]([H])([H])[n+]1[c]([H])[c]([H])[c](-[c]2[c]([H])[c]([H])[c]([H])[c]3[c]2[O][c]2[c]([H])[c]([H])[c]([H])[c]([H])[c]2-3)[c]([H])[c]1[H])[P](=[O])([O][H])[O][H]
+Filtering states:  53%|█████▎    | 7422/14110 [03:09<02:51, 39.11it/s]
+Filtering molecule [H][O][C]([H])([O-])[C]([H])([N]([H])[H])[C]([H])([H])[C]([H])([H])[N]([H])[C](=[O])[C]([H])([N]([H])[H])[C]([H])([H])[C]([H])([H])[N]([H])[H]
+Filtering states:  88%|████████▊ | 12474/14110 [05:20<00:41, 39.39it/s]
+Filtering molecule [O]=[P]12[O][P]3(=[O])[O][P](=[O])([O]1)[O][P](=[O])([O]2)[O]3
+Filtering states:  92%|█████████▏| 12914/14110 [05:31<00:30, 39.48it/s]
+Filtering molecule [O]=[C]=[N][C](=[O])[Cl]
+Filtering states: 100%|██████████| 14110/14110 [06:02<00:00, 38.95it/s]

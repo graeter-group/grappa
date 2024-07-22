@@ -110,11 +110,11 @@ with_torsion=True
 for with_torsion in [True, False]:
 
     if with_torsion:
-        fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+        fig, axs = plt.subplots(2, 3, figsize=(15+0.5, 10))
         idxs = [0,2,4,1,3,5]
     else:
         idxs = [0,2,1,3]
-        fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+        fig, axs = plt.subplots(2, 2, figsize=(10+0.5, 10))
 
     axs = axs.flatten()
     max_freq = 0
@@ -166,6 +166,6 @@ for with_torsion in [True, False]:
     cbar = fig.colorbar(scatter, cax=cbar_ax)
     # cbar.set_label('Frequency')
 
-    plt.tight_layout(rect=[0, 0, 0.9, 1])  # Adjust subplot params to fit the colorbar
+    plt.tight_layout(rect=[0, 0, 0.93, 0.95])  # Adjust subplot params to fit the colorbar
     plt.savefig('param_compare.png' if not with_torsion else "param_compare_torsion.png", dpi=300)
 # %%

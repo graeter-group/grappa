@@ -10,12 +10,12 @@ accelerator: 'gpu'
 plot: true
 
 classical_force_fields:
-  - amber99sbildn
+  # - amber99sbildn
   - gaff-2.11
-  - amber14
+  # - amber14
   # - openff-1.2.0
 
-datasets: null
+datasets: [spice-pubchem-filtered]
 pure_test_datasets: null
 
 gradient_contributions:
@@ -27,7 +27,7 @@ gradient_contributions:
 - total
 
 compare_forcefields:
-  - ['amber99sbildn', '']
+  # - ['amber99sbildn', '']
   - ['gaff-2.11', '']
   # - ['openff-1.2.0', '']
   # - ['amber14', '']
