@@ -101,7 +101,12 @@ For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since th
 
 ### CPU mode
 
-To install Grappa in cpu mode, simply clone the repository and install requirements and the package itself with pip:
+In cpu mode, Grappa is available on pypi:
+```{bash}
+pip install grappa-ff
+```
+
+To install Grappa from source, clone the repository and install requirements and the package itself with pip:
 
 ```{bash}
 git clone https://github.com/hits-mbm-dev/grappa.git
