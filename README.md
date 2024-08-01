@@ -14,7 +14,7 @@ We demonstrate Grappa's transferability to macromolecules in MD simulations from
 <details open>
   <summary>Grappa Overview</summary>
   <p align="center">
-    <img src="docs/figures/grappa_overview.pdf" width="50%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>
         Grappa predicts MM parameters in two steps.
