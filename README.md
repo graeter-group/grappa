@@ -1,29 +1,28 @@
-# Graph Attentional Protein Parametrization (GrAPPa)
+# Grappa (Graph Attentional Protein Parametrization)
 
 _A machine-learned molecular mechanics force field using a deep graph attentional network <br>(code supporting [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050))_
 
 ## Abstract
 
-Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient. In recent years, E(3) equivariant neural networks have lifted the tension between computational efficiency and accuracy of force fields, but they are still several orders of magnitude more expensive than classical molecular mechanics (MM) force fields.
-
-Here, we propose a novel machine learning architecture to predict MM parameters from the molecular graph, employing a graph attentional neural network and a transformer with symmetry-preserving positional encoding. The resulting force field, Grappa, outperforms established and other machine-learned MM force fields in terms of accuracy at the same computational efficiency and can be used in existing Molecular Dynamics (MD) engines like GROMACS and OpenMM. It predicts energies and forces of small molecules, peptides, RNA and - showcasing its extensibility to uncharted regions of chemical space - radicals at state-of-the-art MM accuracy. We demonstrate Grappa's transferability to macromolecules in MD simulations, during which large protein are kept stable and small proteins can fold. Our force field sets the stage for biomolecular simulations close to chemical accuracy, but with the same computational cost as established protein force fields.
+Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
+In recent years, E(3) equivariant neural networks have lifted the tension between computational efficiency and accuracy of force fields, but they are still several orders of magnitude more expensive than established molecular mechanics (MM) force fields.
+Here, we propose Grappa, a machine learning framework to predict MM parameters from the molecular graph, employing a graph attentional neural network and a transformer with symmetry-preserving positional encoding.
+The resulting Grappa force field outperformstabulated and machine-learned MM force fields in terms of accuracy at the same computational efficiency and can be used in existing Molecular Dynamics (MD) engines like GROMACS and OpenMM.
+It predicts energies and forces of small molecules, peptides, RNA and - showcasing its extensibility to uncharted regions of chemical space - radicals at state-of-the-art MM accuracy. 
+We demonstrate Grappa's transferability to macromolecules in MD simulations from a small fast folding protein up to a whole virus particle. Our force field sets the stage for biomolecular simulations closer to chemical accuracy, but with the same computational cost as established protein force fields.
 
 <details open>
   <summary>Grappa Overview</summary>
   <p align="center">
     <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
-  <p><i>Grappa first predicts node embeddings from the molecular graph. In a second step, it predicts MM parameters for each n-body interaction from the embeddings of the contributing nodes, respecting the necessary permutation symmetry.</i></p>
+  <p><i>
+        Grappa predicts MM parameters in two steps.
+        First, atom embeddings are predicted from the molecular graph with a graph neural network.
+        Then, transformers with symmetric positional encoding followed by permutation invariant pooling maps the embeddings to MM parameters with desired permutation symmetries.
+        Once the MM parameters are predicted, the potential energy surface can be evaluated with MM-efficiency for different spatial conformations.
+  </i></p>
 </details>
-
-<details>
-  <summary><b>Performance on MM Benchmark Datasets</b></summary>
-  <p align="center">
-    <img src="docs/figures/table_benchmark.png" width="100%" style="max-width: 200px; display: block; margin: auto;">
-  </p>
-  <p><i>Grappa's energy and force-component RMSE in kcal/mol and kcal/mol/Å on the test dataset (trained with the same train-val-test partition) from Espaloma [<a href="https://arxiv.org/abs/2307.07085v4">Takaba et al. 2023</a>], compared with classical forcefields [<a href="https://pubs.aip.org/aip/jcp/article/153/11/114502/199591/A-fast-and-high-quality-charge-model-for-the-next">He et al.</a>], [<a href="https://doi.org/10.1021/acs.jctc.5b00255">Maier et al.</a>, <a href="https://pubs.acs.org/doi/10.1021/ct200162x">Zgarbova et al.</a>]</i></p>
-</details>
-
 
 
 <details open><summary><b>Table of contents</b></summary>
@@ -108,10 +107,14 @@ conda create -n grappa python=3.10 -y
 conda activate grappa
 ```
 
-In cpu mode, Grappa is available on pypi:
+In cpu mode, Grappa is available on PyPi:
 ```{bash}
 pip install grappa-ff
 ```
+
+Depending on the platform used, installation of OpenMM or GROMACS and Kimmdy is needed (see below).
+
+### Installation from source
 
 To install Grappa from source, clone the repository and install requirements and the package itself with pip:
 
@@ -130,7 +133,7 @@ python tests/test_installation.py
 
 ### GROMACS
 
-The creation of custom GROMACS topology files is handled by [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as grappa via pip,
+The creation of custom GROMACS topology files is handled by [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as Grappa via pip,
 
 ```{bash}
 pip install kimmdy==6.8.3
@@ -138,7 +141,7 @@ pip install kimmdy==6.8.3
 
 ### OpenMM
 
-Unfortunately, OpenMM is not available on pip and has to be installed via conda in the same environment as grappa,
+OpenMM is not available on pip and has to be installed via conda in the same environment as Grappa,
 
 ```{bash}
 conda install -c conda-forge openmm
@@ -149,7 +152,9 @@ Since the resolution of package dependencies can be slow in conda, it is recomme
 
 ### GPU mode
 
-For training grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice. Instructions for installing dgl with cuda can be found at `installation/README.md`.
+For training Grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice.
+Note that installing Grappa in GPU mode is only recommended if training a model is intended.
+Instructions for installing dgl with cuda can be found at `installation/README.md`.
 In this environment, Grappa can be installed by
 
 ```{bash}
