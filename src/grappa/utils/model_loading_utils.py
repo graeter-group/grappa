@@ -5,7 +5,7 @@ from grappa.models import GrappaModel
 import yaml
 import csv
 import pandas as pd
-from grappa.utils.data_utils import get_repo_dir, download_zipped_dir
+from grappa.utils.data_utils import get_repo_dir, download_zipped_dir, get_src_dir
 from grappa.utils.training_utils import get_model_from_path
 import logging
 
@@ -36,7 +36,7 @@ def get_path_from_tag(tag:str='latest')->Path:
         tag = 'grappa-1.3.0'
 
     csv_path = get_repo_dir() / 'models' / 'models.csv'
-    published_csv_path = get_repo_dir() / 'models' / 'published_models.csv'
+    published_csv_path = get_src_dir() / 'models' / 'published_models.csv'
     COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
 
     if not csv_path.exists():
@@ -86,7 +86,7 @@ def get_path_from_tag(tag:str='latest')->Path:
         url = url_df[url_df['tag']==tag]['url'].values[0]
         description = url_df[url_df['tag']==tag]['description'].values[0]
         path = get_model_dir() / tag
-        logging.info(f"Downloading model {tag} from {url}")
+        logging.info(f"Downloading model {tag} from {url} to {path}")
         download_zipped_dir(url=url, target_dir=path)
         # find a .ckpt file in the directory:
         path = get_ckpt(path)

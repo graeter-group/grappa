@@ -79,8 +79,8 @@ grappa_data = data['y']
 #%%
 
 font="Arial"
-fontsize=16
-titlesize=fontsize+3
+fontsize=17
+titlesize=fontsize+4
 
 import matplotlib.pyplot as plt
 
@@ -89,7 +89,7 @@ plt.rc('font', size=fontsize)
 plt.rc('xtick', labelsize=fontsize)
 plt.rc('ytick', labelsize=fontsize)
 plt.rc('axes', titlesize=titlesize)
-plt.rc('axes', labelsize=fontsize+1)
+plt.rc('axes', labelsize=fontsize+2)
 plt.rc('legend', fontsize=fontsize)
 
 kwargs = {
@@ -118,11 +118,13 @@ for with_torsion in [True, False]:
 
     axs = axs.flatten()
     max_freq = 0
+    max_max_freq = 1e3
     for idx, ax in zip(idxs, axs):
         grappa_vals = grappa_data[keys[idx]]
         ff99_vals = ff99_data[keys[idx]]
         points, frequencies = calculate_density_scatter(ff99_vals, grappa_vals, delta_factor=60)
         max_freq = max(max_freq, max(frequencies))
+        max_freq = min(max_freq, max_max_freq)
 
 
     for idx, ax in zip(idxs, axs):
@@ -136,8 +138,9 @@ for with_torsion in [True, False]:
 
         ax.set_title(title)
 
-        if idx < len(idxs)/2:
-            ax.set_ylabel('Grappa-1.3')
+        if idx < 2:
+            # ax.set_ylabel('Grappa-1.3')
+            ax.set_ylabel('Grappa')
         if idx % 2 == 1:
             ax.set_xlabel('ff99SB-ILDN')
         ax.set_aspect('equal')
@@ -164,8 +167,9 @@ for with_torsion in [True, False]:
     # Create an axis for the colorbar
     cbar_ax = fig.add_axes([0.92, 0.105, 0.017 if not with_torsion else 0.013, 0.813])  # Adjust these values to position your colorbar
     cbar = fig.colorbar(scatter, cax=cbar_ax)
-    # cbar.set_label('Frequency')
+    cbar.set_label('Frequency')
 
     plt.tight_layout(rect=[0, 0, 0.93, 0.95])  # Adjust subplot params to fit the colorbar
-    plt.savefig('param_compare.png' if not with_torsion else "param_compare_torsion.png", dpi=300)
+    plt.savefig('param_compare.pdf' if not with_torsion else "param_compare_torsion.pdf", dpi=300, bbox_inches='tight')
+    plt.savefig('param_compare.png' if not with_torsion else "param_compare_torsion.pdf", dpi=300, bbox_inches='tight')
 # %%

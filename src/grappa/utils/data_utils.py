@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import shutil
 import pkg_resources
+import grappa
 
 def get_data_csv_path()->Path:
     '''
@@ -17,14 +18,45 @@ def get_data_csv_path()->Path:
     '''
     return get_repo_dir() / "data" / "dataset_tags.csv"
 
+def get_published_data_csv_path()->Path:
+    '''
+    Returns the path of the csv file defining tag -> dataset mapping.
+    '''
+    return get_src_dir() / "data" / "published_datasets.csv"
+
+def is_installed_via_pypi()->bool:
+    '''
+    Returns True if the package is installed via pip, False otherwise.
+    Assumes that the package is installed via pip if the package is in the working set and the path to the package contains 'site-packages' or 'dist-packages'. NOTE: Make this better.
+    '''
+    if not 'grappa-ff' in pkg_resources.working_set.by_key:
+        return False
+    package_path = os.path.abspath(grappa.__file__)
+    if 'site-packages' in package_path or 'dist-packages' in package_path:
+        return True
+    return False
+
+def get_src_dir() -> Path:
+    '''
+    Returns the path to the src/grappa directory of the repository. (not to src but to src/grappa !)
+    '''
+    if is_installed_via_pypi():
+        return Path(__file__).resolve().parents[1]
+    else:
+        # If the package is not installed (development mode)
+        return Path(__file__).resolve().parents[1]
+
 def get_repo_dir() -> Path:
     '''
     Returns the path to the root of the repository.
     '''
-    try:
-        # If the package is installed
-        return Path(pkg_resources.resource_filename(__name__, '')).resolve().parents[2]
-    except ModuleNotFoundError:
+    if is_installed_via_pypi():
+        GRAPPA_DIR = Path().home() / '.grappa_cache'
+        GRAPPA_DIR.mkdir(exist_ok=True)
+        (GRAPPA_DIR/'models').mkdir(exist_ok=True)
+        (GRAPPA_DIR/'data').mkdir(exist_ok=True)
+        return GRAPPA_DIR
+    else:
         # If the package is not installed (development mode)
         return Path(__file__).resolve().parents[3]
 
@@ -72,7 +104,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
 
     # Load the csv file
     csv_path = get_data_csv_path()
-    url_csv_path = get_data_csv_path().with_name('published_datasets.csv')
+    url_csv_path = get_published_data_csv_path()
     if not csv_path.exists():
         # create empty csv file:
         df = pd.DataFrame(columns=['tag', 'path', 'description'])
@@ -122,7 +154,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
             df.to_csv(csv_path, index=False)
         # download the dataset from the url if specified:
         elif url is not None:
-            logging.info(f"Dataset {tag} not found in dataset_tags.csv. Downloading from {url}")
+            logging.info(f"Dataset {tag} not found in dataset_tags.csv. Downloading from {url} to {data_dir/tag}...")
             found_path = load_dataset(url=url, data_dir=data_dir, dirname=tag)
             df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(found_path), 'description': description}])], ignore_index=True)
             # for backwards compatibility, remove the old dgl dataset if present so that it will be overwritten by the new one upon call of Dataset.from_tag:

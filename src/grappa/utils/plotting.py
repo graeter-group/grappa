@@ -13,7 +13,7 @@ from typing import Union
 import logging
 
 
-def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, colorbar:Union[bool,list]=True, **kwargs) -> plt.Axes:
+def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, colorbar:Union[bool,list]=True, max_frequency:int=None, **kwargs) -> plt.Axes:
     """
     Create a scatter plot of two arrays x and y.
     Args:
@@ -60,9 +60,9 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
         norm = plt.Normalize(vmin=min(frequencies), vmax=max(frequencies))
 
         if logscale:
-            norm = colors.LogNorm(vmin=min(frequencies), vmax=max(frequencies))
+            norm = colors.LogNorm(vmin=min(frequencies), vmax=max(frequencies) if max_frequency is None else max_frequency)
         else:
-            norm = plt.Normalize(vmin=min(frequencies), vmax=max(frequencies))
+            norm = plt.Normalize(vmin=min(frequencies), vmax=max(frequencies) if max_frequency is None else max_frequency)
             
         sc = ax.scatter(points[:, 0], points[:, 1], c=frequencies, cmap=cmap, norm=norm, s=s, alpha=alpha, edgecolor='k', linewidths=0.5, **kwargs)
 

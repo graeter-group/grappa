@@ -326,6 +326,8 @@ class GrappaLightningModel(pl.LightningModule):
             # if exists, extend the existing one (overwriting existing entries if present):
             if Path(self.test_data_path).exists():
                 existing_data = np.load(self.test_data_path)
+                # transform to dict:
+                existing_data = {key: existing_data[key] for key in existing_data.keys()}
                 for key in data.keys():
                     existing_data[key] = data[key]
                 np.savez(self.test_data_path, **existing_data)

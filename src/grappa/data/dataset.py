@@ -362,7 +362,43 @@ class Dataset(torch.utils.data.Dataset):
         perm = np.random.permutation(n)
         subsample = perm[:int(n*factor)]
         return self.where(condition=[i in subsample for i in range(n)])
+    
 
+
+    def remove_confs(self, max_confs: int, seed: int = 0):
+        """
+        For each molecule, randomly remove conformations until the number of conformations is max_confs.
+        """
+        np.random.seed(seed)
+        new_graphs, new_mol_ids, new_subdatasets = [], [], []
+        for (g, dsname, mol_id) in zip(self.graphs, self.subdataset, self.mol_ids):
+            num_confs = g.nodes['g'].data['energy_qm'].flatten().shape[0]
+            if num_confs > max_confs:
+                perm = np.random.permutation(num_confs)
+                selected_indices = perm[:max_confs]
+                new_graph = copy.deepcopy(g)
+                conf_entries = [('n1', 'xyz')]
+                for feat in g.nodes['g'].data.keys():
+                    if feat.startswith('energy_'):
+                        conf_entries.append(('g', feat))
+                for feat in g.nodes['n1'].data.keys():
+                    if feat.startswith('gradient_'):
+                        conf_entries.append(('n1', feat))
+                for lvl, feat in conf_entries:
+                    new_graph.nodes[lvl].data[feat] = new_graph.nodes[lvl].data[feat][:, selected_indices]
+                new_graphs.append(new_graph)
+                new_mol_ids.append(mol_id)
+                new_subdatasets.append(dsname)
+            else:
+                new_graphs.append(g)
+                new_mol_ids.append(mol_id)
+                new_subdatasets.append(dsname)
+
+        self.graphs = new_graphs
+        self.mol_ids = new_mol_ids
+        self.subdataset = new_subdatasets
+        return self
+    
 
     def create_reference(self, ref_terms:List[str]=["nonbonded"], ff_lookup:Dict[str,str]={}, cleanup:bool=False):
         """
@@ -416,6 +452,9 @@ class Dataset(torch.utils.data.Dataset):
     
     # since all confs are returned in the test dataloader, batches could become too large for the GPU memory. Therefore, we restrict the number of conformations to val_conf_strategy and split individual molecules into multiple entries if necessary
     def apply_max_confs(self, confs:Union[int, str]):
+        """
+        Splits molecules with more than confs conformations into multiple entries such that each entry has at most confs conformations.
+        """
 
         self.num_mols = None # keep track of original number of molecules
 

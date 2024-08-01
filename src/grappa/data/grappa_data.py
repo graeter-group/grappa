@@ -30,13 +30,14 @@ class GrappaData(pl.LightningDataModule):
                  seed: int = 0,
                  pin_memory: bool = True,
                  tr_subsampling_factor: float = None,
+                 tr_max_confs:int = None,
                  weights: Dict[str, float] = {},
                  balance_factor: float = 0.,
                  in_feat_names: List[str] = None,
                  save_splits: Union[str, Path] = None,
                  val_conf_strategy: int = 200,
                  split_ids: Dict[str, List[str]] = None,
-                 keep_features: bool = False
+                 keep_features: bool = False,
                 ):
         """
         This class handles the preparation of train, validation, and test dataloaders for a given list of datasets.
@@ -60,6 +61,7 @@ class GrappaData(pl.LightningDataModule):
             pure_val_datasets (List[str], optional): List of dataset tags to be used as pure validation datasets without using the mol_is for splitting.
             pure_test_datasets (List[str], optional): List of dataset tags to be used as pure test datasets without using the mol_is for splitting.
             tr_subsampling_factor (float, optional): Subsampling factor for the training dataset. Defaults to None.
+            tr_max_confs (int, optional): Maximum number of conformations to keep in the training set. Defaults to None.
             weights (Dict[str, float], optional): Dictionary mapping subdataset names to weights. Defaults to {}.
             balance_factor (float, optional): Balances sampling of the train datasets between 0 and 1. Defaults to 0.
             in_feat_names (List[str], optional): List of feature names to keep. Defaults to None.
@@ -86,6 +88,7 @@ class GrappaData(pl.LightningDataModule):
         self.pure_val_datasets = pure_val_datasets
         self.pure_test_datasets = pure_test_datasets
         self.tr_subsampling_factor = tr_subsampling_factor
+        self.tr_max_confs = tr_max_confs
         self.weights = weights
         self.balance_factor = balance_factor
         self.in_feat_names = in_feat_names
@@ -177,6 +180,11 @@ class GrappaData(pl.LightningDataModule):
             if self.tr_subsampling_factor == 0.:
                 logging.warning("Subsampling factor is 0, training set will be empty.")
             self.tr = self.tr.subsampled(self.tr_subsampling_factor, seed=self.seed)
+
+        if self.tr_max_confs is not None:
+            if self.tr_max_confs == 0:
+                logging.warning("Maximum number of conformations is 0, training set will be empty.")
+            self.tr = self.tr.remove_confs(int(self.tr_max_confs), seed=self.seed)
 
         # write reference data as energy_ref = energy_qm - sum(energy_ref_terms) / gradient_ref = ...
         self.tr.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=self.train_cleanup)
