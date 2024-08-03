@@ -109,7 +109,7 @@ conda activate grappa
 
 In cpu mode, Grappa is available on PyPi:
 ```{bash}
-pip install grappa-ff
+pip install grappa-ff --index-url https://download.pytorch.org/whl/cpu
 ```
 
 Depending on the platform used, installation of OpenMM or GROMACS and Kimmdy is needed (see below).
