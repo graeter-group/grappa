@@ -322,7 +322,18 @@ class GrappaLightningModel(pl.LightningModule):
 
             logging.info(f"Saving test data to {self.test_data_path}")
             Path(self.test_data_path).parent.mkdir(parents=True, exist_ok=True)
-            np.savez(self.test_data_path, **data)
+            
+            # if exists, extend the existing one (overwriting existing entries if present):
+            if Path(self.test_data_path).exists():
+                existing_data = np.load(self.test_data_path)
+                # transform to dict:
+                existing_data = {key: existing_data[key] for key in existing_data.keys()}
+                for key in data.keys():
+                    existing_data[key] = data[key]
+                np.savez(self.test_data_path, **existing_data)
+
+            else:
+                np.savez(self.test_data_path, **data)
             
         metrics = self.test_evaluator.pool(seed=42, n_bootstrap=self.n_bootstrap)
 

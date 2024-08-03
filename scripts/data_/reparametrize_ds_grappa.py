@@ -102,7 +102,7 @@ orig_ds_path = get_moldata_path('dipeptides-300K-amber99')
 
 grappa_full_ds = orig_ds_path.parent/'dipeptides-300K-grappa-1.3'
 
-grappa_tabulated = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_ff19SB_trimers.xml')
+grappa_tabulated = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_unique.xml')
 
 reparametrize_dataset(orig_ds_path, grappa_full_ds, grappa_full, ff_name='grappa-1.3', old_ff_name='amber99sbildn', n_max=None, other_ffs=[(grappa_tabulated, 'grappa-1.3-tabulated')])
 # %%

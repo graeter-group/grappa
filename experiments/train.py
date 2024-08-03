@@ -1,4 +1,4 @@
-from grappa.training.experiment import Experiment
+from grappa.training import Experiment
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from pathlib import Path

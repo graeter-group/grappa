@@ -18,6 +18,7 @@ data_module:
   seed: 0
   pin_memory: true
   tr_subsampling_factor: null
+  tr_max_confs: null
   weights:
     rna-diverse: 3
     rna-nucleoside: 5

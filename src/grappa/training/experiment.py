@@ -297,7 +297,7 @@ class Experiment:
                 for dsname in summary.keys():
                     summary[dsname]['n_mols'] = self.datamodule.num_test_mols[dsname]
 
-            ff_test_data_path = Path(ckpt_path).parent / 'test_data' / ff / 'data.npz' if test_data_path is None else Path(test_data_path)
+            ff_test_data_path = Path(ckpt_path).parent / 'test_data' / ff / 'data.npz' if test_data_path is None else Path(test_data_path).parent/ff/'data.npz'
             
             ff_test_data_path.parent.mkdir(parents=True, exist_ok=True)
 

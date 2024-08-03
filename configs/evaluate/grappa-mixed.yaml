@@ -1,17 +1,17 @@
 defaults:
+  - default
   - _self_
 
 ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
-n_bootstrap: 1000
-test_data_path: null
+# n_bootstrap: 1000
+n_bootstrap: 1
+test_data_path: models/grappa-1.3.0/torsion
 accelerator: 'gpu'
 plot: true
 
 classical_force_fields: []
-
-datasets: null
+datasets: [dipeptides-300K-amber99]
 pure_test_datasets: []
-ff_lookup: {}
 
 gradient_contributions:
 - bond
@@ -23,6 +23,9 @@ gradient_contributions:
 
 compare_forcefields: []
 
-eval_model: true
+ff_lookup:
+  dipeptides-300K-amber99: amber99sbildn
 
-grappa_contributions: null
+grappa_contributions:
+- proper
+- improper

@@ -649,7 +649,7 @@ from matplotlib.colors import LogNorm
 
 
 
-def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, figsize: int=5, xlabel:str=None, ylabel:str=None, log=True, exclude_idxs:List[np.ndarray]=None) -> Tuple[plt.Figure, plt.Axes]:
+def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, figsize: int=5, xlabel:str=None, ylabel:str=None, log=True, exclude_idxs:List[np.ndarray]=None, s=40, get_values=False) -> Tuple[plt.Figure, plt.Axes]:
     """
     exclude_idxs: bonds and angles that involve these atoms will be ignored.
     """
@@ -746,7 +746,7 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
 
     # Scatter plot
     for i, x, y in zip(range(6), [bond_eq_x, angle_eq_x, signed_proper_ks_x_n0, bond_k_x, angle_k_x, signed_proper_ks_x_n_rest], [bond_eq_y, angle_eq_y, signed_proper_ks_y_n0, bond_k_y, angle_k_y, signed_proper_ks_y_n_rest]):
-        axes[i] = scatter_plot(ax=axes[i], x=x, y=y, logscale=log, cluster=True)
+        axes[i] = scatter_plot(ax=axes[i], x=x, y=y, logscale=log, cluster=True, s=s)
 
     # Titles and labels
     for i, ax in enumerate(axes):
@@ -761,7 +761,7 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         ax.set_ylim(min_val, max_val)
 
         
-        if not xlabel is None:
+        if not xlabel is None and i > 2:
             ax.set_xlabel(xlabel)
         if not ylabel is None and i in [0,3]:
             ax.set_ylabel(ylabel)
@@ -797,6 +797,27 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
     if title is not None:
         fig.suptitle(title)
     # plt.subplots_adjust(wspace=0.6, hspace=0.2)
+
+    if get_values:
+        data = {'x': {
+            f'Bond eq.': bond_eq_x,
+            f'Bond k': bond_k_x,
+            f'Angle eq.': angle_eq_x,
+            f'Angle k': angle_k_x,
+            f'Torsion k (n=1)': signed_proper_ks_x_n0,
+            f'Torsion k (n=2-{n_periodicity})': signed_proper_ks_x_n_rest,
+            },
+            'y': {
+            f'Bond eq.': bond_eq_y,
+            f'Bond k': bond_k_y,
+            f'Angle eq.': angle_eq_y,
+            f'Angle k': angle_k_y,
+            f'Torsion k (n=1)': signed_proper_ks_y_n0,
+            f'Torsion k (n=2-{n_periodicity})': signed_proper_ks_y_n_rest,
+            }
+        }
+        
+        return data
 
     return fig, ax
 
@@ -887,7 +908,7 @@ def plot_parameters(parameters:List[Parameters], title=None, figsize=5, compare_
     axes[2].set_title(f"Torsion k (n=1) [{UNITS['proper_ks']}]")
     axes[3].set_title(f"Bond k [{UNITS['bond_k']}]")
     axes[4].set_title(f"Angle k [{UNITS['angle_k']}]")
-    axes[5].set_title(f"Torsion k (n=1-{n_periodicity}) [{UNITS['proper_ks']}]")
+    axes[5].set_title(f"Torsion k (n=2-{n_periodicity}) [{UNITS['proper_ks']}]")
 
     plt.tight_layout(pad=3.0)
 
