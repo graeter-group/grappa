@@ -229,3 +229,12 @@ or, for comparing with given classical force fields whose predictions are stored
 ```{bash}
 python experiments/evaluate.py evaluate=your_config
 ```
+
+### Using own trained models
+
+To use a locally trained model, the lightning module checkpoint can be used to load the model for initializing the Grappa class.
+For example, in openmm:
+```{python}
+from grappa import OpenmmGrappa
+grappa_ff = OpenmmGrappa.from_ckpt('path/to/your/checkpoint.ckpt')
+```

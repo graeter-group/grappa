@@ -6,10 +6,11 @@ import torch
 
 from grappa import constants
 from grappa.data import Molecule, Parameters
-from grappa.utils.model_loading_utils import model_from_tag
+from grappa.utils.model_loading_utils import model_from_tag, model_from_path
 from grappa.models.grappa import GrappaModel
 from grappa.utils.dgl_utils import check_disconnected_graphs
 import logging
+from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 
 class Grappa:
@@ -32,6 +33,18 @@ class Grappa:
         """
         logging.info(f"Initializing model with tag {tag}...")
         model = model_from_tag(tag)
+        return cls(model, max_element, device)
+
+    @classmethod
+    def from_ckpt(cls, ckpt_path:Path, max_element=constants.MAX_ELEMENT, device:str='cpu') -> 'Grappa':
+        """
+        Load a model from a .ckpt path.
+        """
+        if not Path(ckpt_path).exists():
+            raise FileNotFoundError(f"Model checkpoint {ckpt_path} not found.")
+
+        logging.info(f"Initializing model from checkpoint {ckpt_path}...")
+        model = model_from_path(ckpt_path)
         return cls(model, max_element, device)
 
     def predict(self, molecule: Molecule) -> Parameters:
