@@ -101,7 +101,14 @@ class Dataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.graphs)
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx)->Tuple[DGLGraph, str]:
+        """
+        Returns the graph and subdataset name at the given index.
+        Args:
+            idx (int): index of the item to be returned
+        Returns:
+            graph, subdataset (DGLGraph, str): graph and subdataset name at the given index
+        """
         return self.graphs[idx], self.subdataset[idx]
     
     @classmethod
