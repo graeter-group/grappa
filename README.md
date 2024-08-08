@@ -1,5 +1,4 @@
 # Grappa (Graph Attentional Protein Parametrization)
-# Grappa (Graph Attentional Protein Parametrization)
 
 _A machine-learned molecular mechanics force field using a deep graph attentional network <br>(code supporting [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050))_
 
