@@ -382,9 +382,7 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
                 labels = []
                 for contrib_name in contribs_present:
                     contrib = contrib_dict[contrib_name]
-                    norm = np.sqrt((contrib**2).sum(axis=-1))
-                    norm = remove_percentile(norm, 99)
-                    all_norms.append(norm)
+                    all_norms.append(contrib)
                     labels.append(contrib_name.capitalize())
 
                 # Create the violin plot
@@ -393,7 +391,7 @@ def make_scatter_plots(ff_data, plot_dir=Path.cwd(), ylabel="Prediction", xlabel
                 # Set x-axis labels
                 ax.set_xticks(np.arange(1, len(labels) + 1))
                 ax.set_xticklabels(labels)
-                ax.set_ylabel("Energy [kcal/mol]")
+                ax.set_ylabel("Energy [kcal/mol], centered for each Molecule")
                 ax.set_title(f"Energy per Contribution")
 
                 # add some padding:
