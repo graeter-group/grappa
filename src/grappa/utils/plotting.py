@@ -112,7 +112,7 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
 
     if show_rmsd:
         rmsd = np.sqrt(np.mean((x - y)**2))
-        ax.text(0.05, 0.95, f'RMSD: {rmsd:.2f}', transform=ax.transAxes, ha='left', va='top')
+        ax.text(0.05, 0.95, f'RMSE: {rmsd:.2f}', transform=ax.transAxes, ha='left', va='top')
 
     return ax
 

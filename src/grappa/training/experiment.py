@@ -310,6 +310,7 @@ class Experiment:
             logging.info(f"Test summary for {ff}:\n{to_df(summary, short=True).to_string()}")
 
             np.savez(ff_test_data_path, **data)
+            logging.info(f"Test data saved to {ff_test_data_path}")
 
             if plot:
                 data = unflatten_dict(data)
@@ -322,20 +323,24 @@ class Experiment:
         Compare two force fields by loading data from npz files that were created during test() or eval_classical().
         """
         def get_ff_data(ff):
-            if not (Path(ckpt_path).parent / 'test_data' / ff / 'data.npz').exists():
-                return None
+            if not (Path(ckpt_path).parent / 'test_data' / ff / 'data.npz').exists() and ff.lower() != 'grappa' and ff != '':
+                raise ValueError(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
             data = np.load(ckpt_path.parent / 'test_data' / ff / 'data.npz') if (ff != '' and ff.lower()!="grappa") else None
             if data is None:
                 npz_paths = list((Path(ckpt_path).parent/'test_data').glob('*.npz'))
                 assert len(npz_paths) == 1, f"Multiple or no npz files found: {npz_paths}"
                 data = np.load(npz_paths[0])
+            if data is None:
+                raise ValueError(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+            if len(data.keys()) == 0:
+                raise ValueError(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
             return unflatten_dict(data)
 
         for ff1, ff2 in forcefields:
             ff1_data = get_ff_data(ff1)
             ff2_data = get_ff_data(ff2)
             if any([d is None for d in [ff1_data, ff2_data]]):
-                logging.warning(f"Data not found for {ff1} or {ff2}. Skipping comparison.")
+                logging.warning(f"Data not found for {ff1} or {ff2} ... Skipping comparison.")
                 continue
             if not 'gradient_contributions' in ff1_data.keys() or not 'gradient_contributions' in ff2_data.keys():
                 continue

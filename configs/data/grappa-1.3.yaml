@@ -4,7 +4,7 @@ defaults:
 data_module:
   datasets:
     - spice-des-monomers
-    - spice-pubchem
+    - spice-pubchem-filtered
     - gen2
     - gen2-torsion
     - rna-diverse

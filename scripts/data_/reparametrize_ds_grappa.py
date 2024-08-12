@@ -98,13 +98,25 @@ from grappa import as_openmm
 
 grappa_full = as_openmm('grappa-1.3')
 
-orig_ds_path = get_moldata_path('dipeptides-300K-amber99')
+orig_ds = get_moldata_path('dipeptides-300K-amber99')
 
-grappa_full_ds = orig_ds_path.parent/'dipeptides-300K-grappa-1.3'
+
+new_ds_name = 'dipeptides-300K-grappa-tabulated'
+
+new_ds = orig_ds.parent/new_ds_name
+
+# delete new ds:
+import shutil
+from grappa.utils.data_utils import get_data_path
+shutil.rmtree(new_ds, ignore_errors=True)
+dgl_ds_path = get_data_path() / 'dgl_datasets' / new_ds_name
+shutil.rmtree(dgl_ds_path, ignore_errors=True)
 
 grappa_tabulated = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_unique.xml')
 
-reparametrize_dataset(orig_ds_path, grappa_full_ds, grappa_full, ff_name='grappa-1.3', old_ff_name='amber99sbildn', n_max=None, other_ffs=[(grappa_tabulated, 'grappa-1.3-tabulated')])
+#%%
+
+reparametrize_dataset(orig_ds, new_ds, grappa_full, ff_name='grappa-1.3', old_ff_name='amber99sbildn', n_max=10, other_ffs=[(grappa_tabulated, 'grappa-1.3_tabulated')])
 # %%
 # # now, parametrize the system with another forcefield and compare to grappa:
 

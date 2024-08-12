@@ -18,6 +18,9 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str
     all_gradients_new = {contrib: [] for contrib in CONTRIBS}
     all_gradients_old = {contrib: [] for contrib in CONTRIBS}
 
+    old_energies = []
+    new_energies = []
+
     assert dspath.is_dir()
     mol_data_paths = list(dspath.glob("*.npz"))
     assert len(mol_data_paths) > 0
@@ -60,6 +63,7 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str
             openmm_gradients = new_moldata.ff_gradient[ff_name]["total"]
             gradient = new_moldata.gradient
 
+
             # calculate the crmse:
             crmse = np.sqrt(np.mean((openmm_gradients-gradient)**2))
 
@@ -75,6 +79,16 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str
             all_gradients_new[contrib].append(new_moldata.ff_gradient[ff_name][contrib].flatten())
             all_gradients_old[contrib].append(old_moldata.ff_gradient[old_ff_name][contrib].flatten())
 
+        old_energy = old_moldata.ff_energy[old_ff_name]["total"]
+        old_energy -= np.mean(old_energy)
+        old_energies.append(old_energy)
+
+        new_energy = new_moldata.ff_energy[ff_name]["total"]
+        new_energy -= np.mean(new_energy)
+        new_energies.append(new_energy)
+
+
+        
     # plot the different contributions:
     fig, ax = plt.subplots(2, 3, figsize=(15, 10))
     for i, contrib in enumerate(CONTRIBS):
@@ -90,6 +104,14 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:str, ff_type:str
     plt.tight_layout()
 
     plt.savefig(f"{outpath.stem}.png")
+    plt.close()
+
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    scatter_plot(ax, np.concatenate(old_energies), np.concatenate(new_energies), cluster=True, logscale=True, show_rmsd=True)
+    ax.set_xlabel(old_ff_name)
+    ax.set_ylabel(ff_name)
+    plt.tight_layout()
+    plt.savefig(f"{outpath.stem}_energy.png")
     plt.close()
 
 

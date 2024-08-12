@@ -10,13 +10,13 @@ accelerator: 'gpu'
 plot: true
 
 classical_force_fields:
-  # - amber99sbildn
-  - gaff-2.11
+  - amber99sbildn
+  # - gaff-2.11
   # - amber14
   # - openff-1.2.0
 
-datasets: [spice-pubchem-filtered]
-pure_test_datasets: null
+datasets: [dipeptides-300K-amber99]
+pure_test_datasets: []
 
 gradient_contributions:
 - bond
@@ -27,7 +27,7 @@ gradient_contributions:
 - total
 
 compare_forcefields:
-  # - ['amber99sbildn', '']
-  - ['gaff-2.11', '']
+  - ['amber99sbildn', '']
+  # - ['gaff-2.11', '']
   # - ['openff-1.2.0', '']
   # - ['amber14', '']
