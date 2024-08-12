@@ -89,11 +89,11 @@ class Parameters():
 
         # some checks:
         if check_eq_values:
-            MAX_ANGLE = 45
+            MIN_ANGLE = 45
             MAX_BOND_LENGTH = 0.5
-            # if any angle is smaller than MAX_ANGLE degrees, notify the user
-            if np.any(angle_eq < np.pi/180*MAX_ANGLE):
-                n_smaller = np.sum(angle_eq < np.pi/180*MAX_ANGLE)
+            # if any angle is smaller than MIN_ANGLE degrees, notify the user
+            if np.any(angle_eq < np.pi/180*MIN_ANGLE):
+                n_smaller = np.sum(angle_eq < np.pi/180*MIN_ANGLE)
                 raise RuntimeError(f"{n_smaller} angles are smaller than 20 degrees. This can lead to numerical instabilities in the model.\nThe smallest angle is {np.min(angle_eq)*180/np.pi} degrees at atom ids {angles[np.argmin(angle_eq)]}.\nnext: {angle_eq[np.argsort(angle_eq)[1:n_smaller+1]]*180/np.pi} degrees at atom ids {angles[np.argsort(angle_eq)[:n_smaller]]}.")
                     
             # if any bond eq length is smaller than MAX_BOND_LENGTH Angstrom, notify the user
@@ -761,8 +761,9 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         ax.set_ylim(min_val, max_val)
 
         
-        if not xlabel is None and i > 2:
-            ax.set_xlabel(xlabel)
+        # if not xlabel is None and i > 2:
+        #     ax.set_xlabel(xlabel)
+        ax.set_xlabel(xlabel)
         if not ylabel is None and i in [0,3]:
             ax.set_ylabel(ylabel)
 

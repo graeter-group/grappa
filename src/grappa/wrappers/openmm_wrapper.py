@@ -1,7 +1,7 @@
 from grappa.grappa import Grappa
 from grappa.data import Molecule, Parameters
 from grappa import constants
-from grappa.constants import Deprecated
+from grappa.constants import MAX_ELEMENT, Deprecated
 from typing import List
 from pathlib import Path
 from typing import Union
@@ -30,7 +30,16 @@ class OpenmmGrappa(Grappa):
         """
         Loads a pretrained model from a tag. Currently, possible tags are 'grappa-1.3' and 'latest'
         """
+        assert importlib.util.find_spec("openmm") is not None, "OpenmmGrappa requires the openmm package to be installed."
         return super().from_tag(tag, max_element, device)
+    
+    @classmethod
+    def from_ckpt(cls, ckpt_path: Path, max_element=constants.MAX_ELEMENT, device: str = 'cpu'):
+        """
+        Loads a pretrained model from a .ckpt file.
+        """
+        assert importlib.util.find_spec("openmm") is not None, "OpenmmGrappa requires the openmm package to be installed."
+        return super().from_ckpt(ckpt_path, max_element, device)
     
     def parametrize_system(self, system:"openmm.System", topology:"openmm.app.Topology", exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES, plot_dir:Union[Path,str]=None, charge_model:Deprecated=None):
         """
@@ -64,8 +73,8 @@ class OpenmmGrappa(Grappa):
 
             
             if not reference_parameters is None:
-                parameters.plot(filename=plot_dir/'grappa_parameters.png', compare_parameters=reference_parameters, name="Grappa", compare_name="Reference")
-                parameters.compare_with(reference_parameters, filename=plot_dir/'parameter_comparison.png', xlabel="Grappa", ylabel="Reference")
+                reference_parameters.plot(filename=plot_dir/'grappa_parameters.png', compare_parameters=parameters, name="Reference", compare_name="Grappa")
+                reference_parameters.compare_with(parameters, filename=plot_dir/'parameter_comparison.png', xlabel="Reference", ylabel="Grappa")
             else:
                 parameters.plot(filename=plot_dir/'grappa_parameters.png')
 
@@ -96,13 +105,35 @@ else:
                   max_element=constants.MAX_ELEMENT,
                   device:str='cpu',
                   exclude_residues:List[str]=OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES,
-                  plot_dir:Union[Path,str]=None
+                  plot_dir:Union[Path,str]=None,
+                  ckpt_path:Union[Path,str]=None,
                 )->ForceField:
         """
         Returns a openmm.app.ForcField object that parametrizes the system using the Grappa model.
         This is done by building a wrapper class in which the createSystem function creates a system using the base_forcefield and then parametrizes it using the grappa model.
+
+        Arguments:
+        ----------
+        tag: str
+            Tag of the model to use. Currently, possible tags are 'grappa-1.3' and 'latest'
+        base_forcefield: Union[str,List[str]]
+            The forcefield to use as a base forcefield for system initialization and used for excluded residues. Default is ['amber99sbildn.xml', 'tip3p.xml'].
+        max_element: int
+            Maximum element (property of the Grappa model). Default is constants.MAX_ELEMENT.
+        device: str
+            Device to use. Default is 'cpu'.
+        exclude_residues: List[str]
+            Residues to exclude from the system. Default is OPENMM_WATER_RESIDUES+OPENMM_ION_RESIDUES.
+        plot_dir: Union[Path,str]
+            Directory to save plots to. Default is None.
+        ckpt_path: Union[Path,str]
+            Path to a .ckpt file to load the grappa model from. Overwrites tag. Default is None.
         """
-        grappa = OpenmmGrappa.from_tag(tag, max_element, device)
+        if ckpt_path is not None:
+            grappa = OpenmmGrappa.from_ckpt(ckpt_path, max_element, device)
+        else:
+            grappa = OpenmmGrappa.from_tag(tag, max_element, device)
+
         if isinstance(base_forcefield, ForceField):
             base_forcefield_ = base_forcefield
         else:

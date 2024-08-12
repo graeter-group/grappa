@@ -11,6 +11,7 @@ outputs/
 reproducility/*.yaml
 reproducility/*.json
 job.sh
+slurm_logs/
 
 # Distribution / packaging
 bin/
