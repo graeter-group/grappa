@@ -83,7 +83,7 @@ system = classical_ff.createSystem(topology)
 grappa_ff = OpenmmGrappa.from_tag('grappa-1.3')
 
 # parametrize the system using grappa.
-system = grappa_ff.parametrize_system(system, topology, charge_model='amber99')
+system = grappa_ff.parametrize_system(system, topology)
 ```
 
 There is also the option to obtain an openmm.app.ForceField that calls Grappa for bonded parameter prediction behind the scenes:
