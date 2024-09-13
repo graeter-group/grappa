@@ -1,0 +1,15 @@
+defaults:
+  - default
+
+ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
+
+wandb:
+  name: baseline
+  project: grappa-continued
+trainer:
+  max_epochs: 1500
+train:
+  lr: 1e-05
+  start_qm_epochs: 0
+  param_loss_epochs: 0
+  warmup_steps: 1000

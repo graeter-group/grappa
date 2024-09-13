@@ -115,8 +115,7 @@ shutil.rmtree(dgl_ds_path, ignore_errors=True)
 grappa_tabulated = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_unique.xml')
 
 #%%
-
-reparametrize_dataset(orig_ds, new_ds, grappa_full, ff_name='grappa-1.3', old_ff_name='amber99sbildn', n_max=10, other_ffs=[(grappa_tabulated, 'grappa-1.3_tabulated')])
+reparametrize_dataset(orig_ds, new_ds, grappa_full, ff_name='grappa-1.3', old_ff_name='amber99sbildn', n_max=None, other_ffs=[(grappa_tabulated, 'grappa-1.3_tabulated')])
 # %%
 # # now, parametrize the system with another forcefield and compare to grappa:
 

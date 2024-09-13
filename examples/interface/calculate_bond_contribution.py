@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from openmm.app import PDBFile, ForceField
 from openmm.unit import angstrom
-from grappa import model_from_tag
+from grappa.utils.model_loading_utils import model_from_tag
 from grappa.data import Molecule
 from grappa.models.internal_coordinates import InternalCoordinates
 

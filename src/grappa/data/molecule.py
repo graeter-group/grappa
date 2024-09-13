@@ -69,14 +69,14 @@ class Molecule():
         mapped_smiles: str = None,
         charge_model: str = 'None',
     )->None:
-        self.atoms = atoms
-        self.bonds = bonds
-        self.impropers = impropers
-        self.atomic_numbers = atomic_numbers
-        self.partial_charges = partial_charges
+        self.atoms = atoms if isinstance(atoms, list) else atoms.tolist()
+        self.bonds = bonds if isinstance(bonds, list) else bonds.tolist()
+        self.impropers = impropers if isinstance(impropers, list) else impropers.tolist()
+        self.atomic_numbers = atomic_numbers if isinstance(atomic_numbers, list) else atomic_numbers.tolist()
+        self.partial_charges = partial_charges if isinstance(partial_charges, list) else partial_charges.tolist()
         self.additional_features = additional_features
-        self.angles = angles
-        self.propers = propers
+        self.angles = angles if isinstance(angles, list) else angles.tolist()
+        self.propers = propers if isinstance(propers, list) else propers.tolist()
         self.neighbor_dict = None  # Calculated from bonds if needed. key: atom id, value: list of neighbor atom ids
 
         self.charge_model = charge_model
@@ -124,9 +124,9 @@ class Molecule():
             tuple_dict = tuple_indices.get_idx_tuples(bonds=self.bonds, neighbor_dict=self.neighbor_dict, is_sorted=is_sorted)
 
             if self.angles is None:
-                self.angles = tuple_dict['angles']
+                self.angles = tuple_dict['angles'] if isinstance(tuple_dict['angles'], list) else tuple_dict['angles'].tolist()
             if self.propers is None:
-                self.propers = tuple_dict['propers']
+                self.propers = tuple_dict['propers'] if isinstance(tuple_dict['propers'], list) else tuple_dict['propers'].tolist()
 
         if self.additional_features is None:
             self.additional_features= {}

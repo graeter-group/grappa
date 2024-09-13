@@ -1,0 +1,71 @@
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-08-15
+HETATM    1  C   ACE A   1       1.959   0.706   0.663  1.00  0.00           C  
+HETATM    2  O   ACE A   1       2.755   0.066   1.340  1.00  0.00           O  
+HETATM    3  CH3 ACE A   1       0.484   0.671   0.980  1.00  0.00           C  
+HETATM    4  H1  ACE A   1       0.307  -0.068   1.760  1.00  0.00           H  
+HETATM    5  H2  ACE A   1       0.163   1.653   1.323  1.00  0.00           H  
+HETATM    6  H3  ACE A   1      -0.069   0.395   0.084  1.00  0.00           H  
+ATOM      7  N   ASN A   2       2.333   1.456  -0.371  1.00  0.00           N  
+ATOM      8  CA  ASN A   2       3.702   1.528  -0.888  1.00  0.00           C  
+ATOM      9  C   ASN A   2       4.610   2.383   0.025  1.00  0.00           C  
+ATOM     10  O   ASN A   2       4.967   3.513  -0.313  1.00  0.00           O  
+ATOM     11  CB  ASN A   2       3.666   2.043  -2.345  1.00  0.00           C  
+ATOM     12  CG  ASN A   2       2.787   1.210  -3.263  1.00  0.00           C  
+ATOM     13  ND2 ASN A   2       3.355   0.471  -4.187  1.00  0.00           N  
+ATOM     14  OD1 ASN A   2       1.574   1.197  -3.150  1.00  0.00           O  
+ATOM     15  H   ASN A   2       1.604   1.870  -0.936  1.00  0.00           H  
+ATOM     16  HA  ASN A   2       4.115   0.517  -0.897  1.00  0.00           H  
+ATOM     17  HB2 ASN A   2       4.681   2.060  -2.740  1.00  0.00           H  
+ATOM     18  HB1 ASN A   2       3.286   3.064  -2.364  1.00  0.00           H  
+ATOM     19 HD21 ASN A   2       2.729  -0.059  -4.767  1.00  0.00           H  
+ATOM     20 HD22 ASN A   2       4.348   0.468  -4.314  1.00  0.00           H  
+ATOM     21  N   MET A   3       4.952   1.865   1.210  1.00  0.00           N  
+ATOM     22  CA  MET A   3       5.716   2.578   2.245  1.00  0.00           C  
+ATOM     23  C   MET A   3       7.207   2.688   1.880  1.00  0.00           C  
+ATOM     24  O   MET A   3       8.054   1.945   2.372  1.00  0.00           O  
+ATOM     25  CB  MET A   3       5.503   1.917   3.618  1.00  0.00           C  
+ATOM     26  CG  MET A   3       4.051   2.054   4.089  1.00  0.00           C  
+ATOM     27  SD  MET A   3       3.765   1.435   5.768  1.00  0.00           S  
+ATOM     28  CE  MET A   3       1.999   1.805   5.923  1.00  0.00           C  
+ATOM     29  H   MET A   3       4.547   0.965   1.454  1.00  0.00           H  
+ATOM     30  HA  MET A   3       5.334   3.597   2.314  1.00  0.00           H  
+ATOM     31  HB2 MET A   3       6.149   2.405   4.349  1.00  0.00           H  
+ATOM     32  HB1 MET A   3       5.769   0.860   3.571  1.00  0.00           H  
+ATOM     33  HG2 MET A   3       3.403   1.506   3.406  1.00  0.00           H  
+ATOM     34  HG1 MET A   3       3.770   3.107   4.060  1.00  0.00           H  
+ATOM     35  HE1 MET A   3       1.839   2.879   5.825  1.00  0.00           H  
+ATOM     36  HE2 MET A   3       1.446   1.279   5.145  1.00  0.00           H  
+ATOM     37  HE3 MET A   3       1.646   1.477   6.901  1.00  0.00           H  
+ATOM     38  N   CYS A   4       7.518   3.600   0.958  1.00  0.00           N  
+ATOM     39  CA  CYS A   4       8.859   3.841   0.429  1.00  0.00           C  
+ATOM     40  C   CYS A   4       9.746   4.604   1.439  1.00  0.00           C  
+ATOM     41  O   CYS A   4       9.992   5.800   1.291  1.00  0.00           O  
+ATOM     42  CB  CYS A   4       8.696   4.554  -0.923  1.00  0.00           C  
+ATOM     43  SG  CYS A   4      10.319   4.819  -1.686  1.00  0.00           S  
+ATOM     44  H   CYS A   4       6.744   4.090   0.524  1.00  0.00           H  
+ATOM     45  HA  CYS A   4       9.341   2.879   0.245  1.00  0.00           H  
+ATOM     46  HB2 CYS A   4       8.204   5.517  -0.773  1.00  0.00           H  
+ATOM     47  HB1 CYS A   4       8.082   3.942  -1.586  1.00  0.00           H  
+ATOM     48  HG  CYS A   4      10.749   5.678  -0.744  1.00  0.00           H  
+HETATM   49  N   NME A   5      10.203   3.903   2.484  1.00  0.00           N  
+HETATM   50  C   NME A   5      11.081   4.421   3.533  1.00  0.00           C  
+HETATM   51  H   NME A   5       9.845   2.959   2.588  1.00  0.00           H  
+HETATM   52  H1  NME A   5      11.641   5.285   3.168  1.00  0.00           H  
+HETATM   53  H2  NME A   5      10.488   4.722   4.397  1.00  0.00           H  
+HETATM   54  H3  NME A   5      11.789   3.648   3.836  1.00  0.00           H  
+TER      55      NME A   5
+CONECT    1    3    2    7
+CONECT    2    1
+CONECT    3    1    4    5    6
+CONECT    4    3
+CONECT    5    3
+CONECT    6    3
+CONECT    7    1
+CONECT   40   49
+CONECT   49   40   50   51
+CONECT   50   52   53   54   49
+CONECT   51   49
+CONECT   52   50
+CONECT   53   50
+CONECT   54   50
+END

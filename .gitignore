@@ -140,6 +140,7 @@ npy_charge_dicts/
 !examples/dataset_creation/*/example_data*.npz
 
 examples/dataset_creation/*/*.pdb
+!examples/dataset_creation/minimal_example_data/*.pdb
 
 **.gro**
 **.top**
