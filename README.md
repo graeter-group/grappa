@@ -10,12 +10,6 @@ Here, we propose Grappa, a machine learning framework to predict MM parameters f
 The resulting Grappa force field outperformstabulated and machine-learned MM force fields in terms of accuracy at the same computational efficiency and can be used in existing Molecular Dynamics (MD) engines like GROMACS and OpenMM.
 It predicts energies and forces of small molecules, peptides, RNA and - showcasing its extensibility to uncharted regions of chemical space - radicals at state-of-the-art MM accuracy. 
 We demonstrate Grappa's transferability to macromolecules in MD simulations from a small fast folding protein up to a whole virus particle. Our force field sets the stage for biomolecular simulations closer to chemical accuracy, but with the same computational cost as established protein force fields.
-Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
-In recent years, E(3) equivariant neural networks have lifted the tension between computational efficiency and accuracy of force fields, but they are still several orders of magnitude more expensive than established molecular mechanics (MM) force fields.
-Here, we propose Grappa, a machine learning framework to predict MM parameters from the molecular graph, employing a graph attentional neural network and a transformer with symmetry-preserving positional encoding.
-The resulting Grappa force field outperformstabulated and machine-learned MM force fields in terms of accuracy at the same computational efficiency and can be used in existing Molecular Dynamics (MD) engines like GROMACS and OpenMM.
-It predicts energies and forces of small molecules, peptides, RNA and - showcasing its extensibility to uncharted regions of chemical space - radicals at state-of-the-art MM accuracy. 
-We demonstrate Grappa's transferability to macromolecules in MD simulations from a small fast folding protein up to a whole virus particle. Our force field sets the stage for biomolecular simulations closer to chemical accuracy, but with the same computational cost as established protein force fields.
 
 <details open>
   <summary>Grappa Overview</summary>
