@@ -3,6 +3,7 @@ from grappa.models import GrappaModel
 import yaml
 from pathlib import Path
 import pandas as pd
+import logging
 
 
 def get_model_from_checkpoint(ckpt: dict, model_config:dict, device: torch.device='cpu') -> GrappaModel:
@@ -14,6 +15,7 @@ def get_model_from_checkpoint(ckpt: dict, model_config:dict, device: torch.devic
     return model
 
 def get_model_from_path(ckpt_path: str, device: torch.device='cpu') -> GrappaModel:
+    logging.info(f"Loading model from {str(ckpt_path)}")
     ckpt = torch.load(ckpt_path, map_location=device)
     with open(Path(ckpt_path).parent / 'config.yaml', 'r') as f:
         model_config = yaml.safe_load(f)['model']

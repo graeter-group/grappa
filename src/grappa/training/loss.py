@@ -24,9 +24,13 @@ class MolwiseLoss(torch.nn.Module):
         weights:Dict[str,float]={"n2_k":1e-3, "n3_k":1e-2, "n4_k":1e-4}, # only slightly change proper torsions when training on classical parameters.
         skip_params_if_not_present:bool=True,
         proper_regularisation:float=0., # prefactor for L2 regularisation of proper torsion parameters
-        improper_regularisation:float=0.,
+        improper_regularisation:float=0.,        
         param_weights_by_dataset:Dict[str,float]={},
         terms:List[str]=['n2', 'n3', 'n4'],
+        # min_k_angle:float=None,
+        # min_k_bond:float=None,
+        # penalty_k_angle:float=10.,
+        # penalty_k_bond:float=10.,
         ):
 
         super().__init__()

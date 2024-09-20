@@ -179,7 +179,7 @@ def dihedral(
     x0: torch.Tensor, x1: torch.Tensor, x2: torch.Tensor, x3: torch.Tensor
 ) -> torch.Tensor:
     """
-    Dihedral between four points, assuming that x1 is the central atom.
+    Dihedral between four points.
 
     Reference
     ---------

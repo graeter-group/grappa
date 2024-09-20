@@ -75,13 +75,21 @@ def reparametrize_dataset(dspath:Path, outpath:Path, forcefield:ForceField, plot
     plt.close()
 
 # %%
-new_ff = ForceField('amber99sbildn.xml')
+# new_ff = ForceField('amber99sbildn.xml')
+new_ff = ForceField('/hits/fast/mbm/hartmaec/workdir/FF99SBILDNPX_OpenMM/grappa_1-3-amber99_unique.xml')
 
 orig_ds = get_moldata_path('dipeptides-300K-amber99')
 
-new_ds = orig_ds.parent/'dipeptides-300K-dummy'
+new_ds_name = 'dipeptides-300K-grappa-tabulated'
 
-reparametrize_dataset(orig_ds, new_ds, new_ff, ff_name='new_ff', old_ff_name='amber99sbildn', n_max=10)
-# %%
-ff = ForceField()
+new_ds = orig_ds.parent/new_ds_name
+
+# delete new ds:
+import shutil
+from grappa.utils.data_utils import get_data_path
+shutil.rmtree(new_ds, ignore_errors=True)
+dgl_ds_path = get_data_path() / 'dgl_datasets' / new_ds_name
+shutil.rmtree(dgl_ds_path, ignore_errors=True)
+
+reparametrize_dataset(orig_ds, new_ds, new_ff, ff_name='grappa-1.3_tabulated', old_ff_name='amber99sbildn', n_max=None)
 # %%

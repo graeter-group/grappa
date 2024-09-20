@@ -18,7 +18,7 @@ progress_bar: true
 trainer:
   overfit_batches: 0
   min_epochs: 5
-  max_epochs: 2000
+  max_epochs: 1000
   accelerator: gpu
   log_every_n_steps: 10
   deterministic: False
@@ -34,8 +34,8 @@ train:
   warmup_steps: 500
   early_stopping_energy_weight: 3.0
   param_weight: 0.001
-  proper_regularisation: 1.0e-03
-  improper_regularisation: 1.0e-03
+  proper_regularisation: 1.
+  improper_regularisation: 1.
   weight_decay: 0
   patience: 50
   lr_decay: 0.8

@@ -4,7 +4,7 @@ defaults:
 data_module:
   datasets:
     - spice-des-monomers
-    - spice-pubchem
+    - spice-pubchem-filtered
     - gen2
     - gen2-torsion
     - rna-diverse
@@ -22,6 +22,7 @@ data_module:
     - dipeptides-hyp-dop-300K-amber99
     - dipeptides-radical-300K
     - bondbreak-radical-peptides-300K
+    - sulfur_dataset
 
   pure_test_datasets:
     - rna-trinucleotide

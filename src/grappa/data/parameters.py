@@ -89,17 +89,17 @@ class Parameters():
 
         # some checks:
         if check_eq_values:
-            MAX_ANGLE = 45
+            MIN_ANGLE = 45
             MAX_BOND_LENGTH = 0.5
-            # if any angle is smaller than MAX_ANGLE degrees, notify the user
-            if np.any(angle_eq < np.pi/180*MAX_ANGLE):
-                n_smaller = np.sum(angle_eq < np.pi/180*MAX_ANGLE)
-                raise RuntimeError(f"{n_smaller} angles are smaller than 20 degrees. This can lead to numerical instabilities in the model.\nThe smallest angle is {np.min(angle_eq)*180/np.pi} degrees at atom ids {angles[np.argmin(angle_eq)]}.\nnext: {angle_eq[np.argsort(angle_eq)[1:n_smaller+1]]*180/np.pi} degrees at atom ids {angles[np.argsort(angle_eq)[:n_smaller]]}.")
+            # if any angle is smaller than MIN_ANGLE degrees, notify the user
+            if np.any(angle_eq < np.pi/180*MIN_ANGLE):
+                n_smaller = np.sum(angle_eq < np.pi/180*MIN_ANGLE)
+                raise RuntimeError(f"{n_smaller} angles are smaller than 20 degrees.\nThe smallest angle is {np.min(angle_eq)*180/np.pi} degrees at atom ids {angles[np.argmin(angle_eq)]}.\nnext: {angle_eq[np.argsort(angle_eq)[1:n_smaller+1]]*180/np.pi} degrees at atom ids {angles[np.argsort(angle_eq)[:n_smaller]]}. You can set check_eq_values=False to ignore this warning.")
                     
             # if any bond eq length is smaller than MAX_BOND_LENGTH Angstrom, notify the user
             if np.any(bond_eq < MAX_BOND_LENGTH):
                 n_smaller = np.sum(bond_eq < MAX_BOND_LENGTH)
-                raise RuntimeError(f"{n_smaller} bond eq lengths are smaller than 0.5 Angstrom. This can lead to numerical instabilities in the model.\nThe smallest bond eq length is {np.min(bond_eq)} Angstrom at atom ids {bonds[np.argmin(bond_eq)]}.\nnext: {bond_eq[np.argsort(bond_eq)[1:n_smaller+1]]} Angstrom at atom ids {bonds[np.argsort(bond_eq)[:n_smaller]]}.")
+                raise RuntimeError(f"{n_smaller} bond eq lengths are smaller than 0.5 Angstrom.\nThe smallest bond eq length is {np.min(bond_eq)} Angstrom at atom ids {bonds[np.argmin(bond_eq)]}.\nnext: {bond_eq[np.argsort(bond_eq)[1:n_smaller+1]]} Angstrom at atom ids {bonds[np.argsort(bond_eq)[:n_smaller]]}. You can set check_eq_values=False to ignore this warning.")
 
         proper_ks = g.nodes['n4'].data[f'k{suffix}'].detach().cpu().numpy()
         # Assuming the phases are stored with a similar naming convention
@@ -503,7 +503,8 @@ class Parameters():
         
         g.nodes['n4'].data['k_ref'] = correct_shape(torch.tensor(proper_ks, dtype=torch.float32), n_periodicity_proper)
 
-        assert np.all((self.improper_ks >= 0) + np.isnan(self.improper_ks)), f"The improper torsion force constants must be positive."
+        if not np.all((self.improper_ks >= 0) + np.isnan(self.improper_ks)):
+            warnings.warn(Warning(f"The improper torsion force constants must be positive."))
         if not np.all(np.isclose(self.improper_phases, 0, atol=1e-2) + np.isclose(self.improper_phases, np.pi, atol=1e-2) + np.isclose(self.improper_phases, 2*np.pi, atol=1e-2) + np.isnan(self.improper_phases)):
             if not allow_nan:
                 raise ValueError("The improper torsion phases must be either 0 or pi or 2pi")
@@ -523,9 +524,10 @@ class Parameters():
         """
         k = to_numpy(k)
         phase = to_numpy(phase)
-        assert np.all((k >= 0) + np.isnan(k)), f"The force constants must be positive."
+        if not np.all((k >= 0) + np.isnan(k)):
+            warnings.warn(Warning(f"The improper torsion force constants must be positive."))
         if not np.all(np.isclose(phase, 0, atol=1e-2) + np.isclose(phase, np.pi, atol=1e-2) + np.isclose(phase, 2*np.pi, atol=1e-2) + np.isnan(phase)):
-            raise ValueError(f"The phases must be either 0 or pi or 2pi")
+            warnings.warn(Warning(f"The improper torsion phases must be either 0 or pi or 2pi"))
         
         return np.where(
                 np.isclose(phase, 0, atol=1e-2) + np.isclose(phase, 2*np.pi, atol=1e-2),
@@ -761,8 +763,9 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         ax.set_ylim(min_val, max_val)
 
         
-        if not xlabel is None and i > 2:
-            ax.set_xlabel(xlabel)
+        # if not xlabel is None and i > 2:
+        #     ax.set_xlabel(xlabel)
+        ax.set_xlabel(xlabel)
         if not ylabel is None and i in [0,3]:
             ax.set_ylabel(ylabel)
 
