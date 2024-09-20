@@ -75,8 +75,8 @@ class Molecule():
         self.atomic_numbers = atomic_numbers if isinstance(atomic_numbers, list) else atomic_numbers.tolist()
         self.partial_charges = partial_charges if isinstance(partial_charges, list) else partial_charges.tolist()
         self.additional_features = additional_features
-        self.angles = angles if isinstance(angles, list) else angles.tolist()
-        self.propers = propers if isinstance(propers, list) else propers.tolist()
+        self.angles = angles
+        self.propers = propers
         self.neighbor_dict = None  # Calculated from bonds if needed. key: atom id, value: list of neighbor atom ids
 
         self.charge_model = charge_model
@@ -146,6 +146,10 @@ class Molecule():
         # initialize all mols to be not-radical if not overwritten later:
         if not 'is_radical' in self.additional_features.keys():
             self.additional_features['is_radical'] = np.zeros((len(self.atoms),), dtype=np.float32)
+
+        # ensure that angles and propers are lists:
+        self.angles = self.angles if isinstance(self.angles, list) else self.angles.tolist()
+        self.propers = self.propers if isinstance(self.propers, list) else self.propers.tolist()
 
         self._validate()
 
