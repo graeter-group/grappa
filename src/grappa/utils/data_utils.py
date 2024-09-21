@@ -108,6 +108,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
     if not csv_path.exists():
         # create empty csv file:
         df = pd.DataFrame(columns=['tag', 'path', 'description'])
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(csv_path, index=False)
     
     df = pd.read_csv(csv_path, dtype=str)
@@ -132,6 +133,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
                 df = df[df['tag']!=tag]
                 found_path = Path(data_dir)/tag
                 df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(found_path), 'description': ''}])], ignore_index=True)
+                Path(str(csv_path)).parent.mkdir(parents=True, exist_ok=True)
                 df.to_csv(csv_path, index=False)
             else:
                 raise FileNotFoundError(f"Dataset {tag} not found at {path}.")
@@ -141,6 +143,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
             found_path = Path(data_dir)/tag
 
             df.loc[df['tag']==tag, 'path'] = str(found_path)
+            Path(str(csv_path)).parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(csv_path, index=False)
         else:
             raise FileNotFoundError(f"Dataset {tag} not found at {path}.")
@@ -151,6 +154,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
             logging.info(f"Dataset {tag} not in the dataset_tags.csv file but found at {Path(data_dir)/tag}. Appending to the csv file...")
             found_path = Path(data_dir)/tag
             df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(found_path), 'description': ''}])], ignore_index=True)
+            Path(str(csv_path)).parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(csv_path, index=False)
         # download the dataset from the url if specified:
         elif url is not None:
@@ -162,6 +166,7 @@ def get_moldata_path(tag:str, data_dir:Union[Path,str]=get_data_path()/'datasets
             if dgl_dir.exists():
                 logging.warning(f"Removing old dgl dataset at {dgl_dir}, which will be overwritten by the downloaded dataset.")
                 shutil.rmtree(dgl_dir)
+            Path(str(csv_path)).parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(csv_path, index=False)
         else:
             raise FileNotFoundError(f"Dataset {tag} not found in the dataset_tags.csv file and not at {data_dir/tag}.")
