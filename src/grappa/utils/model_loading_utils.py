@@ -119,9 +119,9 @@ def find_tag(tag, tags):
     return None
 
 def store_with_comment(df, path, comment):
+    Path(str(path)).parent.mkdir(parents=True, exist_ok=True)
     with open(path, 'w') as f:
         f.write(comment + '\n')
-        Path(str(path)).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, index=False)
 
 def get_ckpt(path):
