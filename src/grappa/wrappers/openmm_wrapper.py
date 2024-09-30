@@ -20,6 +20,8 @@ class OpenmmGrappa(Grappa):
     """
     Model wrapper class. Wraps a trained model and provides the interface to predict bonded parameters for a certain molecule in openmm, where, given a topology and a system, it will write bonded parameters to the system.
     The system must already have partial charges assigned.
+
+    Init model = OpenmmGrappa.from_tag('latest') and call system = model.parametrize_system(system, topology)
     """
     def __init__(self, *args, **kwargs):
         assert importlib.util.find_spec("openmm") is not None, "OpenmmGrappa requires the openmm package to be installed."

@@ -50,16 +50,32 @@ def get_path_from_tag(tag:str='latest')->Path:
 
     all_tags = list(tags) + list(url_tags)
 
-    # try to find a later version of the model if the tag is not found:
     if tag not in all_tags:
-        # if the tag is ...-n.x, try to find n.x.m with m maximal, n,m,x: int
-        new_tag = find_tag(tag, all_tags)
-        if new_tag is not None:
-            logging.info(f"Tag {tag} not found. Using latest version {new_tag} instead.")
-            tag = new_tag
-            assert tag in all_tags, f"Internal error: tag {tag} not found"
+        # if the tag is ...-n.x.y, look whether the folder grappa/models/tag exists:
+        if len(tag.split('-')[-1].split('.'))==3:
+            path = get_model_dir() / tag
+            if path.exists():
+                # if there is exactly one .ckpt file and one config.yaml file in the directory, use it:
+                ckpt_files = list(path.rglob('*.ckpt'))
+                config_files = list(path.rglob('config.yaml'))
+
+                if len(ckpt_files)==1 and len(config_files)==1:
+                    path = ckpt_files[0]
+                    logging.info(f"Model {tag} not found in tags.csv. Found local directory with fitting name at {path}. Using this model instead.")
+                    return path
+                
+                else:
+                    raise FileNotFoundError(f"Model {tag} not found in tags.csv. Found {len(ckpt_files)} .ckpt files and {len(config_files)} config.yaml files in {path}. Require exactly one of each.")
+
         else:
-            raise ValueError(f"Tag {tag} not found, available tags: {all_tags}")
+            # if the tag is ...-n.x, try to find n.x.m with m maximal, n,x,m: int
+            new_tag = find_tag(tag, all_tags)
+            if new_tag is not None:
+                logging.info(f"Tag {tag} not found. Using latest version {new_tag} instead.")
+                tag = new_tag
+                assert tag in all_tags, f"Internal error: tag {tag} not found"
+            else:
+                raise ValueError(f"Tag {tag} not found, available tags: {all_tags}")
 
     if tag in tags:
         # tag must be unique:
