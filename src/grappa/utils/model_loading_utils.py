@@ -51,21 +51,20 @@ def get_path_from_tag(tag:str='latest')->Path:
     all_tags = list(tags) + list(url_tags)
 
     if tag not in all_tags:
-        # if the tag is ...-n.x.y, look whether the folder grappa/models/tag exists:
-        if len(tag.split('-')[-1].split('.'))==3:
-            path = get_model_dir() / tag
-            if path.exists():
-                # if there is exactly one .ckpt file and one config.yaml file in the directory, use it:
-                ckpt_files = list(path.rglob('*.ckpt'))
-                config_files = list(path.rglob('config.yaml'))
+        # look whether the folder grappa/models/tag exists:
+        test_path = get_model_dir() / tag
+        if test_path.exists():
+            # if there is exactly one .ckpt file and one config.yaml file in the directory, use it:
+            ckpt_files = list(test_path.rglob('*.ckpt'))
+            config_files = list(test_path.rglob('config.yaml'))
 
-                if len(ckpt_files)==1 and len(config_files)==1:
-                    path = ckpt_files[0]
-                    logging.info(f"Model {tag} not found in tags.csv. Found local directory with fitting name at {path}. Using this model instead.")
-                    return path
-                
-                else:
-                    raise FileNotFoundError(f"Model {tag} not found in tags.csv. Found {len(ckpt_files)} .ckpt files and {len(config_files)} config.yaml files in {path}. Require exactly one of each.")
+            if len(ckpt_files)==1 and len(config_files)==1:
+                test_path = ckpt_files[0]
+                logging.info(f"Model {tag} not found in tags.csv. Found local directory with fitting name at {test_path}. Using this model instead.")
+                return test_path
+            
+            else:
+                raise FileNotFoundError(f"Model {tag} not found in tags.csv. Found {len(ckpt_files)} .ckpt files and {len(config_files)} config.yaml files in {test_path}. Require exactly one of each.")
 
         else:
             # if the tag is ...-n.x, try to find n.x.m with m maximal, n,x,m: int
