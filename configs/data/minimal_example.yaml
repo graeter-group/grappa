@@ -1,0 +1,9 @@
+defaults:
+  - default
+
+data_module:
+  datasets: [spice-dipeptide, minimal_example_dataset]
+  partition: [0.4, 0.3, 0.3]
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []

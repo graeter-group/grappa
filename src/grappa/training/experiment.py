@@ -56,6 +56,16 @@ class Experiment:
         self._energy_cfg = config.data.energy
         self.is_train = is_train
 
+        # if config.data has attribute extra_datasets, add them to data_cfg.datasets:
+        if hasattr(config.data, 'extra_datasets'):
+            self._data_cfg.datasets = self._data_cfg.datasets + config.data.extra_datasets
+        if hasattr(config.data, 'extra_train_datasets'):
+            self._data_cfg.pure_train_datasets = self._data_cfg.pure_train_datasets + config.data.extra_train_datasets
+        if hasattr(config.data, 'extra_val_datasets'):
+            self._data_cfg.pure_val_datasets = self._data_cfg.pure_val_datasets + config.data.extra_val_datasets
+        if hasattr(config.data, 'extra_test_datasets'):
+            self._data_cfg.pure_test_datasets = self._data_cfg.pure_test_datasets + config.data.extra_test_datasets
+
         # throw an error if energy terms and ref_terms overlap:
         if set(self._energy_cfg.terms) & set(self._data_cfg.ref_terms):
             raise ValueError(f"Energy terms and reference terms must not overlap. Energy terms are predicted by grappa, reference terms by the reference force field. An overlap means that some contributions are counted twice. Found {set(self._energy_cfg.terms) & set(self._data_cfg.ref_terms)}")
@@ -360,7 +370,7 @@ class Experiment:
         assert ckpt_dir is not None or ckpt_path is not None, "If load_split is True, either ckpt_dir or ckpt_path must be provided."
         load_path = ckpt_dir / 'split.json' if ckpt_dir is not None else ckpt_path.parent / 'split.json'
         data_cfg = self._data_cfg
-        data_cfg.splitpath = str(load_path)
+        data_cfg.splitpath = str(load_path) if load_path.exists() else None
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
         self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
         self.datamodule.setup()
