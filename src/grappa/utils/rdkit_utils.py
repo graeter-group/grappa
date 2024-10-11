@@ -24,7 +24,7 @@ def get_ring_encoding(mol)->np.ndarray:
         ).astype(np.float32)
 
 
-def rdkit_graph_from_bonds(bonds: List[Tuple[int, int]]):
+def rdkit_graph_from_bonds(bonds: List[Tuple[int, int]], atomic_numbers: List[int]=None):
     """
     Returns an rdkit molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
     Bond indices should be a list of tuples, where each tuple contains the indices of two bonded atoms.
@@ -38,8 +38,12 @@ def rdkit_graph_from_bonds(bonds: List[Tuple[int, int]]):
     # initialize the molecule
     mol = Chem.RWMol()
 
-    for _ in range(num_atoms):
-        chem_atom = rdchem.Atom(0)
+    if atomic_numbers is None:
+        atomic_numbers = [0] * num_atoms
+    else:
+        assert len(atomic_numbers) == num_atoms, f"atomic_numbers must have length {num_atoms}, but has length {len(atomic_numbers)}"
+    for i in range(num_atoms):
+        chem_atom = rdchem.Atom(int(atomic_numbers[i]))
         mol.AddAtom(chem_atom)
 
 

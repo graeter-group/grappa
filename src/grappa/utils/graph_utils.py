@@ -9,6 +9,9 @@ import logging
 
 from grappa.constants import BONDED_CONTRIBUTIONS
 
+def get_atomic_numbers(g:dgl.DGLGraph)->torch.Tensor:
+    return torch.argwhere(g.nodes['n1'].data['atomic_number'] == 1)[:,1] + 1
+
 def get_parameters(g, suffix="", exclude:Tuple[str,str]=[], terms:List[str]=['n2', 'n3', 'n4', 'n4_improper'])->Dict[str,torch.Tensor]:
     """
     Get the parameters of a graph asuming that they are stored at g.nodes[lvl].data[{k}/{eq}+suffix]

@@ -34,6 +34,7 @@ class GrappaLightningModel(pl.LightningModule):
                  param_loss_terms:List[str]=['n2', 'n3', 'n4'],
                  log_train_interval:int=10,
                  start_logging:int=0,
+                 reset_optimizer_on_load:bool=False,
                 ):
         """
         LightningModule for training a Grappa model.
@@ -61,6 +62,8 @@ class GrappaLightningModel(pl.LightningModule):
             param_weights_by_dataset (Dict[str, float], optional): Dictionary mapping from dataset name to weight of the parameter loss for this dataset. Defaults to {}.
             param_loss_terms (List[str], optional): Which parameters to train on directly during epoch < param_loss_epochs. Defaults to ['n2', 'n3', 'n4'].
             log_train_interval (int, optional): Interval in epochs for logging the training metrics (instead of logging every epoch since this slows down the train steps). Defaults to 10.
+            start_logging (int, optional): Epoch from which to start logging the validation metrics. Defaults to 0.
+            reset_optimizer_on_load (bool, optional): Whether to reset the optimizer when loading a checkpoint. Defaults to False.
         """
         super().__init__()
         
@@ -76,6 +79,8 @@ class GrappaLightningModel(pl.LightningModule):
 
         self.lr = lr
         self.weight_decay = weight_decay
+
+        self.reset_optimizer_on_load = reset_optimizer_on_load
 
         self.start_qm_epochs = start_qm_epochs
 
@@ -341,7 +346,7 @@ class GrappaLightningModel(pl.LightningModule):
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         return optimizer
     
     def on_save_checkpoint(self, checkpoint):
@@ -353,7 +358,10 @@ class GrappaLightningModel(pl.LightningModule):
         # Load elapsed time from checkpoint. it is checked whether time.time() - start_time + elaped_time > time_limit in on_validation_epoch_end
         self.elapsed_time = checkpoint.get('elapsed_time', 0)
         self.start_time = time.time()
-        try:
-            self.lr = checkpoint.get('lr', self.lr)
-        except Exception as e:
-            print(f"Error in recovering the lr in on_load_checkpoint: {e}\nStarting with the lr in config file...", file=sys.stderr)
+        if self.reset_optimizer_on_load:
+            self.configure_optimizers()
+        else:
+            try:
+                self.lr = checkpoint.get('lr', self.lr)
+            except Exception as e:
+                print(f"Error in recovering the lr in on_load_checkpoint: {e}\nStarting with the lr in config file...", file=sys.stderr)
