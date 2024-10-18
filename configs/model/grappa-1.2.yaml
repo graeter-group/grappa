@@ -7,7 +7,7 @@ in_feat_name:
   - degree
 in_feat_dims: {}
 gnn_width: 512
-gnn_attentional_layers: 4
+gnn_attentional_layers: 7
 gnn_convolutions: 0
 gnn_attention_heads: 16
 gnn_dropout_attention: 0.3

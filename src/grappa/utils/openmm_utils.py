@@ -340,7 +340,7 @@ if importlib.util.find_spec('openmm') is not None:
         if name in ['charmm36', 'charmm36-jul2022']:
             warnings.warn("The charmm36 forcefield implemented in grappa for dealing with ACE and NME has a faulty improper contribution. Only use the other contributions.", UserWarning)
             ff_path = get_repo_dir() / "src" / "grappa" / "utils" / "classical_forcefields" / "charmm36-jul2022.xml"
-            return ForceField(str(ff_path))
+            return ForceField(str(ff_path), *args, **kwargs)
 
         elif name == 'amber99sbildn*' or name == 'amber99sbildn-star':
             from grappa.utils import hyp_dop_utility
@@ -366,7 +366,7 @@ if importlib.util.find_spec('openmm') is not None:
             return HypDopOpenmmForceField(str(ff_path), *args, **kwargs)
 
         else:
-            return ForceField(name+'.xml')
+            return ForceField(name+'.xml', *args, **kwargs)
 
 
     def get_nonbonded_contribution(openmm_system:openmm.System, xyz):

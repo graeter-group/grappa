@@ -154,3 +154,5 @@ examples/dataset_creation/*/*.pdb
 
 
 dist/
+
+!examples/dataset_creation/gmx_example_data

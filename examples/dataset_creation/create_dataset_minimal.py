@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 #%%
 
-# Load the dataset
+# Load the data (positions, energies, gradients, topology) from npz files (we assume such data exists) and create MolData objects:
 thisdir = Path(__file__).parent
 dspath = thisdir / "minimal_example_data"
 

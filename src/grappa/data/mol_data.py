@@ -130,6 +130,23 @@ class MolData():
 
         assert not self.mol_id is None and self.mol_id != 'None', f"mol_id must be provided but is {self.mol_id}, type {type(self.mol_id)}"
 
+        # check shapes:
+        if len(self.energy.shape) != 1:
+            raise ValueError(f"Energy must have shape (n_confs,) but has shape {self.energy.shape}")
+        if len(self.gradient.shape) != 3:
+            raise ValueError(f"Gradient must have shape (n_confs, n_atoms, 3) but has shape {self.gradient.shape}")
+        if self.xyz.shape[0] == 0:
+            raise ValueError(f"xyz must have at least one conformation, but has shape {self.xyz.shape}")
+        if self.xyz.shape[2] != 3:
+            raise ValueError(f"xyz must have shape (n_confs, n_atoms, 3) but has shape {self.xyz.shape}")
+        if self.xyz.shape[1] == 0:
+            raise ValueError(f"xyz must have at least one atom, but has shape {self.xyz.shape}")
+        if self.xyz.shape != self.gradient.shape:
+            raise ValueError(f"Shape of xyz {self.xyz.shape} does not match gradient {self.gradient.shape}")
+        if self.xyz.shape[0] != self.energy.shape[0]:
+            raise ValueError(f"Shape of xyz {self.xyz.shape} does not match energy {self.energy.shape}")
+
+
     def  __post_init__(self):
 
         # setting {} by default is not possible in dataclasses, thus do this here:
