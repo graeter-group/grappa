@@ -38,6 +38,7 @@ class GrappaData(pl.LightningDataModule):
                  val_conf_strategy: int = 200,
                  split_ids: Dict[str, List[str]] = None,
                  keep_features: bool = False,
+                 max_energy: float=None
                 ):
         """
         This class handles the preparation of train, validation, and test dataloaders for a given list of datasets.
@@ -97,6 +98,7 @@ class GrappaData(pl.LightningDataModule):
         self.split_ids = split_ids
         self.keep_features = keep_features
         self.ff_lookup = ff_lookup
+        self.max_energy = max_energy
 
         self.train_cleanup = True # set this to manually to False if you want to keep the reference ff data in the training set (e.g. for evaluating the reference data on the training set)
         self.num_test_mols = None # number of molecules in the test set, we might need to keep track of this for the evaluation
@@ -171,6 +173,12 @@ class GrappaData(pl.LightningDataModule):
         self.tr = Dataset.concatenate(self.tr, *pure_train_sets)
         self.vl = Dataset.concatenate(self.vl, *pure_val_sets)
         self.te = Dataset.concatenate(self.te, *pure_test_sets)
+
+        # filter out high energy states from training and validation set
+        if self.max_energy is not None:
+            logging.info(f"Filtering out conformations with energy difference > {self.max_energy} to the minimal energy.")
+            self.tr = self.tr.filter_energies(self.max_energy)
+            self.vl = self.vl.filter_energies(self.max_energy)
 
         # since all confs are returned in the test dataloader, batches could become too large for the GPU memory. Therefore, we restrict the number of conformations to val_conf_strategy and split individual molecules into multiple entries if necessary
         self.te.apply_max_confs(confs=self.val_conf_strategy)

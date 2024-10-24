@@ -35,6 +35,7 @@ class GrappaLightningModel(pl.LightningModule):
                  log_train_interval:int=10,
                  start_logging:int=0,
                  reset_optimizer_on_load:bool=False,
+                 add_noise_on_load:float=0.0,
                 ):
         """
         LightningModule for training a Grappa model.
@@ -64,6 +65,7 @@ class GrappaLightningModel(pl.LightningModule):
             log_train_interval (int, optional): Interval in epochs for logging the training metrics (instead of logging every epoch since this slows down the train steps). Defaults to 10.
             start_logging (int, optional): Epoch from which to start logging the validation metrics. Defaults to 0.
             reset_optimizer_on_load (bool, optional): Whether to reset the optimizer when loading a checkpoint. Defaults to False.
+            add_noise_on_load (float, optional): Standard deviation of the noise to add to the parameters when loading a checkpoint. Defaults to 0.0.
         """
         super().__init__()
         
@@ -81,6 +83,8 @@ class GrappaLightningModel(pl.LightningModule):
         self.weight_decay = weight_decay
 
         self.reset_optimizer_on_load = reset_optimizer_on_load
+        self.add_noise_on_load = add_noise_on_load
+        self.first_epoch_after_load_ckpt = False
 
         self.start_qm_epochs = start_qm_epochs
 
@@ -190,8 +194,8 @@ class GrappaLightningModel(pl.LightningModule):
 
         # Update epoch-dependent hyperparameters such as lr and loss weights.
 
-        if self.current_epoch in self.restarts:
-            self.trainer.optimizers[0] = torch.optim.Adam(self.parameters(), lr=self.lr)
+        if self.current_epoch in self.restarts and self.current_epoch > 0:
+            self.reset_optimizer()
             self.warmup_step = 0
 
         if self.param_loss_epochs is not None:
@@ -206,6 +210,15 @@ class GrappaLightningModel(pl.LightningModule):
             self.loss_fn.energy_weight = float(self.energy_weight)
             self.loss_fn.param_weight = float(self.param_weight)
             self.loss_fn.tuplewise_weight = float(self.tuplewise_weight)
+
+            if self.first_epoch_after_load_ckpt:
+                self.first_epoch_after_load_ckpt = False
+                if self.add_noise_on_load > 0.0:
+                    for param in self.parameters():
+                        if param.requires_grad:
+                            param.data += torch.randn_like(param.data) * self.add_noise_on_load
+                if self.reset_optimizer_on_load:
+                    self.reset_optimizer()
 
             
         return super().on_train_epoch_start()
@@ -231,6 +244,13 @@ class GrappaLightningModel(pl.LightningModule):
                 with torch.no_grad():
                     self.train_evaluator.step(g, dsnames)
 
+            # print(f"BEFORE BACKWARD")
+            # means = [torch.mean(param.data) for param in self.parameters() if param.requires_grad]
+            # num_params = sum([torch.numel(param.data) for param in self.parameters() if param.requires_grad])
+            # print(means)
+            # print(num_params)
+
+            # breakpoint()
         return loss
 
 
@@ -347,7 +367,25 @@ class GrappaLightningModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        return optimizer
+        return [optimizer], []
+
+
+    def reset_optimizer(self):
+        # Call configure_optimizers to reinitialize optimizer(s)
+        opt_sched = self.configure_optimizers()
+
+        # Handle different possible return types
+        if isinstance(opt_sched, tuple):
+            optimizers, lr_schedulers = opt_sched
+        else:
+            optimizers = [opt_sched]
+            lr_schedulers = []
+
+        # Assign the optimizer(s) and learning rate scheduler(s)
+        self.trainer.optimizers = optimizers
+        self.trainer.lr_schedulers = lr_schedulers
+
+
     
     def on_save_checkpoint(self, checkpoint):
         # Add elapsed time to the checkpoint
@@ -358,10 +396,12 @@ class GrappaLightningModel(pl.LightningModule):
         # Load elapsed time from checkpoint. it is checked whether time.time() - start_time + elaped_time > time_limit in on_validation_epoch_end
         self.elapsed_time = checkpoint.get('elapsed_time', 0)
         self.start_time = time.time()
-        if self.reset_optimizer_on_load:
-            self.configure_optimizers()
-        else:
+
+        self.first_epoch_after_load_ckpt = True
+
+        if not self.reset_optimizer_on_load:
             try:
                 self.lr = checkpoint.get('lr', self.lr)
             except Exception as e:
                 print(f"Error in recovering the lr in on_load_checkpoint: {e}\nStarting with the lr in config file...", file=sys.stderr)
+
