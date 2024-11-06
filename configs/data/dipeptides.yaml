@@ -1,0 +1,14 @@
+defaults:
+  - default
+
+data_module:
+  datasets:
+    - dipeptides-300K-amber99
+    - dipeptides-1000K-amber99
+    - uncapped-300K-amber99
+
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []
+  splitpath: espaloma_split
+  partition: [0.8, 0.1, 0.1]
