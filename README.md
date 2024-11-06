@@ -109,7 +109,8 @@ conda activate grappa
 
 In cpu mode, Grappa is available on PyPi:
 ```{bash}
-pip install grappa-ff --index-url https://download.pytorch.org/whl/cpu
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install grappa-ff
 ```
 
 Depending on the platform used, installation of OpenMM or GROMACS and Kimmdy is needed (see below).
@@ -144,7 +145,7 @@ pip install kimmdy==6.8.3
 OpenMM is not available on pip and has to be installed via conda in the same environment as Grappa,
 
 ```{bash}
-conda install -c conda-forge openmm
+conda install -c conda-forge openmm # optional: cudatoolkit=<YOUR CUDA>
 ```
 
 Since the resolution of package dependencies can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
