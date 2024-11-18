@@ -160,7 +160,7 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[]):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], ckpt_data_config=None):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
@@ -180,7 +180,7 @@ class Experiment:
 
 
         if load_split:
-            self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path)
+            self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path, ckpt_data_config=ckpt_data_config)
 
         if self.trainer is None:
             self.trainer = Trainer(
@@ -363,12 +363,24 @@ class Experiment:
             compare_scatter_plots(ff1_data, ff2_data, plot_dir=ckpt_path.parent / 'compare_plots'/dirname, ylabel=ff1.capitalize(), xlabel=ff2.capitalize(), contributions=gradient_contributions)
 
 
-    def load_split(self, ckpt_dir:Path=None, ckpt_path:Path=None):
+    def load_split(self, ckpt_dir:Path=None, ckpt_path:Path=None, ckpt_data_config=None):
         """
         Load the split file from the checkpoint directory and use it to create a test set with unseen molecules.
+        Otherwise, re-initialize the dataloader with the config args from before.
         """
         assert ckpt_dir is not None or ckpt_path is not None, "If load_split is True, either ckpt_dir or ckpt_path must be provided."
         load_path = ckpt_dir / 'split.json' if ckpt_dir is not None else ckpt_path.parent / 'split.json'
+        if load_path.exists():
+            logging.info(f"Loading split from {load_path}")
+        else:
+            logging.warning(f"Split file not found at {load_path}. Inferring from the data module...")
+            
+            # init a module just to generate a split file with the data settings from the checkpoint:
+            # (we do not use this module since the user might have changed the data settings in the evaluation config)
+            ckpt_data_module = OmegaConf.to_container(ckpt_data_config.data_module, resolve=True)
+            re_init_datamodule = GrappaData(**ckpt_data_module, save_splits=self.ckpt_dir/'split.json')
+            re_init_datamodule.setup()
+
         data_cfg = self._data_cfg
         data_cfg.splitpath = str(load_path) if load_path.exists() else None
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
