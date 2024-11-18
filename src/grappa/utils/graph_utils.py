@@ -367,8 +367,11 @@ def get_isomorphisms(graphs1:List[dgl.DGLGraph], graphs2:List[dgl.DGLGraph]=None
 def get_isomorphic_permutation(graph1: dgl.DGLGraph, graph2: dgl.DGLGraph) -> List[int]:
     """
     Returns a permutation list to reorder the atoms of `graph2` to match `graph1` 
-    based on their isomorphic structure.
-    
+    based on their isomorphic structure such that e.g.:
+
+    permutation = get_isomorphic_permutation(g1, g2)
+    g2.xyz[:,permutation] = g1.xyz
+
     Parameters:
     - graph1: A DGLGraph object representing the first molecular graph.
     - graph2: A DGLGraph object representing the second molecular graph.

@@ -129,7 +129,9 @@ class MolData():
                 if not self.gradient is None:
                     assert vv.shape == self.gradient.shape, f"Shape of ff_gradient {k} does not match gradient: {vv.shape} vs {self.gradient.shape}"
 
-        assert not self.mol_id is None and self.mol_id != 'None', f"mol_id must be provided but is {self.mol_id}, type {type(self.mol_id)}"
+        
+        if self.mol_id is None or self.mol_id == 'None':
+            raise Warning(f"mol_id is not provided. For training on different molecules, this is necessary.")
 
         # check shapes:
         if len(self.energy.shape) != 1:
