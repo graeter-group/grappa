@@ -100,9 +100,12 @@ class MolData():
     
     @property
     def classical_parameters(self):
-        ff_keys = list(self.classical_parameter_dict.keys())
-        return self.classical_parameter_dict[ff_keys[0]] if len(ff_keys) == 1 else self.classical_parameter_dict['reference_ff']
-    
+        if self.classical_parameter_dict is None:
+            return None
+        else:
+            ff_keys = list(self.classical_parameter_dict.keys())
+            return self.classical_parameter_dict[ff_keys[0]] if len(ff_keys) == 1 else self.classical_parameter_dict['reference_ff']
+        
     @energy.setter
     def energy(self, value):
         self.ff_energy['qm']['total'] = value
