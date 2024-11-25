@@ -36,5 +36,5 @@ data_module:
     spice-dipeptide-charmm36: ${data.data_module.weights.spice-dipeptide-amber99}
     protein-torsion-amber99: ${data.data_module.weights.spice-dipeptide-amber99}
     protein-torsion-charmm36: ${data.data_module.weights.spice-dipeptide-amber99}
-    dipeptides-radical-300K: 0
-    bondbreak-radical-peptides-300K: 0
+    dipeptides-radical-300K: 1
+    bondbreak-radical-peptides-300K: 1

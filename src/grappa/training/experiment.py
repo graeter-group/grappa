@@ -160,19 +160,21 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], ckpt_data_config=None):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], ckpt_data_config=None, store_test_data:bool=True):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
             ckpt_dir: Path, directory containing the checkpoints from which the best checkpoint is loaded
             ckpt_path: Path, path to the checkpoint to load
             n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
-            test_data_path: Path, dir where to store the test data .npz file
+            test_data_path: Path, dir where to store the test data .npz file. if None, the test data is stored in the same directory as the checkpoint
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
             plot: bool, whether to plot the results
             gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
+        if plot:
+            assert store_test_data, "If plot is True, store_test_data must be True as well."
 
         if len(gradient_contributions) > 0:
             # set the gradient_contributions flag in the energy module to calculate the gradient contributions of the specified terms
@@ -223,7 +225,12 @@ class Experiment:
         # remove the .ckpt
 
         self.grappa_module.n_bootstrap = n_bootstrap
-        self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
+        if store_test_data:
+            self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
+            self.grappa_module.test_data_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            self.grappa_module.test_data_path = None
+
         self.grappa_module.test_evaluator.contributions = gradient_contributions
 
         # make the list explicit (instead of a generator) to get a good progress bar
@@ -272,7 +279,7 @@ class Experiment:
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[]):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], store_test_data:bool=True):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -286,6 +293,9 @@ class Experiment:
             gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
+
+        if plot:
+            assert store_test_data, "If plot is True, store_test_data must be True as well."
 
         if len(classical_force_fields) == 0:
             logging.info("No classical force fields provided. Skipping their evaluation.")
@@ -319,8 +329,9 @@ class Experiment:
 
             logging.info(f"Test summary for {ff}:\n{to_df(summary, short=True).to_string()}")
 
-            np.savez(ff_test_data_path, **data)
-            logging.info(f"Test data saved to {ff_test_data_path}")
+            if store_test_data:
+                np.savez(ff_test_data_path, **data)
+                logging.info(f"Test data saved to {ff_test_data_path}")
 
             if plot:
                 data = unflatten_dict(data)
