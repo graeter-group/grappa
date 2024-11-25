@@ -648,13 +648,24 @@ from matplotlib.colors import LogNorm
 
 # set font to arial:
 # plt.rc('font', family="Arial")
+# increase font size:
+# fontsize = 16
+# plt.rcParams.update({'font.size': fontsize})
+# plt.rcParams.update({'axes.labelsize': fontsize})
+# plt.rcParams.update({'xtick.labelsize': fontsize})
+# plt.rcParams.update({'ytick.labelsize': fontsize})
 
+# title_fontsize = fontsize + 2
+# plt.rcParams.update({'axes.titlesize': title_fontsize})
 
 
 def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parameters], title: str=None, figsize: int=5, xlabel:str=None, ylabel:str=None, log=True, exclude_idxs:List[np.ndarray]=None, s=40, get_values=False) -> Tuple[plt.Figure, plt.Axes]:
     """
     exclude_idxs: bonds and angles that involve these atoms will be ignored.
     """
+
+    xlabel = 'FF99SB-ILDN'
+
     if not isinstance(parameters_x, list):
         parameters_x = [parameters_x]
 
@@ -769,7 +780,7 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         if not ylabel is None and i in [0,3]:
             ax.set_ylabel(ylabel)
 
-        num_ticks = None
+        num_ticks = 5
 
         if num_ticks:
             ax.xaxis.set_major_locator(plt.MaxNLocator(num_ticks))
@@ -821,6 +832,8 @@ def compare_parameters(parameters_x: List[Parameters], parameters_y: List[Parame
         }
         
         return data
+    
+    # fig.savefig("compare_parameters.png", dpi=300)
 
     return fig, ax
 

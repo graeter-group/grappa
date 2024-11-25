@@ -27,7 +27,7 @@ system = classical_ff.createSystem(topology)
 
 #%%
 # load the pretrained ML model from a tag. Currently, possible tags are grappa-1.3' and 'latest'
-grappa_ff = OpenmmGrappa.from_tag('latest')
+grappa_ff = OpenmmGrappa.from_tag('grappa-1.4.0')
 
 # grappa will not change the solvant parameters and the nonbonded parameters, e.g. the partial charges, Lennard-Jones parameters and combination rules
 system = grappa_ff.parametrize_system(system, topology, plot_dir=thisdir)

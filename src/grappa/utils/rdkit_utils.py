@@ -1,7 +1,8 @@
-
+import dgl
 import numpy as np
 
 from typing import Tuple, Set, Dict, Union, List
+from grappa.utils.graph_utils import as_nx
 
 
 def get_ring_encoding(mol)->np.ndarray:
@@ -54,6 +55,50 @@ def rdkit_graph_from_bonds(bonds: List[Tuple[int, int]], atomic_numbers: List[in
     mol = mol.GetMol()
 
     return mol
+
+
+def rdkit_graph_from_dgl(dgl_graph):
+    """
+    Returns an rdkit molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
+    dgl_graph must be a dgl graph with atomic_number feature.
+    """
+    nx_graph = as_nx(dgl_graph)
+    return rdkit_graph_from_nx(nx_graph)
+
+
+def rdkit_graph_from_nx(nx_graph):
+    """
+    Returns an rdkit molecule for representing the graph structure of the molecule, without chemical details such as bond order, formal charge and stereochemistry.
+    nx_graph must be a networkx graph with atomic_number feature
+    """
+    from rdkit import Chem
+    from rdkit.Chem import rdchem
+
+    mol = Chem.RWMol()
+
+    for node, data in nx_graph.nodes(data=True):
+        atom = rdchem.Atom(data['atomic_number'])
+        mol.AddAtom(atom)
+
+    for edge in nx_graph.edges(data=True):
+        a1, a2, data = edge
+        mol.AddBond(a1, a2, rdchem.BondType.SINGLE)
+
+    mol = mol.GetMol()
+
+    return mol
+
+def draw_mol(mol, filename:str=None):
+    """
+    Draw the molecule using rdkit's Draw.MolToImage function.
+    """
+    from rdkit.Chem import Draw
+    from PIL import Image
+
+    img = Draw.MolToImage(mol)
+    if filename is not None:
+        img.save(filename)
+    return img
 
 
 def get_degree(mol) -> np.ndarray:
