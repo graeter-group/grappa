@@ -21,7 +21,7 @@ printf "6\n1\n "|gmx pdb2gmx -f ../T4.pdb -o T4.gro -p T4.top -ignh
 # (This is the only line that depends on grappa, the rest is standard gromacs usage.)
 # the -p flag is used to create a plot of grappa's predicted parameters
 ############################################
-grappa_gmx -f T4.top -o T4_grappa.top -t grappa-1.3 -p
+grappa_gmx -f T4.top -o T4_grappa.top -t grappa-1.4.0 -p
 ############################################
 
 
