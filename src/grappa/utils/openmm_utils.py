@@ -116,7 +116,9 @@ if importlib.util.find_spec('openmm') is not None:
         forces_to_remove = []
         for i, force in enumerate(system.getForces()):
             force_name = force.__class__.__name__.lower()
-            assert force_name in ['nonbondedforce', 'harmonicbondforce', 'harmonicangleforce', 'periodictorsionforce', 'cmaptorsionforce', 'custombondforce', 'customangleforce', 'customtorsionforce', 'customnonbondedforce', 'cmmotionremover'], f"Force found in openmm system ({force_name}) that is not implemented in remove_forces_from_system"
+            assert force_name in ['nonbondedforce', 'harmonicbondforce', 'harmonicangleforce', 'periodictorsionforce', 'cmaptorsionforce', 'custombondforce', 'customangleforce', 'customtorsionforce', 'customnonbondedforce', 'cmmotionremover','customgbforce'], f"Force found in openmm system ({force_name}) that is not implemented in remove_forces_from_system"
+            if force_name == 'customgbforce':
+                print(f"WARNING: Non-gaff force in force field: {force_name}")
             if keep is not None:
                 assert isinstance(keep, list), f"Expected keep to be a list, but got {type(keep)}"
                 assert len(keep) > 0, "Expected keep to be a list of strings, but got an empty list."
@@ -370,7 +372,7 @@ if importlib.util.find_spec('openmm') is not None:
 
 
     def get_nonbonded_contribution(openmm_system:openmm.System, xyz):
-        return get_contribution(openmm_system, xyz, keywords=['nonbonded'])
+        return get_contribution(openmm_system, xyz, keywords=['nonbonded','customgbforce'])
 
     def get_bond_contribution(openmm_system:openmm.System, xyz:np.ndarray):
         return get_contribution(openmm_system, xyz, keywords=['bondforce'])
