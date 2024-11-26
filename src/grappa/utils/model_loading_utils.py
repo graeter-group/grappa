@@ -23,7 +23,7 @@ def model_from_path(path:Union[str,Path])->GrappaModel:
 def model_from_tag(tag:str='latest')->GrappaModel:
     """
     Loads a model from a tag. With each release, the mapping tag to url of model weights is updated such that models returned by this function are always at a version that works in the respective release.
-    Possible tags are defined in src/tags.csv.
+    Links from tag to ckpt path are defined in models/models.csv and downloadable tags are defined in src/models/published_models.csv.
     """
     path = get_path_from_tag(tag)
 
@@ -33,7 +33,7 @@ def model_from_tag(tag:str='latest')->GrappaModel:
 def get_path_from_tag(tag:str='latest')->Path:
 
     if tag == 'latest':
-        tag = 'grappa-1.3.0'
+        tag = 'grappa-1.4.0'
 
     csv_path = get_repo_dir() / 'models' / 'models.csv'
     published_csv_path = get_src_dir() / 'models' / 'published_models.csv'
@@ -94,20 +94,26 @@ def get_path_from_tag(tag:str='latest')->Path:
             raise FileNotFoundError(f"Model {tag} not found at {path}")
 
         if not str(path).endswith('.ckpt'):
-            path = get_ckpt(path)
+            ckpt_path = get_ckpt(path)
+        else:
+            ckpt_path = path
 
 
-    else:
+    else: # now we can assume the tag in url_tags
         url = url_df[url_df['tag']==tag]['url'].values[0]
         description = url_df[url_df['tag']==tag]['description'].values[0]
+        # store the model in the models directory in a folder with the tag name:
         path = get_model_dir() / tag
-        logging.info(f"Downloading model {tag} from {url} to {path}")
+        logging.info(f"Downloading model {tag} from {url} and unzipping it to:\n\t{path}")
         download_zipped_dir(url=url, target_dir=path)
+        
         # find a .ckpt file in the directory:
-        path = get_ckpt(path)
-        df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(path), 'description': description}])], ignore_index=True)
+        ckpt_path = get_ckpt(path)
+        df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(ckpt_path), 'description': description}])], ignore_index=True)
+
+        # store the new entry in models.csv:
         store_with_comment(df, csv_path, COMMENT)
-    return path
+    return ckpt_path
 
 def find_tag(tag, tags):
     """
