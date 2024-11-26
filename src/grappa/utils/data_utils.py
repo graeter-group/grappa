@@ -1,7 +1,6 @@
 import zipfile
 import os
 import requests
-import argparse
 from tqdm import tqdm
 from pathlib import Path
 from typing import Union
@@ -245,19 +244,4 @@ def download_zipped_dir(url:str, target_dir:Path):
         print(f"Error while deleting the zip file: {e}")
 
     logging.info(f"Downloaded to {target_dir}")
-
-def inspect_dataset_(datasetpath:Union[str,Path]):
-    if not modelpath is None:
-        grappa = GromacsGrappa.from_ckpt(modelpath, device=device)
-    else:
-        grappa = GromacsGrappa.from_tag(modeltag, device=device)
-    grappa.parametrize(top_path, top_outpath, plot_parameters=plot_parameters)
-    return
-
-def inspect_dataset():
-    parser = argparse.ArgumentParser(description='Inspect a grappa dataset')
-    parser.add_argument('datasetpath',  type=str, help='Path to the grappa dataset.')
-    args = parser.parse_args()
-
-    return inspect_dataset_(datasetpath=args.datasetpath)
     

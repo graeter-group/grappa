@@ -15,6 +15,7 @@ from pathlib import Path
 
 from typing import List, Union, Tuple, Dict
 
+import argparse
 import copy
 import numpy as np
 import logging
@@ -581,3 +582,89 @@ def clear_tag(tag:str):
         import shutil
         shutil.rmtree(path)
         logging.info(f'Deleted dataset at {path}.')
+
+def inspect_dataset_(datasetpath:Union[str,Path]):
+    def create_inspection_counter(ff_contribution:str, inspection_counts:dict):
+        if ff_contribution == 'qm':
+            inspection_counts[ff_contribution] = {'energy' : {'total':0},'gradient' : {'total':0}}
+        else:
+            inspection_counts[ff_contribution] = {'energy' : {'total':0,'nonbonded':0},'gradient' : {'total':0,'nonbonded':0}}
+
+    bonded_prms = ['bond_eq', 'bond_k', 'angle_k', 'angle_eq', 'proper_ks', 'proper_phases','improper_ks','improper_phases']
+    datasetpath = Path(datasetpath)
+
+    # Initialize counters for tests
+    inspection_counts = {
+        'Structures' : {'xyz':0,'pdb':0},
+        'QM data': {'energy':0,'gradient':0},
+        'FF Parameters': {},
+        'FF Energy/Gradients': {},
+    }
+    for bonded_prm in bonded_prms:
+        inspection_counts['FF Parameters'].update({bonded_prm:0})
+
+    # Iterate over files in the dataset directory
+    ds_list = list(datasetpath.glob('*npz'))
+    n_npz = len(ds_list)
+    inspection_counts = inspection_counts
+    for file_path in ds_list:
+        moldata = MolData.load(file_path.as_posix())
+        moldata._validate()
+            
+        # Check and increment counters for non-NaN values in the required attributes
+        if np.all(np.isfinite(moldata.xyz)): inspection_counts['Structures']['xyz'] += 1
+        if np.all(np.isfinite(moldata.energy)): inspection_counts['QM data']['energy'] += 1
+        if np.all(np.isfinite(moldata.gradient)): inspection_counts['QM data']['gradient'] += 1
+        if moldata.pdb is not None: inspection_counts['Structures']['pdb'] += 1
+
+        # ff energy
+        for k,v in moldata.ff_energy.items():
+            if not k in inspection_counts['FF Energy/Gradients'].keys():
+                create_inspection_counter(k,inspection_counts['FF Energy/Gradients'])
+            if np.all(np.isfinite(moldata.ff_energy[k]['total'])) : inspection_counts['FF Energy/Gradients'][k]['energy']['total'] += 1
+            if k != 'qm':
+                if np.all(np.isfinite(moldata.ff_energy[k]['nonbonded'])) : inspection_counts['FF Energy/Gradients'][k]['energy']['nonbonded'] += 1
+        # ff gradients
+        for k,v in moldata.ff_gradient.items():
+            if not k in inspection_counts['FF Energy/Gradients'].keys():
+                create_inspection_counter(k,inspection_counts['FF Energy/Gradients'])
+            if np.all(np.isfinite(moldata.ff_gradient[k]['total'])) : inspection_counts['FF Energy/Gradients'][k]['gradient']['total'] += 1
+            if k != 'qm':
+                if np.all(np.isfinite(moldata.ff_gradient[k]['nonbonded'])) : inspection_counts['FF Energy/Gradients'][k]['gradient']['nonbonded'] += 1
+        # ff parameters
+        for bonded_prm in bonded_prms:
+            parameters = getattr(moldata.classical_parameters,bonded_prm)
+            if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
+
+
+    print(f"Dataset: {datasetpath.name} with {n_npz} files\n")
+    # Print final counts for each test
+    for test_type, tests in inspection_counts.items():
+        print(test_type)
+        if test_type in ['Structures','QM data','FF Parameters']:
+            for i,(test, count) in enumerate(tests.items()):
+                print(f"{test}: {count}",end='\t')
+                if i % 2 == 1:
+                    print('')
+        elif test_type in ['FF Energy/Gradients']:
+            for FF_type, FF_dict in tests.items():
+                data_string = f"{FF_type} "
+                for i,(data_type, data_dict) in enumerate(FF_dict.items()):
+                    if i > 0:
+                        data_string += '; '
+                    data_string += f"{data_type}"
+                    for ii, (contribution_type, count) in enumerate(data_dict.items()):
+                        if ii > 0:
+                            data_string += ','
+                        data_string += f" {contribution_type}: {count}"
+
+                print(data_string)
+        print('')
+    return
+
+def inspect_dataset():
+    parser = argparse.ArgumentParser(description='Inspect a grappa dataset')
+    parser.add_argument('datasetpath',  type=str, help='Path to the grappa dataset.')
+    args = parser.parse_args()
+
+    return inspect_dataset_(datasetpath=args.datasetpath)
