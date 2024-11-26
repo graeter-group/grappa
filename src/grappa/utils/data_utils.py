@@ -231,6 +231,8 @@ def download_zipped_dir(url:str, target_dir:Path):
                 file.write(chunk)
                 t.update(len(chunk))
 
+    assert zip_path.exists(), f"Download failed, file not found at {zip_path}"
+
     # Unzip the file
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(str(target_dir))

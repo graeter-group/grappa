@@ -10,7 +10,7 @@ import copy
 ds = Dataset.from_tag('spice-dipeptide')
 ds.create_reference()
 
-model = model_from_tag('grappa-1.3').eval()
+model = model_from_tag('latest').eval()
 model = torch.nn.Sequential(model, Energy())
 
 #%%

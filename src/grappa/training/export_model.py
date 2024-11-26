@@ -9,6 +9,7 @@ from typing import List
 from grappa.utils import get_data_path
 from grappa.utils.model_loading_utils import get_model_dir
 import yaml
+import tempfile
 
 
 MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
@@ -87,21 +88,31 @@ def grappa_export():
 def _release_model(release_tag:str, modelname:str):
     """
     Uploads a model to grappas github repository. GitHub CLI needs to be installed (https://github.com/cli/cli/blob/trunk/docs/install_linux.md). The release must exist already (e.g. by gh release create).
-    The model dir is zipped and uploaded to the release. Assumes that the model is already exported, i.e. in the grappa/models/modelname/ directory.
+    The model dir is zipped and uploaded to the release. Assumes that the model is located at grappa/models/modelname/*.ckpt along with grappa/models/modelname/config.yaml.
     """
 
     modeldir = MODELPATH/f'{modelname}'
+    zippath = MODELPATH/f'{modelname}.zip'
     if not modeldir.exists():
         raise FileNotFoundError(f"Expected model dir {modeldir} does not exist.")
 
     # zip model dir:
-    shutil.make_archive(modeldir, 'zip', modeldir)
-    zippath = Path(str(modeldir) + '.zip')
+    # Create a temporary directory using the context manager
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Construct the path for the temporary zip file
+        temp_zip_path = Path(temp_dir)/'temp_model'
+        
+        # Create a zip archive of the model directory
+        shutil.make_archive(str(temp_zip_path), 'zip', modeldir)
+        
+        # Move the zip file to the desired location, adding '.zip' suffix
+        shutil.move(str(temp_zip_path)+'.zip', str(zippath))
 
     # upload to release:
     logging.info(f"Uploading {str(zippath)} to release {release_tag}...")
-    os.system(f"gh release upload {release_tag} {zippath.absolute()}")
+    os.system(f"gh release upload {release_tag} {str(zippath)}")
     os.remove(str(zippath))
+
 
 def release_model():
     parser = argparse.ArgumentParser(description='Uploads a model to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
