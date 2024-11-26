@@ -618,23 +618,25 @@ def inspect_dataset_(datasetpath:Union[str,Path]):
         if moldata.pdb is not None: inspection_counts['Structures']['pdb'] += 1
 
         # ff energy
-        for k,v in moldata.ff_energy.items():
-            if not k in inspection_counts['FF Energy/Gradients'].keys():
-                create_inspection_counter(k,inspection_counts['FF Energy/Gradients'])
-            if np.all(np.isfinite(moldata.ff_energy[k]['total'])) : inspection_counts['FF Energy/Gradients'][k]['energy']['total'] += 1
-            if k != 'qm':
-                if np.all(np.isfinite(moldata.ff_energy[k]['nonbonded'])) : inspection_counts['FF Energy/Gradients'][k]['energy']['nonbonded'] += 1
+        for ff_type,ff_contributions in moldata.ff_energy.items():
+            if not ff_type in inspection_counts['FF Energy/Gradients'].keys():
+                inspection_counts['FF Energy/Gradients'][ff_type] = {'energy' : {},'gradient' : {}}
+            for interaction, val in ff_contributions.items():
+                if not interaction in inspection_counts['FF Energy/Gradients'][ff_type]['energy'].keys():
+                    inspection_counts['FF Energy/Gradients'][ff_type]['energy'][interaction] = 0
+                if np.all(np.isfinite(val)) : inspection_counts['FF Energy/Gradients'][ff_type]['energy'][interaction] += 1
         # ff gradients
-        for k,v in moldata.ff_gradient.items():
-            if not k in inspection_counts['FF Energy/Gradients'].keys():
-                create_inspection_counter(k,inspection_counts['FF Energy/Gradients'])
-            if np.all(np.isfinite(moldata.ff_gradient[k]['total'])) : inspection_counts['FF Energy/Gradients'][k]['gradient']['total'] += 1
-            if k != 'qm':
-                if np.all(np.isfinite(moldata.ff_gradient[k]['nonbonded'])) : inspection_counts['FF Energy/Gradients'][k]['gradient']['nonbonded'] += 1
-        # ff parameters
-        for bonded_prm in bonded_prms:
-            parameters = getattr(moldata.classical_parameters,bonded_prm)
-            if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
+        for ff_type,ff_contributions in moldata.ff_gradient.items():
+            if not ff_type in inspection_counts['FF Energy/Gradients'].keys():
+                inspection_counts['FF Energy/Gradients'][ff_type] = {'energy' : {},'gradient' : {}}
+            for interaction, val in ff_contributions.items():
+                if not interaction in inspection_counts['FF Energy/Gradients'][ff_type]['gradient'].keys():
+                    inspection_counts['FF Energy/Gradients'][ff_type]['gradient'][interaction] = 0
+                if np.all(np.isfinite(val)) : inspection_counts['FF Energy/Gradients'][ff_type]['gradient'][interaction] += 1
+            # ff parameters
+            for bonded_prm in bonded_prms:
+                parameters = getattr(moldata.classical_parameters,bonded_prm)
+                if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
 
 
     print(f"Dataset: {datasetpath.name} with {n_npz} files\n")
