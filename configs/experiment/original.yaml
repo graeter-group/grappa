@@ -1,7 +1,7 @@
 ckpt_path: null
 ckpt_cfg_override: false
 wandb:
-  name: baseline
+  name: baseline-original
   project: grappa
   save_code: True
   tags: []
@@ -29,17 +29,15 @@ train:
   lr: 1e-05
   energy_weight: 1.0
   gradient_weight: 0.8
-  start_qm_epochs: 1
-  param_loss_epochs: 10
+  start_qm_epochs: 2
+  param_loss_epochs: 100
   warmup_steps: 500
   early_stopping_energy_weight: 3.0
   param_weight: 0.001
   proper_regularisation: 1.
   improper_regularisation: 1.
   weight_decay: 0
-  patience: -1
-  lr_decay: 1.
+  patience: 50
+  lr_decay: 0.8
   tuplewise_weight: 0.
   time_limit: 47.5
-  reset_optimizer_on_load: False
-  add_noise_on_load: 0.

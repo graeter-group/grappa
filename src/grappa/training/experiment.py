@@ -56,6 +56,16 @@ class Experiment:
         self._energy_cfg = config.data.energy
         self.is_train = is_train
 
+        # if config.data has attribute extra_datasets, add them to data_cfg.datasets:
+        if hasattr(config.data, 'extra_datasets'):
+            self._data_cfg.datasets = self._data_cfg.datasets + config.data.extra_datasets
+        if hasattr(config.data, 'extra_train_datasets'):
+            self._data_cfg.pure_train_datasets = self._data_cfg.pure_train_datasets + config.data.extra_train_datasets
+        if hasattr(config.data, 'extra_val_datasets'):
+            self._data_cfg.pure_val_datasets = self._data_cfg.pure_val_datasets + config.data.extra_val_datasets
+        if hasattr(config.data, 'extra_test_datasets'):
+            self._data_cfg.pure_test_datasets = self._data_cfg.pure_test_datasets + config.data.extra_test_datasets
+
         # throw an error if energy terms and ref_terms overlap:
         if set(self._energy_cfg.terms) & set(self._data_cfg.ref_terms):
             raise ValueError(f"Energy terms and reference terms must not overlap. Energy terms are predicted by grappa, reference terms by the reference force field. An overlap means that some contributions are counted twice. Found {set(self._energy_cfg.terms) & set(self._data_cfg.ref_terms)}")
@@ -150,19 +160,21 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[]):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], ckpt_data_config=None, store_test_data:bool=True):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
             ckpt_dir: Path, directory containing the checkpoints from which the best checkpoint is loaded
             ckpt_path: Path, path to the checkpoint to load
             n_bootstrap: int, number of bootstrap samples to calculate the uncertainty of the test metrics
-            test_data_path: Path, dir where to store the test data .npz file
+            test_data_path: Path, dir where to store the test data .npz file. if None, the test data is stored in the same directory as the checkpoint
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
             plot: bool, whether to plot the results
             gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
+        if plot:
+            assert store_test_data, "If plot is True, store_test_data must be True as well."
 
         if len(gradient_contributions) > 0:
             # set the gradient_contributions flag in the energy module to calculate the gradient contributions of the specified terms
@@ -170,7 +182,7 @@ class Experiment:
 
 
         if load_split:
-            self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path)
+            self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path, ckpt_data_config=ckpt_data_config)
 
         if self.trainer is None:
             self.trainer = Trainer(
@@ -213,7 +225,12 @@ class Experiment:
         # remove the .ckpt
 
         self.grappa_module.n_bootstrap = n_bootstrap
-        self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
+        if store_test_data:
+            self.grappa_module.test_data_path = Path(ckpt_path).parent / 'test_data' / (epoch+'.npz') if test_data_path is None else Path(test_data_path)
+            self.grappa_module.test_data_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            self.grappa_module.test_data_path = None
+
         self.grappa_module.test_evaluator.contributions = gradient_contributions
 
         # make the list explicit (instead of a generator) to get a good progress bar
@@ -262,7 +279,7 @@ class Experiment:
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[]):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], store_test_data:bool=True):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -276,6 +293,9 @@ class Experiment:
             gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
+
+        if plot:
+            assert store_test_data, "If plot is True, store_test_data must be True as well."
 
         if len(classical_force_fields) == 0:
             logging.info("No classical force fields provided. Skipping their evaluation.")
@@ -309,8 +329,9 @@ class Experiment:
 
             logging.info(f"Test summary for {ff}:\n{to_df(summary, short=True).to_string()}")
 
-            np.savez(ff_test_data_path, **data)
-            logging.info(f"Test data saved to {ff_test_data_path}")
+            if store_test_data:
+                np.savez(ff_test_data_path, **data)
+                logging.info(f"Test data saved to {ff_test_data_path}")
 
             if plot:
                 data = unflatten_dict(data)
@@ -353,14 +374,26 @@ class Experiment:
             compare_scatter_plots(ff1_data, ff2_data, plot_dir=ckpt_path.parent / 'compare_plots'/dirname, ylabel=ff1.capitalize(), xlabel=ff2.capitalize(), contributions=gradient_contributions)
 
 
-    def load_split(self, ckpt_dir:Path=None, ckpt_path:Path=None):
+    def load_split(self, ckpt_dir:Path=None, ckpt_path:Path=None, ckpt_data_config=None):
         """
         Load the split file from the checkpoint directory and use it to create a test set with unseen molecules.
+        Otherwise, re-initialize the dataloader with the config args from before.
         """
         assert ckpt_dir is not None or ckpt_path is not None, "If load_split is True, either ckpt_dir or ckpt_path must be provided."
         load_path = ckpt_dir / 'split.json' if ckpt_dir is not None else ckpt_path.parent / 'split.json'
+        if load_path.exists():
+            logging.info(f"Loading split from {load_path}")
+        else:
+            logging.warning(f"Split file not found at {load_path}. Inferring from the data module...")
+            
+            # init a module just to generate a split file with the data settings from the checkpoint:
+            # (we do not use this module since the user might have changed the data settings in the evaluation config)
+            ckpt_data_module = OmegaConf.to_container(ckpt_data_config.data_module, resolve=True)
+            re_init_datamodule = GrappaData(**ckpt_data_module, save_splits=self.ckpt_dir/'split.json')
+            re_init_datamodule.setup()
+
         data_cfg = self._data_cfg
-        data_cfg.splitpath = str(load_path)
+        data_cfg.splitpath = str(load_path) if load_path.exists() else None
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
         self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
         self.datamodule.setup()

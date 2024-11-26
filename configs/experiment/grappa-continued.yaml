@@ -1,7 +1,7 @@
 defaults:
   - default
 
-ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
+ckpt_path: models/grappa-1.4.0/checkpoint.ckpt
 
 wandb:
   name: baseline
@@ -13,3 +13,5 @@ train:
   start_qm_epochs: 0
   param_loss_epochs: 0
   warmup_steps: 1000
+  reset_optimizer_on_load: True
+  add_noise_on_load: 0.0

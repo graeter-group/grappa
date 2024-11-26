@@ -6,8 +6,12 @@ import numpy as np
 import random
 from tqdm import tqdm
 import logging
+from copy import deepcopy
 
 from grappa.constants import BONDED_CONTRIBUTIONS
+
+def get_atomic_numbers(g:dgl.DGLGraph)->torch.Tensor:
+    return torch.argwhere(g.nodes['n1'].data['atomic_number'] == 1)[:,1] + 1
 
 def get_parameters(g, suffix="", exclude:Tuple[str,str]=[], terms:List[str]=['n2', 'n3', 'n4', 'n4_improper'])->Dict[str,torch.Tensor]:
     """
@@ -359,3 +363,49 @@ def get_isomorphisms(graphs1:List[dgl.DGLGraph], graphs2:List[dgl.DGLGraph]=None
             isomorphic_pairs.append((i, j))
 
     return set(isomorphic_pairs)
+
+def get_isomorphic_permutation(graph1: dgl.DGLGraph, graph2: dgl.DGLGraph) -> List[int]:
+    """
+    Returns a permutation list to reorder the atoms of `graph2` to match `graph1` 
+    based on their isomorphic structure such that e.g.:
+
+    permutation = get_isomorphic_permutation(g1, g2)
+    g2.xyz[:,permutation] = g1.xyz
+
+    Parameters:
+    - graph1: A DGLGraph object representing the first molecular graph.
+    - graph2: A DGLGraph object representing the second molecular graph.
+
+    Returns:
+    - List[int]: A list of indices representing the permutation required to align graph1 to graph2.
+    """
+    homgraph1 = dgl.node_type_subgraph(graph1, ['n1'])
+    homgraph2 = dgl.node_type_subgraph(graph2, ['n1'])
+
+    # Convert DGLGraphs to NetworkX graphs for isomorphism checking
+    nx_graph1 = homgraph1.to_networkx(node_attrs=['atomic_number'])
+    nx_graph2 = homgraph2.to_networkx(node_attrs=['atomic_number'])
+    
+    def node_match(n1, n2):
+        return np.all(n1['atomic_number'].numpy() == n2['atomic_number'].numpy())
+    
+    # Find the isomorphism mapping between graph1 and graph2 nodes
+    gm = nx.isomorphism.GraphMatcher(nx_graph1, nx_graph2, node_match=node_match)
+    
+    if gm.is_isomorphic():
+        # Extract the node correspondence mapping from graph1 to graph2
+        mapping = gm.mapping
+        # Generate the permutation list based on the mapping
+        permutation = [mapping[i] for i in range(len(homgraph1.nodes()))]
+        return permutation
+    else:
+        raise ValueError("Graphs are not isomorphic")
+
+
+def as_nx(graph:dgl.DGLGraph)->nx.Graph:
+    """
+    Convert a DGLGraph representing a grappa molecule to a NetworkX graph.
+    """
+    homgraph = deepcopy(dgl.node_type_subgraph(graph, ['n1']))
+    homgraph.ndata['atomic_number'] = torch.argmax(homgraph.ndata['atomic_number'], dim=-1) + 1
+    return homgraph.to_networkx(node_attrs=['atomic_number'])

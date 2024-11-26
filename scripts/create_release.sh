@@ -1,3 +1,3 @@
-TAG=v.1.3.1
+TAG=v.1.4.0
 
 gh release create $TAG

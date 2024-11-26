@@ -27,6 +27,9 @@ class Dataset(torch.utils.data.Dataset):
     Class that stores dgl graphs, their mol_ids and the name of the subdataset to which they belong.
     Items are returned as (graph, subdataset) tuples.
     The mol_ids are used to create splits into train, validation and test sets.
+    Shapes of graph entries:
+    - nodes['g'].data['energy_qm']: (1,n_confs)
+    - nodes['n1'].data['xyz']: (n_atoms, n_confs, 3)
     """
     def __init__(self, graphs:List[DGLGraph]=[], mol_ids:List[str]=[], subdataset:Union[List[str], str]=[]):
         """
@@ -501,7 +504,72 @@ class Dataset(torch.utils.data.Dataset):
         self.graphs = new_graphs
         self.mol_ids = new_mol_ids
         self.subdataset = new_subdatasets
-        return self        
+        return self
+    
+    @staticmethod
+    def remove_confs(graph, conf_idxs):
+        """
+        Removes conformations from the graph based on the provided indices.
+        
+        Args:
+            graph (DGLGraph): The graph to remove conformations from.
+            conf_idxs (List[int]): The indices of the conformations to keep.
+        Returns:
+            DGLGraph: The graph with the conformations filtered by the given indices.
+        """
+        conf_entries = [('n1', 'xyz')]
+        for feat in graph.nodes['g'].data.keys():
+            if feat.startswith('energy_'):
+                conf_entries.append(('g', feat))
+        for feat in graph.nodes['n1'].data.keys():
+            if feat.startswith('gradient_'):
+                conf_entries.append(('n1', feat))
+
+        # Filter out the conformations based on the given indices
+        for lvl, feat in conf_entries:
+            graph.nodes[lvl].data[feat] = graph.nodes[lvl].data[feat][:, conf_idxs]
+
+        return graph
+
+    def filter_energies(self, max_energy: float):
+        """
+        Filters out conformations from graphs where the QM energy exceeds the specified max_energy.
+        Ensures that at least 2 conformations remain in the graph.
+        
+        Args:
+            max_energy (float): The maximum allowed QM energy. Conformations with a QM energy higher than this value are removed.
+            
+        Returns:
+            Dataset: The dataset with only the conformations that meet the energy criterion.
+        """
+        new_graphs = []
+        new_mol_ids = []
+        new_subdatasets = []
+
+        for g, mol_id, dsname in zip(self.graphs, self.mol_ids, self.subdataset):
+            # Get the indices of conformations that have energies <= max_energy
+            normalized_energies = g.nodes['g'].data['energy_qm'][0] - g.nodes['g'].data['energy_qm'][0].min()
+            keep_indices = torch.argwhere(normalized_energies < max_energy).flatten()
+
+            # Ensure at least 2 conformations are kept
+            if len(keep_indices) < 2:
+                continue
+
+            # Apply the filtering to the graph and add it to the new list of graphs
+            new_graph = self.remove_confs(g, keep_indices)
+            new_graphs.append(new_graph)
+            new_mol_ids.append(mol_id)
+            new_subdatasets.append(dsname)
+
+        if len(new_graphs) == 0:
+            raise ValueError('No conformations meet the energy criterion. Please adjust the maximum energy.')
+
+        # Update the dataset with the filtered graphs
+        self.graphs = new_graphs
+        self.mol_ids = new_mol_ids
+        self.subdataset = new_subdatasets
+
+        return self
 
 
 def clear_tag(tag:str):

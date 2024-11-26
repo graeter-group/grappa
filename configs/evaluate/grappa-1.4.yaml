@@ -2,20 +2,17 @@ defaults:
   - default
   - _self_
 
-ckpt_path: models/grappa-1.3.0/checkpoint.ckpt
-# n_bootstrap: 1000
-n_bootstrap: 1
-test_data_path: /hits/fast/mbm/seutelf/plot-grappa/data.npz
+ckpt_path: models/grappa-1.4.0/checkpoint.ckpt
+n_bootstrap: 0
 accelerator: 'gpu'
-plot: true
+plot: false
 
 classical_force_fields:
-  # - amber99sbildn
+  - amber99sbildn
   - gaff-2.11
-  - amber14
+  # - amber14
   # - openff-1.2.0
 
-datasets: [spice-pubchem-filtered, spice-dipeptide]
 pure_test_datasets: [rna-trinucleotide]
 
 gradient_contributions:

@@ -13,7 +13,7 @@ from typing import Union
 import logging
 
 
-def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, colorbar:Union[bool,list]=True, max_frequency:int=None, **kwargs) -> plt.Axes:
+def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, num_ticks:int=None, max_ticks:int=8, ax_symmetric=False, cluster=False, delta_factor=100, cmap='viridis', logscale=False, show_rmsd=False, amplitude=None, cbar_label:bool=False, colorbar:Union[bool,list]=True, max_frequency:int=None, show_diagonal:bool=True, **kwargs) -> plt.Axes:
     """
     Create a scatter plot of two arrays x and y.
     Args:
@@ -87,8 +87,9 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
     else:
         ax.scatter(x, y, alpha=alpha, s=s, **kwargs)
 
-    # limits and ticks:
-    ax.set_aspect('equal', 'box')
+    if ax_symmetric:
+        # limits and ticks:
+        ax.set_aspect('equal', 'box')
 
     x_min, y_min = ax.get_xlim()[0], ax.get_ylim()[0]
     x_max, y_max = ax.get_xlim()[1], ax.get_ylim()[1]
@@ -103,11 +104,13 @@ def scatter_plot(ax, x, y, n_max:int=None, seed=0, alpha:float=1., s:float=15, n
             min_val = -max(abs(min_val), abs(max_val))
             max_val = max(abs(min_val), abs(max_val))
 
-    # reference line
-    ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
+    if show_diagonal:
+        # reference line
+        ax.plot([min_val, max_val], [min_val, max_val], color='black', linestyle='-', linewidth=0.5)
 
-    ax.set_ylim(min_val, max_val)
-    ax.set_xlim(min_val, max_val)
+    if ax_symmetric:
+        ax.set_ylim(min_val, max_val)
+        ax.set_xlim(min_val, max_val)
 
 
     if show_rmsd:

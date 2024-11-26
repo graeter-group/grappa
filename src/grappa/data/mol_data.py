@@ -12,6 +12,7 @@ from grappa import constants
 from grappa import units as grappa_units
 import traceback
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
 @dataclass(init=False)
@@ -131,7 +132,26 @@ class MolData():
                 if not self.gradient is None:
                     assert vv.shape == self.gradient.shape, f"Shape of ff_gradient {k} does not match gradient: {vv.shape} vs {self.gradient.shape}"
 
-        assert not self.mol_id is None and self.mol_id != 'None', f"mol_id must be provided but is {self.mol_id}, type {type(self.mol_id)}"
+        
+        if self.mol_id is None or self.mol_id == 'None':
+            raise Warning(f"mol_id is not provided. For training on different molecules, this is necessary.")
+
+        # check shapes:
+        if len(self.energy.shape) != 1:
+            raise ValueError(f"Energy must have shape (n_confs,) but has shape {self.energy.shape}")
+        if len(self.gradient.shape) != 3:
+            raise ValueError(f"Gradient must have shape (n_confs, n_atoms, 3) but has shape {self.gradient.shape}")
+        if self.xyz.shape[0] == 0:
+            raise ValueError(f"xyz must have at least one conformation, but has shape {self.xyz.shape}")
+        if self.xyz.shape[2] != 3:
+            raise ValueError(f"xyz must have shape (n_confs, n_atoms, 3) but has shape {self.xyz.shape}")
+        if self.xyz.shape[1] == 0:
+            raise ValueError(f"xyz must have at least one atom, but has shape {self.xyz.shape}")
+        if self.xyz.shape != self.gradient.shape:
+            raise ValueError(f"Shape of xyz {self.xyz.shape} does not match gradient {self.gradient.shape}")
+        if self.xyz.shape[0] != self.energy.shape[0]:
+            raise ValueError(f"Shape of xyz {self.xyz.shape} does not match energy {self.energy.shape}")
+
 
     def  __post_init__(self):
 
@@ -417,7 +437,7 @@ class MolData():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=True,charge_model:str="None"):
+    def from_openmm_system(cls, openmm_system, openmm_topology, xyz, energy, gradient, mol_id:str, partial_charges=None, mapped_smiles=None, pdb=None, ff_name:str=None, sequence:str=None, smiles:str=None, allow_nan_params:bool=True,charge_model:str="None", skip_ff:bool=False):
         """
         Use an openmm system to obtain classical contributions, classical parameters and the interaction tuples. Calculates the contributions:
             - total: total energy and gradient
@@ -450,18 +470,23 @@ class MolData():
 
         mol = Molecule.from_openmm_system(openmm_system=openmm_system, openmm_topology=openmm_topology, partial_charges=partial_charges, mapped_smiles=mapped_smiles, charge_model=charge_model)
 
-        try:        
-            params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
-        except Exception as e:
-            if allow_nan_params:
-                params = Parameters.get_nan_params(mol=mol)
-            else:
-                tb = traceback.format_exc()
-                raise ValueError(f"Could not obtain parameters from openmm system: {e}\n{tb}. Consider setting allow_nan_params=True, then the parameters for this molecule will be set to nans and ignored during training.")
+        if not skip_ff:
+            try:        
+                params = Parameters.from_openmm_system(openmm_system, mol=mol, allow_skip_improper=True)
+            except Exception as e:
+                if allow_nan_params:
+                    params = Parameters.get_nan_params(mol=mol)
+                else:
+                    tb = traceback.format_exc()
+                    raise ValueError(f"Could not obtain parameters from openmm system: {e}\n{tb}. Consider setting allow_nan_params=True, then the parameters for this molecule will be set to nans and ignored during training.")
+                
+        else:
+            params = Parameters.get_nan_params(mol=mol)
 
         self = cls(molecule=mol, classical_parameters=params, xyz=xyz, energy=energy, gradient=gradient, mapped_smiles=mapped_smiles, pdb=pdb, mol_id=mol_id, sequence=sequence, smiles=smiles)
 
-        self.add_ff_data(openmm_system=openmm_system, ff_name=ff_name, partial_charges=partial_charges, xyz=xyz)
+        if not skip_ff:
+            self.add_ff_data(openmm_system=openmm_system, ff_name=ff_name, partial_charges=partial_charges, xyz=xyz)
 
         return self
 
@@ -681,3 +706,38 @@ class MolData():
 
         # add ff data:
         self.add_ff_data(openmm_system=openmm_system, ff_name=ff_name, partial_charges=partial_charges, xyz=self.xyz)
+
+
+    @classmethod
+    def from_pdb(cls, pdb:Union[str,list], mol_id:str, forcefield:str='amber99sbildn.xml', skip_ff:bool=False):
+        """
+        Creates a mock MolData object from a pdb file. The energy and gradient are set to nan.
+        pdb: str - the contents of the pdb file, separated by newlines or a list of strings describing the lines of the pdb file.
+        """
+
+        from openmm.app import PDBFile, ForceField
+
+        ff_name = forcefield.strip('.xml')
+
+        if isinstance(pdb, list):
+            assert all(isinstance(p, str) for p in pdb), "All pdb lines must be strings."
+            pdbstring = '\n'.join(pdb)
+
+        else:
+            assert isinstance(pdb, str), "pdb must be a string or a list of strings."
+            pdbstring = pdb
+
+        with TemporaryDirectory() as tmpdirname:
+            pdb_file = Path(tmpdirname) / f"{mol_id}.pdb"
+            with open(pdb_file, 'w') as f:
+                f.write(pdbstring)
+                f.flush()
+
+            pdb_file = PDBFile(str(pdb_file))
+
+        ff = ForceField(forcefield)
+        system = ff.createSystem(pdb_file.topology)
+
+        moldata = MolData.from_openmm_system(openmm_system=system, openmm_topology=pdb_file.topology, xyz=np.zeros((1,)+np.array(pdb_file.positions).shape), energy=np.array((0,)), gradient=np.zeros((1,)+np.array(pdb_file.positions).shape), mol_id=mol_id, pdb=pdbstring, skip_ff=skip_ff)
+
+        return moldata

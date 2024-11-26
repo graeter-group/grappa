@@ -142,6 +142,8 @@ npy_charge_dicts/
 examples/dataset_creation/*/*.pdb
 !examples/dataset_creation/minimal_example_data/*.pdb
 
+!configs/data
+
 **.gro**
 **.top**
 **.itp**
@@ -152,3 +154,5 @@ examples/dataset_creation/*/*.pdb
 
 
 dist/
+
+!examples/dataset_creation/gmx_example_data

@@ -1,8 +1,8 @@
-TAG=v.1.3.0
+TAG=v.1.4.0
 
-CKPT=../ckpt/grappa-1.3/published/2024-06-26_01-30-36/epoch:789-early_stop_loss:19.65.ckpt
-NAME=grappa-1.3.0
-DESCR="Covers peptides, small molecules, rna and radical peptides"
+CKPT=../models/grappa-1.4.0/checkpoint.ckpt
+NAME=grappa-1.4.0
+DESCR="Covers peptides, small molecules, rna"
 
 grappa_export -n $NAME -c $CKPT -m "$DESCR"
 

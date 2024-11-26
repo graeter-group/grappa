@@ -149,10 +149,10 @@ else:
             """
             Wrapper class for the openmm.app.ForceField class that parametrizes the system using the Grappa model.
             """
-            def createSystem(self, topology, **kwargs):
+            def createSystem(self, topology, *args, **kwargs):
                 
                 try:
-                    system = base_forcefield_.createSystem(topology, **kwargs)
+                    system = base_forcefield_.createSystem(topology, *args, **kwargs)
                 except Exception as e:
                     raise RuntimeError(f"Error when creating system with OpenMM base forcefield (not Grappa): {e}")
                 

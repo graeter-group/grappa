@@ -669,9 +669,9 @@ class Molecule():
         self.additional_features['is_radical'] = np.array(is_radical, dtype=np.float32)
 
     @classmethod
-    def random(cls):
+    def example(cls):
         """
-        Create a random molecule (A-B-C-D, E-B) with atomic numbers 1,2,3,4,5 and partial charges 0.0, 0.2, 0.3, -0.5., 0.
+        Create an example molecule (A-B-C-D, E-B) with atomic numbers 1,2,3,4,5 and partial charges 0.0, 0.2, 0.3, -0.5., 0.
         """
 
         atoms = [0,1,2,3,4]
@@ -684,3 +684,46 @@ class Molecule():
         partial_charges = [0.0, 0.2, 0.3, -0.5, 0.]
 
         return cls(atoms=atoms, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges)
+    
+
+    @classmethod
+    def from_ase(cls, atoms, bonds=None, partial_charges:List[float]=None, impropers=[]):
+        """
+        Args:
+            atoms (ase.Atoms): an ase.Atoms object
+            bonds (list): a list of tuples of atom indices that are bonded. If None, the bonds are extracted from the ase.Atoms object. Positions are then required.
+        """
+
+        from ase import Atoms
+        from ase.neighborlist import NeighborList
+        import numpy as np
+        from ase.data import covalent_radii
+
+        assert isinstance(atoms, Atoms), f"atoms must be an ase.Atoms object but is {type(atoms)}"
+
+        if bonds is None:
+            if atoms.positions is None or np.all(atoms.positions == 0):
+                raise ValueError("If bonds are not passed, positions must be passed.")
+            
+            # Extract bonds:
+
+            # Define cutoffs using covalent radii
+            cutoffs = [covalent_radii[number] for number in atoms.numbers]
+            nl = NeighborList(cutoffs=cutoffs, self_interaction=False, bothways=True)
+            nl.update(atoms)
+
+            # Extract bonds
+            bonds = []
+            for i in range(len(atoms)):
+                indices, offsets = nl.get_neighbors(i)
+                for j in indices:
+                    if j > i:
+                        bonds.append((i, j))
+
+        atom_idxs = list(range(len(atoms)))
+        atomic_numbers = atoms.numbers
+        if partial_charges is None:
+            partial_charges = atoms.get_initial_charges()
+
+
+        return cls(atoms=atom_idxs, bonds=bonds, atomic_numbers=atomic_numbers, partial_charges=partial_charges, impropers=impropers)
