@@ -606,11 +606,12 @@ def inspect_dataset_(datasetpath:Union[str,Path]):
     # Iterate over files in the dataset directory
     ds_list = list(datasetpath.glob('*npz'))
     n_npz = len(ds_list)
+    n_conformations = 0
     inspection_counts = inspection_counts
     for file_path in ds_list:
         moldata = MolData.load(file_path.as_posix())
         moldata._validate()
-            
+        n_conformations += len(moldata.energy)
         # Check and increment counters for non-NaN values in the required attributes
         if np.all(np.isfinite(moldata.xyz)): inspection_counts['Structures']['xyz'] += 1
         if np.all(np.isfinite(moldata.energy)): inspection_counts['QM data']['energy'] += 1
@@ -633,13 +634,13 @@ def inspect_dataset_(datasetpath:Union[str,Path]):
                 if not interaction in inspection_counts['FF Energy/Gradients'][ff_type]['gradient'].keys():
                     inspection_counts['FF Energy/Gradients'][ff_type]['gradient'][interaction] = 0
                 if np.all(np.isfinite(val)) : inspection_counts['FF Energy/Gradients'][ff_type]['gradient'][interaction] += 1
-            # ff parameters
-            for bonded_prm in bonded_prms:
-                parameters = getattr(moldata.classical_parameters,bonded_prm)
-                if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
+        # ff parameters
+        for bonded_prm in bonded_prms:
+            parameters = getattr(moldata.classical_parameters,bonded_prm)
+            if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
 
 
-    print(f"Dataset: {datasetpath.name} with {n_npz} files\n")
+    print(f"Dataset: {datasetpath.name} with {n_npz} files and {n_conformations} conformations\n")
     # Print final counts for each test
     for test_type, tests in inspection_counts.items():
         print(test_type)
