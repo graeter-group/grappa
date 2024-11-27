@@ -2,6 +2,17 @@
 
 _A machine learned molecular mechanics force field using a deep graph attentional network <br>(code supporting [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050))_
 
+<details open><summary><b>Table of contents</b></summary>
+
+- [Abstract](#abstract)
+- [Usage](#usage)
+- [Installation](#installation)
+- [Pretrained Models](#pretrained-models)
+- [Datasets](#datasets)
+- [Training](#training)
+- [Common Pitfalls](#common-pitfalls)
+</details>
+
 ## Abstract
 
 Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
@@ -22,17 +33,6 @@ We demonstrate Grappa's transferability to macromolecules in MD simulations from
         Then, transformers with symmetric positional encoding followed by permutation invariant pooling maps the embeddings to MM parameters with desired permutation symmetries.
         Once the MM parameters are predicted, the potential energy surface can be evaluated with MM-efficiency for different spatial conformations.
   </i></p>
-</details>
-
-
-<details open><summary><b>Table of contents</b></summary>
-  
-- [Usage](#usage)
-- [Installation](#installation)
-- [Pretrained Models](#pretrained-models)
-- [Datasets](#datasets)
-- [Training](#training)
-- [Common Pitfalls](#common-pitfalls)
 </details>
 
 
