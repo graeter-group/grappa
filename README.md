@@ -25,13 +25,13 @@ We demonstrate Grappa's transferability to macromolecules in MD simulations from
 <details open>
   <summary>Grappa Overview</summary>
   <p align="center">
-    <img src="docs/figures/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
+    <img src="media/grappa_overview.png" width="50%" style="max-width: 200px; display: block; margin: auto;">
   </p>
   <p><i>
         Grappa predicts MM parameters in two steps.
         First, atom embeddings are predicted from the molecular graph with a graph neural network.
         Then, transformers with symmetric positional encoding followed by permutation invariant pooling maps the embeddings to MM parameters with desired permutation symmetries.
-        Once the MM parameters are predicted, the potential energy surface can be evaluated with MM-efficiency for different spatial conformations.
+        Once the MM parameters are predicted, the potential energy surface can be evaluated with MM-efficiency for different spatial conformations, e.g. in GROMACS or OpenMM.
   </i></p>
 </details>
 
