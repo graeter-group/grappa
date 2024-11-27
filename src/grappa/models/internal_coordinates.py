@@ -14,22 +14,8 @@ class InternalCoordinates(torch.nn.Module):
 
 def internal_coordinates(g):
     """
-    Assign values to geometric entities in graphs.
-
-    Parameters
-    ----------
-    g : `dgl.DGLHeteroGraph`
-            Input graph.
-
-    Returns
-    -------
-    g : `dgl.DGLHeteroGraph`
-        Output graph.
-
-    Notes
-    -----
-    This function modifies graphs in-place.
-
+    Calculate internal coordinates from Cartesian coordinates and store them as feature 'x' in the graph for the respective level:
+    'n2' for bond lengths, 'n3' for bond angles, 'n4' for proper dihedrals, and 'n4_improper' for improper dihedrals.
     """
 
     #==========================================================================
@@ -126,6 +112,8 @@ def internal_coordinates(g):
 
 # from espaloma:
 
+# MIT License
+
 # Copyright (c) 2020 Yuanqing Wang @ choderalab // MSKCC
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -138,15 +126,7 @@ def internal_coordinates(g):
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
 
-# =============================================================================
-# IMPORTS
-# =============================================================================
 
-
-
-# =============================================================================
-# SINGLE GEOMETRY ENTITY
-# =============================================================================
 def distance(x0, x1):
     """ Distance. """
     return torch.norm(x0 - x1, p=2, dim=-1)
