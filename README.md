@@ -32,7 +32,7 @@ We demonstrate Grappa's transferability to macromolecules in MD simulations from
 - [Pretrained Models](#pretrained-models)
 - [Datasets](#datasets)
 - [Training](#training)
-- [Reproducibility](#reproducibility)
+- [Common Pitfalls](#common-pitfalls)
 </details>
 
 
@@ -96,7 +96,7 @@ system = grappa_ff.createSystem(topology)
 
 ## Installation
 
-For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime.
+For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime. For training, gpu mode is advised, see below.
 
 ### CPU mode
 
@@ -115,7 +115,7 @@ pip install grappa-ff
 
 Depending on the platform used, installation of OpenMM or GROMACS and Kimmdy is needed (see below).
 
-### Installation from source
+### Installation from source (CPU mode)
 
 To install Grappa from source, clone the repository and install requirements and the package itself with pip:
 
@@ -151,7 +151,7 @@ conda install -c conda-forge openmm # optional: cudatoolkit=<YOUR CUDA>
 Since the resolution of package dependencies can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
 
 
-### GPU mode
+## Installation in GPU mode
 
 For training Grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice.
 Note that installing Grappa in GPU mode is only recommended if training a model is intended.
@@ -168,7 +168,7 @@ Verify the installation by running
 python tests/test_installation.py
 ```
 
-## Pretrained Models
+## Pretrained models
 
 Pretrained models can be obtained by using `grappa.utils.run_utils.model_from_tag` with a tag (e.g. `latest`) that will point to a version-dependent url, from which model weights are downloaded.
 Available models are listed in `models/published_models.csv`.
@@ -233,3 +233,13 @@ For example, in openmm:
 from grappa import OpenmmGrappa
 grappa_ff = OpenmmGrappa.from_ckpt('path/to/your/checkpoint.ckpt')
 ```
+
+## Common pitfalls
+
+### Deployment
+#### D.1 CUDA errors
+Install Grappa in CPU mode for using it as OpenMM or GROMACS force field, a gpu is not necessary for inference but only for training. If you intend to train and deploy Grappa, it is easiest to have two separate environments, one for training with Grappa in GPU mode without OpenMM or KIMMDY installed and one for dataset curation and deployment with Grappa in CPU mode.
+
+### Training
+#### T.1 Delete cached datasets upon changes
+Grappa caches datasets in a compressed form at `data/dgl_datasets/<dataset-name>`. If you change the .npz files that define the dataset with more details (at `data/datasets/<dataset-name>/*.npz`), make sure to delete the respective cache.
