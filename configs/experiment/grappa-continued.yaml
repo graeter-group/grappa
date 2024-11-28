@@ -7,7 +7,7 @@ wandb:
   name: baseline
   project: grappa-continued
 trainer:
-  max_epochs: 1500
+  max_epochs: null
 train:
   lr: 1e-05
   start_qm_epochs: 0
