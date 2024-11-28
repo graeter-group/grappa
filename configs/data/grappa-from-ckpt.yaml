@@ -2,6 +2,12 @@ defaults:
   - grappa-1.4.0
   - _self_
 
+data_module:
+  datasets: []
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []
+
 extra_datasets: []
 extra_train_datasets: []
 extra_val_datasets: []
