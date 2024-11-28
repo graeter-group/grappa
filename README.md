@@ -203,7 +203,7 @@ For the creation of custom datasets, take a look at the tutorials `examples/data
 Grappa models can be trained with a given configuration specified using hydra by running
 
 ```{bash}
-python experiments/train.py
+python experiments/train.py data.data_module.datasets=[spice-dipeptide]
 ```
 
 With hydra, configuration files can be defined in a modular way. For Grappa, we have configuration types `model`, `data` and `experiment`, for each of which default values can be overwritten in the command line or in a separate configuration file. For example, to train a model with less node features, one can run
