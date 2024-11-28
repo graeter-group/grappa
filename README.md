@@ -1,6 +1,13 @@
+<p align="left">
+  <img src="media/grappa_logo_black_upd_backgr.png" width="18%" style="max-width: 200px; display: block; margin: auto;">
+</p>
+
 # Grappa - Machine Learned MM Parameterization
 
+
 _A machine learned molecular mechanics force field using a deep graph attentional network <br>(code supporting [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050))_
+
+
 
 <details open><summary><b>Table of contents</b></summary>
 
@@ -37,6 +44,7 @@ We demonstrate Grappa's transferability to macromolecules in MD simulations from
 
 
 ## Usage
+
 
 The current version of Grappa only predicts bonded parameters; the nonbonded parameters like partial charges and Lennard Jones parameters are predicted with a traditional force field of choice.
 The input to Grappa is therefore a representation of the system of interest that already contains information on the nonbonded parameters.
