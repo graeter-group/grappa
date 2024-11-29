@@ -643,7 +643,7 @@ def inspect_dataset_(datasetpath:Union[str,Path]):
             parameters = getattr(moldata.classical_parameters,bonded_prm)
             if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
 
-    print(f"Dataset: {datasetpath.name} with {n_npz} files and {n_conformations} conformations\n")
+    print(f"Dataset: {datasetpath.name} with {n_npz} molecules and {n_conformations} conformations\n")
     print(f"Energy mean: {np.mean(energies):5.2f}, std: {np.std(energies):5.2f}, max: {np.max(energies):5.2f}, min: {np.min(energies):5.2f} [kcal/mol]")
     print(f"Gradient norm mean: {np.mean(gradients):5.2f}, std: {np.std(gradients):5.2f}, max: {np.max(gradients):5.2f} [kcal/mol/Å]")
     # Print final counts for each test
