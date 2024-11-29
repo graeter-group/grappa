@@ -4,14 +4,14 @@ from openmm import System
 import openmm.app
 
 
-def openmm_system_from_gmx_top(top_filepath: Union[str,Path]) -> openmm.System:
+def openmm_system_from_gmx_top(top_filepath: Union[str,Path]) -> tuple[openmm.System,openmm.app.Topology]:
     if isinstance(top_filepath,Path):
         top_filepath = top_filepath.as_posix()
     top_gmx = openmm.app.GromacsTopFile(top_filepath)
     system_gmx = top_gmx.createSystem()
-    return system_gmx
+    return system_gmx, top_gmx.topology
 
-def openmm_system_from_dict(data: dict[str,list], xml_filename: Optional[str] = None) -> openmm.System:
+def openmm_system_from_dict(data: dict[str,list], xml_filename: Optional[str] = None) -> tuple[openmm.System,openmm.app.Topology]:
     # check data
     required_keys = ['element','atom_name','atom_type','charge','mass','epsilon','sigma','bond','lj14scale','coulomb14scale']
     for k in required_keys:
@@ -31,7 +31,7 @@ def openmm_system_from_dict(data: dict[str,list], xml_filename: Optional[str] = 
 
     # create system
     openmm_system = ff.createSystem(openmm_topology)    
-    return openmm_system
+    return openmm_system, openmm_topology
 
 def openmm_forcefield_xml_from_dict(data: dict, filename: str):
     lj14scale = data['lj14scale']
