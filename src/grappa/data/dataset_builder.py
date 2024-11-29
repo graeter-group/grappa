@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from ase.io import read
 from ase import Atoms
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.geometry.analysis import Analysis
 
 
@@ -14,6 +15,8 @@ from grappa.utils.data_utils import get_moldata_path
 from grappa.utils.graph_utils import get_isomorphisms
 
 from grappa.utils.graph_utils import get_isomorphic_permutation
+
+TQDM_DISABLE=1
 
 def get_bonds(geometry: Atoms):
         ana = Analysis(geometry)
@@ -34,9 +37,7 @@ def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list
     isomorphisms = []
     for i,graph in enumerate(graphs[1:]):
         try:
-            print(graphs[0])
-            print(graph)
-            isomorphism = get_isomorphisms([graphs[0]],[graph])
+            isomorphism = get_isomorphisms([graphs[0]],[graph],silent=True)
             if len(isomorphism) == 1 :
                 isomorphisms.append(isomorphism)
             else:
@@ -65,7 +66,8 @@ class DatasetBuilder:
     def from_QM(cls, qm_data_dir: Path):
         """ Expects nested QM data dir. One molecule per directory."""
         entries = {}
-        for subdir in qm_data_dir.iterdir():
+        subdirs =  list(qm_data_dir.iterdir())
+        for subdir in sorted(subdirs):
             mol_id = subdir.name 
             print(mol_id)
             conformations = []
@@ -76,11 +78,10 @@ class DatasetBuilder:
                 conformations.append(read(file,index=':'))
             
             # different QM files could have different atom order, matching this
-            #if len(geometries) > 1:
             molecules = []
             for conformation_list in conformations:
-                molecules.append(Molecule.from_ase(conformation_list[-1]))  #taking [-1] could be better for optimizations
-            permutations = match_molecules(molecules,verbose=True)
+                molecules.append(Molecule.from_ase(conformation_list[-1]))  #taking [-1] could be better than [0] for optimizations
+            permutations = match_molecules(molecules,verbose=False)
 
             if len(permutations) == 0:
                 continue
@@ -88,12 +89,29 @@ class DatasetBuilder:
             # merge conformations
             QM_data = {'xyz':[],'energy':[],'gradient':[]}
             for idx, permutation in permutations.items():
-                QM_data['xyz'].extend(np.asarray([x.get_positions()[[permutation]] for x in conformations[idx]]))
-                QM_data['energy'].extend(np.asarray([x.get_potential_energy() for x in conformations[idx]]))
-                QM_data['gradient'].extend(np.asarray([x.get_forces()[permutation] for x in conformations[idx]])) # - to convert from force to gradient
+                xyz = []
+                energy = []
+                gradient = []
+                for conformation in conformations[idx]:
+                    try:
+                        xyz_conf = conformation.get_positions()[[permutation]]
+                        energy_conf = conformation.get_potential_energy()
+                        force_conf = conformation.get_forces()[permutation]
+                        # append after to only add to list if all three properties exist
+                        xyz.append(xyz_conf)
+                        energy.append(energy_conf)
+                        gradient.append(-force_conf)# - to convert from force to gradient
+                    except PropertyNotImplementedError as e:
+                        print(f"Caught the exception: {e}")
+                QM_data['xyz'].extend(np.asarray(xyz))
+                QM_data['energy'].extend(np.asarray(energy))
+                QM_data['gradient'].extend(np.asarray(gradient)) 
+
+            if len(QM_data['energy']) == 0:
+                print(f"No QM data available for {mol_id}")
+                continue
 
             # convert to array
-            #print(QM_data)
             for k in QM_data.keys():
                 QM_data[k] = np.asarray(QM_data[k]).squeeze()
 
@@ -102,16 +120,6 @@ class DatasetBuilder:
             entries[mol_id] = mol_data
 
         return cls(entries=entries)
-
-
-        # #molecules[idx2].atoms = np.array(permutation)[mol_spice.molecule.atoms]
-        # molecules[idx2].atoms = np.asarray(molecules[idx2].atoms)[permutation]
-
-        # xyz = mol_spice.xyz[:,permutation]
-        # energy = mol_spice.energy
-        # gradient = mol_spice.gradient[:,permutation]
-
-        pass
 
     def write_to_dir(self, directory: str):
         """ """
