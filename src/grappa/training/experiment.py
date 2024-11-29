@@ -19,6 +19,8 @@ from grappa.utils.training_utils import to_df
 from grappa.utils.run_utils import flatten_dict, unflatten_dict
 from grappa.utils.plotting import make_scatter_plots, compare_scatter_plots
 from grappa.models import GrappaModel, Energy
+from grappa.utils.model_loading_utils import get_model_dir, get_published_csv_path, get_path_from_tag
+import pandas as pd
 import torch
 import logging
 import json
@@ -144,6 +146,9 @@ class Experiment:
         if self._experiment_cfg.ckpt_path is not None:
             if not str(self._experiment_cfg.ckpt_path).startswith('/'):
                 self._experiment_cfg.ckpt_path = Path(REPO_DIR)/self._experiment_cfg.ckpt_path
+
+        if hasattr(self._experiment_cfg, 'ckpt_path') and self._experiment_cfg.ckpt_path is not None:
+            download_model_if_possible(self._experiment_cfg.ckpt_path)
 
         self.trainer = Trainer(
             **self._experiment_cfg.trainer,
@@ -397,3 +402,16 @@ class Experiment:
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
         self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
         self.datamodule.setup()
+
+
+def download_model_if_possible(ckpt_path:Path):
+    ckpt_path = Path(ckpt_path)
+    if not ckpt_path.exists():
+        print(str(ckpt_path.parent.parent.resolve().absolute()))
+        print(str(get_model_dir().resolve().absolute()))
+        if str(ckpt_path.parent.parent.resolve().absolute()) == str(get_model_dir().resolve().absolute()):
+            potential_tag = ckpt_path.parent.name
+            url_tags = pd.read_csv(get_published_csv_path(), dtype=str)['tag'].values
+            if potential_tag in url_tags:
+                logging.info(f"Model {potential_tag} not found locally. Downloading...")
+                get_path_from_tag(potential_tag)
