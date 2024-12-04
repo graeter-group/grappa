@@ -24,6 +24,8 @@ data_module:
     spice-pubchem: 0.8
   balance_factor: 0.0
   val_conf_strategy: 200
+  max_energy: null
+  max_force: null
 energy:
   terms:
     - bond

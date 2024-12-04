@@ -532,25 +532,52 @@ class Dataset(torch.utils.data.Dataset):
 
         return graph
 
-    def filter_energies(self, max_energy: float):
+    def filter_energies(self, max_energy: float, max_force: float = None):
         """
         Filters out conformations from graphs where the QM energy exceeds the specified max_energy.
-        Ensures that at least 2 conformations remain in the graph.
+        Ensures that at least 2 conformations remain in the graph. Units are derived from kcal/mol and angstrom.
         
         Args:
-            max_energy (float): The maximum allowed QM energy. Conformations with a QM energy higher than this value are removed.
+            max_energy (float): The maximum allowed QM energy difference to the minimum across the states included. Conformations with a QM energy higher than this value are removed.
+            max_force (float, optional): The maximum allowed force (L2 norm per atom). Conformations with a force higher than this value are removed. Default: None.
             
         Returns:
             Dataset: The dataset with only the conformations that meet the energy criterion.
         """
+        if max_energy is None and max_force is None:
+            return self
+
+        if len(self.graphs) == 0:
+            return self
+        
+        if max_energy is not None and max_energy < 0:
+            raise ValueError(f'The maximum energy must be greater than or equal to 0. Received {max_energy}.')
+
         new_graphs = []
         new_mol_ids = []
         new_subdatasets = []
 
         for g, mol_id, dsname in zip(self.graphs, self.mol_ids, self.subdataset):
-            # Get the indices of conformations that have energies <= max_energy
-            normalized_energies = g.nodes['g'].data['energy_qm'][0] - g.nodes['g'].data['energy_qm'][0].min()
-            keep_indices = torch.argwhere(normalized_energies < max_energy).flatten()
+
+            num_confs = g.nodes['g'].data['energy_qm'].shape[1]
+            keep_indices = torch.arange(num_confs)
+            
+            if max_energy is not None:
+                # Get the indices of conformations that have energies <= max_energy
+                normalized_energies = g.nodes['g'].data['energy_qm'][0] - g.nodes['g'].data['energy_qm'][0].min()
+                keep_indices_ = torch.argwhere(normalized_energies < max_energy).flatten()
+                keep_indices = torch.intersect1d(keep_indices, keep_indices_)
+         
+            if max_force is not None:
+                # shape (n_atoms, n_confs)                
+                forces_abs_vals = torch.norm(g.nodes['n1'].data['gradient_qm'], dim=-1, p=2)
+
+                # shape (n_confs,)
+                max_forces = torch.max(forces_abs_vals, dim=0).values
+
+                keep_indices_ = torch.argwhere(max_forces < max_force).flatten()
+                keep_indices = torch.intersect1d(keep_indices, keep_indices_)
+
 
             # Ensure at least 2 conformations are kept
             if len(keep_indices) < 2:
