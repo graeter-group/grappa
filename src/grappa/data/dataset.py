@@ -545,6 +545,9 @@ class Dataset(torch.utils.data.Dataset):
         """
         if max_energy is None and max_force is None:
             return self
+
+        if len(self.graphs) == 0:
+            return self
         
         if max_energy is not None and max_energy < 0:
             raise ValueError(f'The maximum energy must be greater than or equal to 0. Received {max_energy}.')
