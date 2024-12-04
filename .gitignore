@@ -40,6 +40,7 @@ notes.md
 
 */mdout.mdp
 
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
@@ -123,6 +124,7 @@ npy_charge_dicts/
 **/psi4-calc.dat
 **/timer.dat
 
+!media/
 
 .venv
 **/nohup.out

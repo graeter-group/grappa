@@ -29,6 +29,8 @@ def model_from_tag(tag:str='latest')->GrappaModel:
 
     return model_from_path(path=path)
 
+def get_published_csv_path()->Path:
+    return get_src_dir() / 'models' / 'published_models.csv'
 
 def get_path_from_tag(tag:str='latest')->Path:
 
@@ -36,7 +38,7 @@ def get_path_from_tag(tag:str='latest')->Path:
         tag = 'grappa-1.4.0'
 
     csv_path = get_repo_dir() / 'models' / 'models.csv'
-    published_csv_path = get_src_dir() / 'models' / 'published_models.csv'
+    published_csv_path = get_published_csv_path()
     COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
 
     if not csv_path.exists():
@@ -91,7 +93,7 @@ def get_path_from_tag(tag:str='latest')->Path:
             path = get_repo_dir()/path
 
         if not path.exists():
-            raise FileNotFoundError(f"Model {tag} not found at {path}")
+            raise FileNotFoundError(f"Model {tag} not found at {path}, but linked to this path via models/models.csv. Delete the entry or redirect.")
 
         if not str(path).endswith('.ckpt'):
             ckpt_path = get_ckpt(path)

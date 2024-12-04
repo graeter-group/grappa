@@ -1,6 +1,5 @@
 data_module:
-  datasets:
-    - spice-dipeptide
+  datasets: []
   pure_test_datasets: []
   pure_val_datasets: []
   pure_train_datasets: []
