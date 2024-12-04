@@ -94,26 +94,17 @@ class DatasetBuilder:
             # values are more accessible    
             if len(molecules) > 1:  
                 print("Matching atom order in QM files")     
-                permutations = match_molecules(molecules,verbose=verbose)
-                # for idx, permutation in permutations.items():
-                #     for conformation in conformations[idx]:
-                #         try:
-                #             conformation.set_positions(conformation.get_positions()[permutation])
-                #             conformation._calc.results['forces'] = conformation._calc.results['forces'][permutation]
-                #         except PropertyNotImplementedError as e:
-                #             print(f"Caught the exception during atom matching: {e}")      
+                permutations = match_molecules(molecules,verbose=verbose)     
             else:
                 permutations = {0:list(range(QM_calculations[0][0].get_positions().shape[0]))}                      
-            print(permutations.keys(),len(molecules),molecules,gaussian_files)
+
             # merge conformations
             QM_data = {'xyz':[],'energy':[],'gradient':[]}
-            for j,conformations in enumerate(QM_calculations):
-                print(j,permutations[j],conformations[0].get_positions().shape)
+            for idx,permutation in permutations.items():
                 xyz = []
                 energy = []
                 gradient = []
-                permutation = permutations[j]
-                for conformation in conformations:
+                for conformation in QM_calculations[idx]:
                     try:
                         xyz_conf = conformation.get_positions()[permutation]
                         energy_conf = conformation.get_potential_energy() * mol / kcal # conversion to grappa units [kcal/mol]
@@ -204,6 +195,7 @@ class DatasetBuilder:
         """ Remove conformations where the nonbonded contribution to energy and gradient is much higher than the QM energy and gradient
         """
             #filter out bad energies
+        count_remove = {'entries':0,'conformations':0}
         rmv_entries = []
         for mol_id, entry in self.entries.items():
             if mol_id not in self.complete_entries:
@@ -222,12 +214,12 @@ class DatasetBuilder:
                     print(energy_mm[j],energy_qm[j])
                     print(gradient_norm_mm[j],gradient_norm_qm[j])
                     bad_idxs.append(j)
-
             if len(bad_idxs) > 0:
                 print(f" Removing conformations {bad_idxs}")
                 print(len(entry.energy))
                 try:
                     entry.delete_states(bad_idxs)
+                    count_remove['conformations'] += len(bad_idxs)
                 except ValueError as e:
                     print(e)
                     print(f"Removing dataset entry {mol_id}")
@@ -238,6 +230,8 @@ class DatasetBuilder:
         for rmv_entry in rmv_entries:
             self.entries.pop(rmv_entry,None)
             self.complete_entries.remove(rmv_entry)
+        count_remove['entries'] = len(rmv_entries)
+        print(f"Removed {count_remove['entries']} molecule entries and {count_remove['conformations']} conformations.")
 
     def write_to_dir(self, dataset_dir: Union[str,Path], overwrite:bool=False, delete_dgl:bool=False):
         """ """
