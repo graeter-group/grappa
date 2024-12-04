@@ -8,10 +8,10 @@ from ase.io import read
 from ase import Atoms
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.geometry.analysis import Analysis
+from ase.units import kcal, mol, Angstrom
 
 from grappa.data.parameters import Parameters
-from grappa.data.molecule import Molecule
-from grappa.data.mol_data import MolData
+from grappa.data import Molecule, MolData, clear_tag
 from grappa.utils.openmm_utils import get_nonbonded_contribution
 from grappa.utils.system_utils import openmm_system_from_gmx_top, openmm_system_from_dict
 from grappa.utils.graph_utils import get_isomorphic_permutation, get_isomorphisms
@@ -58,6 +58,18 @@ class DatasetBuilder:
     complete_entries: set[str] = field(default_factory=set)
 
     @classmethod
+    def from_moldata(cls, moldata_dir: Path):
+        entries = {}
+        complete_entries = set()
+        npzs = list(moldata_dir.glob('*npz'))
+        for npz in sorted(npzs):
+            print(npz.name)
+            moldata = MolData.load(npz)
+            entries.update({moldata.mol_id:moldata})
+            complete_entries.add(moldata.mol_id)
+        return cls(entries=entries,complete_entries=complete_entries)
+
+    @classmethod
     def from_QM(cls, qm_data_dir: Path, verbose:bool = False):
         """ Expects nested QM data dir. One molecule per directory."""
         entries = {}
@@ -65,30 +77,47 @@ class DatasetBuilder:
         for subdir in sorted(subdirs):
             mol_id = subdir.name 
             print(mol_id)
-            conformations = []
+            QM_calculations = []
             gaussian_files = list(subdir.glob(f"*.log")) + list(subdir.glob('*.out'))
 
             # create geometries: list[list[Atoms]]
             for file in gaussian_files:
-                conformations.append(read(file,index=':'))
+                QM_calculations.append(read(file,index=':'))
             
-            # different QM files could have different atom order, matching this
+            # create molecules
             molecules = []
-            for conformation_list in conformations:
-                molecules.append(Molecule.from_ase(conformation_list[-1]))  #taking [-1] could be better than [0] for optimizations
-            permutations = match_molecules(molecules,verbose=verbose)
-
+            for conformations in QM_calculations:
+                molecules.append(Molecule.from_ase(conformations[-1]))  #taking [-1] could be better than [0] for optimizations
+                        
+            # different QM files could have different atom order, matching this 
+            # the ase atoms object is not a good container for changing energies and forces, maybe do this when the 
+            # values are more accessible    
+            if len(molecules) > 1:  
+                print("Matching atom order in QM files")     
+                permutations = match_molecules(molecules,verbose=verbose)
+                # for idx, permutation in permutations.items():
+                #     for conformation in conformations[idx]:
+                #         try:
+                #             conformation.set_positions(conformation.get_positions()[permutation])
+                #             conformation._calc.results['forces'] = conformation._calc.results['forces'][permutation]
+                #         except PropertyNotImplementedError as e:
+                #             print(f"Caught the exception during atom matching: {e}")      
+            else:
+                permutations = {0:list(range(QM_calculations[0][0].get_positions().shape[0]))}                      
+            print(permutations.keys(),len(molecules),molecules,gaussian_files)
             # merge conformations
             QM_data = {'xyz':[],'energy':[],'gradient':[]}
-            for idx, permutation in permutations.items():
+            for j,conformations in enumerate(QM_calculations):
+                print(j,permutations[j],conformations[0].get_positions().shape)
                 xyz = []
                 energy = []
                 gradient = []
-                for conformation in conformations[idx]:
+                permutation = permutations[j]
+                for conformation in conformations:
                     try:
-                        xyz_conf = conformation.get_positions()[[permutation]]
-                        energy_conf = conformation.get_potential_energy()
-                        force_conf = conformation.get_forces()[permutation]
+                        xyz_conf = conformation.get_positions()[permutation]
+                        energy_conf = conformation.get_potential_energy() * mol / kcal # conversion to grappa units [kcal/mol]
+                        force_conf = conformation.get_forces()[permutation] * mol / kcal *Angstrom # conversion to grappa units [kcal/mol A]
                         # append after to only add to list if all three properties exist
                         xyz.append(xyz_conf)
                         energy.append(energy_conf)
@@ -134,15 +163,25 @@ class DatasetBuilder:
             system, topology = openmm_system_from_gmx_top(top_file)
             # create molecule and get permutation
             mol = Molecule.from_openmm_system(system,topology)
-            permutations = match_molecules([self.entries[mol_id].molecule,mol])
-            if len(permutations) != 2:
-                print(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
-                continue
-            # replace data
-            permutation = permutations[1]
-            self.entries[mol_id].molecule = mol
-            self.entries[mol_id].xyz = self.entries[mol_id].xyz[:,permutation]
-            self.entries[mol_id].gradient = self.entries[mol_id].gradient[:,permutation]
+
+            # reorder atoms of QM data if atomic number list is different
+            if mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers:
+                print(f"Atomic numbers of QM data and GROMACS topology doesn't match! Trying to match by graph.")
+                permutations = match_molecules([mol,self.entries[mol_id].molecule])
+                if len(permutations) != 2:
+                    print(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
+                    continue
+                # replace data
+                print(permutations[1])
+                print(mol.atomic_numbers)
+                print(self.entries[mol_id].molecule.atomic_numbers)
+                print([self.entries[mol_id].molecule.atomic_numbers[jj] for jj in permutations[1]])
+                permutation = permutations[1]
+                self.entries[mol_id].molecule = mol
+                self.entries[mol_id].xyz = self.entries[mol_id].xyz[:,permutation]
+                self.entries[mol_id].gradient = self.entries[mol_id].gradient[:,permutation]
+            else:
+                self.entries[mol_id].molecule = mol
             # add nonbonded energy
             # energy, force = get_nonbonded_contribution(system,self.entries[mol_id].xyz)
             self.entries[mol_id].add_ff_data(system,xyz=self.entries[mol_id].xyz)
@@ -161,7 +200,46 @@ class DatasetBuilder:
                 for ff_name, ff_dict in moldata.ff_gradient.items():
                     ff_dict.pop(contribution,None)
 
-    def write_to_dir(self, dataset_dir: Union[str,Path], overwrite:bool=False):
+    def filter_bad_nonbonded(self):
+        """ Remove conformations where the nonbonded contribution to energy and gradient is much higher than the QM energy and gradient
+        """
+            #filter out bad energies
+        rmv_entries = []
+        for mol_id, entry in self.entries.items():
+            if mol_id not in self.complete_entries:
+                continue
+            print(mol_id)
+            energy_mm = entry.ff_energy['reference_ff']['nonbonded'] - np.mean(entry.ff_energy['reference_ff']['nonbonded'])
+            energy_qm = entry.energy - np.mean(entry.energy)
+
+            gradient_norm_mm = np.average(np.linalg.norm(entry.ff_gradient['reference_ff']['nonbonded'],axis=2),axis=1)
+            gradient_norm_qm = np.average(np.linalg.norm(entry.gradient,axis=2),axis=1)
+
+            bad_idxs = []
+            for j in range(len(energy_qm)):
+                if (energy_mm[j] / energy_qm[j] > 2 and energy_mm[j] > 10 ) or (gradient_norm_mm[j]/gradient_norm_qm[j] > 2 and gradient_norm_mm[j] > 10):
+                    print(f"bad MM energy for {mol_id} conformation {j}")
+                    print(energy_mm[j],energy_qm[j])
+                    print(gradient_norm_mm[j],gradient_norm_qm[j])
+                    bad_idxs.append(j)
+
+            if len(bad_idxs) > 0:
+                print(f" Removing conformations {bad_idxs}")
+                print(len(entry.energy))
+                try:
+                    entry.delete_states(bad_idxs)
+                except ValueError as e:
+                    print(e)
+                    print(f"Removing dataset entry {mol_id}")
+                    rmv_entries.append(mol_id)
+                print(len(entry.energy))
+
+        print(f"Removing entries: {rmv_entries}")
+        for rmv_entry in rmv_entries:
+            self.entries.pop(rmv_entry,None)
+            self.complete_entries.remove(rmv_entry)
+
+    def write_to_dir(self, dataset_dir: Union[str,Path], overwrite:bool=False, delete_dgl:bool=False):
         """ """
         dataset_dir = Path(dataset_dir)
         dataset_dir.mkdir(parents=True,exist_ok=True)
@@ -171,6 +249,10 @@ class DatasetBuilder:
             if not overwrite:
                 print(f"Not writing dataset because npz files are already in directory!")
                 return
+            else:
+                print('Removing .npz files in dataset directory')
+                for file in dataset_dir.glob('*.npz'):
+                    file.unlink()
         mol_ids = self.entries.keys()
         output_entries = []
         for entry_idx in self.complete_entries:
@@ -179,6 +261,11 @@ class DatasetBuilder:
         print(f"Writing {len(output_entries)} complete entries out of {len(self.entries)} total entries in the DatasetBuilder.")
         for output_entry_idx in output_entries:
             self.entries[output_entry_idx].save(dataset_dir / f"{output_entry_idx}.npz")
+        if delete_dgl:
+            print(f"Clearing dgl dataset with tag: {dataset_dir.name}")
+            clear_tag(dataset_dir.name)
+
+
 
 
     def _validate(self):
