@@ -16,12 +16,6 @@ from grappa.utils.openmm_utils import get_nonbonded_contribution
 from grappa.utils.system_utils import openmm_system_from_gmx_top, openmm_system_from_dict
 from grappa.utils.graph_utils import get_isomorphic_permutation, get_isomorphisms
 
-def get_bonds(geometry: Atoms):
-        ana = Analysis(geometry)
-        [bonds_raw] = ana.unique_bonds 
-        bonds = [[i,n]  for i,nl in  enumerate(bonds_raw) for n in nl]
-        return bonds
-
 def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list[int]]:
     """Match relative to first Molecule in molecules
     """
@@ -133,9 +127,12 @@ class DatasetBuilder:
 
         return cls(entries=entries)
 
-    def add_nonbonded_from_gmx_top(self, top_data_dir: Path):
+    def add_nonbonded_from_gmx_top(self, top_data_dir: Path, add_pdb:bool=False):
         """Replaces molecule of entry with gmx top molecule and permutates moldata xyz and forces
         """
+        if add_pdb:
+            import io
+            from openmm.app import PDBFile
         subdirs =  list(top_data_dir.iterdir())
         for subdir in sorted(subdirs):
             mol_id = subdir.name 
@@ -173,6 +170,11 @@ class DatasetBuilder:
                 self.entries[mol_id].gradient = self.entries[mol_id].gradient[:,permutation]
             else:
                 self.entries[mol_id].molecule = mol
+
+            if add_pdb:
+                buffer = io.StringIO()
+                PDBFile.writeFile(topology,positions=self.entries[mol_id].xyz[-1,:,:],file=buffer)
+                self.entries[mol_id].pdb = buffer.getvalue()
             # add nonbonded energy
             # energy, force = get_nonbonded_contribution(system,self.entries[mol_id].xyz)
             self.entries[mol_id].add_ff_data(system,xyz=self.entries[mol_id].xyz)
@@ -259,12 +261,21 @@ class DatasetBuilder:
             print(f"Clearing dgl dataset with tag: {dataset_dir.name}")
             clear_tag(dataset_dir.name)
 
+    def write_pdb(self, pdb_dir: Union[str,Path]):
+        """Write all pdbs of DataBuilder.entries to a pdb directory
+        """
+        pdb_dir = Path(pdb_dir)
+        pdb_dir.mkdir(parents=True,exist_ok=True)
+        for entry in self.entries.values():
+            if entry.pdb is not None:
+                with open(pdb_dir / f"{entry.mol_id}.pdb",'w') as f:
+                    f.write(entry.pdb)
 
 
 
     def _validate(self):
         """ """
-        pass
+        raise NotImplementedError
 
 
 # %%
