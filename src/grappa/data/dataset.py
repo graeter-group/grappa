@@ -685,7 +685,7 @@ def inspect_dataset_(datasetpath:Union[str,Path]):
     for k,v in energies_diff.items():
         print(f"Target energy difference (QM - MM(nonbonded)) for {k}: mean {np.mean(v):5.2f}, std: {np.std(v):5.2f}, max: {np.max(v):5.2f}, min {np.min(v):5.2f} [kcal/mol]")
         if k in gradients_diff.keys():
-            print(f"Target gradient norm difference (QM - MM(nonbonded)) for {k}: mean {np.mean(gradients_diff[k]):5.2f}, std: {np.std(gradients_diff[k]):5.2f}, max: {np.max(gradients_diff[k]):5.2f}, min {np.min(gradients_diff[k]):5.2f} [kcal/mol]")
+            print(f"Target gradient norm difference (QM - MM(nonbonded)) for {k}: mean {np.mean(gradients_diff[k]):5.2f}, std: {np.std(gradients_diff[k]):5.2f}, max: {np.max(gradients_diff[k]):5.2f}, min {np.min(gradients_diff[k]):5.2f} [kcal/mol/A]")
     # Print final counts for each test
     for test_type, tests in inspection_counts.items():
         print(test_type)
