@@ -1,0 +1,35 @@
+defaults:
+  - default
+  - _self_
+
+ckpt_path: models/grappa-1.4.0/checkpoint.ckpt
+n_bootstrap: 0
+accelerator: 'gpu'
+plot: false
+
+classical_force_fields:
+  - gaff-2.11
+  - amber14
+
+pure_test_datasets: [rna-trinucleotide]
+datasets:
+  - spice-des-monomers
+  - spice-pubchem
+  - gen2
+  - gen2-torsion
+  - spice-dipeptide
+  - protein-torsion
+  - pepconf-dlc
+  - rna-diverse
+
+splitpath: espaloma_split
+
+gradient_contributions:
+- bond
+- angle
+- proper
+- improper
+- nonbonded
+- total
+
+compare_forcefields: []

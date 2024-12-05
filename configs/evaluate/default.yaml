@@ -13,14 +13,15 @@ classical_force_fields: []
 datasets: null
 pure_test_datasets: null
 ff_lookup: {}
+splitpath: null
 
-gradient_contributions:
-- bond
-- angle
-- proper
-- improper
-- nonbonded
-- total
+gradient_contributions: []
+# - bond
+# - angle
+# - proper
+# - improper
+# - nonbonded
+# - total
 
 compare_forcefields: []
 

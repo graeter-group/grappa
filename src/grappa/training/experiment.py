@@ -165,7 +165,7 @@ class Experiment:
         )
 
 
-    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], ckpt_data_config=None, store_test_data:bool=True):
+    def test(self, ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=10, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], ckpt_data_config=None, store_test_data:bool=True, splitpath:Path=None):
         """
         Evaluate the model on the test sets. Loads the weights from a given checkpoint. If None is given, the best checkpoint is loaded.
         Args:
@@ -176,6 +176,10 @@ class Experiment:
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
             plot: bool, whether to plot the results
             gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
+            ckpt_data_config: DictConfig, configuration for the data module that was used to train the model
+            store_test_data: bool, whether to store the data calculated for the test set
+            splitpath: Path, path to the split file for defining the test set manually
+
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
         if plot:
@@ -187,7 +191,12 @@ class Experiment:
 
 
         if load_split:
-            self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path, ckpt_data_config=ckpt_data_config)
+            if splitpath is None:
+                self.load_split_from_file(splitpath=splitpath)
+
+            else:
+                self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path, ckpt_data_config=ckpt_data_config)
+
 
         if self.trainer is None:
             self.trainer = Trainer(
@@ -284,7 +293,7 @@ class Experiment:
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], store_test_data:bool=True):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], store_test_data:bool=True, splitpath:Path=None):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -308,7 +317,11 @@ class Experiment:
         logging.info(f"Evaluating classical force fields: {', '.join(classical_force_fields)}...")
 
         if load_split:
-            self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path)
+            if splitpath is not None:
+                self.load_split_from_file(splitpath=splitpath)
+            else:
+                self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path)
+
 
         for ff in classical_force_fields:
             ff = str(ff)
@@ -399,6 +412,18 @@ class Experiment:
 
         data_cfg = self._data_cfg
         data_cfg.splitpath = str(load_path) if load_path.exists() else None
+        data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
+        self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
+        self.datamodule.setup()
+
+
+    def load_split_from_file(self, splitpath:Path):
+        """
+        Load the split from a file and use it to create a test set.
+        """
+        splitpath = Path(splitpath)
+        data_cfg = self._data_cfg
+        data_cfg.splitpath = str(splitpath) if splitpath.exists() else None
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
         self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
         self.datamodule.setup()
