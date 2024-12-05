@@ -41,3 +41,4 @@ where=["src"]
 [project.scripts]
 grappa_gmx = "grappa.wrappers.gromacs_wrapper:main"
 grappa_export = "grappa.training.export_model:grappa_export"
+grappa_inspect-dataset = "grappa.data.dataset:inspect_dataset"

@@ -327,28 +327,28 @@ def cannot_be_isomorphic(graph1:nx.Graph, graph2:nx.Graph)->bool:
     atomic_numbers2 = graph2.nodes(data='atomic_number')
     if len(atomic_numbers1) != len(atomic_numbers2):
         return True
-    atomic_numbers1 = np.argmax(np.array([node[1] for node in atomic_numbers1]), axis=-1)
-    atomic_numbers2 = np.argmax(np.array([node[1] for node in atomic_numbers2]), axis=-1)
+    atomic_numbers1 = np.argmax(np.array([node[1].numpy() for node in atomic_numbers1]), axis=-1)
+    atomic_numbers2 = np.argmax(np.array([node[1].numpy() for node in atomic_numbers2]), axis=-1)
 
     if not set(atomic_numbers1) == set(atomic_numbers2):
         return True
 
-def get_isomorphisms(graphs1:List[dgl.DGLGraph], graphs2:List[dgl.DGLGraph]=None)->Set[Tuple[int,int]]:
+def get_isomorphisms(graphs1:List[dgl.DGLGraph], graphs2:List[dgl.DGLGraph]=None, silent:bool=False)->Set[Tuple[int,int]]:
     """
     Returns a set of pairs of indices of isomorphic graphs in the two lists of graphs. If only one list is provided, it will return the isomorphisms within that list.
     This function can be used to validate generated datasets and to assign a consistent mol_id.
     """
-    homgraphs1 = [dgl.node_type_subgraph(graph, ['n1']) for graph in tqdm(graphs1, desc="Creating homgraphs")]
-    homgraphs2 = [dgl.node_type_subgraph(graph, ['n1']) for graph in tqdm(graphs2, desc="Creating homgraphs")] if graphs2 is not None else homgraphs1
+    homgraphs1 = [dgl.node_type_subgraph(graph, ['n1']) for graph in tqdm(graphs1, desc="Creating homgraphs",disable=silent)]
+    homgraphs2 = [dgl.node_type_subgraph(graph, ['n1']) for graph in tqdm(graphs2, desc="Creating homgraphs",disable=silent)] if graphs2 is not None else homgraphs1
 
-    nx_graphs1 = list([graph.to_networkx(node_attrs=['atomic_number']) for graph in tqdm(homgraphs1, desc="Converting to nx")])
-    nx_graphs2 = list([graph.to_networkx(node_attrs=['atomic_number']) for graph in tqdm(homgraphs2, desc="Converting to nx")]) if graphs2 is not None else nx_graphs1
+    nx_graphs1 = list([graph.to_networkx(node_attrs=['atomic_number']) for graph in tqdm(homgraphs1, desc="Converting to nx",disable=silent)])
+    nx_graphs2 = list([graph.to_networkx(node_attrs=['atomic_number']) for graph in tqdm(homgraphs2, desc="Converting to nx",disable=silent)]) if graphs2 is not None else nx_graphs1
 
     # for each graph, check how many graphs are isomorphic to it, based on the element stored in graph.ndata['atomic_number']
     if graphs2 is None:
-        pairs = [(i, j) for i in tqdm(range(len(nx_graphs1)), desc="Creating pairs") for j in range(i+1, len(nx_graphs1)) if not cannot_be_isomorphic(nx_graphs1[i], nx_graphs1[j])]
+        pairs = [(i, j) for i in tqdm(range(len(nx_graphs1)), desc="Creating pairs",disable=silent) for j in range(i+1, len(nx_graphs1)) if not cannot_be_isomorphic(nx_graphs1[i], nx_graphs1[j])]
     else:
-        pairs = [(i, j) for i in tqdm(range(len(nx_graphs1)), desc="Creating pairs") for j in range(len(nx_graphs2)) if not cannot_be_isomorphic(nx_graphs1[i], nx_graphs2[j])]
+        pairs = [(i, j) for i in tqdm(range(len(nx_graphs1)), desc="Creating pairs",disable=silent) for j in range(len(nx_graphs2)) if not cannot_be_isomorphic(nx_graphs1[i], nx_graphs2[j])]
     # randomly shuffle the pairs to avoid bias in remaining time prediction
     random.shuffle(pairs)
     isomorphic_pairs = []
@@ -356,7 +356,7 @@ def get_isomorphisms(graphs1:List[dgl.DGLGraph], graphs2:List[dgl.DGLGraph]=None
     def node_match(n1, n2):
         return np.all(n1['atomic_number'].numpy() == n2['atomic_number'].numpy())
 
-    for i, j in tqdm(pairs, desc="Checking isomorphisms"):
+    for i, j in tqdm(pairs, desc="Checking isomorphisms",disable=silent):
         if len(nx_graphs1[i].nodes) != len(nx_graphs2[j].nodes):
             continue
         if nx.is_isomorphic(nx_graphs1[i], nx_graphs2[j], node_match=node_match):
