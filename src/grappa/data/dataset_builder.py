@@ -93,10 +93,12 @@ class DatasetBuilder:
         return cls(entries=entries)
 
     @classmethod
-    def from_QM_ase(cls, qm_data_dir: Path, verbose:bool = False):
+    def from_QM_ase(cls, qm_data_dir: Path, parse_all_configurations: bool = True, verbose:bool = False):
         """ Expects nested QM data dir. One molecule per directory."""
         entries = {}
         subdirs =  list(qm_data_dir.iterdir())
+        index_str = ':' if parse_all_configurations else None   # could extend this to the pass index-str itself
+
         for subdir in sorted(subdirs):
             mol_id = subdir.name 
             print(mol_id)
@@ -105,7 +107,7 @@ class DatasetBuilder:
 
             # create geometries: list[list[Atoms]]
             for file in gaussian_files:
-                QM_calculations.append(read(file,index=':'))
+                QM_calculations.append(read(file,index=index_str))
             
             # create molecules
             molecules = []
