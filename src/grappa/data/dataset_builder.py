@@ -64,7 +64,36 @@ class DatasetBuilder:
         return cls(entries=entries,complete_entries=complete_entries)
 
     @classmethod
-    def from_QM(cls, qm_data_dir: Path, verbose:bool = False):
+    def from_QM_arrays(cls, qm_data_dir: Path, verbose:bool = False):
+        """ Expects nested QM data dir. One molecule per directory. One array per input type. Assuming units to be default grappa units
+        """
+        entries = {}
+        subdirs =  list(qm_data_dir.iterdir())
+        for subdir in sorted(subdirs):
+            mol_id = subdir.name 
+            print(mol_id)
+            energy = np.load(subdir/"psi4_energies.npy")
+            gradient = -np.load(subdir/"psi4_forces.npy")
+
+            xyz = np.load(subdir/"positions.npy")
+            atomic_numbers = np.load(subdir/"atomic_numbers.npy") # not needed
+
+            valid_idxs = np.isfinite(energy)
+            valid_idxs = np.where(valid_idxs)[0]
+            energy = energy[valid_idxs]
+            gradient = gradient[valid_idxs]
+            xyz = xyz[valid_idxs]
+
+            # use ase to get bonds from positions
+            atoms = Atoms(positions=xyz[-1],numbers=atomic_numbers)
+            mol = Molecule.from_ase(atoms)
+
+            mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
+            entries[mol_id] = mol_data
+        return cls(entries=entries)
+
+    @classmethod
+    def from_QM_ase(cls, qm_data_dir: Path, verbose:bool = False):
         """ Expects nested QM data dir. One molecule per directory."""
         entries = {}
         subdirs =  list(qm_data_dir.iterdir())
