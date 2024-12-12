@@ -44,15 +44,31 @@ def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list
         print(permutations)
     return permutations
 
-#%%
-
 @dataclass
 class DatasetBuilder:
+    """The DatasetBuilder converts QM data and nonbonded information (e.g. from a GROMACS topology file) to a grappa dataset.
+
+    Attributes
+    ----------
+    entries
+        Dictionary with mol-ids as keys and MolData values. The MolData object contains all information to build a dataset entry
+    complete_entries
+        Set of mol-ids with both QM data and nonbonded information. It is not validated when value is returned.
+
+    Example
+    ----------
+    >>> db = DatasetBuilder.from_QM_ase("example-data-in")
+    >>> db.add_nonbonded_from_gmx_top("example-data-in", add_pdb=True)
+    >>> db.remove_bonded_parameters()
+    >>> db.filter_bad_nonbonded()
+    >>> db.write_to_dir("example-data-out", overwrite=True, delete_dgl=True)
+    """
     entries: dict[str,MolData] = field(default_factory=dict)
     complete_entries: set[str] = field(default_factory=set)
 
     @classmethod
-    def from_moldata(cls, moldata_dir: Path):
+    def from_moldata(cls, moldata_dir: Union[str,Path]):
+        moldata_dir = Path(moldata_dir)
         entries = {}
         complete_entries = set()
         npzs = list(moldata_dir.glob('*npz'))
@@ -64,9 +80,10 @@ class DatasetBuilder:
         return cls(entries=entries,complete_entries=complete_entries)
 
     @classmethod
-    def from_QM_arrays(cls, qm_data_dir: Path, verbose:bool = False):
+    def from_QM_arrays(cls, qm_data_dir: Union[str,Path], verbose:bool = False):
         """ Expects nested QM data dir. One molecule per directory. One array per input type. Assuming units to be default grappa units
         """
+        qm_data_dir = Path(qm_data_dir)
         entries = {}
         subdirs =  list(qm_data_dir.iterdir())
         for subdir in sorted(subdirs):
@@ -93,11 +110,11 @@ class DatasetBuilder:
         return cls(entries=entries)
 
     @classmethod
-    def from_QM_ase(cls, qm_data_dir: Path, parse_all_configurations: bool = True, verbose:bool = False):
+    def from_QM_ase(cls, qm_data_dir: Union[str,Path], ase_index_str: str = ':', verbose:bool = False):
         """ Expects nested QM data dir. One molecule per directory."""
+        qm_data_dir = Path(qm_data_dir)
         entries = {}
         subdirs =  list(qm_data_dir.iterdir())
-        index_str = ':' if parse_all_configurations else None   # could extend this to the pass index-str itself
 
         for subdir in sorted(subdirs):
             mol_id = subdir.name 
@@ -107,7 +124,7 @@ class DatasetBuilder:
 
             # create geometries: list[list[Atoms]]
             for file in gaussian_files:
-                QM_calculations.append(read(file,index=index_str))
+                QM_calculations.append(read(file,index=ase_index_str))
             
             # create molecules
             molecules = []
@@ -158,9 +175,10 @@ class DatasetBuilder:
 
         return cls(entries=entries)
 
-    def add_nonbonded_from_gmx_top(self, top_data_dir: Path, add_pdb:bool=False):
+    def add_nonbonded_from_gmx_top(self, top_data_dir: Union[str,Path], add_pdb:bool=False):
         """Replaces molecule of entry with gmx top molecule and permutates moldata xyz and forces
         """
+        top_data_dir = Path(top_data_dir)
         if add_pdb:
             import io
             from openmm.app import PDBFile
