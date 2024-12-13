@@ -44,7 +44,7 @@ def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list
         print(permutations)
     return permutations
 
-def moldata_from_qm_dict(qm_dict: Mapping, mol_id: str) -> MolData:
+def moldata_from_qm_dict(qm_dict: Mapping, mol_id: str) -> Union[MolData,None]:
     """Qm_dict should be a dict like object. Must contain keys xyz, energy, atomic_numbers and either force or gradient
     """
     assert all([x in qm_dict for x in ['xyz','energy','atomic_numbers']]), f"The QM dictionary must contain xyz, energy and atomic_numbers but is missing keys: {list(filename_dict.keys())}"
@@ -52,6 +52,9 @@ def moldata_from_qm_dict(qm_dict: Mapping, mol_id: str) -> MolData:
 
     valid_idxs = np.isfinite(qm_dict['energy'])
     valid_idxs = np.where(valid_idxs)[0]
+    if len(valid_idxs) < 3:
+        print(f"Too few conformations: {len(mol_data.energy)}. Skipping entry!")
+        return None
     energy = qm_dict['energy'][valid_idxs]
     xyz =  qm_dict['xyz'][valid_idxs]
     if 'force' in qm_dict:
@@ -60,10 +63,10 @@ def moldata_from_qm_dict(qm_dict: Mapping, mol_id: str) -> MolData:
         gradient = qm_dict['gradient'][valid_idxs]
 
     # use ase to get bonds from positions
-    atoms = Atoms(positions=qm_dict['xyz'][-1],numbers=qm_dict['atomic_numbers'])
+    atoms = Atoms(positions=xyz[-1],numbers=qm_dict['atomic_numbers'])
     mol = Molecule.from_ase(atoms)
 
-    mol_data = MolData(molecule=mol,xyz=qm_dict['xyz'],energy=qm_dict['energy'],gradient=qm_dict['gradient'],mol_id=mol_id)
+    mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
     return mol_data
 
 @dataclass
@@ -130,8 +133,7 @@ class DatasetBuilder:
 
             npz = np.load(npz_files[0])
             mol_data = moldata_from_qm_dict(npz, mol_id)
-            if len(mol_data.energy) < 3:
-                print(f"Too few conformations: {len(mol_data.energy)}. Skipping entry!")
+            if mol_data is None:
                 continue
             entries[mol_id] = mol_data
 
@@ -175,6 +177,8 @@ class DatasetBuilder:
                 qm_dict['gradient'] = - qm_dict.pop('force')
             print(qm_dict)
             mol_data = moldata_from_qm_dict(qm_dict, mol_id)
+            if mol_data is None:
+                continue
             entries[mol_id] = mol_data
         return cls(entries=entries)
 
