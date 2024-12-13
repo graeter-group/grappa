@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Union, Mapping
 from pathlib import Path
 import numpy as np
 from tqdm import tqdm
@@ -44,6 +44,28 @@ def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list
         print(permutations)
     return permutations
 
+def moldata_from_qm_dict(qm_dict: Mapping, mol_id: str) -> MolData:
+    """Qm_dict should be a dict like object. Must contain keys xyz, energy, atomic_numbers and either force or gradient
+    """
+    assert all([x in qm_dict for x in ['xyz','energy','atomic_numbers']]), f"The QM dictionary must contain xyz, energy and atomic_numbers but is missing keys: {list(filename_dict.keys())}"
+    assert ('force' in qm_dict) != ('gradient' in qm_dict), f"The QM dictionary must contain either 'force' or 'gradient', but not both: {list(filename_dict.keys())}"
+
+    valid_idxs = np.isfinite(qm_dict['energy'])
+    valid_idxs = np.where(valid_idxs)[0]
+    energy = qm_dict['energy'][valid_idxs]
+    xyz =  qm_dict['xyz'][valid_idxs]
+    if 'force' in qm_dict:
+        gradient = -qm_dict['force'][valid_idxs]
+    else:
+        gradient = qm_dict['gradient'][valid_idxs]
+
+    # use ase to get bonds from positions
+    atoms = Atoms(positions=qm_dict['xyz'][-1],numbers=qm_dict['atomic_numbers'])
+    mol = Molecule.from_ase(atoms)
+
+    mol_data = MolData(molecule=mol,xyz=qm_dict['xyz'],energy=qm_dict['energy'],gradient=qm_dict['gradient'],mol_id=mol_id)
+    return mol_data
+
 @dataclass
 class DatasetBuilder:
     """The DatasetBuilder converts QM data and nonbonded information (e.g. from a GROMACS topology file) to a grappa dataset.
@@ -67,7 +89,7 @@ class DatasetBuilder:
     complete_entries: set[str] = field(default_factory=set)
 
     @classmethod
-    def from_moldata(cls, moldata_dir: Union[str,Path]):
+    def from_moldata(cls, moldata_dir: Union[str,Path], mol_id_from_file_stem:bool = False):
         moldata_dir = Path(moldata_dir)
         entries = {}
         complete_entries = set()
@@ -75,13 +97,22 @@ class DatasetBuilder:
         for npz in sorted(npzs):
             print(npz.name)
             moldata = MolData.load(npz)
+            if mol_id_from_file_stem:
+                moldata.mol_id = npz.stem
+
             entries.update({moldata.mol_id:moldata})
             complete_entries.add(moldata.mol_id)
         return cls(entries=entries,complete_entries=complete_entries)
 
     @classmethod
-    def from_QM_arrays(cls, qm_data_dir: Union[str,Path], verbose:bool = False):
-        """ Expects nested QM data dir. One molecule per directory. One array per input type. Assuming units to be default grappa units
+    def from_QM_dicts(cls, qm_data_dir: Union[str,Path], verbose:bool = False):
+        """ Expects nested QM data dir. One molecule per directory. One array per input type. 
+        Arrays of the same type should have the same filename. Assuming units to be default grappa units
+        
+        Attributes
+        ----------
+        qm_data_dir 
+            Directory with subdirectories containing a single npz file with QM data. The subdirectory names will be used as mol_ids
         """
         qm_data_dir = Path(qm_data_dir)
         entries = {}
@@ -89,23 +120,61 @@ class DatasetBuilder:
         for subdir in sorted(subdirs):
             mol_id = subdir.name 
             print(mol_id)
-            energy = np.load(subdir/"psi4_energies.npy")
-            gradient = -np.load(subdir/"psi4_forces.npy")
 
-            xyz = np.load(subdir/"positions.npy")
-            atomic_numbers = np.load(subdir/"atomic_numbers.npy") # not needed
+            npz_files = list(subdir.glob('*.npz'))
+            if len(npz_files) > 1:
+                print(f"Multiple npz files in {subdir.name}, taking {npz_files[0]}.")
+            elif len(npz_files) == 0:
+                print(f"No npz file found in {subdir}. Skipping!")
+                continue
 
-            valid_idxs = np.isfinite(energy)
-            valid_idxs = np.where(valid_idxs)[0]
-            energy = energy[valid_idxs]
-            gradient = gradient[valid_idxs]
-            xyz = xyz[valid_idxs]
+            npz = np.load(npz_files[0])
+            mol_data = moldata_from_qm_dict(npz, mol_id)
+            if len(mol_data.energy) < 3:
+                print(f"Too few conformations: {len(mol_data.energy)}. Skipping entry!")
+                continue
+            entries[mol_id] = mol_data
 
-            # use ase to get bonds from positions
-            atoms = Atoms(positions=xyz[-1],numbers=atomic_numbers)
-            mol = Molecule.from_ase(atoms)
+        return cls(entries=entries)
 
-            mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
+    @classmethod
+    def from_QM_arrays(cls, qm_data_dir: Union[str,Path], filename_dict:Union[dict[str,str],None]= None, verbose:bool = False):
+        """ Expects nested QM data dir. One molecule per directory. One array per input type. 
+        Arrays of the same type should have the same filename. Assuming units to be default grappa units
+        
+        Attributes
+        ----------
+        qm_data_dir 
+            Directory with subdirectories containing QM data arrays for every dataset entry
+        filename_dict
+            Dictionary of QM data array files. Must contain keys xyz, energy, atomic_numbers and either force or gradient
+
+        """
+        if filename_dict is None:
+            filename_dict = {'energy': 'psi4_energies.npy',
+                             'force': 'psi4_forces.npy',
+                             'xyz': 'positions.npy',
+                             'atomic_numbers': 'atomic_numbers.npy'}
+        assert all([x in filename_dict for x in ['xyz','energy','atomic_numbers']]), f"The filename dictionary must contain xyz, energy and atomic_numbers but is missing keys: {list(filename_dict.keys())}"
+        assert ('force' in filename_dict) != ('gradient' in filename_dict), f"The filename dictionary must contain either 'force' or 'gradient', but not both: {list(filename_dict.keys())}"
+
+        qm_data_dir = Path(qm_data_dir)
+        entries = {}
+        subdirs =  list(qm_data_dir.iterdir())
+        for subdir in sorted(subdirs):
+            mol_id = subdir.name 
+            print(mol_id)
+            if not all([(subdir / fn).exists() for fn in filename_dict.values()]):
+                print(f"Couldn't find all filenames in subdirectory. Skipping!")
+                continue
+            
+            qm_dict = {}
+            for k,v in filename_dict.items():
+                qm_dict[k] = np.load(subdir / v)
+            if 'force' in qm_dict:
+                qm_dict['gradient'] = - qm_dict.pop('force')
+            print(qm_dict)
+            mol_data = moldata_from_qm_dict(qm_dict, mol_id)
             entries[mol_id] = mol_data
         return cls(entries=entries)
 
@@ -129,7 +198,7 @@ class DatasetBuilder:
             # create molecules
             molecules = []
             for conformations in QM_calculations:
-                molecules.append(Molecule.from_ase(conformations[-1]))  #taking [-1] could be better than [0] for optimizations
+                molecules.append(Molecule.from_ase(conformations[-1]))  #taking [-1] could be better than [0] for optimizations, could check for conf with min energy 
                         
             # different QM files could have different atom order, matching this 
             # the ase atoms object is not a good container for changing energies and forces, maybe do this when the 
