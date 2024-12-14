@@ -18,8 +18,9 @@ data_module:
     - spice-dipeptide-amber99
     - spice-dipeptide-charmm36
     # OWN PEPTIDE DATASETS:
-    - dipeptides-radical-300K
-    - bondbreak-radical-peptides-300K
+    - peptide-radical-opt
+    - peptide-radical-scan
+    - peptide-radical-MD
 
   pure_test_datasets:
     - rna-trinucleotide
@@ -36,5 +37,6 @@ data_module:
     spice-dipeptide-charmm36: ${data.data_module.weights.spice-dipeptide-amber99}
     protein-torsion-amber99: ${data.data_module.weights.spice-dipeptide-amber99}
     protein-torsion-charmm36: ${data.data_module.weights.spice-dipeptide-amber99}
-    dipeptides-radical-300K: 1
-    bondbreak-radical-peptides-300K: 1
+    peptide-radical-opt: 1
+    peptide-radical-scan: 1
+    peptide-radical-MD: 1
