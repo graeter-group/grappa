@@ -53,7 +53,7 @@ def moldata_from_qm_dict(qm_dict: Mapping, mol_id: str) -> Union[MolData,None]:
     valid_idxs = np.isfinite(qm_dict['energy'])
     valid_idxs = np.where(valid_idxs)[0]
     if len(valid_idxs) < 3:
-        print(f"Too few conformations: {len(mol_data.energy)}. Skipping entry!")
+        print(f"Too few conformations: {len(valid_idxs)}. Skipping entry!")
         return None
     energy = qm_dict['energy'][valid_idxs]
     xyz =  qm_dict['xyz'][valid_idxs]
