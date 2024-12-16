@@ -1,0 +1,51 @@
+defaults:
+  - grappa-1.4.0
+  - _self_
+
+data_module:
+  datasets: 
+      # ESPALOMA DATASET (AM1BCC CHARGES):
+    - spice-des-monomers
+    - spice-pubchem-filtered
+    - gen2
+    - gen2-torsion
+    - rna-diverse
+    - pepconf-dlc
+    - protein-torsion
+    - spice-dipeptide
+    # ESPALOMA PEPTIDES WITH DIFFERENT CHARGES:
+    - protein-torsion-amber99
+    - protein-torsion-charmm36
+    - spice-dipeptide-amber99
+    - spice-dipeptide-charmm36
+    # OWN PEPTIDE RADICAL DATASETS:
+    - peptide-radical-opt
+    - peptide-radical-scan
+    - peptide-radical-MD
+  pure_test_datasets: 
+  - rna-trinucleotide
+  pure_val_datasets: []
+  pure_train_datasets: 
+  - rna-nucleoside
+extra_datasets: []
+extra_train_datasets: []
+extra_val_datasets: []
+extra_test_datasets: []
+splitpath: espaloma_split
+weights:
+  spice-pubchem-filtered: 0.04
+  gen2: 0.05     
+  gen2-torsion: 0.05
+  spice-des-monomers: 0.05
+  rna-diverse: 0.05
+  pepconf-dlc: 0.05
+  protein-torsion: 0.05
+  spice-dipeptide: 0.05
+  rna-nucleoside: 0.05
+  spice-dipeptide-amber99: 0.05
+  spice-dipeptide-charmm36: 0.05
+  protein-torsion-amber99: 0.05
+  protein-torsion-charmm36: 0.05
+  peptide-radical-opt: 1
+  peptide-radical-scan: 1
+  peptide-radical-MD: 1
