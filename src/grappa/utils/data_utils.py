@@ -244,3 +244,4 @@ def download_zipped_dir(url:str, target_dir:Path):
         print(f"Error while deleting the zip file: {e}")
 
     logging.info(f"Downloaded to {target_dir}")
+    

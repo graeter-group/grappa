@@ -701,6 +701,7 @@ class Molecule():
 
         assert isinstance(atoms, Atoms), f"atoms must be an ase.Atoms object but is {type(atoms)}"
 
+
         if bonds is None:
             if atoms.positions is None or np.all(atoms.positions == 0):
                 raise ValueError("If bonds are not passed, positions must be passed.")

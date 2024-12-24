@@ -15,6 +15,7 @@ from pathlib import Path
 
 from typing import List, Union, Tuple, Dict
 
+import argparse
 import copy
 import numpy as np
 import logging
@@ -608,3 +609,110 @@ def clear_tag(tag:str):
         import shutil
         shutil.rmtree(path)
         logging.info(f'Deleted dataset at {path}.')
+
+def inspect_dataset_(datasetpath:Union[str,Path]):
+    bonded_prms = ['bond_eq', 'bond_k', 'angle_k', 'angle_eq', 'proper_ks', 'proper_phases','improper_ks','improper_phases']
+    datasetpath = Path(datasetpath)
+
+    # Initialize counters for tests
+    inspection_counts = {
+        'Structures' : {'xyz':0,'pdb':0},
+        'QM data': {'energy':0,'gradient':0},
+        'FF Parameters': {},
+        'FF Energy/Gradients': {},
+    }
+    for bonded_prm in bonded_prms:
+        inspection_counts['FF Parameters'].update({bonded_prm:0})
+
+    # Iterate over files in the dataset directory
+    ds_list = list(datasetpath.glob('*npz'))
+    n_npz = len(ds_list)
+    n_conformations = 0
+    QM_energies = []
+    QM_gradients = []
+    energies_diff = {}
+    gradients_diff = {}
+    inspection_counts = inspection_counts
+    for file_path in ds_list:
+        moldata = MolData.load(file_path.as_posix())
+        moldata._validate()
+        n_conformations += len(moldata.energy)
+        QM_energies.extend(list(moldata.energy - np.mean(moldata.energy)))
+        QM_gradients.extend(list(np.linalg.norm(moldata.gradient,axis=2).flatten()))
+        # Check and increment counters for non-NaN values in the required attributes
+        if np.all(np.isfinite(moldata.xyz)): inspection_counts['Structures']['xyz'] += 1
+        if np.all(np.isfinite(moldata.energy)): inspection_counts['QM data']['energy'] += 1
+        if np.all(np.isfinite(moldata.gradient)): inspection_counts['QM data']['gradient'] += 1
+        if moldata.pdb is not None: inspection_counts['Structures']['pdb'] += 1
+
+        # ff energy
+        for ff_type,ff_contributions in moldata.ff_energy.items():
+            if not ff_type in inspection_counts['FF Energy/Gradients'].keys():
+                inspection_counts['FF Energy/Gradients'][ff_type] = {'energy' : {},'gradient' : {}}
+            for interaction, val in ff_contributions.items():
+                if not interaction in inspection_counts['FF Energy/Gradients'][ff_type]['energy'].keys():
+                    inspection_counts['FF Energy/Gradients'][ff_type]['energy'][interaction] = 0
+                if np.all(np.isfinite(val)) : inspection_counts['FF Energy/Gradients'][ff_type]['energy'][interaction] += 1
+                if interaction == 'nonbonded':
+                    if ff_type not in energies_diff.keys():
+                        energies_diff[ff_type] = []
+                    QM_rel = moldata.energy - np.mean(moldata.energy) 
+                    MM_rel = val - np.mean(val)
+                    energies_diff[ff_type].extend(list(QM_rel-MM_rel))
+
+        # ff gradients
+        for ff_type,ff_contributions in moldata.ff_gradient.items():
+            if not ff_type in inspection_counts['FF Energy/Gradients'].keys():
+                inspection_counts['FF Energy/Gradients'][ff_type] = {'energy' : {},'gradient' : {}}
+            for interaction, val in ff_contributions.items():
+                if not interaction in inspection_counts['FF Energy/Gradients'][ff_type]['gradient'].keys():
+                    inspection_counts['FF Energy/Gradients'][ff_type]['gradient'][interaction] = 0
+                if np.all(np.isfinite(val)) : inspection_counts['FF Energy/Gradients'][ff_type]['gradient'][interaction] += 1
+                if interaction == 'nonbonded':
+                    if ff_type not in gradients_diff.keys():
+                        gradients_diff[ff_type] = []
+                    QM_rel = np.average(np.linalg.norm(moldata.gradient,axis=2),axis=1)
+                    MM_rel = np.average(np.linalg.norm(val,axis=2),axis=1)
+                    gradients_diff[ff_type].extend(list(QM_rel-MM_rel))
+        # ff parameters
+        for bonded_prm in bonded_prms:
+            parameters = getattr(moldata.classical_parameters,bonded_prm)
+            if np.all(np.isfinite(parameters)) and parameters.size > 0: inspection_counts['FF Parameters'][bonded_prm] +=1
+
+    print(f"Dataset: {datasetpath.name} with {n_npz} molecules and {n_conformations} conformations\n")
+    print(f"QM Energy mean: {np.mean(QM_energies):5.2f}, std: {np.std(QM_energies):5.2f}, max: {np.max(QM_energies):5.2f}, min: {np.min(QM_energies):5.2f} [kcal/mol]")
+    print(f"QM Gradient norm mean: {np.mean(QM_gradients):5.2f}, std: {np.std(QM_gradients):5.2f}, max: {np.max(QM_gradients):5.2f} [kcal/mol/Å]")
+    for k,v in energies_diff.items():
+        print(f"Target energy difference (QM - MM(nonbonded)) for {k}: mean {np.mean(v):5.2f}, std: {np.std(v):5.2f}, max: {np.max(v):5.2f}, min {np.min(v):5.2f} [kcal/mol]")
+        if k in gradients_diff.keys():
+            print(f"Target gradient norm difference (QM - MM(nonbonded)) for {k}: mean {np.mean(gradients_diff[k]):5.2f}, std: {np.std(gradients_diff[k]):5.2f}, max: {np.max(gradients_diff[k]):5.2f}, min {np.min(gradients_diff[k]):5.2f} [kcal/mol/A]")
+    # Print final counts for each test
+    for test_type, tests in inspection_counts.items():
+        print(test_type)
+        if test_type in ['Structures','QM data','FF Parameters']:
+            for i,(test, count) in enumerate(tests.items()):
+                print(f"{test}: {count}",end='\t')
+                if i % 2 == 1:
+                    print('')
+        elif test_type in ['FF Energy/Gradients']:
+            for FF_type, FF_dict in tests.items():
+                data_string = f"{FF_type} "
+                for i,(data_type, data_dict) in enumerate(FF_dict.items()):
+                    if i > 0:
+                        data_string += '; '
+                    data_string += f"{data_type}"
+                    for ii, (contribution_type, count) in enumerate(data_dict.items()):
+                        if ii > 0:
+                            data_string += ','
+                        data_string += f" {contribution_type}: {count}"
+
+                print(data_string)
+        print('')
+    return
+
+def inspect_dataset():
+    parser = argparse.ArgumentParser(description='Inspect a grappa dataset')
+    parser.add_argument('datasetpath',  type=str, help='Path to the grappa dataset.')
+    args = parser.parse_args()
+
+    return inspect_dataset_(datasetpath=args.datasetpath)
