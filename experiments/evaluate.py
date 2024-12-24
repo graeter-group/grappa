@@ -10,9 +10,9 @@ import logging
 @hydra.main(version_base=None, config_path=str(Path(__file__).parent/"../configs"), config_name="evaluate")
 def main(cfg: DictConfig) -> None:
 
-    download_model_if_possible(cfg.evaluate.ckpt_path)
+    ckpt_path = download_model_if_possible(cfg.evaluate.ckpt_path)
     
-    ckpt_path = Path(cfg.evaluate.ckpt_path)
+    ckpt_path = Path(ckpt_path)
 
     assert ckpt_path.exists(), f"Checkpoint path {ckpt_path} does not exist."
     
@@ -60,10 +60,12 @@ def main(cfg: DictConfig) -> None:
 
     experiment = Experiment(config=ckpt_cfg, load_data=False)
 
-    if cfg.evaluate.eval_model:
-        experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=True, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, ckpt_data_config=ckpt_data_config, store_test_data=cfg.evaluate.store_test_data)
+    split_needed = len(ckpt_cfg.data.data_module.datasets)>0 # split information is needed for all sets in datasets.
 
-    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.evaluate.classical_force_fields, test_data_path=cfg.evaluate.test_data_path, load_split=cfg.evaluate.eval_model, n_bootstrap=cfg.evaluate.n_bootstrap, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, store_test_data=cfg.evaluate.store_test_data)
+    if cfg.evaluate.eval_model:
+        experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=split_needed, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, ckpt_data_config=ckpt_data_config, store_test_data=cfg.evaluate.store_test_data)
+
+    experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.evaluate.classical_force_fields, test_data_path=cfg.evaluate.test_data_path, load_split=not cfg.evaluate.eval_model, n_bootstrap=cfg.evaluate.n_bootstrap, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, store_test_data=cfg.evaluate.store_test_data)
     experiment.compare_forcefields(ckpt_path=ckpt_path, forcefields=cfg.evaluate.compare_forcefields, gradient_contributions=cfg.evaluate.gradient_contributions)
 
 if __name__ == "__main__":
