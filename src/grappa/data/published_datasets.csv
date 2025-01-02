@@ -6,9 +6,9 @@ dipeptides-1000K-openff-1.2.0,https://github.com/graeter-group/grappa/releases/d
 dipeptides-300K-charmm36_nonb,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/dipeptides-300K-charmm36_nonb.zip,
 dipeptides-1000K-charmm36_nonb,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/dipeptides-1000K-charmm36_nonb.zip,
 uncapped-300K-amber99,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/uncapped-300K-amber99.zip,
-dipeptides-hyp-dop-300K-amber99,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/dipeptides-hyp-dop-300K-amber99.zip,
-dipeptides-radical-300K,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/dipeptides-radical-300K.zip,
-bondbreak-radical-peptides-300K,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/bondbreak-radical-peptides-300K.zip,
+dipeptides-hyp-dop-300K-amber99,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/dipeptides-hyp-dop-300K-amber99.zip
+dipeptides-radical-300K,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/dipeptides-radical-300K.zip,deprecated
+bondbreak-radical-peptides-300K,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/bondbreak-radical-peptides-300K.zip,deprecated
 uncapped-300K-openff-1.2.0,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/uncapped-300K-openff-1.2.0.zip,
 spice-pubchem,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/spice-pubchem.zip,
 rna-nucleoside,https://github.com/graeter-group/grappa/releases/download/v.1.3.0/rna-nucleoside.zip,
@@ -26,3 +26,6 @@ spice-dipeptide-amber99,https://github.com/graeter-group/grappa/releases/downloa
 spice-dipeptide-charmm36,https://github.com/graeter-group/grappa/releases/download/v.1.4.0/spice-dipeptide-charmm36.zip,spice-dipeptide but with nonbonded parameters from charmm36
 protein-torsion-amber99,https://github.com/graeter-group/grappa/releases/download/v.1.4.0/protein-torsion-amber99.zip,protein-torsion but with nonbonded parameters from amber99
 protein-torsion-charmm36,https://github.com/graeter-group/grappa/releases/download/v.1.4.0/protein-torsion-charmm36.zip,protein-torsion but with nonbonded parameters from charmm36
+peptide-radical-MD,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/peptide-radical-MD.zip,radical peptides with states sampled from MD
+peptide-radical-scan,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/peptide-radical-scan.zip,radical peptides with states sampled from torsion scans
+peptide-radical-opt,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/peptide-radical-opt.zip,radical peptides with states sampled from optimization trajectories

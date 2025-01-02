@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "grappa"
-version = "1.4.0"
+version = "1.4.1"
 authors = [
     { name="Leif Seute", email="leif.seute@h-its.org" }
 ]
