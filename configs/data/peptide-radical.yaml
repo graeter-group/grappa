@@ -1,0 +1,14 @@
+defaults:
+  - default
+
+data_module:
+  datasets:
+    - peptide-radical-MD
+    - peptide-radical-opt
+    - peptide-radical-scan
+
+  pure_test_datasets: []
+  pure_val_datasets: []
+  pure_train_datasets: []
+  splitpath: espaloma_split
+  partition: [0.8, 0.1, 0.1]
