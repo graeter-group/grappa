@@ -187,6 +187,12 @@ For full reproducibility, also the respective partition of the dataset and the c
 python experiments/train.py data=grappa-1.4 model=default experiment=default
 ```
 
+| Tag      | Description                          |
+|-----------|--------------------------------------|
+| grappa-1.4.0    | Covers peptides, small molecules, rna. Used for protein and peptide simulations reported in the paper.|
+| grappa-1.4.1-radical   | Covers peptides, small molecules, rna, peptide radicals.|
+
+
 ## Datasets
 
 Datasets of dgl graphs representing molecules can be obtained by using the `grappa.data.Dataset.from_tag` constructor.
@@ -194,9 +200,34 @@ An example can be found at `examples/usage/dataset.py`, available tags are liste
 
 To re-create the benchmark experiment, also the splitting into train/val/test sets from Espaloma is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
 
-The datasets 'dipeptides-300K-...', 'dipeptides-1000K-...', 'uncapped_...', 'hyp-dop_...' and 'dipeptides_radical-300K' were generated using scripts at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
-
 For the creation of custom datasets, take a look at the tutorials `examples/dataset_creation/create_dataset.py` and `examples/dataset_creation/uncommon_molecule_dataset.py`.
+
+| Tag                        | Description                                                                           |
+|----------------------------|---------------------------------------------------------------------------------------|
+| spice-pubchem              | Small molecule dataset from Espaloma. Sampled from MD.                                |
+| rna-nucleoside             | Nucleoside dataset from Espaloma. Sampled from MD.                                |
+| gen2                       | Small molecule dataset from Espaloma. Sampled from optimization trajectories.      |
+| spice-des-monomers         | Small molecule dataset from Espaloma. Sampled from MD.                                        |
+| spice-dipeptide            | Dipeptide dataset from Espaloma. Sampled from MD.                                                   |
+| rna-diverse                | RNA dataset from Espaloma. Sampled from MD.                                      |
+| gen2-torsion               | Small molecule dataset from Espaloma. Sampled from torsion scans.                                 |
+| pepconf-dlc                | Peptide dataset from Espaloma. Sampled from optimization trajectories.                |
+| protein-torsion            | Peptide dataset from Espaloma. Sampled from torsion scans.                            |
+| rna-trinucleotide          | Trinucleotide dataset from Espaloma. Sampled from MD.                                           |
+| espaloma_split             | Defines the train val test split used for training Espaloma 0.3.0.                                 |
+| spice-pubchem-filtered     | spice-pubchem without molecules with QM forces over 500 kcal/mol/Angstroem.                  |
+| spice-dipeptide-amber99    | Spice-dipeptide but with nonbonded parameters from amber99.                           |
+| spice-dipeptide-charmm36   | Spice-dipeptide but with nonbonded parameters from charmm36.                          |
+| protein-torsion-amber99    | Protein-torsion but with nonbonded parameters from amber99.                           |
+| protein-torsion-charmm36   | Protein-torsion but with nonbonded parameters from charmm36.                          |
+| dipeptides-hyp-dop-300K-amber99 | Dataset of dipeptides with HYP and DOP residues at 300K with amber99SB-ILDN* nonbonded parameters. Sampled from MD.           |
+| uncapped-300K-openff-1.2.0 | Dataset of peptides without capping at 300K with OpenFF 1.2.0/am1-bcc nonbonded parameters. Sampled from MD.     |
+| peptide-radical-MD         | Radical peptides with states sampled from MD.                                         |
+| peptide-radical-scan       | Radical peptides with states sampled from torsion scans.                              |
+| peptide-radical-opt        | Radical peptides with states sampled from optimization trajectories.                 |
+
+Espaloma datasets from: [https://pubs.rsc.org/en/content/articlehtml/2024/sc/d4sc00690a](https://pubs.rsc.org/en/content/articlehtml/2024/sc/d4sc00690a)
+
 
 ## Training
 
