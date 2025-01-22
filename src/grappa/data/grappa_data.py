@@ -8,6 +8,7 @@ import logging
 from grappa.data.dataset import Dataset
 from grappa.data.graph_data_loader import GraphDataLoader
 from grappa.utils.data_utils import get_moldata_path
+from grappa.data.transforms import AnnotateGrappaAtomsNInteractions
 from tqdm import tqdm
 
 class GrappaData(pl.LightningDataModule):
@@ -28,6 +29,7 @@ class GrappaData(pl.LightningDataModule):
                  conf_strategy: Union[str, int] = 32,
                  ff_lookup: Dict[str, str] = {},
                  seed: int = 0,
+                 
                  pin_memory: bool = True,
                  tr_subsampling_factor: float = None,
                  tr_max_confs:int = None,
@@ -39,7 +41,8 @@ class GrappaData(pl.LightningDataModule):
                  split_ids: Dict[str, List[str]] = None,
                  keep_features: bool = False,
                  max_energy: float=None,
-                 max_force: float=None
+                 max_force: float=None,
+                 partial_param: bool = False,
                 ):
         """
         This class handles the preparation of train, validation, and test dataloaders for a given list of datasets.
@@ -71,6 +74,7 @@ class GrappaData(pl.LightningDataModule):
             val_conf_strategy (int, optional): Strategy for sampling conformations for the validation dataloader. Defaults to 200.
             split_ids (Dict[str, List[str]], optional): Dictionary containing the split IDs. Defaults to None.
             keep_features (bool, optional): Whether to keep features during processing. Defaults to False.
+            partial_param (bool): Whether to use partial parameterization. Defaults to False.
             """
         super().__init__()
         self.datasets = datasets
@@ -101,6 +105,7 @@ class GrappaData(pl.LightningDataModule):
         self.ff_lookup = ff_lookup
         self.max_energy = max_energy
         self.max_force = max_force
+        self.partial_param = partial_param
 
         self.train_cleanup = True # set this to manually to False if you want to keep the reference ff data in the training set (e.g. for evaluating the reference data on the training set)
         self.num_test_mols = None # number of molecules in the test set, we might need to keep track of this for the evaluation
@@ -175,6 +180,11 @@ class GrappaData(pl.LightningDataModule):
         self.tr = Dataset.concatenate(self.tr, *pure_train_sets)
         self.vl = Dataset.concatenate(self.vl, *pure_val_sets)
         self.te = Dataset.concatenate(self.te, *pure_test_sets)
+
+        if self.partial_param:
+            self.tr.transform = AnnotateGrappaAtomsNInteractions(deterministic=False)
+            self.vl.transform = AnnotateGrappaAtomsNInteractions(deterministic=True)
+            self.te.transform = AnnotateGrappaAtomsNInteractions(deterministic=True)
 
         # filter out high energy states from training and validation set
         if self.max_energy is not None:
