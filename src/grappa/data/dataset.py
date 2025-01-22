@@ -13,7 +13,7 @@ from dgl import DGLGraph
 import json
 from pathlib import Path
 
-from typing import List, Union, Tuple, Dict
+from typing import List, Union, Tuple, Dict, Optional, Callable
 
 import argparse
 import copy
@@ -32,18 +32,20 @@ class Dataset(torch.utils.data.Dataset):
     - nodes['g'].data['energy_qm']: (1,n_confs)
     - nodes['n1'].data['xyz']: (n_atoms, n_confs, 3)
     """
-    def __init__(self, graphs:List[DGLGraph]=[], mol_ids:List[str]=[], subdataset:Union[List[str], str]=[]):
+    def __init__(self, graphs:List[DGLGraph]=[], mol_ids:List[str]=[], subdataset:Union[List[str], str]=[], transform: Optional[Callable]=None):
         """
         Args:
             graphs (List[DGLGraph]): list of dgl graphs
             mol_ids (List[str]): list of molecule ids
             subdataset (List[str]): list of subdataset names
+            transform (Optional[Callable]): transformation to be applied to the graphs
         """
         if isinstance(subdataset, str):
             subdataset = [subdataset]*len(graphs)
         self.graphs = graphs
         self.mol_ids = mol_ids
         self.subdataset = subdataset
+        self.transform = transform
         assert len(graphs) == len(mol_ids) == len(subdataset)
         self.num_mols = None # keep track of original number of molecules if self.apply_max_confs is called
 
@@ -113,6 +115,9 @@ class Dataset(torch.utils.data.Dataset):
         Returns:
             graph, subdataset (DGLGraph, str): graph and subdataset name at the given index
         """
+
+        if self.transform is not None:
+            return self.transform(self.graphs[idx]), self.subdataset[idx]
         return self.graphs[idx], self.subdataset[idx]
     
     @classmethod
