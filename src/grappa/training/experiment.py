@@ -191,7 +191,7 @@ class Experiment:
 
 
         if load_split:
-            if splitpath is None:
+            if splitpath is not None:
                 self.load_split_from_file(splitpath=splitpath)
 
             else:
@@ -363,16 +363,19 @@ class Experiment:
         """
         def get_ff_data(ff):
             if not (Path(ckpt_path).parent / 'test_data' / ff / 'data.npz').exists() and ff.lower() != 'grappa' and ff != '':
-                raise ValueError(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+                logging.warning(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+                return None
             data = np.load(ckpt_path.parent / 'test_data' / ff / 'data.npz') if (ff != '' and ff.lower()!="grappa") else None
             if data is None:
                 npz_paths = list((Path(ckpt_path).parent/'test_data').glob('*.npz'))
                 assert len(npz_paths) == 1, f"Multiple or no npz files found: {npz_paths}"
                 data = np.load(npz_paths[0])
             if data is None:
-                raise ValueError(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+                logging.warning(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+                return None
             if len(data.keys()) == 0:
-                raise ValueError(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+                logging.warning(f"No data found for {ff} at {ckpt_path.parent / 'test_data' / ff / 'data.npz'}")
+                return None
             return unflatten_dict(data)
 
         for ff1, ff2 in forcefields:
@@ -407,7 +410,11 @@ class Experiment:
             # init a module just to generate a split file with the data settings from the checkpoint:
             # (we do not use this module since the user might have changed the data settings in the evaluation config)
             ckpt_data_module = OmegaConf.to_container(ckpt_data_config.data_module, resolve=True)
-            re_init_datamodule = GrappaData(**ckpt_data_module, save_splits=self.ckpt_dir/'split.json')
+            
+            load_path = Path(self.ckpt_dir) / 'split.json'
+            load_path.parent.mkdir(parents=True, exist_ok=True)
+
+            re_init_datamodule = GrappaData(**ckpt_data_module, save_splits=load_path)
             re_init_datamodule.setup()
 
         data_cfg = self._data_cfg
@@ -422,8 +429,10 @@ class Experiment:
         Load the split from a file and use it to create a test set.
         """
         splitpath = Path(splitpath)
+        if not splitpath.exists():
+            raise FileNotFoundError(f"Split file not found at {splitpath}")
         data_cfg = self._data_cfg
-        data_cfg.splitpath = str(splitpath) if splitpath.exists() else None
+        data_cfg.splitpath = str(splitpath)
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)
         self.datamodule = GrappaData(**OmegaConf.to_container(data_cfg, resolve=True))
         self.datamodule.setup()
@@ -432,11 +441,19 @@ class Experiment:
 def download_model_if_possible(ckpt_path:Path):
     ckpt_path = Path(ckpt_path)
     if not ckpt_path.exists():
+        url_tags = pd.read_csv(get_published_csv_path(), dtype=str)['tag'].values
+        
+        if str(ckpt_path) in url_tags:
+            logging.info(f"Model {str(ckpt_path)} not found locally. Downloading...")
+            return get_path_from_tag(str(ckpt_path))
+             
+
         print(str(ckpt_path.parent.parent.resolve().absolute()))
         print(str(get_model_dir().resolve().absolute()))
         if str(ckpt_path.parent.parent.resolve().absolute()) == str(get_model_dir().resolve().absolute()):
             potential_tag = ckpt_path.parent.name
-            url_tags = pd.read_csv(get_published_csv_path(), dtype=str)['tag'].values
             if potential_tag in url_tags:
                 logging.info(f"Model {potential_tag} not found locally. Downloading...")
-                get_path_from_tag(potential_tag)
+                return get_path_from_tag(potential_tag)
+            
+    return ckpt_path

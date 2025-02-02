@@ -10,9 +10,9 @@ import logging
 @hydra.main(version_base=None, config_path=str(Path(__file__).parent/"../configs"), config_name="evaluate")
 def main(cfg: DictConfig) -> None:
 
-    download_model_if_possible(cfg.evaluate.ckpt_path)
+    ckpt_path = download_model_if_possible(cfg.evaluate.ckpt_path)
     
-    ckpt_path = Path(cfg.evaluate.ckpt_path)
+    ckpt_path = Path(ckpt_path)
 
     assert ckpt_path.exists(), f"Checkpoint path {ckpt_path} does not exist."
     
