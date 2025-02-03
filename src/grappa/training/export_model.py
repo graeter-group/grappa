@@ -18,7 +18,7 @@ MODELPATH = Path(__file__).parent.parent.parent.parent/'models'
 def grappa_export():
 
     parser = argparse.ArgumentParser(description='Copies a checkpoint, a config.yaml file and all .json and .txt files in children of that dir to grappa/models/modelname/. Adds the modelname and path to grappa/src.tags.csv')
-    parser.add_argument('--modelname', '-n', type=str, help='Name of the model, e.g. grappa-1.0', required=True)
+    parser.add_argument('--modelname', '-n', type=str, help='Name (or tag) of the model, e.g. grappa-1.0', required=True)
     parser.add_argument('--checkpoint_path', '-c', type=str, help='Absolute path to the lightning checkpoint that should be exported.', required=True)
     parser.add_argument('--description', '-m', type=str, help='Description of the model.', required=False, default='')
 
@@ -145,10 +145,25 @@ def _upload_datasets(release_tag:str, dstags:List[str]):
 
 
 def upload_datasets():
-    parser = argparse.ArgumentParser(description='Uploads datasets to a given release of grappa using github CLI. The release must exist on the server. and github CLI must be installed.')
+    parser = argparse.ArgumentParser(description='Uploads datasets to a given release of grappa using github CLI. The release must exist on the server and github CLI must be installed.')
     parser.add_argument('--release_tag', '-t', type=str, required=True, help='The tag of the release that the datasets should be uploaded to.')
     parser.add_argument('--dstags', '-d', type=str, nargs='+', required=True, help='The names of the datasets that should be uploaded.')
 
     args = parser.parse_args()
 
     _upload_datasets(args.release_tag, args.dstags)
+
+
+def upload():
+    parser = argparse.ArgumentParser(description='Uploads a model and/or datasets to a given release of grappa using github CLI. The release must exist on the server and github CLI must be installed.')
+    parser.add_argument('--release_tag', '-t', type=str, required=True, help='The tag of the release that the model and datasets should be uploaded to.')
+    parser.add_argument('--modeltag', '-m', type=str, nargs='+', required=False, help='The tag of the model that should be uploaded. Expects the model checkpoint to be located at grappa/models/modelname', default=[])
+    parser.add_argument('--dstags', '-d', type=str, nargs='+', required=False, help='The names of the datasets that should be uploaded. Expects the datasets to be located at grappa/data/datasets/dstag', default=[])
+
+    args = parser.parse_args()
+
+    if args.modeltag:
+        for modeltag in args.modeltag:
+            _release_model(args.release_tag, modeltag)
+    if args.dstags:
+        _upload_datasets(args.release_tag, args.dstags)

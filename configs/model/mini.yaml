@@ -1,0 +1,34 @@
+graph_node_features: 64
+in_feats: null
+in_feat_name:
+  - atomic_number
+  - ring_encoding
+  - partial_charge
+  - degree
+in_feat_dims: {}
+gnn_width: 64
+gnn_attentional_layers: 4
+gnn_convolutions: 0
+gnn_attention_heads: 4
+gnn_dropout_attention: 0.3
+gnn_dropout_initial: 0.0
+gnn_dropout_conv: 0.0
+gnn_dropout_final: 0.1
+symmetric_transformer_dropout: 0.5
+symmetric_transformer_depth: 1
+symmetric_transformer_n_heads: 4
+symmetric_transformer_width: 64
+symmetriser_depth: 4
+symmetriser_width: 64
+n_periodicity_proper: 3
+n_periodicity_improper: 2
+gated_torsion: true
+positional_encoding: true
+layer_norm: true
+self_interaction: true
+learnable_statistics: false
+torsion_cutoff: 1.e-4
+harmonic_gate: false
+only_n2_improper: true
+stat_scaling: true
+shifted_elu: true

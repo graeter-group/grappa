@@ -39,11 +39,10 @@ def get_path_from_tag(tag:str='latest')->Path:
 
     csv_path = get_repo_dir() / 'models' / 'models.csv'
     published_csv_path = get_published_csv_path()
-    COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
 
     if not csv_path.exists():
         empty_df = pd.DataFrame(columns=['tag', 'path', 'description'])
-        store_with_comment(empty_df, csv_path, COMMENT)
+        store_with_comment(empty_df, csv_path)
 
     df = pd.read_csv(csv_path, comment='#', dtype=str)
     tags = df['tag'].values
@@ -114,7 +113,7 @@ def get_path_from_tag(tag:str='latest')->Path:
         df = pd.concat([df, pd.DataFrame([{'tag': tag, 'path': str(ckpt_path), 'description': description}])], ignore_index=True)
 
         # store the new entry in models.csv:
-        store_with_comment(df, csv_path, COMMENT)
+        store_with_comment(df, csv_path)
     return ckpt_path
 
 def find_tag(tag, tags):
@@ -141,10 +140,11 @@ def find_tag(tag, tags):
                 return tags[idx]
     return None
 
-def store_with_comment(df, path, comment):
+def store_with_comment(df, path):
+    COMMENT="# Defines a map from model tag to local checkpoint path or url to zipped checkpoint and config file.\n# The checkpoint path is absolute or relative to the root directory of the project. A corresponding config.yaml is required to be present in the same directory."
     Path(str(path)).parent.mkdir(parents=True, exist_ok=True)
     with open(path, 'w') as f:
-        f.write(comment + '\n')
+        f.write(COMMENT + '\n')
         df.to_csv(f, index=False)
 
 def get_ckpt(path):

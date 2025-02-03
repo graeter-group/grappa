@@ -131,13 +131,13 @@ To install Grappa from source, clone the repository and install requirements and
 git clone https://github.com/hits-mbm-dev/grappa.git
 cd grappa
 
-pip install -r installation/cpu_requirements.txt
+pip install -r installation_utils/cpu_requirements.txt
 pip install -e .
 ```
 
 Verify the installation by running
 ```
-python tests/test_installation.py
+pytest
 ```
 
 ### GROMACS
@@ -163,17 +163,17 @@ Since the resolution of package dependencies can be slow in conda, it is recomme
 
 For training Grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice.
 Note that installing Grappa in GPU mode is only recommended if training a model is intended.
-Instructions for installing dgl with cuda can be found at `installation/README.md`.
+Instructions for installing dgl with cuda can be found at `installation_utils/README.md`.
 In this environment, Grappa can be installed by
 
 ```{bash}
-pip install -r installation/requirements.txt
+pip install -r installation_utils/requirements.txt
 pip install -e .
 ```
 
 Verify the installation by running
 ```
-python tests/test_installation.py
+pytest
 ```
 
 ## Pretrained models

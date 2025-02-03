@@ -11,6 +11,7 @@ from grappa.models.grappa import GrappaModel
 from grappa.utils.dgl_utils import check_disconnected_graphs
 import logging
 from pathlib import Path
+import warnings
 logging.basicConfig(level=logging.INFO)
 
 class Grappa:
@@ -22,14 +23,19 @@ class Grappa:
         self.model.eval()
         self.max_element = max_element
         self.device = device
-        self.field_of_view = model.field_of_view
+        if not hasattr(model, 'field_of_view'):
+            warnings.warn("Input model does not have a field_of_view attribute. Set it to msg_passing_steps + 3. Assumes 10 message passing steps by default, the actual number should be much smaller.")
+            self.field_of_view = 10 + 3
+        else:
+            self.field_of_view = model.field_of_view
 
     @classmethod
     def from_tag(cls, tag:str='latest', max_element=constants.MAX_ELEMENT, device:str='cpu') -> 'Grappa':
         """
         Load a model from a tag. Available tags are:
             - 'latest'
-            - 'grappa-1.3'
+            - 'grappa-1.4.0'
+            - 'grappa-1.4.1-radical'
         """
         logging.info(f"Initializing model with tag {tag}...")
         model = model_from_tag(tag)

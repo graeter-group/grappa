@@ -26,8 +26,8 @@ def get_published_data_csv_path()->Path:
 
 def is_installed_via_pypi()->bool:
     '''
-    Returns True if the package is installed via pip, False otherwise.
-    Assumes that the package is installed via pip if the package is in the working set and the path to the package contains 'site-packages' or 'dist-packages'. NOTE: Make this better.
+    Returns True if the package is installed via pypi, False otherwise.
+    Assumes that the package is installed via pypi if the package is in the working set and the path to the package contains 'site-packages' or 'dist-packages'. NOTE: Make this better.
     '''
     if not 'grappa-ff' in pkg_resources.working_set.by_key:
         return False
