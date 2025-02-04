@@ -56,5 +56,4 @@ filterwarnings = [
 ]
 markers = [
     "slow: mark test as slow",
-    "gpu: mark test as requiring a GPU",
 ]

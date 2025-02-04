@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("openmm")
 
 @pytest.mark.slow
-def test_openmm_wrapper():
+def test_openmm_wrapper_identity():
 
     from grappa.wrappers.openmm_wrapper import OpenmmGrappa
     from openmm.app import PDBFile, ForceField
@@ -63,3 +63,51 @@ def test_openmm_wrapper():
 
     assert np.allclose(grads, orig_grads, atol=1e-3)
     # cannot assert energy proximity, because only energy differences between conformations are meaningful
+
+
+
+@pytest.mark.slow
+def test_openmm_wrapper_deviation():
+    """Test whether OpenMM wrapper works by comparing Grappa and Amber gradients."""
+    
+    from openmm.app import ForceField, PDBFile, Modeller
+    from openmm import unit
+    from grappa import OpenmmGrappa
+    from grappa.utils.openmm_utils import get_energies
+    from grappa.constants import get_grappa_units_in_openmm
+    import numpy as np
+    from pathlib import Path
+
+    thisdir = Path(__file__).parent
+
+    # Load PDB and topology
+    pdbfile = PDBFile(str(thisdir/'../examples/usage/T4.pdb'))
+    topology = pdbfile.topology
+
+    # Load classical force field
+    classical_ff = ForceField("amber99sbildn.xml", "tip3p.xml")
+
+    # Solvate and prepare the system
+    modeller = Modeller(topology, pdbfile.positions)
+    modeller.deleteWater()
+    modeller.addHydrogens(classical_ff)
+    modeller.addSolvent(classical_ff, model="tip3p", padding=1.0 * unit.nanometers)
+    topology = modeller.getTopology()
+    positions = modeller.getPositions()
+
+    # Create classical and Grappa systems
+    orig_system = classical_ff.createSystem(topology)
+    grappa_ff = OpenmmGrappa.from_tag("grappa-1.4.1-light")
+    system = grappa_ff.parametrize_system(orig_system, topology, plot_dir=thisdir)
+
+    # Compute gradients
+    DISTANCE_UNIT = get_grappa_units_in_openmm()["LENGTH"]
+    positions = np.array([positions.value_in_unit(DISTANCE_UNIT)])
+    orig_energy, orig_grads = get_energies(orig_system, positions)
+    grappa_energy, grappa_grads = get_energies(system, positions)
+
+    # Compute RMSE between Amber and Grappa gradients
+    rmse = np.sqrt(np.mean((orig_grads - grappa_grads) ** 2))
+    
+    # Assert RMSE < 10
+    assert rmse < 10, f"Gradient cRMSE between amber99 and grappa-light too high: {rmse}"
