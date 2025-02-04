@@ -52,8 +52,10 @@ filterwarnings = [
     "ignore:.*pkg_resources is deprecated as an API.*:DeprecationWarning",
     "ignore:.*Deprecated call to `pkg_resources.declare_namespace.*:DeprecationWarning",
     "ignore:.*Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib').*:DeprecationWarning",
-    "ignore:.*from pkg_resources import parse_version.*:DeprecationWarning"
+    "ignore:.*from pkg_resources import parse_version.*:DeprecationWarning",
+    "ignore:.*outdated is using a deprecated API.*:DeprecationWarning"
 ]
+
 markers = [
     "slow: mark test as slow",
 ]

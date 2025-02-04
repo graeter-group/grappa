@@ -98,7 +98,7 @@ def test_openmm_wrapper_deviation():
     # Create classical and Grappa systems
     orig_system = classical_ff.createSystem(topology)
     grappa_ff = OpenmmGrappa.from_tag("grappa-1.4.1-light")
-    system = grappa_ff.parametrize_system(orig_system, topology, plot_dir=thisdir)
+    system = grappa_ff.parametrize_system(orig_system, topology, plot_dir=None)
 
     # Compute gradients
     DISTANCE_UNIT = get_grappa_units_in_openmm()["LENGTH"]
@@ -111,3 +111,6 @@ def test_openmm_wrapper_deviation():
     
     # Assert RMSE < 10
     assert rmse < 10, f"Gradient cRMSE between amber99 and grappa-light too high: {rmse}"
+    
+    # Assert max force deviation is < 50 kcal/mol/A:
+    assert np.max(np.abs(orig_grads - grappa_grads)) < 50, f"Max force deviation between amber99 and grappa-light too high: {np.max(np.abs(orig_grads - grappa_grads))}"

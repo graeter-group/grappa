@@ -447,9 +447,6 @@ def download_model_if_possible(ckpt_path:Path):
             logging.info(f"Model {str(ckpt_path)} not found locally. Downloading...")
             return get_path_from_tag(str(ckpt_path))
              
-
-        print(str(ckpt_path.parent.parent.resolve().absolute()))
-        print(str(get_model_dir().resolve().absolute()))
         if str(ckpt_path.parent.parent.resolve().absolute()) == str(get_model_dir().resolve().absolute()):
             potential_tag = ckpt_path.parent.name
             if potential_tag in url_tags:
