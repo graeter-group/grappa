@@ -101,6 +101,18 @@ def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str=""
         min_grappa_atoms = {"n2": 1, "n3": 1, "n4": 1, "n4_improper": 1}
 
     is_grappa_interaction = g.nodes[term].data["num_grappa_atoms"] >= min_grappa_atoms[term]
+
+    # # Interpolate between the parameters based on the ratio of grappa atoms in the interaction.s
+    # if interpolate:
+    #     ratio = g.nodes[term].data["num_grappa_atoms"] / int(term[1])
+    #     if "n4" in term:
+    #         _, n_periodicity = g.nodes[term].data[param + grappa_suffix].shape
+    #         ratio = ratio.repeat(n_periodicity,1).permute((1, 0))
+    #         return ratio * g.nodes[term].data[param + grappa_suffix] + (1 - ratio) * g.nodes[term].data[param + trad_suffix][:,:n_periodicity]
+    #     return ratio * g.nodes[term].data[param + grappa_suffix] + (1 - ratio) * g.nodes[term].data[param + trad_suffix]
+    
+    # # Retrieve the parameters from either grappa of the traditional parameters depending on the number of grappa atoms in the interaction.
+    # else:
     
     # For propers and impropers, we need to adjust the traditional parameters to match the periodicity of the grappa parameters.
     # This is necessary because the grappa parameters may have different periodicities, and we need to ensure that the traditional
