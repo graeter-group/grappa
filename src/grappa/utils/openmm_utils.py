@@ -5,6 +5,7 @@ OPENMM_ION_RESIDUES = ["CL", "NA", "K", "MG", "CA", "ZN", "FE", "CU", "F", "BR",
 import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     
+    from collections import defaultdict
     import openmm
     from grappa.utils import get_repo_dir
     from openmm.app import PDBFile
@@ -18,6 +19,7 @@ if importlib.util.find_spec('openmm') is not None:
     import grappa.data
     import copy
     import warnings
+    import logging
 
     # Define a custom filter to raise the warning only once
     warnings.simplefilter("once")
@@ -40,6 +42,8 @@ if importlib.util.find_spec('openmm') is not None:
 
         new_topol_idx = {} # maps the old atom index to the new atom index
 
+        ignored_residues = defaultdict(int)
+
         # add a dummy chain and residue:
         new_chain = new_topology.addChain()
         new_residue = new_topology.addResidue('DUM', new_chain)
@@ -49,6 +53,11 @@ if importlib.util.find_spec('openmm') is not None:
             if atom.residue.name not in exclude_residues:
                 new_topology.addAtom(atom.name, atom.element, new_residue, id=atom.index)
                 new_topol_idx[atom.index] = new_topology.getNumAtoms() - 1
+            else:
+                ignored_residues[atom.residue.name] += 1
+
+        if ignored_residues:
+            logging.info(f"Ignored atoms of the following residues:\n{ignored_residues}")
 
         new_atoms = list(new_topology.atoms())
 

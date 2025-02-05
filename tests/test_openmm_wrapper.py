@@ -23,7 +23,7 @@ def test_openmm_wrapper_identity():
     thisdir = Path(__file__).parent
 
     #####################
-    pdb = PDBFile(str(thisdir/'../examples/usage/T4.pdb'))
+    pdb = PDBFile(str(thisdir/'testfiles/T4.pdb'))
     topology = pdb.topology
     ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
     system = ff.createSystem(pdb.topology)
@@ -80,8 +80,8 @@ def test_openmm_wrapper_deviation():
 
     thisdir = Path(__file__).parent
 
-    # Load PDB and topology
-    pdbfile = PDBFile(str(thisdir/'../examples/usage/T4.pdb'))
+    # Load PDB and topology (this is a test system with two ubiquitins and a few water molecules)
+    pdbfile = PDBFile(str(thisdir/'testfiles/two_ubqs.pdb'))
     topology = pdbfile.topology
 
     # Load classical force field
@@ -89,9 +89,9 @@ def test_openmm_wrapper_deviation():
 
     # Solvate and prepare the system
     modeller = Modeller(topology, pdbfile.positions)
-    modeller.deleteWater()
+    # modeller.deleteWater()
     modeller.addHydrogens(classical_ff)
-    modeller.addSolvent(classical_ff, model="tip3p", padding=1.0 * unit.nanometers)
+    # modeller.addSolvent(classical_ff, model="tip3p", padding=1.0 * unit.nanometers, neutralize=True)
     topology = modeller.getTopology()
     positions = modeller.getPositions()
 

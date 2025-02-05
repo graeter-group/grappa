@@ -18,7 +18,8 @@ def test_gmx_wrapper():
     gmx_dir = Path(__file__).parent / "gmx_temp_files"
     gmx_dir.mkdir(exist_ok=True, parents=True)
 
-    pdbfile = Path(__file__).parent / "../examples/usage/T4.pdb"
+    # this is a tets system with two ubiquitins and a few water molecules
+    pdbfile = Path(__file__).parent / "testfiles/two_ubqs.pdb"
     # copy the pdbfile to the gmx_dir:
     shutil.copy(pdbfile, gmx_dir)
     
@@ -26,22 +27,22 @@ def test_gmx_wrapper():
 
     # parameterize the system with amber99sbildn:
     # (the 6 1 flags are to select the traditional forcefield and water model)
-    os.system('printf "6\n1\n "|gmx pdb2gmx -f T4.pdb -o T4.gro -p T4.top -ignh')
+    os.system('printf "6\n1\n "|gmx pdb2gmx -f two_ubqs.pdb -o two_ubqs.gro -p two_ubqs.top -ignh')
 
-    if not os.path.exists("T4.top"):
-        raise FileNotFoundError("T4.top not found. Parametrization failed.")
+    if not os.path.exists("two_ubqs.top"):
+        raise FileNotFoundError("two_ubqs.top not found. Parametrization failed.")
 
     # Then, run grappa_gmx to create a new topology file using the grappa model
     ############################################
-    os.system('grappa_gmx -f T4.top -o T4_grappa.top -t grappa-1.4.1-light')
+    os.system('grappa_gmx -f two_ubqs.top -o two_ubqs_grappa.top -t grappa-1.4.1-light')
     ############################################
 
-    if not os.path.exists("T4_grappa.top"):
-        raise FileNotFoundError("T4_grappa.top not found")
+    if not os.path.exists("two_ubqs_grappa.top"):
+        raise FileNotFoundError("two_ubqs_grappa.top not found")
 
 
-    forces_amber = get_forces_gmx("T4.gro", "T4.top")
-    forces_grappa = get_forces_gmx("T4.gro", "T4_grappa.top")
+    forces_amber = get_forces_gmx("two_ubqs.gro", "two_ubqs.top")
+    forces_grappa = get_forces_gmx("two_ubqs.gro", "two_ubqs_grappa.top")
     
     import matplotlib.pyplot as plt
     plt.scatter(forces_amber, forces_grappa)

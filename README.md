@@ -5,14 +5,12 @@
 # Grappa - Machine Learned MM Parameterization
 
 
-_A machine learned molecular mechanics force field using a deep graph attentional network <br>(code supporting [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050))_
-
+_A machine learned molecular mechanics force field based on a graph attentional network <br>(paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b))_
 
 
 <details open><summary><b>Table of contents</b></summary>
 
-- [Abstract](#abstract)
-- [Usage](#usage)
+- [Using the Grappa Force Field](#Using the Grappa Force Field)
 - [Installation](#installation)
 - [Pretrained Models](#pretrained-models)
 - [Datasets](#datasets)
@@ -20,14 +18,6 @@ _A machine learned molecular mechanics force field using a deep graph attentiona
 - [Common Pitfalls](#common-pitfalls)
 </details>
 
-## Abstract
-
-Simulating large molecular systems over long timescales requires force fields that are both accurate and efficient.
-In recent years, E(3) equivariant neural networks have lifted the tension between computational efficiency and accuracy of force fields, but they are still several orders of magnitude more expensive than established molecular mechanics (MM) force fields.
-Here, we propose Grappa, a machine learning framework to predict MM parameters from the molecular graph, employing a graph attentional neural network and a transformer with symmetry-preserving positional encoding.
-The resulting Grappa force field outperformstabulated and machine-learned MM force fields in terms of accuracy at the same computational efficiency and can be used in existing Molecular Dynamics (MD) engines like GROMACS and OpenMM.
-It predicts energies and forces of small molecules, peptides, RNA and - showcasing its extensibility to uncharted regions of chemical space - radicals at state-of-the-art MM accuracy. 
-We demonstrate Grappa's transferability to macromolecules in MD simulations from a small fast folding protein up to a whole virus particle. Our force field sets the stage for biomolecular simulations closer to chemical accuracy, but with the same computational cost as established protein force fields.
 
 <details open>
   <summary>Grappa Overview</summary>
@@ -37,20 +27,21 @@ We demonstrate Grappa's transferability to macromolecules in MD simulations from
   <p><i>
         Grappa predicts MM parameters in two steps.
         First, atom embeddings are predicted from the molecular graph with a graph neural network.
-        Then, transformers with symmetric positional encoding followed by permutation invariant pooling maps the embeddings to MM parameters with desired permutation symmetries.
+        Then, transformers with symmetric positional encoding followed by permutation invariant pooling map the embeddings to MM parameters with desired permutation symmetries.
         Once the MM parameters are predicted, the potential energy surface can be evaluated with MM-efficiency for different spatial conformations, e.g. in GROMACS or OpenMM.
   </i></p>
 </details>
 
 
-## Usage
-
+## Using the Grappa Force Field
 
 The current version of Grappa only predicts bonded parameters; the nonbonded parameters like partial charges and Lennard Jones parameters are predicted with a traditional force field of choice.
-The input to Grappa is therefore a representation of the system of interest that already contains information on the nonbonded parameters.
+The input to Grappa is therefore a graph representation of the system of interest that already contains information on the nonbonded parameters.
 Currently, Grappa is compatible with GROMACS and OpenMM.
 
-For complete example scripts, see `examples/usage`.
+For instructive example scripts, see the following Google Colab notebooks that run entirely on the cloud and do not require any local installation:
+- [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
+- [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
 
 ### GROMACS
 
@@ -67,6 +58,8 @@ grappa_gmx -f topology.top -o topology_grappa.top -t grappa-1.4 -p
 
 # continue with ususal gromacs workflow (solvation etc.)
 ```
+
+Also see the Colab Notebook: [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
 
 ### OpenMM
 
@@ -102,6 +95,9 @@ assert isinstance(grappa_ff, ForceField)
 system = grappa_ff.createSystem(topology)
 ```
 
+Also see the Colab Notebook: [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
+
+
 ## Installation
 
 For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime. For training, gpu mode is advised, see below.
@@ -120,7 +116,13 @@ In cpu mode, Grappa is available on PyPi:
 pip install grappa-ff
 ```
 
-Depending on the platform used, installation of OpenMM or GROMACS and Kimmdy is needed (see below).
+Depending on the MD engine used, an installation of OpenMM or GROMACS is needed (see below).
+For GROMACS, also the [kimmdy](https://github.com/hits-mbm-dev/kimmdy) package is required:
+```{bash}
+pip install kimmdy==6.8.3
+```
+
+The installation is also part of the Colab Notebooks [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing) and [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
 
 ### Installation from source (CPU mode)
 
@@ -141,7 +143,7 @@ pytest
 
 ### GROMACS
 
-The creation of custom GROMACS topology files is handled by [Kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as Grappa via pip,
+The creation of custom GROMACS topology files is handled by [kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as Grappa via pip,
 
 ```{bash}
 pip install kimmdy==6.8.3
@@ -155,7 +157,7 @@ pytest -m slow
 
 ### OpenMM
 
-OpenMM is not available on pip and has to be installed via conda in the same environment as Grappa,
+OpenMM has to be installed in the same environment as Grappa. It is advised to install OpenMM via conda:
 
 ```{bash}
 conda install -c conda-forge openmm # optional: cudatoolkit=<YOUR CUDA>
@@ -265,7 +267,7 @@ For starting training with pretrained model weights, call e.g.
 python experiments/train.py experiment.ckpt_path=models/grappa-1.3.0/checkpoint.ckpt
 ```
 
-Training is logged in [wandb](https://docs.wandb.ai/quickstart) and can be safely interrupted by pressing `ctrl+c` at any time. Checkpoints with the best validation loss will be saved in the `ckpt/<project>/<name>/<data>` directory.
+Training is logged in [wandb](https://docs.wandb.ai/quickstart) (for which a free account is required) and can be safely interrupted by pressing `ctrl+c` at any time. Checkpoints with the best validation loss will be saved in the `ckpt/<project>/<name>/<data>` directory.
 
 For evaluation, run
 ```{bash}
@@ -277,7 +279,7 @@ or, for comparing with given classical force fields whose predictions are stored
 python experiments/evaluate.py evaluate=your_config
 ```
 
-A checkpoint can also be downloaded from a tag.
+For evaluation, a checkpoint can also be downloaded from a tag.
 By default, the dataset config of the checkpoint is used for evaluation, but one can override the respective config args to evaluate solely on custom datasets:
 ```{bash}
 python experiments/evaluate.py evaluate.ckpt_path=grappa-1.4.0 evaluate.datasets=[] evaluate.pure_test_datasets=[<your_dataset_tag>]

@@ -4,3 +4,5 @@ from .wrappers.openmm_wrapper import OpenmmGrappa
 import importlib.util
 from .wrappers.openmm_wrapper import as_openmm
 from .utils import model_from_path, model_from_tag
+
+__version__ = '1.4.1'

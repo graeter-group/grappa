@@ -17,7 +17,7 @@ classical_ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
 modeller = Modeller(topology, pdbfile.positions)
 modeller.deleteWater()
 modeller.addHydrogens(classical_ff)
-modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers)
+modeller.addSolvent(classical_ff, model='tip3p', padding=1.0*unit.nanometers, neutralize=True)
 
 topology = modeller.getTopology()
 positions = modeller.getPositions()
@@ -26,10 +26,10 @@ system = classical_ff.createSystem(topology)
 ##########################
 
 #%%
-# load the pretrained ML model from a tag. Currently, possible tags are grappa-1.3' and 'latest'
+# load the pretrained ML model from a tag.
 grappa_ff = OpenmmGrappa.from_tag('latest')
 
-# grappa will not change the solvant parameters and the nonbonded parameters, e.g. the partial charges, Lennard-Jones parameters and combination rules
+# grappa will not change the solvent parameters and the nonbonded parameters, e.g. the partial charges, Lennard-Jones parameters and combination rules
 system = grappa_ff.parametrize_system(system, topology, plot_dir=thisdir)
 
 # %%
