@@ -252,9 +252,9 @@ Grappa models can be trained with a given configuration specified using hydra by
 python experiments/train.py data.data_module.datasets=[spice-dipeptide]
 ```
 
-With hydra, configuration files can be defined in a modular way. For Grappa, we have configuration types `model`, `data` and `experiment`, for each of which default values can be overwritten in the command line or in a separate configuration file. For example, to train a model with less node features, one can run
+With hydra, configuration files can be defined in a modular way. For Grappa, we have configuration types `model`, `data` and `experiment`, for each of which default values can be overwritten in the command line or in a separate configuration file. For example, to train a model with less node features:
 ```{bash}
-python experiments/train.py model.graph_node_features=32
+python experiments/train.py data.data_module.datasets=[spice-dipeptide] model.graph_node_features=32
 ```
 
 and for training on the datasets of grappa-1.4 (defined in `configs/data/grappa-1.4.0`), one can run
@@ -274,7 +274,7 @@ For evaluation, run
 python experiments/evaluate.py evaluate.ckpt_path=<path_to_checkpoint>
 ```
 
-or, for comparing with given classical force fields whose predictions are stored in the dataset, create `configs/evaluate/your_config.yaml` and run  
+or, for comparing with given classical force fields whose predictions are stored in the dataset, create `configs/evaluate/your_config.yaml` (see `configs/evaluate/example.yaml`) and run  
 ```{bash}
 python experiments/evaluate.py evaluate=your_config
 ```

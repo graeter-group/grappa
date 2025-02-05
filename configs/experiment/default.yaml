@@ -24,7 +24,7 @@ trainer:
   deterministic: False
   check_val_every_n_epoch: 1
 evaluation:
-  n_bootstrap: 1000
+  n_bootstrap: 1
 train:
   lr: 1e-05
   energy_weight: 1.0
