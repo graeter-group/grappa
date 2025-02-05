@@ -73,11 +73,11 @@ def pool_energy(g, energies, term, suffix):
     
     return pooled_energies
 
-def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str="", trad_suffix: str="_ref") -> Tensor:
+def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str="", trad_suffix: str="_ref", min_grappa_atoms: Optional[dict]=None) -> Tensor:
     """
     Retrieves the partial parameters for a given term from the graph.
 
-    Partial parameterization means that only interactions containing at least one grappa atom are parameterized with grappa parameters and that all other interactions are parameterized with traditional parameters.
+    Partial parameterization means that only interactions containing at least a spezified number of grappa atoms are parameterized with grappa parameters and that all other interactions are parameterized with traditional parameters.
 
     args:
         g (DGLGraph): The graph containing the data.
@@ -85,7 +85,9 @@ def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str=""
         param (str): The parameter name.
         grappa_suffix (str): The suffix for the grappa parameter.
         trad_suffix (str): The suffix for the traditional parameter.
+        min_grappa_atoms (Optional[dict]): A dictionary containing the minimum number of grappa atoms for each interaction to be parameterized with grappa. If None, the default value of one grappa atom is used for each interaction.
     """
+
     if param + grappa_suffix not in g.nodes[term].data.keys():
         raise RuntimeError(f"{term} has no {param}{grappa_suffix} attribute")
     
@@ -95,7 +97,10 @@ def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str=""
     if "num_grappa_atoms" not in g.nodes[term].data.keys():
         raise RuntimeError(f"{term} has no num_grappa_atoms attribute")
 
-    is_grappa_interaction = g.nodes[term].data["num_grappa_atoms"].to(torch.bool)
+    if min_grappa_atoms is None:
+        min_grappa_atoms = {"n2": 1, "n3": 1, "n4": 1, "n4_improper": 1}
+
+    is_grappa_interaction = g.nodes[term].data["num_grappa_atoms"] >= min_grappa_atoms[term]
     
     # For propers and impropers, we need to adjust the traditional parameters to match the periodicity of the grappa parameters.
     # This is necessary because the grappa parameters may have different periodicities, and we need to ensure that the traditional
@@ -104,12 +109,11 @@ def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str=""
         _, n_periodicity = g.nodes[term].data[param + grappa_suffix].shape
         is_grappa_interaction = is_grappa_interaction.repeat(n_periodicity,1).permute((1, 0))
         return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + (~is_grappa_interaction) * g.nodes[term].data[param + trad_suffix][:,:n_periodicity] 
-        # return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + g.nodes[term].data[param + trad_suffix][:,:n_periodicity] 
-    else:
-        return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + (~is_grappa_interaction) * g.nodes[term].data[param + trad_suffix] 
-        # return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + g.nodes[term].data[param + trad_suffix] 
 
-def get_params(g: DGLGraph, term:str, param:str, suffix:str, partial_param: bool=False) -> Tensor:
+    return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + (~is_grappa_interaction) * g.nodes[term].data[param + trad_suffix] 
+
+
+def get_params(g: DGLGraph, term:str, param:str, suffix:str, partial_param: bool=False, min_grappa_atoms: Optional[dict]=None) -> Tensor:
     """
     Retrieves the parameters for a given term from the graph.
 
@@ -120,12 +124,13 @@ def get_params(g: DGLGraph, term:str, param:str, suffix:str, partial_param: bool
         param (str): The parameter name.
         suffix (str): The suffix for the parameter.
         partial_param (bool): Whether to use partial parameterization. If True, the arg suffix is ignored. Defaults to False.
+        min_grappa_atoms (Optional[dict]): A dictionary containing the minimum number of grappa atoms for each interaction to be parameterized with grappa. If None, the default value of one grappa atom is used for each interaction. Only used if partial_param is True.
 
     Returns:
         Tensor: The retrieved parameters.
     """
     if partial_param:
-        return get_partial_params(g, term, param)
+        return get_partial_params(g, term, param, min_grappa_atoms=min_grappa_atoms)
     else:
         if param+suffix not in g.nodes[term].data.keys():
             raise RuntimeError(f"{term} has no {param}{suffix} attribute")
@@ -134,7 +139,7 @@ def get_params(g: DGLGraph, term:str, param:str, suffix:str, partial_param: bool
 
 
 class Energy(torch.nn.Module):
-    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False, partial_param:bool=False):
+    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False, partial_param:bool=False, min_grappa_atoms: Optional[dict]=None):
         """
         Module that writes the energy of molecular conformations into a dgl graph. First, internal coordinates such as torsional angles, angles and distances are calculated, then their energy contributions are added and stored at g.nodes["g"].data["energy"] and g.nodes["g"].data["energy_"+term] for each term. The gradients of the total energy w.r.t. the xyz coordinates are calculated and stored at g.nodes["n1"].data["gradient"].
         
@@ -147,6 +152,7 @@ class Energy(torch.nn.Module):
         write_suffix: suffix of the energy and gradient attributes written to the graph. if None, write_suffix is set to suffix.
         gradients: whether to calculate gradients of the total energy w.r.t. the xyz coordinates. This cannot be done if the context does not allow autograd (e.g. if this function is called while torch.no_grad() is active).
         partial_param: whether to use partial parameterization. default is False.
+        min_grappa_atoms: A dictionary containing the minimum number of grappa atoms for each interaction to be parameterized with grappa. If None, the default value of one grappa atom is used for each interaction. Only used if partial_param is True.
         """
         super().__init__()
 
@@ -169,6 +175,9 @@ class Energy(torch.nn.Module):
         self.LEVEL_TO_TERM = {v: k for k, v in self.TERM_TO_LEVEL.items()}
         self.LEVEL_TO_TERM["n4"] = "proper"
         self.terms = [self.TERM_TO_LEVEL[t] for t in terms]
+        if isinstance(min_grappa_atoms, dict):
+            min_grappa_atoms = {self.TERM_TO_LEVEL[k]: v for k, v in min_grappa_atoms.items()}
+        self.min_grappa_atoms = min_grappa_atoms
 
     def forward(self, g):
         """
@@ -204,7 +213,7 @@ class Energy(torch.nn.Module):
 
             # get the energy contribution of this term in shape (num_batch, num_confs)
 
-            contrib, tuple_energies = Energy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion, partial_param=self.partial_param)
+            contrib, tuple_energies = Energy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion, partial_param=self.partial_param, min_grappa_atoms=self.min_grappa_atoms)
             if not contrib is None:
                 if self.gradient_contributions and grad_available():
                     # condition under which we can calculate the gradient:
@@ -232,7 +241,7 @@ class Energy(torch.nn.Module):
         return g
     
     @staticmethod
-    def get_energy_contribution(g, term, suffix, offset_torsion=True, partial_param:bool=False):
+    def get_energy_contribution(g, term, suffix, offset_torsion=True, partial_param:bool=False, min_grappa_atoms: Optional[dict]=None):
         """
         Returns:
         en, energies
@@ -241,11 +250,11 @@ class Energy(torch.nn.Module):
         if term not in g.ntypes:
             return None, None
 
-        k = get_params(g, term, "k", suffix, partial_param=partial_param)
+        k = get_params(g, term, "k", suffix, partial_param=partial_param, min_grappa_atoms=min_grappa_atoms)
         dof_data = g.nodes[term].data["x"]
 
         if term in ["n2", "n3"]:
-            eq = get_params(g, term, "eq", suffix, partial_param=partial_param)
+            eq = get_params(g, term, "eq", suffix, partial_param=partial_param, min_grappa_atoms=min_grappa_atoms)
             energies = harmonic_energy(k=k, eq=eq, distances=dof_data)
             en = pool_energy(g=g, energies=energies, term=term, suffix=suffix)
   
