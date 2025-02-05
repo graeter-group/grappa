@@ -1,4 +1,4 @@
-import pytest  # add to requirements.txt
+import pytest
 from dgl import DGLGraph
 import torch
 import random
