@@ -5,12 +5,12 @@
 # Grappa - Machine Learned MM Parameterization
 
 
-_A machine learned molecular mechanics force field based on a graph attentional network <br>(paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b))_
+_A machine learned molecular mechanics force field based on a graph attentional network <br>(Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b))_
 
 
 <details open><summary><b>Table of contents</b></summary>
 
-- [Using the Grappa Force Field](#Using the Grappa Force Field)
+- [Using the Grappa Force Field](#using-the-grappa-force-field)
 - [Installation](#installation)
 - [Pretrained Models](#pretrained-models)
 - [Datasets](#datasets)
