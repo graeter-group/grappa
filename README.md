@@ -5,7 +5,22 @@
 # Grappa - Machine Learned MM Parameterization
 
 
-_A machine learned molecular mechanics force field based on a graph attentional network <br>(Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b))_
+_A machine learned molecular mechanics force field based on a graph attentional network_
+
+Paper: [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050)
+```bibtex
+@article{seute2025grappa,
+  author = "Seute, Leif and Hartmann, Eric and Stühmer, Jan and Gräter, Frauke",
+  title = "Grappa – a machine learned molecular mechanics force field",
+  journal = "Chem. Sci.",
+  year = "2025",
+  volume = "16",
+  issue = "6",
+  pages = "2907-2930",
+  publisher = "The Royal Society of Chemistry",
+  doi = "10.1039/D4SC05465B",
+  url = "http://dx.doi.org/10.1039/D4SC05465B",}
+```
 
 
 <details open><summary><b>Table of contents</b></summary>
@@ -306,3 +321,5 @@ Install Grappa in CPU mode for using it as OpenMM or GROMACS force field, a gpu 
 ### Training
 #### T.1 Delete cached datasets upon changes
 Grappa caches datasets in a compressed form at `data/dgl_datasets/<dataset-name>`. If you change the .npz files that define the dataset with more details (at `data/datasets/<dataset-name>/*.npz`), make sure to delete the respective cache.
+
+
