@@ -25,18 +25,27 @@ def test_model():
     assert 'eq' in updated_graph.nodes['n2'].data.keys()
 
 
-def test_backward_pass():
+
+def perform_backward_passes(device):
     ds = Dataset.from_tag('small_example')
 
-    model = GrappaModel()
+    model = GrappaModel(gnn_attentional_layers=2, graph_node_features=32, gnn_width=32,
+                        symmetric_transformer_width=32)
 
     energy_module = Energy()
     coordinates_module = InternalCoordinates()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+    devices = ['cpu'] + (['cuda'] if torch.cuda.is_available() else [])
     
-    # perform two backward passes
+    # for each device, perform two backward passes:
     for graph in (ds[0][0], ds[1][0]):
+
+        graph = graph.to(device)
+        model.to(device)
+        energy_module.to(device)
+        coordinates_module.to(device)
 
         updated_graph = model(graph)
 
@@ -59,9 +68,23 @@ def test_backward_pass():
 
         loss = energy_mse + force_mse
 
+        # assert there are no nans in the loss:
+        assert not torch.any(torch.isnan(loss))
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+
+
+def test_backward_pass():
+    perform_backward_passes('cpu')
+
+
+@pytest.mark.gpu
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="No cuda available")
+def test_backward_pass_cuda():
+    perform_backward_passes('cuda')
 
 
 def test_downloaded_model():

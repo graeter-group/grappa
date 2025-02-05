@@ -4,7 +4,7 @@ test whether the openmm wrapper works as expected by implementing the identity a
 import pytest
 
 # only run if openmm is installed:
-pytest.importorskip("openmm")
+pytest.importorskip("openmm", reason="OpenMM not available")
 
 @pytest.mark.slow
 def test_openmm_wrapper_identity():

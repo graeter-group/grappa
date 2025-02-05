@@ -11,7 +11,7 @@ class GrappaModel(torch.nn.Module):
                  in_feat_name:Union[str,List[str]]=["atomic_number", "ring_encoding", "partial_charge", "degree"],
                  in_feat_dims:Dict[str,int]={},
                  gnn_width:int=512,
-                 gnn_attentional_layers:int=7,
+                 gnn_attentional_layers:int=4,
                  gnn_convolutions:int=0,
                  gnn_attention_heads:int=16,
                  gnn_dropout_attention:float=0.3,

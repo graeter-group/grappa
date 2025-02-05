@@ -117,7 +117,6 @@ conda activate grappa
 
 In cpu mode, Grappa is available on PyPi:
 ```{bash}
-pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install grappa-ff
 ```
 
@@ -148,6 +147,12 @@ The creation of custom GROMACS topology files is handled by [Kimmdy](https://git
 pip install kimmdy==6.8.3
 ```
 
+If Grappa was installed from source, verify the Grappa-gmx installation by running
+```{bash}
+pytest
+pytest -m slow
+```
+
 ### OpenMM
 
 OpenMM is not available on pip and has to be installed via conda in the same environment as Grappa,
@@ -157,6 +162,12 @@ conda install -c conda-forge openmm # optional: cudatoolkit=<YOUR CUDA>
 ```
 
 Since the resolution of package dependencies can be slow in conda, it is recommended to install OpenMM first and then install Grappa.
+
+If Grappa was installed from source, Grappa-OpenMM installation by running
+```{bash}
+pytest
+pytest -m slow
+```
 
 
 ## Installation in GPU mode
@@ -174,6 +185,7 @@ pip install -e .
 Verify the installation by running
 ```
 pytest
+pytest -m gpu
 ```
 
 ## Pretrained models
@@ -191,6 +203,7 @@ python experiments/train.py data=grappa-1.4 model=default experiment=default
 |-----------|--------------------------------------|
 | grappa-1.4.0    | Covers peptides, small molecules, rna. Used for protein and peptide simulations reported in the paper.|
 | grappa-1.4.1-radical   | Covers peptides, small molecules, rna, peptide radicals.|
+| grappa-1.4.1-light   | Lightweight model with much fewer parameters for testing. Covers peptides, small molecules, rna, peptide radicals.|
 
 
 ## Datasets
@@ -279,6 +292,8 @@ For example, in openmm:
 from grappa import OpenmmGrappa
 grappa_ff = OpenmmGrappa.from_ckpt('path/to/your/checkpoint.ckpt')
 ```
+
+You can also simply put the checkpoint and a config.yaml file in the repository `grappa/models/<your_model_tag>` and use `<your_model_tag>` as a tag for loading the model.
 
 ## Common pitfalls
 

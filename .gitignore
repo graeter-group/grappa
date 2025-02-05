@@ -41,6 +41,7 @@ notes.md
 */mdout.mdp
 
 tests/gmx_temp_files
+.pytest_cache
 
 # Installer logs
 pip-log.txt

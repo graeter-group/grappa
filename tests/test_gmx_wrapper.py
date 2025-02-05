@@ -1,12 +1,12 @@
-import os
-
-def is_gmx_available():
-    return os.system("gmx --version > /dev/null 2>&1") == 0
-
+import shutil
 import pytest
 
-# skip if gmx is not available:
+def is_gmx_available():
+    return shutil.which("gmx") is not None
 
+
+
+# skip if gmx is not available:
 @pytest.mark.skipif(not is_gmx_available(), reason="Gromacs not available")
 @pytest.mark.slow
 def test_gmx_wrapper():
@@ -24,14 +24,12 @@ def test_gmx_wrapper():
     
     os.chdir(f"{str(gmx_dir.absolute())}")
 
-    print("Current directory:", os.getcwd())
-
     # parameterize the system with amber99sbildn:
     # (the 6 1 flags are to select the traditional forcefield and water model)
     os.system('printf "6\n1\n "|gmx pdb2gmx -f T4.pdb -o T4.gro -p T4.top -ignh')
 
     if not os.path.exists("T4.top"):
-        raise FileNotFoundError("T4.top not found")
+        raise FileNotFoundError("T4.top not found. Parametrization failed.")
 
     # Then, run grappa_gmx to create a new topology file using the grappa model
     ############################################
@@ -115,5 +113,3 @@ def get_forces_gmx(grofile:str, topfile:str):
     forces = forces / 10.
 
     return forces
-
-test_gmx_wrapper()

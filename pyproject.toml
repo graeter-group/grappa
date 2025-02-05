@@ -37,25 +37,15 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where=["src"]
 
-
 [project.scripts]
 grappa_gmx = "grappa.wrappers.gromacs_wrapper:main"
 grappa_export = "grappa.training.export_model:grappa_export"
 grappa_inspect-dataset = "grappa.data.dataset:inspect_dataset"
 grappa_upload = "grappa.training.export_model:upload"
 
-
-
 [tool.pytest.ini_options]
 addopts = "-m 'not slow and not gpu'"
-filterwarnings = [
-    "ignore:.*pkg_resources is deprecated as an API.*:DeprecationWarning",
-    "ignore:.*Deprecated call to `pkg_resources.declare_namespace.*:DeprecationWarning",
-    "ignore:.*Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib').*:DeprecationWarning",
-    "ignore:.*from pkg_resources import parse_version.*:DeprecationWarning",
-    "ignore:.*outdated is using a deprecated API.*:DeprecationWarning"
-]
-
 markers = [
     "slow: mark test as slow",
+    "gpu: mark test as requiring a CUDA installation of torch and dgl",
 ]
