@@ -1,5 +1,8 @@
+from typing import Optional
 import torch
+from torch import Tensor
 import dgl
+from dgl import DGLGraph
 from grappa.utils.dgl_utils import grad_available
  
 from grappa.models.internal_coordinates import InternalCoordinates
@@ -70,9 +73,68 @@ def pool_energy(g, energies, term, suffix):
     
     return pooled_energies
 
+def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str="", trad_suffix: str="_ref") -> Tensor:
+    """
+    Retrieves the partial parameters for a given term from the graph.
+
+    Partial parameterization means that only interactions containing at least one grappa atom are parameterized with grappa parameters and that all other interactions are parameterized with traditional parameters.
+
+    args:
+        g (DGLGraph): The graph containing the data.
+        term (str): The term for which parameters are retrieved.
+        param (str): The parameter name.
+        grappa_suffix (str): The suffix for the grappa parameter.
+        trad_suffix (str): The suffix for the traditional parameter.
+    """
+    if param + grappa_suffix not in g.nodes[term].data.keys():
+        raise RuntimeError(f"{term} has no {param}{grappa_suffix} attribute")
+    
+    if param + trad_suffix not in g.nodes[term].data.keys():
+        raise RuntimeError(f"{term} has no {param}{trad_suffix} attribute")
+    
+    if "num_grappa_atoms" not in g.nodes[term].data.keys():
+        raise RuntimeError(f"{term} has no num_grappa_atoms attribute")
+
+    is_grappa_interaction = g.nodes[term].data["num_grappa_atoms"].to(torch.bool)
+    
+    # For propers and impropers, we need to adjust the traditional parameters to match the periodicity of the grappa parameters.
+    # This is necessary because the grappa parameters may have different periodicities, and we need to ensure that the traditional
+    # parameters are aligned with the same periodicity to correctly compute the energy contributions.
+    if "n4" in term:
+        _, n_periodicity = g.nodes[term].data[param + grappa_suffix].shape
+        is_grappa_interaction = is_grappa_interaction.repeat(n_periodicity,1).permute((1, 0))
+        return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + (~is_grappa_interaction) * g.nodes[term].data[param + trad_suffix][:,:n_periodicity] 
+        # return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + g.nodes[term].data[param + trad_suffix][:,:n_periodicity] 
+    else:
+        return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + (~is_grappa_interaction) * g.nodes[term].data[param + trad_suffix] 
+        # return is_grappa_interaction * g.nodes[term].data[param + grappa_suffix] + g.nodes[term].data[param + trad_suffix] 
+
+def get_params(g: DGLGraph, term:str, param:str, suffix:str, partial_param: bool=False) -> Tensor:
+    """
+    Retrieves the parameters for a given term from the graph.
+
+    retrieved.
+    Args:
+        g (DGLGraph): The graph containing the data.
+        term (str): The term for which parameters are retrieved.
+        param (str): The parameter name.
+        suffix (str): The suffix for the parameter.
+        partial_param (bool): Whether to use partial parameterization. If True, the arg suffix is ignored. Defaults to False.
+
+    Returns:
+        Tensor: The retrieved parameters.
+    """
+    if partial_param:
+        return get_partial_params(g, term, param)
+    else:
+        if param+suffix not in g.nodes[term].data.keys():
+            raise RuntimeError(f"{term} has no {param}{suffix} attribute")
+
+        return g.nodes[term].data[param+suffix]
+
 
 class Energy(torch.nn.Module):
-    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False):
+    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False, partial_param:bool=False):
         """
         Module that writes the energy of molecular conformations into a dgl graph. First, internal coordinates such as torsional angles, angles and distances are calculated, then their energy contributions are added and stored at g.nodes["g"].data["energy"] and g.nodes["g"].data["energy_"+term] for each term. The gradients of the total energy w.r.t. the xyz coordinates are calculated and stored at g.nodes["n1"].data["gradient"].
         
@@ -84,6 +146,7 @@ class Energy(torch.nn.Module):
         offset_torsion: whether to include the constant offset term (that makes the contribution positive) in the torsion energy calculation
         write_suffix: suffix of the energy and gradient attributes written to the graph. if None, write_suffix is set to suffix.
         gradients: whether to calculate gradients of the total energy w.r.t. the xyz coordinates. This cannot be done if the context does not allow autograd (e.g. if this function is called while torch.no_grad() is active).
+        partial_param: whether to use partial parameterization. default is False.
         """
         super().__init__()
 
@@ -95,7 +158,7 @@ class Energy(torch.nn.Module):
         self.gradients = gradients
         self.gradient_contributions = gradient_contributions
         self.geom = InternalCoordinates()
-        
+        self.partial_param = partial_param
         self.TERM_TO_LEVEL = {
             "bond": "n2",
             "angle": "n3",
@@ -141,7 +204,7 @@ class Energy(torch.nn.Module):
 
             # get the energy contribution of this term in shape (num_batch, num_confs)
 
-            contrib, tuple_energies = Energy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion)
+            contrib, tuple_energies = Energy.get_energy_contribution(g, term=term, suffix=self.suffix, offset_torsion=self.offset_torsion, partial_param=self.partial_param)
             if not contrib is None:
                 if self.gradient_contributions and grad_available():
                     # condition under which we can calculate the gradient:
@@ -169,7 +232,7 @@ class Energy(torch.nn.Module):
         return g
     
     @staticmethod
-    def get_energy_contribution(g, term, suffix, offset_torsion=True):
+    def get_energy_contribution(g, term, suffix, offset_torsion=True, partial_param:bool=False):
         """
         Returns:
         en, energies
@@ -177,14 +240,12 @@ class Energy(torch.nn.Module):
         """
         if term not in g.ntypes:
             return None, None
-        if "k"+suffix not in g.nodes[term].data.keys():
-            raise RuntimeError(f"{term} has no k{suffix} attribute")
 
-        k = g.nodes[term].data["k"+suffix]
+        k = get_params(g, term, "k", suffix, partial_param=partial_param)
         dof_data = g.nodes[term].data["x"]
 
         if term in ["n2", "n3"]:
-            eq = g.nodes[term].data["eq"+suffix]
+            eq = get_params(g, term, "eq", suffix, partial_param=partial_param)
             energies = harmonic_energy(k=k, eq=eq, distances=dof_data)
             en = pool_energy(g=g, energies=energies, term=term, suffix=suffix)
   
