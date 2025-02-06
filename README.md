@@ -7,7 +7,7 @@
 
 _A machine learned molecular mechanics force field based on a graph attentional network_
 
-Paper: [https://arxiv.org/abs/2404.00050](https://arxiv.org/abs/2404.00050)
+Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b)
 ```bibtex
 @article{seute2025grappa,
   author = "Seute, Leif and Hartmann, Eric and Stühmer, Jan and Gräter, Frauke",
