@@ -138,10 +138,11 @@ class Experiment:
 
         # Log the config to wandb
         self._cfg.experiment = self._experiment_cfg
-        cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
-        flat_cfg = dict(flatten_dict(cfg_dict))
-        assert isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config), f"Expected wandb config, but got {type(logger.experiment.config)}"
-        logger.experiment.config.update(flat_cfg)
+        # NOTE: does not work if multiple gpus are present!
+        if isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config):
+            cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
+            flat_cfg = dict(flatten_dict(cfg_dict))
+            logger.experiment.config.update(flat_cfg)
 
         if self._experiment_cfg.ckpt_path is not None:
             if not str(self._experiment_cfg.ckpt_path).startswith('/'):
@@ -156,7 +157,8 @@ class Experiment:
             logger=logger,
             enable_progress_bar=self._experiment_cfg.progress_bar,
             enable_model_summary=True,
-            inference_mode=False # important for test call, force calculation needs autograd
+            inference_mode=False, # important for test call, force calculation needs autograd
+            devices=1
         )
         self.trainer.fit(
             model=self.grappa_module,
