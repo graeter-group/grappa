@@ -266,7 +266,7 @@ class DatasetBuilder:
         if not all([x in qm_dict for x in ['xyz','energy','atomic_numbers']]):
             print(f"The QM dictionary for '{mold_id}' must contain xyz, energy and atomic_numbers but only has following keys: {list(qm_dict.keys())}. Skipping entry!")
             valid = False
-        if ('force' in qm_dict) != ('gradient' in qm_dict):
+        if ('force' in qm_dict) == ('gradient' in qm_dict):
             print(f"The QM dictionary must contain either 'force' or 'gradient', but not both or none: {list(qm_dict.keys())}. Skipping entry!")
             valid = False
         # check number of valid conformations
