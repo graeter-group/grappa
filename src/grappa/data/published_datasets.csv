@@ -30,3 +30,4 @@ peptide-radical-MD,https://github.com/graeter-group/grappa/releases/download/v.1
 peptide-radical-scan,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/peptide-radical-scan.zip,radical peptides with states sampled from torsion scans
 peptide-radical-opt,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/peptide-radical-opt.zip,radical peptides with states sampled from optimization trajectories
 small_example,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/small_example.zip,11 molecules from spice-des-monomers
+dipeptides-1000K-amber99-solv,https://github.com/graeter-group/grappa/releases/download/v.1.4.1/dipeptides-1000K-amber99-solv.zip,dipeptides with amber99 nonbonded contribution sampled at 1000K
