@@ -12,6 +12,12 @@ class TestAnnotateGrappaAtomsNInteractions:
         d = Dataset.from_tag('dipeptides-300K-amber99')
         graph, subdata = d[0]
         return graph
+    
+    @pytest.fixture
+    def annotated_aa_graph(self, aa_graph) -> DGLGraph:
+        random.seed(1)
+        return AnnotateGrappaAtomsNInteractions(deterministic=False)(aa_graph) # khop=1, start_atom=16, grappa_atom=[6, 16]
+    
 
     def test_get_khop_connected_atoms(self, aa_graph):
         one_hop_connected_atoms = get_khop_connected_atoms(aa_graph, khop=1, start_atom=2)
@@ -30,6 +36,14 @@ class TestAnnotateGrappaAtomsNInteractions:
         idx = torch.tensor([1, 4])
         one_hot = idx_to_one_hot(idx, 5)
         assert torch.equal(one_hot, torch.tensor([0, 1, 0, 0, 1]))
+    
+    def test_annotate_grappa_atoms_n_interactions_deterministic_annotated(self, annotated_aa_graph):
+        graph = AnnotateGrappaAtomsNInteractions(deterministic=True)(annotated_aa_graph)
+        assert torch.equal(graph.nodes["n1"].data["grappa_atom"], torch.tensor([0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float32))
+        assert torch.equal(graph.nodes["n2"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+        assert torch.equal(graph.nodes["n3"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 1, 2, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+        assert torch.equal(graph.nodes["n4"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+        assert torch.equal(graph.nodes["n4_improper"].data["num_grappa_atoms"], torch.tensor([1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
 
     def test_annotate_grappa_atoms_n_interactions_deterministic(self, aa_graph):
        graph = AnnotateGrappaAtomsNInteractions(deterministic=True)(aa_graph)
@@ -49,13 +63,10 @@ class TestAnnotateGrappaAtomsNInteractions:
         assert torch.equal(graph.nodes["n4"].data["num_grappa_atoms"], 4*torch.ones((110,), dtype=torch.int32))
         assert torch.equal(graph.nodes["n4_improper"].data["num_grappa_atoms"], 4*torch.ones((42,), dtype=torch.int32))
     
-    def test_annotate_grappa_atoms_n_interactions_random(self, aa_graph):
-        random.seed(1) # khop=1 and start_atom=16
-        graph = AnnotateGrappaAtomsNInteractions(deterministic=False)(aa_graph)
-        # grappa atoms = tensor([6, 16]) 
-        assert torch.equal(graph.nodes["n1"].data["grappa_atom"], torch.tensor([0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float32))
-        assert torch.equal(graph.nodes["n2"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
-        assert torch.equal(graph.nodes["n3"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 1, 2, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
-        assert torch.equal(graph.nodes["n4"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
-        assert torch.equal(graph.nodes["n4_improper"].data["num_grappa_atoms"], torch.tensor([1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+    def test_annotate_grappa_atoms_n_interactions_random(self, annotated_aa_graph):
+        assert torch.equal(annotated_aa_graph.nodes["n1"].data["grappa_atom"], torch.tensor([0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=torch.float32))
+        assert torch.equal(annotated_aa_graph.nodes["n2"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+        assert torch.equal(annotated_aa_graph.nodes["n3"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 1, 2, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+        assert torch.equal(annotated_aa_graph.nodes["n4"].data["num_grappa_atoms"], torch.tensor([0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 2, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
+        assert torch.equal(annotated_aa_graph.nodes["n4_improper"].data["num_grappa_atoms"], torch.tensor([1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], dtype=torch.int32))
         
