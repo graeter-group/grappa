@@ -80,6 +80,9 @@ class AnnotateGrappaAtomsNInteractions(BaseTransform):
         total_atoms = graph.num_nodes("n1")
 
         if self.deterministic:
+            # Check if grappa atoms are already annotated
+            if "grappa_atom" in graph.nodes["n1"].data.keys():
+                return graph
             grappa_atoms_ids = get_khop_connected_atoms(graph, khop=3, start_atom=5)
         else:
             if random() < 0.8:
