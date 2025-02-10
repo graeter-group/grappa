@@ -56,7 +56,6 @@ class GromacsGrappa(Grappa):
         topology = Topology(read_top(Path(top_path)),radicals='',is_reactive_predicate_f=get_is_reactive_predicate_f(include=include_list, exclude=exclude_list))   #radicals='' means kimmdy won't search for radicals
 
         # call grappa model to write the parameters to the topology
-        print(include_list,exclude_list,topology.molecules,topology._check_is_reactive_molecule('sol'),topology._check_is_reactive_molecule('SOL'),topology._check_is_reactive_molecule('Protein'))
         topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, plot_path=plot_path)
         topology.needs_parameterization = True
         
