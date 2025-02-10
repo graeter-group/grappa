@@ -1,5 +1,6 @@
 ckpt_path: null
 ckpt_cfg_override: false
+use_wandb: True
 wandb:
   name: baseline
   project: grappa

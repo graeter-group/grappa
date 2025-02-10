@@ -120,10 +120,6 @@ class Experiment:
 
         callbacks = []
 
-        logger = WandbLogger(
-            **self._experiment_cfg.wandb,
-        )
-
         # Checkpoint directory.
         self.ckpt_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Checkpoints saved to {self.ckpt_dir}")
@@ -138,11 +134,19 @@ class Experiment:
 
         # Log the config to wandb
         self._cfg.experiment = self._experiment_cfg
-        # NOTE: does not work if multiple gpus are present!
-        if isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config):
-            cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
-            flat_cfg = dict(flatten_dict(cfg_dict))
-            logger.experiment.config.update(flat_cfg)
+
+        if self._experiment_cfg.use_wandb:
+            logger = WandbLogger(
+                **self._experiment_cfg.wandb,
+            )
+
+            # NOTE: the following does not work if multiple gpus are present (does not crash but also does not log the config)
+            if isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config):
+                cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
+                flat_cfg = dict(flatten_dict(cfg_dict))
+                logger.experiment.config.update(flat_cfg)
+        else:
+            logger = None
 
         if self._experiment_cfg.ckpt_path is not None:
             if not str(self._experiment_cfg.ckpt_path).startswith('/'):
