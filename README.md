@@ -118,8 +118,6 @@ Also see the Colab Notebook: [Grappa as OpenMM force field](https://colab.resear
 
 For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime. For training, gpu mode is advised, see below.
 
-### CPU mode
-
 Create a conda environment with python 3.10:
 
 ```{bash}
@@ -139,23 +137,6 @@ pip install kimmdy>=6.8.3
 ```
 
 The installation is also part of the Colab Notebooks [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing) and [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
-
-### Installation from source (CPU mode)
-
-To install Grappa from source, clone the repository and install requirements and the package itself with pip:
-
-```{bash}
-git clone https://github.com/hits-mbm-dev/grappa.git
-cd grappa
-
-pip install -r installation_utils/cpu_requirements.txt
-pip install -e .
-```
-
-Verify the installation by running
-```
-pytest
-```
 
 ### GROMACS
 
@@ -187,6 +168,22 @@ pytest
 pytest -m slow
 ```
 
+### Installation from source (CPU mode)
+
+To install Grappa from source, clone the repository and install requirements and the package itself with pip:
+
+```{bash}
+git clone https://github.com/hits-mbm-dev/grappa.git
+cd grappa
+
+pip install -r installation_utils/cpu_requirements.txt
+pip install -e .
+```
+
+Verify the installation by running
+```
+pytest
+```
 
 ## Installation for the development of custom Grappa force fields
 

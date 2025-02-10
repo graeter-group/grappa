@@ -370,7 +370,7 @@ def get_isomorphic_permutation(graph1: dgl.DGLGraph, graph2: dgl.DGLGraph) -> Li
     based on their isomorphic structure such that e.g.:
 
     permutation = get_isomorphic_permutation(g1, g2)
-    g2.xyz[:,permutation] = g1.xyz
+    g2.atomic_number[:,permutation] = g1.atomic_number
 
     Parameters:
     - graph1: A DGLGraph object representing the first molecular graph.

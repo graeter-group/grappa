@@ -15,7 +15,9 @@ from grappa.utils.system_utils import openmm_system_from_gmx_top, openmm_system_
 from grappa.utils.graph_utils import get_isomorphic_permutation, get_isomorphisms
 
 def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list[int]]:
-    """Match relative to first Molecule in molecules
+    """
+    Match relative to first Molecule in molecules. Assumes all entries of molecules represent the same molecule, but with different atom order.
+    Returns a dictionary of {idx: permutation} such that molecules[idx] with reordered atoms corresponds to the first molecule. This means that e.g. for elements: molecules[idx].atomic_number[permutation[idx]] = molecules[0].atomic_number
     """
 
     permutations = {0: list(range(len(molecules[0].atoms)))}
@@ -135,6 +137,7 @@ class DatasetBuilder:
     def entry_from_qm_output_file(self, mol_id:str, qm_output_files:list[Union[Path,str]],  ase_index_str: str = ':'):
         """
             Using ASE, processes QM output files to extract geometries, energies, and gradients. From this, a DatasetBuilder entry is created.
+            Since ASE uses eV and Angstrom as internal units, the energies and gradients are converted to the Grappa units kcal/mol and A, respectively.
 
             Parameters
             ----------
