@@ -25,12 +25,13 @@ Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://p
 
 <details open><summary><b>Table of contents</b></summary>
 
-- [Using the Grappa Force Field](#using-the-grappa-force-field)
-- [Installation](#installation)
-- [Pretrained Models](#pretrained-models)
+- [Using the Grappa force field](#using-the-grappa-force-field)
+- [Installation](#installation-for-use-as-force-field)
+- [Installation for development](#installation-for-the-development-of-custom-grappa-force-fields)
+- [Pretrained models](#pretrained-models)
 - [Datasets](#datasets)
 - [Training](#training)
-- [Common Pitfalls](#common-pitfalls)
+- [Common pitfalls](#common-pitfalls)
 </details>
 
 
@@ -113,7 +114,7 @@ system = grappa_ff.createSystem(topology)
 Also see the Colab Notebook: [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
 
 
-## Installation
+## Installation for use as force field
 
 For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime. For training, gpu mode is advised, see below.
 
@@ -134,7 +135,7 @@ pip install grappa-ff
 Depending on the MD engine used, an installation of OpenMM or GROMACS is needed (see below).
 For GROMACS, also the [kimmdy](https://github.com/hits-mbm-dev/kimmdy) package is required:
 ```{bash}
-pip install kimmdy==6.8.3
+pip install kimmdy>=6.8.3
 ```
 
 The installation is also part of the Colab Notebooks [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing) and [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
@@ -161,7 +162,7 @@ pytest
 The creation of custom GROMACS topology files is handled by [kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as Grappa via pip,
 
 ```{bash}
-pip install kimmdy==6.8.3
+pip install kimmdy>=6.8.3
 ```
 
 If Grappa was installed from source, verify the Grappa-gmx installation by running
@@ -187,7 +188,7 @@ pytest -m slow
 ```
 
 
-## Installation in GPU mode
+## Installation for the development of custom Grappa force fields
 
 For training Grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice.
 Note that installing Grappa in GPU mode is only recommended if training a model is intended.
