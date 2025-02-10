@@ -1,4 +1,4 @@
-# Experiment class inspired by https://github.com/microsoft/protein-frame-flow, Copyright (c) Microsoft Corporation.
+# Experiment class inspired by https://github.com/microsoft/protein-frame-flow
 
 import hydra
 from omegaconf import DictConfig, OmegaConf

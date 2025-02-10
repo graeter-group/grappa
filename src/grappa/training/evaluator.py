@@ -9,7 +9,7 @@ import copy
 from grappa.data import Parameters
 from grappa.data.parameters import compare_parameters, plot_parameters
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import logging
 from typing import Tuple, Dict
 from grappa.utils import flatten_dict
