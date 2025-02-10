@@ -23,13 +23,15 @@ class GromacsGrappa(Grappa):
         assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
         return super().__init__(*args, **kwargs)
 
-    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, plot_parameters:bool=False, charge_model:Deprecated=None):
+    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, include_list:list = [], exclude_list:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
         """
         Creates a .top file with the grappa-predicted parameters for the topology
 
         Args:
             top_path (Union[str, Path]): 'path/to/topology.top' The path to the topology file, parametrised by a classical force field (nonbonded parameters and improper torsion idxs are needed)
             top_outpath (Union[str, Path], optional): Defaults to 'path/to/topology_grappa.top'. The path to the output file.
+            include list: Include certain GROMACS topology molecules in `Reactive` molecule.
+            exclude_list: Exclude certain GROMACS topology molecules in `Reactive` molecule.
             plot_parameters (bool, optional): Defaults to False. If True, a plot of the parameters is created and saved in the same directory as the output file.
         """
         assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
@@ -44,15 +46,17 @@ class GromacsGrappa(Grappa):
 
         # import this only when the function is called to make grappas dependency on kimmdy optional
         from kimmdy.topology.topology import Topology
+        from kimmdy.topology.utils import get_is_reactive_predicate_f
         from kimmdy.parsing import read_top, write_top
 
         from grappa.utils.kimmdy_utils import KimmdyGrappaParameterizer
 
         # load the topology
         top_path = Path(top_path)
-        topology = Topology(read_top(Path(top_path)),radicals='')
+        topology = Topology(read_top(Path(top_path)),radicals='',is_reactive_predicate_f=get_is_reactive_predicate_f(include=include_list, exclude=exclude_list))   #radicals='' means kimmdy won't search for radicals
 
         # call grappa model to write the parameters to the topology
+        print(include_list,exclude_list,topology.molecules,topology._check_is_reactive_molecule('sol'),topology._check_is_reactive_molecule('SOL'),topology._check_is_reactive_molecule('Protein'))
         topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, plot_path=plot_path)
         topology.needs_parameterization = True
         
@@ -63,12 +67,12 @@ class GromacsGrappa(Grappa):
         return
 
 
-def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.3', device:str='cpu', plot_parameters:bool=False, modelpath:Union[str,Path]=None):
+def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.3', device:str='cpu', include_list:list=[], exclude_list:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
     if not modelpath is None:
         grappa = GromacsGrappa.from_ckpt(modelpath, device=device)
     else:
         grappa = GromacsGrappa.from_tag(modeltag, device=device)
-    grappa.parametrize(top_path, top_outpath, plot_parameters=plot_parameters)
+    grappa.parametrize(top_path, top_outpath, include_list=include_list, exclude_list=exclude_list, plot_parameters=plot_parameters)
     return
 
 def main():
@@ -78,8 +82,10 @@ def main():
     parser.add_argument('--modeltag', '-t', type=str, default='grappa-1.3', help='tag of the grappa model to use')
     parser.add_argument('--modelpath', '-ckpt', type=str, default=None, help='Path to the grappa model checkpoint. Overwrites the modeltag argument.')
     parser.add_argument('--device', '-d', type=str, default='cpu', help='The device to use for grappas inference forward pass. Defaults to cpu.')
+    parser.add_argument("--include","-w",nargs='+',default=[],help="Include certain GROMACS topology molecules in `Reactive` molecule.")
+    parser.add_argument("--exclude","-b",nargs='+',default=[],help="Exclude certain GROMACS topology molecules in `Reactive` molecule.")    
     parser.add_argument('--plot_parameters', '-p', action='store_true', help='If set, a plot of the MM parameters is created and saved in the same directory as the output file.')
     args = parser.parse_args()
 
-    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, device=args.device, plot_parameters=args.plot_parameters, modelpath=args.modelpath)
+    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, device=args.device, include_list=args.include, exclude_list=args.exclude, plot_parameters=args.plot_parameters, modelpath=args.modelpath)
     
