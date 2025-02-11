@@ -4,7 +4,7 @@ from typing import Tuple, List, Dict, Union, Set
 import networkx as nx
 import numpy as np
 import random
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import logging
 from copy import deepcopy
 

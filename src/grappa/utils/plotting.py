@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import copy
 import matplotlib.colors as colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
