@@ -153,7 +153,7 @@ class Experiment:
                 self._experiment_cfg.ckpt_path = Path(REPO_DIR)/self._experiment_cfg.ckpt_path
 
         if hasattr(self._experiment_cfg, 'ckpt_path') and self._experiment_cfg.ckpt_path is not None:
-            download_model_if_possible(self._experiment_cfg.ckpt_path)
+            use_tag_if_possible(self._experiment_cfg.ckpt_path)
 
         self.trainer = Trainer(
             **self._experiment_cfg.trainer,
@@ -444,9 +444,9 @@ class Experiment:
         self.datamodule.setup()
 
 
-def download_model_if_possible(ckpt_path:Path):
+def use_tag_if_possible(ckpt_path:Path):
     ckpt_path = Path(ckpt_path)
-    if not ckpt_path.exists():
+    if not ckpt_path.exists() and not ckpt_path.endswith('.ckpt'):
         url_tags = pd.read_csv(get_published_csv_path(), dtype=str)['tag'].values
         
         if str(ckpt_path) in url_tags:
