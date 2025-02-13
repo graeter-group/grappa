@@ -371,7 +371,7 @@ class Evaluator:
         """
 
         if n_bootstrap is not None and n_bootstrap > 0:
-            logging.info("Calculating bootstrapped metrics... This may take a while.")
+            logging.info(f"Calculating bootstrapped metrics for n_bootstr={n_bootstrap}... This may take a while.")
             # first take the full dataset:
             self.collect()
             metrics = [self.get_metrics()]
