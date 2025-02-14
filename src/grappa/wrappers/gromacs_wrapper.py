@@ -1,11 +1,17 @@
 from grappa.grappa import Grappa
 from typing import Union
 from pathlib import Path
+import sys
 import argparse
 import importlib
 import logging
 import warnings
 from grappa.constants import Deprecated
+
+if sys.version_info > (3, 10):
+    from importlib_metadata import version
+else:
+    from importlib.metadata import version
 
 class GromacsGrappa(Grappa):
     """
@@ -53,7 +59,14 @@ class GromacsGrappa(Grappa):
 
         # load the topology
         top_path = Path(top_path)
-        topology = Topology(read_top(Path(top_path)),radicals='',is_reactive_predicate_f=get_is_reactive_predicate_f(include=include_list, exclude=exclude_list))   #radicals='' means kimmdy won't search for radicals
+
+        kimmdy_version = version("kimmdy")
+        logging.info(f"kimmdy version {kimmdy_version}")
+        if list(map(int,version("kimmdy").split('.'))) > [6,6,0]:
+            topology = Topology(read_top(Path(top_path)),radicals='',is_reactive_predicate_f=get_is_reactive_predicate_f(include=include_list, exclude=exclude_list))   #radicals='' means kimmdy won't search for radicals
+        else:
+            logging.info(f"version number below '6.6.0', ignoring explicit includes and excludes!")
+            topology = Topology(read_top(Path(top_path)),radicals='')
 
         # call grappa model to write the parameters to the topology
         topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, plot_path=plot_path)
