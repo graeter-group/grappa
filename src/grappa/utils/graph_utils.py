@@ -1,5 +1,9 @@
+import warnings
+from typing import Optional
+from collections import defaultdict
 import torch
 import dgl
+from dgl import DGLGraph
 from typing import Tuple, List, Dict, Union, Set
 import networkx as nx
 import numpy as np
@@ -7,8 +11,11 @@ import random
 from tqdm import tqdm
 import logging
 from copy import deepcopy
+import pandas as pd
 
 from grappa.constants import BONDED_CONTRIBUTIONS
+from grappa.data.transforms import one_hot_to_idx
+from grappa.utils.tuple_indices import get_neighbor_dict
 
 def get_atomic_numbers(g:dgl.DGLGraph)->torch.Tensor:
     return torch.argwhere(g.nodes['n1'].data['atomic_number'] == 1)[:,1] + 1
@@ -409,3 +416,394 @@ def as_nx(graph:dgl.DGLGraph)->nx.Graph:
     homgraph = deepcopy(dgl.node_type_subgraph(graph, ['n1']))
     homgraph.ndata['atomic_number'] = torch.argmax(homgraph.ndata['atomic_number'], dim=-1) + 1
     return homgraph.to_networkx(node_attrs=['atomic_number'])
+
+def get_grappa_contributions(tag: str,  min_grappa_atoms: dict = {"n2": 1, "n3": 1, "n4": 1, "n4_improper": 1}) -> dict:
+    """
+    Compute the contribution of grappa parameters for the interactions in the dataset.
+
+    Args:
+        tag (str): The dataset tag.
+        min_grappa_atoms (dict): The minimum number of grappa atoms per interaction. Default is {"n2": 1, "n3": 1, "n4": 1, "n4_improper": 1}.
+    """
+    from grappa.data import Dataset
+    
+    term_to_interaction = {"n2": "bonds", "n3": "angles", "n4": "propers", "n4_improper": "impropers"}
+    
+    ds = Dataset.from_tag(tag)
+
+    # Set default grappa contribution to 0
+    grappa_contribution = defaultdict(int)
+
+    for graph, _ in ds: 
+        try: 
+            is_grappa_atom = graph.nodes["n1"].data["grappa_atom"].to(torch.bool)
+            grappa_contribution["grappa_atoms"] += is_grappa_atom.sum().item()
+            grappa_contribution["trad_atoms"] += (~is_grappa_atom).sum().item()
+        except KeyError:
+            warnings.warn("No grappa_atom attribute found in the graph. Assuming all atoms are traditional.")
+            grappa_contribution["grappa_atoms"] += 0
+            grappa_contribution["trad_atoms"] += graph.num_nodes("n1")
+        for term in ["n2", "n3", "n4", "n4_improper"]:
+            interaction = term_to_interaction[term]
+            try: 
+                is_grappa_interaction = graph.nodes[term].data["num_grappa_atoms"] >= min_grappa_atoms[term] 
+                grappa_contribution[f"grappa_{interaction}"] += is_grappa_interaction.sum().item()
+                grappa_contribution[f"trad_{interaction}"] += (~is_grappa_interaction).sum().item()
+            except KeyError:
+                warnings.warn(f"No num_grappa_atoms attribute found for the {term} nodes in the graph. Assuming all {interaction} are traditional.")
+                grappa_contribution[f"grappa_{interaction}"] += 0
+                grappa_contribution[f"trad_{interaction}"] += len(graph.nodes[term].data["idxs"])
+    for term in ["atoms", "bonds", "angles", "propers", "impropers"]:
+        grappa_contribution[f"{term}_total"] = grappa_contribution[f"grappa_{term}"] + grappa_contribution[f"trad_{term}"]
+        grappa_contribution[f"{term}_contrib"] = grappa_contribution[f"grappa_{term}"] / grappa_contribution[f"{term}_total"]
+        
+    return grappa_contribution
+
+
+def get_grappa_contributions_from_tags(tags: list, min_grappa_atoms: dict = {"n2": 1, "n3": 1, "n4": 1, "n4_improper": 1}) -> pd.DataFrame:
+    """
+    Compute the contribution of grappa parameters for the interactions in the datasets.
+
+    Args:
+        tags (list): List of dataset tags.
+        min_grappa_atoms (dict): The minimum number of grappa atoms per interaction. Default is {"n2": 1, "n3": 1, "n4": 1, "n4_improper": 1}.
+    """
+
+    grappa_contributions = []
+    for t in tags:
+        c = get_grappa_contributions(tag=t, min_grappa_atoms=min_grappa_atoms, print_contributions=False)
+        grappa_contributions.append(c)
+    contribution = pd.DataFrame(grappa_contributions)
+    contribution["grappa_contrib"] = (contribution["grappa_bonds"] + contribution["grappa_angles"] + contribution["grappa_propers"] + contribution["grappa_impropers"]) / (contribution["bonds_total"] + contribution["angles_total"] + contribution["propers_total"] + contribution["impropers_total"])
+    contribution["grappa_contrib_mean"] = contribution[["bonds_contrib", "angles_contrib", "propers_contrib", "impropers_contrib"]].mean(axis=1)
+    contribution["grappa_contrib_std"] = contribution[["bonds_contrib", "angles_contrib", "propers_contrib", "impropers_contrib"]].std(axis=1)
+    # contribution["grappa_contrib_diff"] = (contribution["grappa_contrib_mean"] - contribution["grappa_contrib"]).abs()
+    return contribution
+
+
+def get_neighbor_atomic_numbers_dict(graph: DGLGraph, neighbor_dict: dict) -> dict:
+    """
+    Get the atomic numbers of the neighbors of each atom in the graph.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+    """
+    atomic_numbers = graph.nodes["n1"].data["atomic_number"]
+    neighbor_atomic_numbers_dict = {}
+    for i, neighbors in neighbor_dict.items():
+        neighbor_atomic_numbers = []
+        for neighbor in neighbors:
+            atomic_number_one_hot = atomic_numbers[neighbor]
+            atomic_number = one_hot_to_idx(atomic_number_one_hot).item() + 1
+            neighbor_atomic_numbers.append(atomic_number)
+        neighbor_atomic_numbers_dict[i] = neighbor_atomic_numbers
+    return neighbor_atomic_numbers_dict
+
+
+def is_hydrogen_atom(graph: DGLGraph, atom_idx: int) -> bool:
+    """
+    Check if the atom is a hydrogen atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        atom_idx (int): The index of the atom.
+    """
+    return bool(graph.nodes["n1"].data["atomic_number"][atom_idx, 0].item())
+
+
+def is_carbon_atom(graph: DGLGraph, atom_idx: int) -> bool:
+    """
+    Check if the atom is a carbon atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        atom_idx (int): The index of the atom.
+    """
+    return bool(graph.nodes["n1"].data["atomic_number"][atom_idx, 5].item())
+
+
+def is_nitrogen_atom(graph: DGLGraph, atom_idx: int) -> bool:
+    """
+    Check if the atom is a nitrogen atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        atom_idx (int): The index of the atom.
+    """
+    return bool(graph.nodes["n1"].data["atomic_number"][atom_idx, 6].item())
+
+
+def is_oxygen_atom(graph: DGLGraph, atom_idx: int) -> bool:
+    """
+    Check if the atom is an oxygen atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        atom_idx (int): The index of the atom.
+    """
+    return bool(graph.nodes["n1"].data["atomic_number"][atom_idx, 7].item())
+
+
+def is_carbonyl_carbon_atom(graph: DGLGraph, atom_idx: int, neighbor_atomic_numbers_dict: dict) -> bool:
+    """
+    Check if the atom is a carbonyl carbon atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        atom_idx (int): The index of the atom.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+    """
+    neighbor_atomic_numbers = neighbor_atomic_numbers_dict[atom_idx]
+    return is_carbon_atom(graph, atom_idx) and len(neighbor_atomic_numbers) == 3 and neighbor_atomic_numbers.count(8) == 1
+
+
+def is_neighbor_carbonyl_carbon_atom(graph: DGLGraph, atom_idx: int, neighbor_dict: dict, neighbor_atomic_numbers_dict: dict) -> bool:
+    """
+    Check if the atom is a neighbor of a carbonyl carbon atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        atom_idx (int): The index of the atom.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+        neighbor_atomic_numbers_dict (dict): A dictionary containing the atomic numbers of the neighbors of each atom.
+    """
+    return bool(sum([is_carbonyl_carbon_atom(graph, atom, neighbor_atomic_numbers_dict) for atom in neighbor_dict[atom_idx]]))
+
+
+def are_connected(atoms: list, neighbor_dict: Optional[dict] = None, graph: Optional[DGLGraph]=None) -> bool:
+    """
+    Check if the given atoms form a connected subgraph.
+
+    Args:
+        atoms (List[int]): A list of atom indices.
+        neighbor_dict (Optional[dict]): A dictionary mapping each atom to its neighbors. If None, it will be generated.
+        graph (Optional[DGLGraph]): The DGLGraph object representing the molecular graph. Required if neighbor_dict is None.
+    """
+    assert graph is not None or neighbor_dict is not None, "Either graph or neighbor_dict must be provided."
+
+    if neighbor_dict is None:
+        neighbor_dict = get_neighbor_dict(graph.nodes["n2"].data["idxs"].tolist())
+
+    atom_set = set(atoms)  # Convert to set for O(1) lookup
+    visited = set()
+
+    def dfs(atom):
+        """Depth-first search (DFS) to explore the connected component."""
+        stack = [atom]
+        while stack:
+            current = stack.pop()
+            if current not in visited:
+                visited.add(current)
+                stack.extend(neighbor for neighbor in neighbor_dict[current] if neighbor in atom_set)
+
+    # Start DFS from the first atom in the list
+    dfs(atoms[0])
+
+    return visited == atom_set
+
+
+def get_connected_atoms(atom_idx: int, neighbor_dict: dict, forbidden: list) -> list:
+    """
+    Get the indices of all atoms connected to the atom.
+    
+    Args:
+        atom_idx (int): The index of the atom.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+        forbidden (list): A list of atom indexes that should not be included in the connected atoms.
+    """
+
+    connected_atoms = []
+    neighbor = neighbor_dict[atom_idx]
+
+    for atom in neighbor:
+        if atom not in forbidden and atom not in connected_atoms:
+            connected_atoms.append(atom)
+            neighbor.extend(neighbor_dict[atom])
+            
+    return connected_atoms
+
+
+def get_methly_carbon_atom(graph: DGLGraph, neighbor_atomic_numbers_dict: dict) -> list:
+    """
+    Get the indices of the carbon atoms in a methyl group.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        neighbor_atomic_numbers_dict (dict): A dictionary containing the atomic numbers of the neighbors of each atom.
+    """
+    methyl_carbon_atoms = []
+    total_atoms = graph.num_nodes("n1")
+    for idx in range(total_atoms):
+        if is_carbon_atom(graph, idx):
+            neighbor_atomic_numbers = neighbor_atomic_numbers_dict[idx]
+            if len(neighbor_atomic_numbers) == 4 and neighbor_atomic_numbers.count(1) == 3:
+                methyl_carbon_atoms.append(idx)      
+    return methyl_carbon_atoms
+
+
+def get_ace_carbonly_carbon_atom(graph: DGLGraph, neighbor_dict: dict, neighbor_atomic_numbers_dict: dict) -> int:
+    """
+    Get the indix of the carbonyl carbon atom in the acetyl cap.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+        neighbor_atomic_numbers_dict (dict): A dictionary containing the atomic numbers of the neighbors of each atom.
+    """
+    ace_carbonyl_carbon_atom = []
+    methyl_carbon_atoms = get_methly_carbon_atom(graph, neighbor_atomic_numbers_dict)
+    assert methyl_carbon_atoms, "No methyl carbon atom found in the molecule."
+
+    for idx in methyl_carbon_atoms:
+        neighbor_atomic_numbers = neighbor_atomic_numbers_dict[idx]
+        if neighbor_atomic_numbers.count(6) == 1:
+            carbon_atom = neighbor_dict[idx][neighbor_atomic_numbers.index(6)]
+            if is_carbonyl_carbon_atom(graph, carbon_atom, neighbor_atomic_numbers_dict):
+                ace_carbonyl_carbon_atom.append(carbon_atom)
+
+    assert len(ace_carbonyl_carbon_atom) == 1, f"{len(ace_carbonyl_carbon_atom)} carbonyl carbon atoms found in the molecule."
+    return ace_carbonyl_carbon_atom[0]         
+
+
+def get_nterminal_alpha_carbon_atom(graph: DGLGraph, neighbor_dict: dict, neighbor_atomic_numbers_dict: dict) -> int:
+    """
+    Get the indix of the N-terminal alpha carbon atom.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+        neighbor_atomic_numbers_dict (dict): A dictionary containing the atomic numbers of the neighbors of each atom.
+    """
+
+    ace_carbonly_carbon_atom = get_ace_carbonly_carbon_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict)
+
+    neighbor_atomic_numbers = neighbor_atomic_numbers_dict[ace_carbonly_carbon_atom]
+    amid_nitrogen_atom = neighbor_dict[ace_carbonly_carbon_atom][neighbor_atomic_numbers.index(7)]
+    neighbor_atomic_numbers = neighbor_atomic_numbers_dict[amid_nitrogen_atom]
+    neighbor = neighbor_dict[amid_nitrogen_atom]
+    nterminal_alpha_carbon_atom = [atom for atom, atomic_number in zip(neighbor, neighbor_atomic_numbers) if atomic_number == 6 and atom != ace_carbonly_carbon_atom and is_neighbor_carbonyl_carbon_atom(graph, atom, neighbor_dict, neighbor_atomic_numbers_dict)]
+    assert nterminal_alpha_carbon_atom, "No N-terminal alpha carbon atom found in the molecule."
+    assert len(nterminal_alpha_carbon_atom) == 1, f"{len(nterminal_alpha_carbon_atom)} N-terminal alpha carbon atoms found in the molecule."
+    return nterminal_alpha_carbon_atom[0]
+
+
+def get_nterminal_carbonly_carbon_atom(graph: DGLGraph, neighbor_dict: dict, neighbor_atomic_numbers_dict: dict) -> int:
+    """
+    Get the indix of the carbonyl carbon atom in the backbone of the N-terminal amino acid residue.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+        neighbor_atomic_numbers_dict (dict): A dictionary containing the atomic numbers of the neighbors of each atom.
+    """
+    nterminal_alpha_carbon_atom = get_nterminal_alpha_carbon_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict)
+
+    neighbor = neighbor_dict[nterminal_alpha_carbon_atom]
+    nterminal_carbonyl_carbon_atom = [atom for atom in neighbor if is_carbonyl_carbon_atom(graph, atom, neighbor_atomic_numbers_dict)]
+
+    assert len(nterminal_carbonyl_carbon_atom) == 1, f"{len(nterminal_carbonyl_carbon_atom)} N-terminal carbonyl carbon atoms found in the molecule."
+    return nterminal_carbonyl_carbon_atom[0]
+
+
+def get_second_amide_nitrogen_atom(graph: DGLGraph, neighbor_dict: dict, neighbor_atomic_numbers_dict: dict, nterminal_carbonyl_carbon_atom: Optional[int]=None) -> int:
+    """
+    Get the indix of the nitrogen atom in the amide group of the second amino acid.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        neighbor_dict (dict): A dictionary containing the neighbors of each atom.
+        neighbor_atomic_numbers_dict (dict): A dictionary containing the atomic numbers of the neighbors of each atom.
+    """
+    if nterminal_carbonyl_carbon_atom is None:
+        nterminal_carbonyl_carbon_atom = get_nterminal_carbonly_carbon_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict)
+
+    neighbor_atomic_numbers = neighbor_atomic_numbers_dict[nterminal_carbonyl_carbon_atom]
+    second_amid_nitrogen_atom = neighbor_dict[nterminal_carbonyl_carbon_atom][neighbor_atomic_numbers.index(7)]
+
+    return second_amid_nitrogen_atom
+
+
+def get_nterminal_side_chain_atoms(graph: DGLGraph) -> list:
+    """
+    Get the indices of the atoms in side chain of the N-terminal amino acid.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+    """
+    neighbor_dict = get_neighbor_dict(bonds=graph.nodes["n2"].data["idxs"].tolist())
+    neighbor_atomic_numbers_dict = get_neighbor_atomic_numbers_dict(graph=graph, neighbor_dict=neighbor_dict)
+
+    nterminal_alpha_carbon_atom = get_nterminal_alpha_carbon_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict)
+
+    neighbor_atomic_numbers = neighbor_atomic_numbers_dict[nterminal_alpha_carbon_atom]
+    neighbor = neighbor_dict[nterminal_alpha_carbon_atom]
+
+    # Check if the N-terminal amino acid is a glycine
+    if neighbor_atomic_numbers.count(1) == 2:
+        return neighbor[neighbor_atomic_numbers.index(1)]
+    
+    nterminal_beta_carbon_atom = [atom for atom in neighbor if is_carbon_atom(graph, atom) and not is_carbonyl_carbon_atom(graph, atom, neighbor_atomic_numbers_dict)]
+
+    assert nterminal_beta_carbon_atom, "No N-terminal beta carbon atom found in the molecule."
+    assert len(nterminal_beta_carbon_atom) == 1, f"{len(nterminal_beta_carbon_atom)} N-terminal beta carbon atoms found in the molecule."
+    nterminal_beta_carbon_atom = nterminal_beta_carbon_atom[0]
+
+    amid_nitrogen_atom = neighbor[neighbor_atomic_numbers.index(7)]
+
+    nterminal_side_chain_atoms = get_connected_atoms(nterminal_beta_carbon_atom, neighbor_dict, [amid_nitrogen_atom, nterminal_alpha_carbon_atom])
+
+    return nterminal_side_chain_atoms
+
+
+def get_nterminal_atoms_from_dipeptide(graph: DGLGraph) -> list:
+    """
+    Get the indices of the atoms in the N-terminal amino acid and the ACE cap from a dipeptide.
+    
+    Only works for dipeptides!!!
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+    """
+    neighbor_dict = get_neighbor_dict(bonds=graph.nodes["n2"].data["idxs"].tolist())
+    neighbor_atomic_numbers_dict = get_neighbor_atomic_numbers_dict(graph=graph, neighbor_dict=neighbor_dict)
+
+    nterminal_carbonly_carbon_atom = get_nterminal_carbonly_carbon_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict)
+    second_amide_nitrogen_atom = get_second_amide_nitrogen_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict, nterminal_carbonly_carbon_atom)
+    return get_connected_atoms(nterminal_carbonly_carbon_atom, neighbor_dict, forbidden=[second_amide_nitrogen_atom])
+
+
+def get_cterminal_atoms_from_dipeptide(graph: DGLGraph) -> list:
+    """
+    Get the indices of the atoms in the C-terminal amino acid and the NME cap from a dipeptide.
+    
+    Only works for dipeptides!!!
+
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+    """
+    neighbor_dict = get_neighbor_dict(bonds=graph.nodes["n2"].data["idxs"].tolist())
+    neighbor_atomic_numbers_dict = get_neighbor_atomic_numbers_dict(graph=graph, neighbor_dict=neighbor_dict)
+
+    nterminal_carbonly_carbon_atom = get_nterminal_carbonly_carbon_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict)
+    second_amide_nitrogen_atom = get_second_amide_nitrogen_atom(graph, neighbor_dict, neighbor_atomic_numbers_dict, nterminal_carbonly_carbon_atom)
+    return get_connected_atoms(second_amide_nitrogen_atom, neighbor_dict, forbidden=[nterminal_carbonly_carbon_atom])
+
+
+def get_percentage_of_atoms(graph: DGLGraph, percentage: float, random_sampling: bool=False) -> list:
+    """
+    Get the atom indices for a given percentage of all atoms in the graph.
+    
+    Args:
+        graph (DGLGraph): The DGLGraph object representing the molecular graph.
+        percentage (float): The percentage of atoms to get.
+        random_sampling (bool): If True, the atoms are randomly chosen. If False, atoms are selected based on their index and selected atoms are checked for connectivity. Default is False.
+    """
+    total_atoms = graph.num_nodes("n1")
+    num_atoms = int(total_atoms * percentage + 0.5)
+    if random_sampling:
+        atoms = list(range(total_atoms))
+        return random.sample(atoms, num_atoms)
+    atoms = list(range(num_atoms))
+    if not are_connected(atoms, graph=graph):
+        raise ValueError(f"Selected atoms are not connected: {atoms}")
+    return atoms
