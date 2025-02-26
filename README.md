@@ -56,7 +56,7 @@ The input to Grappa is therefore a graph representation of the system of interes
 Currently, Grappa is compatible with GROMACS and OpenMM.
 
 For instructive example scripts, see the following Google Colab notebooks that run entirely on the cloud and do not require any local installation:
-- [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
+- [Grappa as GROMACS force field](https://colab.research.google.com/drive/1C1ebqR9CnxkMLSR3aJ87zcY2W_nqIMmN?usp=sharing)
 - [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
 
 ### GROMACS
