@@ -102,7 +102,8 @@ def get_partial_params(g: DGLGraph, term: str, param: str, grappa_suffix: str=""
 
     is_grappa_interaction = g.nodes[term].data["num_grappa_atoms"] >= min_grappa_atoms[term]
 
-    # # Interpolate between the parameters based on the ratio of grappa atoms in the interaction.s
+    # interpolate = True 
+    # # Interpolate between the parameters based on the ratio of grappa atoms in the interaction.
     # if interpolate:
     #     ratio = g.nodes[term].data["num_grappa_atoms"] / int(term[1])
     #     if "n4" in term:
