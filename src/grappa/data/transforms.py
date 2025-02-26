@@ -85,8 +85,13 @@ class AnnotateGrappaAtomsNInteractions(BaseTransform):
                 return graph
             grappa_atoms_ids = get_khop_connected_atoms(graph, khop=3, start_atom=5)
         else:
-            if random() < 0.8:
+            rand = random()
+            if rand < 0.7:
                 grappa_atoms_ids = get_khop_connected_atoms(graph, khop=randint(1,3), start_atom=randint(0, total_atoms - 1)) 
+            elif rand < 0.8: # Select only preannotated grappa atoms as grappa atoms
+                if "grappa_atom" not in graph.nodes["n1"].data.keys(): 
+                    raise RuntimeError("Grappa atoms are not annotated.")
+                return graph
             else: # Select all atoms as grappa atoms
                 grappa_atoms_ids = torch.arange(0, total_atoms, dtype=torch.int64)
 
