@@ -52,8 +52,6 @@ def perform_backward_passes(device):
         updated_graph = coordinates_module(updated_graph)
         updated_graph = energy_module(updated_graph)
 
-        print(updated_graph.nodes['g'].data.keys())
-
         energy_qm = updated_graph.nodes['g'].data['energy_qm'] - updated_graph.nodes['g'].data['energy_reference_ff_nonbonded']
         energy_qm -= energy_qm.mean(dim=1, keepdim=True)
         energy_grappa = updated_graph.nodes['g'].data['energy']
@@ -120,4 +118,5 @@ def test_downloaded_model():
     grappa_grad = mol.nodes['n1'].data['gradient']
     crmse = torch.mean((qm_minus_nonbonded_grad - grappa_grad)**2)**0.5
 
-    assert crmse < 10
+    if crmse > 10:
+        raise ValueError(f"Internal Error. Force crmse is too high: {crmse}, should be below 10 kcal/mol/angstroem!")
