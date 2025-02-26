@@ -57,6 +57,13 @@ def main(cfg: DictConfig) -> None:
         complement = list(set(['nonbonded', 'bond', 'angle', 'proper', 'improper']) - set(cfg.evaluate.grappa_contributions))
         ckpt_cfg.data.data_module.ref_terms = complement
         ckpt_cfg.data.energy.terms = cfg.evaluate.grappa_contributions
+    
+    # if specified, use partial parametertatization for energy and force calculations:
+    if hasattr(cfg, "data") and hasattr(cfg.data, "energy"): 
+        if hasattr(cfg.data.energy, "partial_param"):
+            ckpt_cfg.data.energy.partial_param = cfg.data.energy.partial_param
+        if hasattr(cfg.data.energy, "min_grappa_atoms"):
+            ckpt_cfg.data.energy.min_grappa_atoms = cfg.data.energy.min_grappa_atoms
 
     experiment = Experiment(config=ckpt_cfg, load_data=False)
 
