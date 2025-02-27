@@ -1,7 +1,7 @@
 OPENMM_WATER_RESIDUES = ["HOH", "WAT", "TIP3", "TIP4", "TIP5", "TIP3P", "TIP4P", "TIP5P", "SPC", "SPC/E", "SPCE", "SPC-FW", "SPC-HW", "SPC-HFW", "SPC-HF"]
 OPENMM_ION_RESIDUES = ["CL", "NA", "K", "MG", "CA", "ZN", "FE", "CU", "F", "BR", "I", "CL-", "NA+", "K+", "MG2+", "CA2+", "ZN2+", "FE2+", "FE3+", "CU2+", "CU1+", "F-", "BR-", "I-"]
 
-
+# The following conditional imnports are only for pylint, we import the packages in each function call again. otherwise, it will not work if one first installs grappa and only then openmm.
 import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     import openmm
@@ -31,6 +31,7 @@ def get_subtopology(topology:'openmm.app.topology.Topology', exclude_residues:Li
     Returns a sub-topology of the given topology, excluding certain residues with names given in exclude_residues.
     The atom.id of the atoms in the sub-topology is the same as the atom.index in the original topology.
     """
+    import openmm.app.topology
 
     assert isinstance(topology, openmm.app.topology.Topology), f"Expected openmm.app.topology.Topology, but got {type(topology)}"
 
@@ -152,7 +153,7 @@ def set_partial_charges(system:'openmm.System', partial_charges:Union[list, np.n
     """
     Set partial charges of a system. The charge must be in units of elementary charge.
     """
-
+    import openmm
     # get the nonbonded force (behaves like a reference not a copy!):
     nonbonded_force = None
     for force in system.getForces():
@@ -180,6 +181,7 @@ def get_partial_charges(system:'openmm.System')->np.ndarray:
     """
     Returns the partial charges of the system in units of elementary charge.
     """
+    import openmm
     # get the nonbonded force (behaves like a reference not a copy!):
     nonbonded_force = None
     for force in system.getForces():
@@ -209,6 +211,7 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
 
     # handle units:
     from openmm.unit import Quantity
+    import openmm
 
     grappa_units = get_grappa_units_in_openmm()
     BOND_K_UNIT = grappa_units['BOND_K']
@@ -344,6 +347,7 @@ def get_openmm_forcefield(name:str, *args, **kwargs)->'ForceField':
     - amber99sbildn* or amber99sbildn-star (amber99sbildn with HYP and DOP residue type)
     - any standard openmm forcefield
     """
+    from openmm.app import ForceField
 
     if name.endswith('.xml'):
         name = name[:-4]
@@ -424,6 +428,7 @@ def get_improper_contribution(openmm_system:'openmm.System', xyz:np.ndarray, mol
         """
         Only works if the impropers are given as PeriodicTorsionForce in the openmm system.
         """
+        import openmm
 
         openmm_system = copy.deepcopy(openmm_system)
 
@@ -455,6 +460,7 @@ def get_pdb(pdb_string:str)->'PDBFile':
     """
     Returns an openmm PDBFile from a pdb string in which the lines are separated by '\n'.
     """
+    from openmm.app import PDBFile
     with tempfile.TemporaryDirectory() as tmp:
         pdbpath = str(Path(tmp)/'pep.pdb')
         with open(pdbpath, "w") as pdb_file:

@@ -5,10 +5,11 @@ import importlib
 This is used for the gromacs wrapper.
 """
 
-if importlib.util.find_spec('kimmdy') is not None:
-    from kimmdy.topology.topology import Topology
-    from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
-    from kimmdy.plugins import Parameterizer
+# The following conditional imnports are only for pylint, we import the packages in each function call again. otherwise, it will not work if one first installs grappa and only then kimmdy.
+# if importlib.util.find_spec('kimmdy') is not None:
+#     from kimmdy.topology.topology import Topology
+#     from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
+#     from kimmdy.plugins import Parameterizer
 
 import logging
 import numpy as np
@@ -58,7 +59,7 @@ def order_proper(idxs: np.ndarray) -> np.ndarray:
     
 
 # workflow functions
-def build_molecule(top: Topology, build_nrs:Set[str], charge_model:str='amber99') -> Molecule:
+def build_molecule(top: 'Topology', build_nrs:Set[str], charge_model:str='amber99') -> Molecule:
     '''
     Build a grappa.data.Molecule from a kimmdy.topology.topology.Topology
 
@@ -154,6 +155,8 @@ def apply_parameters(top: 'Topology', parameters: Parameters, apply_nrs: Set[str
     assume units are according to https://manual.gromacs.org/current/reference-manual/definitions.html
     namely: length [nm], mass [kg], time [ps], energy [kJ/mol], force [kJ mol-1 nm-1], angle [deg]
     """
+
+    from kimmdy.topology.atomic import Bond, Angle, Dihedral, MultipleDihedrals
 
     ## atoms
     # Nothing to do here because partial charges are dealt with elsewhere
