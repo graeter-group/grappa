@@ -13,9 +13,15 @@ from grappa.data import Molecule, MolData, clear_tag
 from grappa.utils.openmm_utils import get_nonbonded_contribution
 from grappa.utils.system_utils import openmm_system_from_gmx_top, openmm_system_from_dict
 from grappa.utils.graph_utils import get_isomorphic_permutation, get_isomorphisms
+import importlib.util
+from openmm import System
+from openmm.app import Topology, ForceField, PDBFile
+import logging
 
 def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list[int]]:
-    """Match relative to first Molecule in molecules
+    """
+    Match relative to first Molecule in molecules. Assumes all entries of molecules represent the same molecule, but with different atom order.
+    Returns a dictionary of {idx: permutation} such that molecules[idx] with reordered atoms corresponds to the first molecule. This means that e.g. for elements: molecules[idx].atomic_number[permutation[idx]] = molecules[0].atomic_number
     """
 
     permutations = {0: list(range(len(molecules[0].atoms)))}
@@ -27,19 +33,16 @@ def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list
     isomorphisms = get_isomorphisms([graphs[0]],graphs,silent=True)
     matched_idxs = [idxs[1] for idxs in list(isomorphisms)]
     if len(matched_idxs) < len(molecules):
-        print(f"Couldn't match all graphs to first graph, only {matched_idxs}!")
-        # except RuntimeError as e:
-        #     print('Skipping Molecule matching!')
-        #     raise e
+        logging.info(f"Couldn't match all graphs to first graph, only {matched_idxs}!")
     if verbose:
-        print(isomorphisms)
+        logging.info(isomorphisms)
 
     for isomorphism in list(isomorphisms):
         [idx1,idx2] = isomorphism
         permutation = get_isomorphic_permutation(graphs[idx1],graphs[idx2])
         permutations[idx2] = permutation
     if verbose:
-        print(permutations)
+        logging.info(permutations)
     return permutations
 
 @dataclass
@@ -68,6 +71,10 @@ class DatasetBuilder:
     entries: dict[str,MolData] = field(default_factory=dict)
     complete_entries: set[str] = field(default_factory=set)
 
+    # post init fct:
+    def __post_init__(self):
+        assert importlib.util.find_spec("openmm") is not None, "The dataset builder class requires the openmm package to be installed."
+
     ### Dataset creation ###
     @classmethod
     def from_moldata(cls, moldata_dir: Union[str,Path], mol_id_from_file_stem:bool = False):
@@ -78,7 +85,6 @@ class DatasetBuilder:
         complete_entries = set()
         npzs = list(moldata_dir.glob('*npz'))
         for npz in sorted(npzs):
-            print(npz.name)
             moldata = MolData.load(npz)
             if mol_id_from_file_stem:
                 moldata.mol_id = npz.stem
@@ -95,7 +101,8 @@ class DatasetBuilder:
         mol_id 
             The identifier for the molecule entry.
         filename
-            File name of the QM data dictionary
+            File name of the QM data dictionary. Must include keys
+            'xyz', 'energy', 'atomic_numbers', and either 'force' or 'gradient'.
 
         Returns
         -------
@@ -135,6 +142,7 @@ class DatasetBuilder:
     def entry_from_qm_output_file(self, mol_id:str, qm_output_files:list[Union[Path,str]],  ase_index_str: str = ':'):
         """
             Using ASE, processes QM output files to extract geometries, energies, and gradients. From this, a DatasetBuilder entry is created.
+            Since ASE uses eV and Angstrom as internal units, the energies and gradients are converted to the Grappa units kcal/mol and A, respectively.
 
             Parameters
             ----------
@@ -163,7 +171,7 @@ class DatasetBuilder:
                     
         ## different QM files could have different atom order, matching this  
         if len(molecules) > 1:  
-            print("Matching atom order in QM files")     
+            logging.info("Matching atom order in QM files")     
             permutations = match_molecules(molecules, verbose=False)     
         else:
             permutations = {0:list(range(QM_calculations[0][0].get_positions().shape[0]))}                      
@@ -184,13 +192,13 @@ class DatasetBuilder:
                     energy.append(energy_conf)
                     gradient.append(-force_conf)# - to convert from force to gradient
                 except PropertyNotImplementedError as e:
-                    print(f"Caught the exception: {e}")
+                    logging.warning(f"Caught the exception: {e}")
             qm_dict['xyz'].extend(np.asarray(xyz))
             qm_dict['energy'].extend(np.asarray(energy))
             qm_dict['gradient'].extend(np.asarray(gradient)) 
 
         if len(qm_dict['energy']) == 0:
-            print(f"No QM data available for {mol_id}")
+            logging.warning(f"No QM data available for {mol_id}")
             return
 
         ## convert to array
@@ -227,10 +235,10 @@ class DatasetBuilder:
         ## check whether entry exists ##
         if mol_id in self.entries.keys():
             if overwrite is False:
-                print(f"Entry {mol_id} already exists in DatasetBuilder. Will not create a new entry!")
+                logging.warning(f"Entry {mol_id} already exists in DatasetBuilder. Will not create a new entry!")
                 return
             else:
-                print(f"Entry {mol_id} already exists in DatasetBuilder. Overwriting it with new entry!")
+                logging.info(f"Entry {mol_id} already exists in DatasetBuilder. Overwriting it with new entry!")
 
         ## skip invalid entry ##
         if validate:
@@ -264,16 +272,16 @@ class DatasetBuilder:
         valid = True
         # check qm dict keys
         if not all([x in qm_dict for x in ['xyz','energy','atomic_numbers']]):
-            print(f"The QM dictionary for '{mold_id}' must contain xyz, energy and atomic_numbers but only has following keys: {list(qm_dict.keys())}. Skipping entry!")
+            logging.warning(f"The QM dictionary for '{mold_id}' must contain xyz, energy and atomic_numbers but only has following keys: {list(qm_dict.keys())}. Skipping entry!")
             valid = False
         if ('force' in qm_dict) == ('gradient' in qm_dict):
-            print(f"The QM dictionary must contain either 'force' or 'gradient', but not both or none: {list(qm_dict.keys())}. Skipping entry!")
+            logging.warning(f"The QM dictionary must contain either 'force' or 'gradient', but not both or none: {list(qm_dict.keys())}. Skipping entry!")
             valid = False
         # check number of valid conformations
         valid_idxs = np.isfinite(qm_dict['energy'])
         valid_idxs = np.where(valid_idxs)[0]
         if len(valid_idxs) < 3:
-            print(f"Too few conformations: {len(valid_idxs)} < 3. Skipping entry!")
+            logging.warning(f"Too few conformations: {len(valid_idxs)} < 3. Skipping entry!")
             valid = False
         return valid
 
@@ -301,26 +309,54 @@ class DatasetBuilder:
             from openmm.app import PDBFile
         
         if not mol_id in self.entries.keys():   
-            print(f"Entry {mol_id} not in DatasetBuilder entries. Skipping!")
+            logging.warning(f"Entry {mol_id} not in DatasetBuilder entries. Skipping!")
             return
 
         ## create molecule
         system, topology = openmm_system_from_gmx_top(top_file)
+
+        if add_pdb:
+            buffer = io.StringIO()
+            PDBFile.writeFile(topology,positions=self.entries[mol_id].xyz[-1,:,:],file=buffer)
+            self.entries[mol_id].pdb = buffer.getvalue()
+
+        self.add_nonbonded(mol_id,system,topology)
+
+
+    def add_nonbonded(self, mol_id:str, system: System, topology: Topology):
+        """	
+        Add nonbonded data from an OpenMM system to entry. Replaces the molecule of an existing entry with an OpenMM topology and permutes molecular data (xyz and forces) such that the atomic numbers match the topology if necessary.
+
+        Parameters
+        ----------
+        mol_id 
+            Unique identifier for the molecule entry.
+        system
+            OpenMM system object containing force field parameters to calculate nonbonded energy, forces and improper positions.
+        topology
+            OpenMM topology object used to replace the molecule.
+
+        Returns
+        -------
+        None
+            This method modifies the entry in place and does not return a value.
+        """
+        if not mol_id in self.entries.keys():   
+            loggin.warning(f"Entry {mol_id} not in DatasetBuilder entries. Skipping!")
+            return
+    
+        ## create molecule
         mol = Molecule.from_openmm_system(system,topology)
 
         ## get permutation and replace entry molecule
         # reorder atoms of QM data if atomic number list is different
-        if mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers:
-            print(f"Atomic numbers of QM data and GROMACS topology doesn't match! Trying to match by graph.")
+        if mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers or mol.bonds != self.entries[mol_id].molecule.bonds:
+            logging.info(f"Atomic numbers of QM data and force field topology doesn't match! Matching by graph isomorphism.")
             permutations = match_molecules([mol,self.entries[mol_id].molecule])
             if len(permutations) != 2:
-                print(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
+                logging.warning(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
                 return
             # replace data
-            # print(permutations[1])
-            # print(mol.atomic_numbers)
-            # print(self.entries[mol_id].molecule.atomic_numbers)
-            # print([self.entries[mol_id].molecule.atomic_numbers[jj] for jj in permutations[1]])
             permutation = permutations[1]
             self.entries[mol_id].molecule = mol
             self.entries[mol_id].xyz = self.entries[mol_id].xyz[:,permutation]
@@ -328,17 +364,32 @@ class DatasetBuilder:
         else:
             self.entries[mol_id].molecule = mol
 
-        if add_pdb:
-            buffer = io.StringIO()
-            PDBFile.writeFile(topology,positions=self.entries[mol_id].xyz[-1,:,:],file=buffer)
-            self.entries[mol_id].pdb = buffer.getvalue()
-
         ## add nonbonded energy
         # energy, force = get_nonbonded_contribution(system,self.entries[mol_id].xyz)
         self.entries[mol_id].add_ff_data(system,xyz=self.entries[mol_id].xyz)
         self.entries[mol_id]._validate()
 
         self.complete_entries.add(mol_id)
+
+
+    def add_nonbonded_from_pdb(self, mol_id:str, pdb_file:Path, forcefield:ForceField=ForceField('amber99sbildn.xml')):
+        """
+        """
+        if not mol_id in self.entries.keys():   
+            logging.warning(f"Entry {mol_id} not in DatasetBuilder entries. Skipping!")
+            return
+
+        ## create system from pdb:
+        topology = PDBFile(str(pdb_file)).getTopology()
+        system = forcefield.createSystem(topology)
+
+        self.add_nonbonded(mol_id,system,topology)
+
+        if pdb_file is not None:
+            with open(pdb_file,'r') as f:
+                self.entries[mol_id].pdb = f.read()
+                assert isinstance(self.entries[mol_id].pdb, str)
+
 
     ### Dataset Manipulation ###
     def remove_bonded_parameters(self):
@@ -362,38 +413,35 @@ class DatasetBuilder:
         for mol_id, entry in self.entries.items():
             if mol_id not in self.complete_entries:
                 continue
-            print(mol_id)
             energy_mm = entry.ff_energy['reference_ff']['nonbonded'] - np.mean(entry.ff_energy['reference_ff']['nonbonded'])
             energy_qm = entry.energy - np.mean(entry.energy)
 
             gradient_norm_mm = np.average(np.linalg.norm(entry.ff_gradient['reference_ff']['nonbonded'],axis=2),axis=1)
             gradient_norm_qm = np.average(np.linalg.norm(entry.gradient,axis=2),axis=1)
 
+            EPS = 1e-6
+
             bad_idxs = []
             for j in range(len(energy_qm)):
-                if (energy_mm[j] / energy_qm[j] > 2 and energy_mm[j] > 10 ) or (gradient_norm_mm[j]/gradient_norm_qm[j] > 2 and gradient_norm_mm[j] > 10):
-                    print(f"bad MM energy for {mol_id} conformation {j}")
-                    print(energy_mm[j],energy_qm[j])
-                    print(gradient_norm_mm[j],gradient_norm_qm[j])
+                if (np.abs(energy_mm[j]) / np.abs((energy_qm[j]+EPS)) > 2 and energy_mm[j] > 10 ) or (np.abs(gradient_norm_mm[j])/(np.abs(gradient_norm_qm[j])+EPS) > 2 and gradient_norm_mm[j] > 10):
+                    logging.info(f"bad MM energy for {mol_id} conformation {j}")
                     bad_idxs.append(j)
             if len(bad_idxs) > 0:
-                print(f" Removing conformations {bad_idxs}")
-                print(len(entry.energy))
+                logging.info(f" Removing conformations {bad_idxs}")
                 try:
                     entry.delete_states(bad_idxs)
                     count_remove['conformations'] += len(bad_idxs)
                 except ValueError as e:
-                    print(e)
-                    print(f"Removing dataset entry {mol_id}")
+                    logging.warning(e)
+                    logging.info(f"Removing dataset entry {mol_id}")
                     rmv_entries.append(mol_id)
-                print(len(entry.energy))
 
-        print(f"Removing entries: {rmv_entries}")
+        logging.info(f"Removing entries: {rmv_entries}")
         for rmv_entry in rmv_entries:
             self.entries.pop(rmv_entry,None)
             self.complete_entries.remove(rmv_entry)
         count_remove['entries'] = len(rmv_entries)
-        print(f"Removed {count_remove['entries']} molecule entries and {count_remove['conformations']} conformations.")
+        logging.info(f"Removed {count_remove['entries']} molecule entries and {count_remove['conformations']} conformations.")
 
 
     ### Dataset Writing ###
@@ -403,12 +451,12 @@ class DatasetBuilder:
         dataset_dir.mkdir(parents=True,exist_ok=True)
         npzs_existing = list(dataset_dir.glob('*npz'))
         if len(npzs_existing) > 0:
-            print(f"{len(npzs_existing)} npz files already in output directory!")
+            logging.info(f"{len(npzs_existing)} npz files already in output directory!")
             if not overwrite:
-                print(f"Not writing dataset because npz files are already in directory!")
+                logging.warning(f"Not writing dataset because npz files are already in directory!")
                 return
             else:
-                print('Removing .npz files in dataset directory')
+                logging.info('Removing .npz files in dataset directory')
                 for file in dataset_dir.glob('*.npz'):
                     file.unlink()
         mol_ids = self.entries.keys()
@@ -416,11 +464,11 @@ class DatasetBuilder:
         for entry_idx in self.complete_entries:
             if entry_idx in mol_ids:
                 output_entries.append(entry_idx)
-        print(f"Writing {len(output_entries)} complete entries out of {len(self.entries)} total entries in the DatasetBuilder.")
+        logging.info(f"Writing {len(output_entries)} complete entries out of {len(self.entries)} total entries in the DatasetBuilder.")
         for output_entry_idx in output_entries:
             self.entries[output_entry_idx].save(dataset_dir / f"{output_entry_idx}.npz")
         if delete_dgl:
-            print(f"Clearing dgl dataset with tag: {dataset_dir.name}")
+            logging.info(f"Clearing dgl dataset with tag: {dataset_dir.name}")
             clear_tag(dataset_dir.name)
 
     def write_pdb(self, pdb_dir: Union[str,Path]):

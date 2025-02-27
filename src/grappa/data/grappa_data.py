@@ -8,7 +8,7 @@ import logging
 from grappa.data.dataset import Dataset
 from grappa.data.graph_data_loader import GraphDataLoader
 from grappa.utils.data_utils import get_moldata_path
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 class GrappaData(pl.LightningDataModule):
     def __init__(self,

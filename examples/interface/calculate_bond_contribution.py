@@ -57,11 +57,11 @@ bond_ks = g.nodes['n2'].data['k'].detach().cpu().numpy()
 # %%
 
 """
-For calculating the bond energies, we also need to obtain the bond lengths, whcalc_coordsh can be done using the InternalCoordinates module. But first, we need to add 3D information (the positions of the atoms) to the 2D molecular graph.
+For calculating the bond energies, we also need to obtain the bond lengths, which can be done using the InternalCoordinates module. But first, we need to add 3D information (the positions of the atoms) to the 2D molecular graph.
 """
 xyz_angstrom = PDBFile(PDBPATH).getPositions().value_in_unit(angstrom)
 
-# construct torch tensor of shape (n_atoms, 3) and add batch dimension for conformations, whcalc_coordsh is expected by grappa
+# construct torch tensor of shape (n_atoms, 3) and add batch dimension for conformations, which is expected by grappa
 # shape (n_atoms, n_confs, 3)
 xyz_angstrom = torch.tensor(xyz_angstrom).unsqueeze(1)
 

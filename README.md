@@ -25,6 +25,7 @@ Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://p
 
 <details open><summary><b>Table of contents</b></summary>
 
+- [Tutorials](#tutorials)
 - [Using the Grappa force field](#using-the-grappa-force-field)
 - [Installation](#installation-for-use-as-force-field)
 - [Installation for development](#installation-for-the-development-of-custom-grappa-force-fields)
@@ -48,6 +49,13 @@ Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://p
   </i></p>
 </details>
 
+## Tutorials
+We provide instructive example scripts for both application and training on custom datasets in the following Google Colab notebooks that run entirely on the cloud and do not require any local installation:
+- [Using Grappa as GROMACS force field](https://colab.research.google.com/drive/1C1ebqR9CnxkMLSR3aJ87zcY2W_nqIMmN?usp=sharing)
+- [Using Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
+- [Training Grappa models](https://colab.research.google.com/drive/1HCsFIGh8mQu2F9acWw7YFAabAhEjZRfc?usp=sharing)
+- [Creating and training on custom datasets](https://colab.research.google.com/drive/143Ycnof3-9TLO7P8CWLsH7K0TMHMfr6s?usp=sharing)
+
 
 ## Using the Grappa Force Field
 
@@ -55,9 +63,7 @@ The current version of Grappa only predicts bonded parameters; the nonbonded par
 The input to Grappa is therefore a graph representation of the system of interest that already contains information on the nonbonded parameters.
 Currently, Grappa is compatible with GROMACS and OpenMM.
 
-For instructive example scripts, see the following Google Colab notebooks that run entirely on the cloud and do not require any local installation:
-- [Grappa as GROMACS force field](https://colab.research.google.com/drive/1C1ebqR9CnxkMLSR3aJ87zcY2W_nqIMmN?usp=sharing)
-- [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
+For instructive example scripts, see the Google Colab tutorials ([GROMACS](https://colab.research.google.com/drive/1C1ebqR9CnxkMLSR3aJ87zcY2W_nqIMmN?usp=sharing), [OpenMM](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)).
 
 ### GROMACS
 
@@ -118,8 +124,6 @@ Also see the Colab Notebook: [Grappa as OpenMM force field](https://colab.resear
 
 For using Grappa in GROMACS or OPENMM, Grappa in cpu mode is sufficient since the inference runtime of Grappa is usually small compared to the simulation runtime. For training, gpu mode is advised, see below.
 
-### CPU mode
-
 Create a conda environment with python 3.10:
 
 ```{bash}
@@ -139,23 +143,6 @@ pip install kimmdy>=6.8.3
 ```
 
 The installation is also part of the Colab Notebooks [Grappa as GROMACS force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing) and [Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
-
-### Installation from source (CPU mode)
-
-To install Grappa from source, clone the repository and install requirements and the package itself with pip:
-
-```{bash}
-git clone https://github.com/hits-mbm-dev/grappa.git
-cd grappa
-
-pip install -r installation_utils/cpu_requirements.txt
-pip install -e .
-```
-
-Verify the installation by running
-```
-pytest
-```
 
 ### GROMACS
 
@@ -187,6 +174,22 @@ pytest
 pytest -m slow
 ```
 
+### Installation from source (CPU mode)
+
+To install Grappa from source, clone the repository and install requirements and the package itself with pip:
+
+```{bash}
+git clone https://github.com/hits-mbm-dev/grappa.git
+cd grappa
+
+pip install -r installation_utils/cpu_requirements.txt
+pip install -e .
+```
+
+Verify the installation by running
+```
+pytest
+```
 
 ## Installation for the development of custom Grappa force fields
 

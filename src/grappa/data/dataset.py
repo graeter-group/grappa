@@ -20,7 +20,7 @@ import copy
 import numpy as np
 import logging
 import torch
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # inherit from torch ds:
 class Dataset(torch.utils.data.Dataset):

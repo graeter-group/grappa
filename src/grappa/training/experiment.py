@@ -1,4 +1,4 @@
-# Experiment class inspired by https://github.com/microsoft/protein-frame-flow, Copyright (c) Microsoft Corporation.
+# Experiment class inspired by https://github.com/microsoft/protein-frame-flow
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -120,10 +120,6 @@ class Experiment:
 
         callbacks = []
 
-        logger = WandbLogger(
-            **self._experiment_cfg.wandb,
-        )
-
         # Checkpoint directory.
         self.ckpt_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Checkpoints saved to {self.ckpt_dir}")
@@ -138,18 +134,26 @@ class Experiment:
 
         # Log the config to wandb
         self._cfg.experiment = self._experiment_cfg
-        # NOTE: does not work if multiple gpus are present!
-        if isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config):
-            cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
-            flat_cfg = dict(flatten_dict(cfg_dict))
-            logger.experiment.config.update(flat_cfg)
+
+        if self._experiment_cfg.use_wandb:
+            logger = WandbLogger(
+                **self._experiment_cfg.wandb,
+            )
+
+            # NOTE: the following does not work if multiple gpus are present (does not crash but also does not log the config)
+            if isinstance(logger.experiment.config, wandb.sdk.wandb_config.Config):
+                cfg_dict = OmegaConf.to_container(self._cfg, resolve=True)
+                flat_cfg = dict(flatten_dict(cfg_dict))
+                logger.experiment.config.update(flat_cfg)
+        else:
+            logger = None
 
         if self._experiment_cfg.ckpt_path is not None:
             if not str(self._experiment_cfg.ckpt_path).startswith('/'):
                 self._experiment_cfg.ckpt_path = Path(REPO_DIR)/self._experiment_cfg.ckpt_path
 
         if hasattr(self._experiment_cfg, 'ckpt_path') and self._experiment_cfg.ckpt_path is not None:
-            download_model_if_possible(self._experiment_cfg.ckpt_path)
+            use_tag_if_possible(self._experiment_cfg.ckpt_path)
 
         self.trainer = Trainer(
             **self._experiment_cfg.trainer,
@@ -440,9 +444,9 @@ class Experiment:
         self.datamodule.setup()
 
 
-def download_model_if_possible(ckpt_path:Path):
+def use_tag_if_possible(ckpt_path:Path):
     ckpt_path = Path(ckpt_path)
-    if not ckpt_path.exists():
+    if not ckpt_path.exists() and not str(ckpt_path).endswith('.ckpt'):
         url_tags = pd.read_csv(get_published_csv_path(), dtype=str)['tag'].values
         
         if str(ckpt_path) in url_tags:

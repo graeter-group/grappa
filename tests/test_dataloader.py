@@ -13,10 +13,11 @@ def test_download():
     dspath = get_data_path()/'datasets'/'small_example'
     if dspath.exists():
         shutil.rmtree(dspath)
-    dataset_csv = pd.read_csv(get_data_path()/'dataset_tags.csv')
-    if 'small_example' in dataset_csv['tag'].values:
-        dataset_csv = dataset_csv[dataset_csv['tag']!='small_example']
-        dataset_csv.to_csv(get_data_path()/'dataset_tags.csv', index=False)
+    if (get_data_path()/'dataset_tags.csv').exists():
+        dataset_csv = pd.read_csv(get_data_path()/'dataset_tags.csv')
+        if 'small_example' in dataset_csv['tag'].values:
+            dataset_csv = dataset_csv[dataset_csv['tag']!='small_example']
+            dataset_csv.to_csv(get_data_path()/'dataset_tags.csv', index=False)
 
     dataset = Dataset.from_tag('small_example')
     assert dataset is not None

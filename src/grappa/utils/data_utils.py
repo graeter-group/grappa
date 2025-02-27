@@ -1,10 +1,9 @@
 import zipfile
 import os
 import requests
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from pathlib import Path
 from typing import Union
-from tqdm import tqdm
 import logging
 import pandas as pd
 import numpy as np
