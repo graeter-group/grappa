@@ -789,17 +789,17 @@ def get_cterminal_atoms_from_dipeptide(graph: DGLGraph) -> list:
     return get_connected_atoms(second_amide_nitrogen_atom, neighbor_dict, forbidden=[nterminal_carbonly_carbon_atom])
 
 
-def get_percentage_of_atoms(graph: DGLGraph, percentage: float, random_sampling: bool=False) -> list:
+def get_ratio_of_atoms(graph: DGLGraph, ratio: float, random_sampling: bool=False) -> list:
     """
     Get the atom indices for a given percentage of all atoms in the graph.
     
     Args:
         graph (DGLGraph): The DGLGraph object representing the molecular graph.
-        percentage (float): The percentage of atoms to get.
+        ratio (float): The ratio of atoms to get. A ratio of 0 will return an empty list, while a ratio of 1 will return all atom indices.
         random_sampling (bool): If True, the atoms are randomly chosen. If False, atoms are selected based on their index and selected atoms are checked for connectivity. Default is False.
     """
     total_atoms = graph.num_nodes("n1")
-    num_atoms = int(total_atoms * percentage + 0.5)
+    num_atoms = int(total_atoms * ratio + 0.5)
     if random_sampling:
         atoms = list(range(total_atoms))
         return random.sample(atoms, num_atoms)
