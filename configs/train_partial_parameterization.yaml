@@ -1,0 +1,34 @@
+# Train a grappa model for paratial parameterization using a dataset derived from the spice-dipeptide-amber99 dataset.
+
+defaults:
+  - data: default
+  - experiment: default
+  - model: default
+  - _self_
+
+model:
+  in_feat_name:
+    - atomic_number
+    - ring_encoding
+    - partial_charge
+    - degree
+    - grappa_atom
+data:
+  data_module:
+    datasets: [spice-dipeptide-amber99-sidechain-grappa]  # The dataset can be obtained by running the script examples/partial_parameterization/create_spice_dipeptide_partial.py
+    partial_param: true
+    partition: [0.8, 0.1, 0.1]
+    splitpath: espaloma_split
+  energy:
+    partial_param: true
+    min_grappa_atoms:
+      bond: 1
+      angle: 1
+      proper: 1
+      improper: 1
+
+experiment:
+  wandb:
+    name: spice-dipeptides_partial_train
+  trainer:
+    max_epochs: 1500

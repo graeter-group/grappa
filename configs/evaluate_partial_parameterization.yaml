@@ -1,0 +1,48 @@
+# Evaluate the vanilla grappa 1.40 model on test datasets derived from the spice-dipeptide-amber99 dataset for partial parameterization.
+defaults:
+  - evaluate: default
+  - _self_
+
+evaluate:
+  ckpt_path: models/grappa-1.4.0/checkpoint.ckpt
+
+  n_bootstrap: 1000
+  accelerator: 'gpu'
+  store_test_data: false
+  plot: false
+
+  classical_force_fields: []
+  # classical_force_fields: [amber99sbildn]
+
+  datasets: []
+
+  pure_test_datasets: 
+    - spice-dipeptide-amber99-sidechain-grappa-test
+    - spice-dipeptide-amber99-all-grappa-test
+    - spice-dipeptide-amber99-random0.1-grappa-test
+    - spice-dipeptide-amber99-random0.2-grappa-test
+    - spice-dipeptide-amber99-random0.3-grappa-test
+    - spice-dipeptide-amber99-random0.4-grappa-test
+    - spice-dipeptide-amber99-random0.5-grappa-test
+    - spice-dipeptide-amber99-random0.6-grappa-test
+    - spice-dipeptide-amber99-random0.7-grappa-test
+    - spice-dipeptide-amber99-random0.8-grappa-test
+    - spice-dipeptide-amber99-random0.9-grappa-test
+    - spice-dipeptide-amber99-connected0.1-grappa-test
+    - spice-dipeptide-amber99-connected0.2-grappa-test
+    - spice-dipeptide-amber99-connected0.3-grappa-test
+    - spice-dipeptide-amber99-connected0.4-grappa-test
+    - spice-dipeptide-amber99-connected0.5-grappa-test
+    - spice-dipeptide-amber99-connected0.6-grappa-test
+    - spice-dipeptide-amber99-connected0.7-grappa-test
+    - spice-dipeptide-amber99-connected0.8-grappa-test
+    - spice-dipeptide-amber99-connected0.9-grappa-test
+
+data:
+  energy:
+    partial_param: true
+    min_grappa_atoms:
+      bond: 1
+      angle: 1
+      proper: 1
+      improper: 1
