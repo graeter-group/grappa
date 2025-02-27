@@ -446,7 +446,7 @@ class Experiment:
 
 def use_tag_if_possible(ckpt_path:Path):
     ckpt_path = Path(ckpt_path)
-    if not ckpt_path.exists() and not ckpt_path.endswith('.ckpt'):
+    if not ckpt_path.exists() and not str(ckpt_path).endswith('.ckpt'):
         url_tags = pd.read_csv(get_published_csv_path(), dtype=str)['tag'].values
         
         if str(ckpt_path) in url_tags:
