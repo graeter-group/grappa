@@ -53,8 +53,8 @@ Paper: [https://pubs.rsc.org/en/content/articlepdf/2025/sc/d4sc05465b](https://p
 We provide instructive example scripts for both application and training on custom datasets in the following Google Colab notebooks that run entirely on the cloud and do not require any local installation:
 - [Using Grappa as GROMACS force field](https://colab.research.google.com/drive/1C1ebqR9CnxkMLSR3aJ87zcY2W_nqIMmN?usp=sharing)
 - [Using Grappa as OpenMM force field](https://colab.research.google.com/drive/1H6leB4hrgB6MttPokeVntcPNFMtzqZto?usp=sharing)
-- [Training Grappa models](FILL IN)
-- [Creating and training on custom datasets](FILL IN)
+- [Training Grappa models](https://colab.research.google.com/drive/1HCsFIGh8mQu2F9acWw7YFAabAhEjZRfc?usp=sharing)
+- [Creating and training on custom datasets](https://colab.research.google.com/drive/143Ycnof3-9TLO7P8CWLsH7K0TMHMfr6s?usp=sharing)
 
 
 ## Using the Grappa Force Field
