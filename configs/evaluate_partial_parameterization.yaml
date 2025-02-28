@@ -16,7 +16,7 @@ evaluate:
 
   datasets: []
 
-  pure_test_datasets: 
+  pure_test_datasets: # The dataset can be obtained by running the script examples/partial_parameterization/create_spice_dipeptide_partial.py and subsequently the script examples/partial_parameterization/create_test_dataset.py
     - spice-dipeptide-amber99-sidechain-grappa-test
     - spice-dipeptide-amber99-all-grappa-test
     - spice-dipeptide-amber99-random0.1-grappa-test
