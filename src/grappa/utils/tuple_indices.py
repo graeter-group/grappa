@@ -141,12 +141,19 @@ def is_proper(ids:Tuple[int,int,int,int], neighbor_dict:Dict)->bool:
 
 
 
-def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, central_atom_position=IMPROPER_CENTRAL_IDX)->Tuple[List[Tuple[int,int,int,int]], List[Tuple[int,int,int,int]]]:
+def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, central_atom_position:int=IMPROPER_CENTRAL_IDX)->Tuple[List[Tuple[int,int,int,int]], List[Tuple[int,int,int,int]]]:
     """
     Returns propers, impropers in the format required by grappa.data.Molecule.
 
     torsion_ids is a list of tuples of atom ids, where each tuple contains four atom ids and each tuple describes a proper or improper torsion. For proper torsions, the order of the atoms is important (atoms that are connected to each other must appear consecutively), for improper torsions, it is not.
+
+    Args:
+    - torsion_ids: List[Tuple[int,int,int,int]]: A list of tuples of atom ids, where each tuple contains four atom ids and each tuple describes a proper or improper torsion.
+    - neighbor_dict: Dict: A dictionary that maps atom ids to lists of neighbor atom ids.
+    - central_atom_position: int: The position of the central atom in the improper torsions. This is a convention.
+
     
+    Returns propers, impropers.
     propers contains the atom ids of proper torsions, where each set of four atom ids only occurs once.
 
     impropers contains the atom ids of improper torsions with the central position at central_atom_position. Each set of atom ids appears three times for the three independent dihedral angles that can be defined for this set of atoms under the constraint that the central atom is given. (There are 6==3! possible permutations, but only 3 are independent because of the antisymmetry of the dihedral angle under exchange of the first and last or the second and third atom.)
@@ -165,13 +172,12 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
         torsion_is_improper, central_idx = is_improper(ids=torsion, neighbor_dict=neighbor_dict)
         torsion_is_proper = is_proper(ids=torsion, neighbor_dict=neighbor_dict)
 
-        # NOTE: CHECK THIS
-        # if a torsion is both proper and improper, we consider it proper.
+        # if a torsion is both proper and improper, we consider it proper (this should not happen)
         if torsion_is_improper and torsion_is_proper:
             torsion_is_improper = False
 
         if not torsion_is_proper and not torsion_is_improper:
-            raise RuntimeError(f"Encountered torsion that is neither proper nor improper: {torsion}")
+            raise RuntimeError(f"Internal error. Encountered torsion that is neither proper nor improper: {torsion}. This usually happens if torsions are obtained from a force field instead of calculating them directly from graph connectivity.")
 
 
         if not torsion_is_improper:

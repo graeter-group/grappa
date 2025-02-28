@@ -58,7 +58,7 @@ def get_subtopology(topology:'openmm.app.topology.Topology', exclude_residues:Li
             ignored_residues[atom.residue.name] += 1
 
     if ignored_residues:
-        logging.info(f"Ignored atoms of the following residues:\n{ignored_residues}")
+        logging.info(f"Ignored atoms of the following residues:\n{dict(ignored_residues)}")
 
     new_atoms = list(new_topology.atoms())
 

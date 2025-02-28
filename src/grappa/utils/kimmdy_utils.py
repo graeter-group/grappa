@@ -6,10 +6,10 @@ This is used for the gromacs wrapper.
 """
 
 # The following conditional imnports are only for pylint, we import the packages in each function call again. otherwise, it will not work if one first installs grappa and only then kimmdy.
-# if importlib.util.find_spec('kimmdy') is not None:
-#     from kimmdy.topology.topology import Topology
-#     from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
-#     from kimmdy.plugins import Parameterizer
+if importlib.util.find_spec('kimmdy') is not None:
+    from kimmdy.topology.topology import Topology
+    from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
+    from kimmdy.plugins import Parameterizer
 
 import logging
 import numpy as np
@@ -242,137 +242,148 @@ def apply_parameters(top: 'Topology', parameters: Parameters, apply_nrs: Set[str
     return
 
 
-class KimmdyGrappaParameterizer('Parameterizer'):
-    '''
-    Kimmdy Parameterizer that uses a Grappa model to parameterize a Topology.
+if importlib.util.find_spec('kimmdy') is not None:
+    from kimmdy.topology.topology import Topology
+    from kimmdy.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
+    from kimmdy.plugins import Parameterizer
 
-    - grappa_instance: Grappa instance to use for parameterization
-    - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
-        - 'amber99': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
-        - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
-    '''
-    def __init__(self, *args, grappa_instance: Grappa, charge_model:str='amber99', plot_path=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.grappa_instance = grappa_instance
-        self.field_of_view = grappa_instance.field_of_view
-        self.charge_model = charge_model
-        self.plot_path = plot_path
+    class KimmdyGrappaParameterizer(Parameterizer):
+        '''
+        Kimmdy Parameterizer that uses a Grappa model to parameterize a Topology.
 
-    def parameterize_topology(
-        self, current_topology: 'Topology', focus_nrs:  Optional[Set[str]] = None
-    ) -> 'Topology':
-        
-        if not focus_nrs:
-            print(f"Parameterizing molecule without focus")
-            build_nrs = set([atom.nr for atom in current_topology.atoms.values()])
-            apply_nrs = build_nrs
-        else:
-            # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
-            field_of_view = self.field_of_view
-            # new parameters are applied to atoms within the field of view of the focus_nrs atoms. 
-            # For all of those to have the same field of view as in the whole molecule, another field of view is added for building the molecule
-            apply_nrs = current_topology.get_neighbors(focus_nrs,field_of_view)
-            build_nrs = current_topology.get_neighbors(apply_nrs,field_of_view)
+        - grappa_instance: Grappa instance to use for parameterization
+        - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
+            - 'amber99': the charges are assigned using a classical force field. For grappa-1.1, this is only possible for peptides and proteins, where classical refers to the charges from the amber99sbildn force field.
+            - 'am1BCC': the charges are assigned using the am1bcc method. These charges need to be used for rna and small molecules in grappa-1.1.
+        '''
+        def __init__(self, *args, grappa_instance: Grappa, charge_model:str='amber99', plot_path=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.grappa_instance = grappa_instance
+            self.field_of_view = grappa_instance.field_of_view
+            self.charge_model = charge_model
+            self.plot_path = plot_path
 
-
-        ## get atoms, bonds, radicals in required format
-        mol = build_molecule(current_topology, build_nrs, charge_model=self.charge_model)
-
-        parameters = self.grappa_instance.predict(mol)
-
-        # create a plot for visual inspection:
-        if self.plot_path is not None:
-            parameters.plot(filename=str(self.plot_path))
-
-        # convert units et cetera
-        parameters = convert_parameters(parameters)
-
-        # apply parameters
-        apply_parameters(current_topology, parameters, build_nrs)
-        return current_topology
-        
-def find_angle(tup: tuple, top: 'Topology') -> Tuple[int, int, int]:
-    """
-    Find the angle tuple in the topology that is equivalent to the given tuple.
-    If no equivalent tuple is found, it logs a warning and returns False.
-    """
-    if not top.angles.get(tup):
-        # try equivalent tuples using the symmetries of the angle:
-        # angle_{ijk} = angle_{kji} (reversal)
-        equivalent_tups = [
-            tuple(reversed(tup))
-        ]
-        
-        tups_in_topology = [tup_eq for tup_eq in equivalent_tups if top.angles.get(tup_eq)]
-
-        if len(tups_in_topology) == 0:
-            logging.warning(
-                f"Ignored parameters with invalid ids: {tup} for angles"
-            )
-            return None
-        elif len(tups_in_topology) > 1:
-            logging.warning(
-                f"Multiple equivalent tuples found for {tup} in angles"
-            )
-        else:
-            tup = tups_in_topology[0]
-    return tup
-
-def find_bond(tup: tuple, top: 'Topology') -> Tuple[int, int]:
-    """
-    Find the bond tuple in the topology that is equivalent to the given tuple.
-    If no equivalent tuple is found, it logs a warning and returns False.
-    """
-    if not top.bonds.get(tup):
-        # try equivalent tuples using the symmetries of the bond:
-        # bond_{ij} = bond_{ji} (reversal)
-        equivalent_tups = [
-            tuple(reversed(tup))
-        ]
-        
-        tups_in_topology = [tup_eq for tup_eq in equivalent_tups if top.bonds.get(tup_eq)]
-
-        if len(tups_in_topology) == 0:
-            logging.warning(
-                f"Ignored parameters with invalid ids: {tup} for bonds"
-            )
-            return None
-        elif len(tups_in_topology) > 1:
-            logging.warning(
-                f"Multiple equivalent tuples found for {tup} in bonds"
-            )
-        else:
-            tup = tups_in_topology[0]
-    return tup
+        def parameterize_topology(
+            self, current_topology: 'Topology', focus_nrs:  Optional[Set[str]] = None
+        ) -> 'Topology':
+            
+            if not focus_nrs:
+                print(f"Parameterizing molecule without focus")
+                build_nrs = set([atom.nr for atom in current_topology.atoms.values()])
+                apply_nrs = build_nrs
+            else:
+                # field of view relates to attention layers and convolutions; + 3 to get dihedrals and ring membership (up to 6 membered rings, for larger rings this should be higher)
+                field_of_view = self.field_of_view
+                # new parameters are applied to atoms within the field of view of the focus_nrs atoms. 
+                # For all of those to have the same field of view as in the whole molecule, another field of view is added for building the molecule
+                apply_nrs = current_topology.get_neighbors(focus_nrs,field_of_view)
+                build_nrs = current_topology.get_neighbors(apply_nrs,field_of_view)
 
 
-def find_proper(tup: tuple, top: 'Topology') -> Tuple[int, int, int, int]:
-    """
-    Find the proper dihedral tuple in the topology that is equivalent to the given tuple.
-    If no equivalent tuple is found, it logs a warning and returns False.
-    """
+            ## get atoms, bonds, radicals in required format
+            mol = build_molecule(current_topology, build_nrs, charge_model=self.charge_model)
 
-    if not top.proper_dihedrals.get(tup):
-        # try equivalent tuples. use the symmetries of the dihedral angle (see Grappa paper appendix):
-        # cos(phi_{ijkl}) = cos(phi_{lkji}) (reversal)
-        # = cos(phi_{ljki}) = cos(phi_{ikjl}) (permutation of the outer atoms)
-        equivalent_tups = [
-            tuple(reversed(tup)),
-            (tup[3], tup[1], tup[2], tup[0]),
-            (tup[0], tup[2], tup[1], tup[3]),
-        ]
-        
-        tups_in_topology = list([tup_eq for tup_eq in equivalent_tups if top.proper_dihedrals.get(tup_eq)])
+            parameters = self.grappa_instance.predict(mol)
 
-        if len(tups_in_topology) == 0:
-            logging.warning(
-                f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
-            )
-            return None
-        elif len(tups_in_topology) > 1:
-            logging.warning(
-                f"Multiple equivalent tuples found for {tup} in proper dihedrals"
-            )
-        else:
-            tup = tups_in_topology[0]
-    return tup
+            # create a plot for visual inspection:
+            if self.plot_path is not None:
+                parameters.plot(filename=str(self.plot_path))
+
+            # convert units et cetera
+            parameters = convert_parameters(parameters)
+
+            # apply parameters
+            apply_parameters(current_topology, parameters, build_nrs)
+            return current_topology
+            
+    def find_angle(tup: tuple, top: 'Topology') -> Tuple[int, int, int]:
+        """
+        Find the angle tuple in the topology that is equivalent to the given tuple.
+        If no equivalent tuple is found, it logs a warning and returns False.
+        """
+        if not top.angles.get(tup):
+            # try equivalent tuples using the symmetries of the angle:
+            # angle_{ijk} = angle_{kji} (reversal)
+            equivalent_tups = [
+                tuple(reversed(tup))
+            ]
+            
+            tups_in_topology = [tup_eq for tup_eq in equivalent_tups if top.angles.get(tup_eq)]
+
+            if len(tups_in_topology) == 0:
+                logging.warning(
+                    f"Ignored parameters with invalid ids: {tup} for angles"
+                )
+                return None
+            elif len(tups_in_topology) > 1:
+                logging.warning(
+                    f"Multiple equivalent tuples found for {tup} in angles"
+                )
+            else:
+                tup = tups_in_topology[0]
+        return tup
+
+    def find_bond(tup: tuple, top: 'Topology') -> Tuple[int, int]:
+        """
+        Find the bond tuple in the topology that is equivalent to the given tuple.
+        If no equivalent tuple is found, it logs a warning and returns False.
+        """
+        if not top.bonds.get(tup):
+            # try equivalent tuples using the symmetries of the bond:
+            # bond_{ij} = bond_{ji} (reversal)
+            equivalent_tups = [
+                tuple(reversed(tup))
+            ]
+            
+            tups_in_topology = [tup_eq for tup_eq in equivalent_tups if top.bonds.get(tup_eq)]
+
+            if len(tups_in_topology) == 0:
+                logging.warning(
+                    f"Ignored parameters with invalid ids: {tup} for bonds"
+                )
+                return None
+            elif len(tups_in_topology) > 1:
+                logging.warning(
+                    f"Multiple equivalent tuples found for {tup} in bonds"
+                )
+            else:
+                tup = tups_in_topology[0]
+        return tup
+
+
+    def find_proper(tup: tuple, top: 'Topology') -> Tuple[int, int, int, int]:
+        """
+        Find the proper dihedral tuple in the topology that is equivalent to the given tuple.
+        If no equivalent tuple is found, it logs a warning and returns False.
+        """
+
+        if not top.proper_dihedrals.get(tup):
+            # try equivalent tuples. use the symmetries of the dihedral angle (see Grappa paper appendix):
+            # cos(phi_{ijkl}) = cos(phi_{lkji}) (reversal)
+            # = cos(phi_{ljki}) = cos(phi_{ikjl}) (permutation of the outer atoms)
+            equivalent_tups = [
+                tuple(reversed(tup)),
+                (tup[3], tup[1], tup[2], tup[0]),
+                (tup[0], tup[2], tup[1], tup[3]),
+            ]
+            
+            tups_in_topology = list([tup_eq for tup_eq in equivalent_tups if top.proper_dihedrals.get(tup_eq)])
+
+            if len(tups_in_topology) == 0:
+                logging.warning(
+                    f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
+                )
+                return None
+            elif len(tups_in_topology) > 1:
+                logging.warning(
+                    f"Multiple equivalent tuples found for {tup} in proper dihedrals"
+                )
+            else:
+                tup = tups_in_topology[0]
+        return tup
+
+
+else:
+    class KimmdyGrappaParameterizer:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("kimmdy package not found. Please install kimmdy BEFORE installing grappa to use the KimmdyGrappaParameterizer. You can install kimmdy via pip install kimmdy.")

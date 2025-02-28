@@ -109,7 +109,6 @@ class Molecule():
 
     def _validate(self):
         # check the input for consistency
-        # TODO: compare to current input validation
         pass
     
     
@@ -171,21 +170,41 @@ class Molecule():
         for i, proper in enumerate(self.propers):
             self.propers[i] = (proper[0], proper[1], proper[2], proper[3]) if proper[0] < proper[3] else (proper[3], proper[2], proper[1], proper[0])
 
+    @staticmethod
+    def interactions_from_openmm_topology(openmm_topology):
+        """
+        Extract atom_ids, bonds, angles and proper torsions from an openmm topology.
+        The atom_ids are the ids in the topology.
+        Returns a neighbor_dict, atom_ids, bonds, angles, propers.
+        """
+        import openmm.unit as openmm_unit
+        from openmm import System
+        from openmm.app import Topology as OpenMMTopology
+
+        assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
+
+        atom_ids = [int(atom.id) for atom in openmm_topology.atoms()] # assume that the id in the topology is the index in the system.
+
+        bonds = []
+        for bond in openmm_topology.bonds():
+            bonds.append((bond[0].id, bond[1].id)) # here we use the id, as in atom_ids
+
+        neighbor_dict = tuple_indices.get_neighbor_dict(bonds, sort=True)
+        tuple_dict = tuple_indices.get_idx_tuples(bonds=bonds, is_sorted=True, neighbor_dict=neighbor_dict)
+        angles = tuple_dict['angles']
+        propers = tuple_dict['propers']
+
+        return neighbor_dict, atom_ids, bonds, angles, propers
+
+
 
     @classmethod
     def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None'):
         """
-        Create a Molecule from an openmm system. The bonds are extracted from the HarmonicBondForce of the system. For improper torsions, those of the openmm system are used.
+        Create a Molecule from an openmm system. The atom_ids, bonds, angles, and proper torsions are extracted from the topology. For improper torsions, those of the openmm system are used.
+        NOTE: The topology ids have to correspond to the indices of the atoms in the system!
+        The topology may be a sub-topology of the full system, e.g. without solvant.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
-        The indices are those of the topology.
-        the topology may be a sub-topology of the full system, e.g. without solvant. The indices have to correspond to the indices of the atoms in the system.
-        Arguments:
-            - openmm_system: an openmm system
-            - openmm_topology: an openmm topology
-            - partial_charges: a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system.
-            - ring_encoding: if False, the ring encoding feature (for which rdkit is needd) is not added.
-            - mapped_smiles: the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'.
-
             
         Args:
             openmm_system ([openmm.System]): an openmm system defining the improper torsions and, if partial_charges is None, the partial charges.
@@ -193,6 +212,7 @@ class Molecule():
             partial_charges ([type], optional): a list of partial charges for each atom in units of the elementary charge. If None, the partial charges are obtained from the openmm system. Defaults to None.
             ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
+            charge_model (str, optional): deprecated. Defaults to 'None'.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
@@ -204,21 +224,10 @@ class Molecule():
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
 
         # indices in the system:
-        if openmm_system.getNumParticles() > len(list(openmm_topology.atoms())):
-            atom_idxs = [int(atom.id) for atom in openmm_topology.atoms()] # assume that the id in the topology is the index in the system.
-        elif openmm_system.getNumParticles() == len(list(openmm_topology.atoms())):
-            atom_idxs = list(range(openmm_system.getNumParticles()))
-        else:
+        if not len(list(openmm_topology.atoms())) <= openmm_system.getNumParticles():
             raise ValueError(f"the number of particles in the system ({openmm_system.getNumParticles()}) must be equal to or greater than the number of atoms in the topology ({len(list(openmm_topology.atoms()))})")
-            
-        bonds = []
-        for bond in openmm_topology.bonds():
-            bonds.append((bond[0].index, bond[1].index)) # here we use the index in atom_idxs
 
-        neighbor_dict = tuple_indices.get_neighbor_dict(bonds, sort=True)
-        tuple_dict = tuple_indices.get_idx_tuples(bonds=bonds, is_sorted=True, neighbor_dict=neighbor_dict)
-        angles = tuple_dict['angles']
-        propers = tuple_dict['propers']
+        neighbor_dict, atom_idxs, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
         # get the improper torsions:
         all_torsions = []

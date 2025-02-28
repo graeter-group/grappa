@@ -10,6 +10,7 @@ import numpy as np
 import shutil
 import pkg_resources
 import grappa
+import json
 
 def get_data_csv_path()->Path:
     '''
@@ -244,3 +245,14 @@ def download_zipped_dir(url:str, target_dir:Path):
 
     logging.info(f"Downloaded to {target_dir}")
     
+
+def load_splitfile(splitpath:str):
+    # try to find canonical positions for the split file
+    if isinstance(splitpath, str):
+        splitpath = Path(splitpath)
+    if not splitpath.exists():
+        # assume its a tag
+        splitpath = get_moldata_path(tag=splitpath)/'split.json'
+    assert splitpath.exists(), f"Split file {splitpath} does not exist."
+    split_ids = json.load(open(splitpath, 'r'))
+    return split_ids

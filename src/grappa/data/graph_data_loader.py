@@ -98,7 +98,7 @@ class GraphDataLoader(DataLoader):
         assert isinstance(conf_strategy, str) or isinstance(conf_strategy, int), f"conf_strategy must be a str or int, but got {type(conf_strategy)}"
         assert balance_factor >= 0 and balance_factor <= 1, f"balance_factor must be between 0 and 1, but got {balance_factor}"
 
-        if shuffle and (len(weights) or balance_factor>0) > 0:
+        if shuffle and (len(weights) or balance_factor>0) and (len(dataset)>0) > 0:
             if balance_factor > 0:
                 all_names = [dsname for _, dsname in dataset]
                 occurence_ratios = {name: all_names.count(name)/len(all_names) for name in set(all_names)}
@@ -131,12 +131,12 @@ class GraphDataLoader(DataLoader):
 
             sampler = torch.utils.data.WeightedRandomSampler(sample_weights, len(sample_weights), replacement=True)
 
-            return super().__init__(dataset, *args, collate_fn=get_collate_fn(conf_strategy=conf_strategy, deep_copies_of_same_graphs=True), sampler=sampler, **kwargs)
-        elif len(weights) > 0:
-            raise ValueError("Weights are only supported with shuffle=True") 
-        else:
+            return super().__init__(dataset, *args, collate_fn=get_collate_fn(conf_strategy=conf_strategy, deep_copies_of_same_graphs=True), sampler=sampler, **kwargs)   
+        elif len(dataset) > 0:
             return super().__init__(dataset, *args, collate_fn=get_collate_fn(conf_strategy=conf_strategy), shuffle=shuffle, **kwargs)
-
+        else:
+            # return empty DataLoader:
+            return super().__init__([])
 
     def to(self, device):
         """

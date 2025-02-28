@@ -35,7 +35,7 @@ def get_published_csv_path()->Path:
 def get_path_from_tag(tag:str='latest')->Path:
 
     if tag == 'latest':
-        tag = 'grappa-1.4.1-radical'
+        tag = 'grappa-1.4.0'
 
     csv_path = get_repo_dir() / 'models' / 'models.csv'
     published_csv_path = get_published_csv_path()

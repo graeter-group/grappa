@@ -7,7 +7,7 @@ import copy
 import logging
 from grappa.data.dataset import Dataset
 from grappa.data.graph_data_loader import GraphDataLoader
-from grappa.utils.data_utils import get_moldata_path
+from grappa.utils.data_utils import load_splitfile
 from tqdm.auto import tqdm
 
 class GrappaData(pl.LightningDataModule):
@@ -148,14 +148,8 @@ class GrappaData(pl.LightningDataModule):
 
         # try to find canonical positions for the split file
         if self.splitpath is not None:
-            if isinstance(self.splitpath, str):
-                self.splitpath = Path(self.splitpath)
-            if not self.splitpath.exists():
-                # assume its a tag
-                self.splitpath = get_moldata_path(tag=self.splitpath)/'split.json'
-            assert self.splitpath.exists(), f"Split file {self.splitpath} does not exist."
-            self.split_ids = json.load(open(self.splitpath, 'r'))
-            logging.info(f'Using split ids from {self.splitpath}')
+            self.split_ids = load_splitfile(self.splitpath)
+            logging.info(f"Loaded split ids from {self.splitpath}")
 
         # starting from the passed split ids or path, add more ids that are not included yet
         self.split_ids = dataset.calc_split_ids(partition=self.partition, seed=self.seed, existing_split=self.split_ids)
