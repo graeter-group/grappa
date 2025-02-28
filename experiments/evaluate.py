@@ -59,10 +59,10 @@ def main(cfg: DictConfig) -> None:
         ckpt_cfg.data.data_module.ref_terms = complement
         ckpt_cfg.data.energy.terms = cfg.evaluate.grappa_contributions
 
-    experiment = Experiment(config=ckpt_cfg, load_data=False)
+    experiment = Experiment(config=ckpt_cfg, load_data=True)
 
     if cfg.evaluate.eval_model:
-        experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=True, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, ckpt_data_config=ckpt_data_config, store_test_data=cfg.evaluate.store_test_data, splitpath=cfg.evaluate.splitpath)
+        experiment.test(ckpt_path=ckpt_path, n_bootstrap=cfg.evaluate.n_bootstrap, test_data_path=cfg.evaluate.test_data_path, load_split=len(ckpt_cfg.data.data_module.datasets)>0, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, ckpt_data_config=ckpt_data_config, store_test_data=cfg.evaluate.store_test_data, splitpath=cfg.evaluate.splitpath)
 
     experiment.eval_classical(ckpt_path=ckpt_path, classical_force_fields=cfg.evaluate.classical_force_fields, test_data_path=cfg.evaluate.test_data_path, load_split=cfg.evaluate.eval_model, n_bootstrap=cfg.evaluate.n_bootstrap, plot=cfg.evaluate.plot, gradient_contributions=cfg.evaluate.gradient_contributions, store_test_data=cfg.evaluate.store_test_data, splitpath=cfg.evaluate.splitpath)
     experiment.compare_forcefields(ckpt_path=ckpt_path, forcefields=cfg.evaluate.compare_forcefields, gradient_contributions=cfg.evaluate.gradient_contributions)

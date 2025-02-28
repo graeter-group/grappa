@@ -18,8 +18,9 @@ from grappa.training.lightning_model import GrappaLightningModel
 from grappa.utils.training_utils import to_df
 from grappa.utils.run_utils import flatten_dict, unflatten_dict
 from grappa.utils.plotting import make_scatter_plots, compare_scatter_plots
-from grappa.models import GrappaModel, Energy
 from grappa.utils.model_loading_utils import get_model_dir, get_published_csv_path, get_path_from_tag
+from grappa.utils.data_utils import get_moldata_path
+from grappa.models import GrappaModel, Energy
 import pandas as pd
 import torch
 import logging
@@ -436,7 +437,13 @@ class Experiment:
         """
         splitpath = Path(splitpath)
         if not splitpath.exists():
-            raise FileNotFoundError(f"Split file not found at {splitpath}")
+            # assume its a tag
+            splitpath_ = get_moldata_path(tag=splitpath)/'split.json'
+            if not splitpath_.exists():
+                raise FileNotFoundError(f"Split file not found at {splitpath} or {splitpath_}")
+            else:
+                splitpath = splitpath_
+
         data_cfg = self._data_cfg
         data_cfg.splitpath = str(splitpath)
         data_cfg.partition = [0.,0.,1.] # all the data that is not in the split file is used for testing (since we assume its unseen)

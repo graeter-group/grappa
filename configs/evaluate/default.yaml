@@ -1,7 +1,7 @@
 defaults:
   - _self_
 
-ckpt_path: models/grappa-1.4.0/checkpoint.ckpt
+ckpt_path: grappa-1.4.0
 n_bootstrap: 1
 store_test_data: false
 test_data_path: null
@@ -10,7 +10,7 @@ plot: false
 
 classical_force_fields: []
 
-datasets: null
+datasets: []
 pure_test_datasets: null
 ff_lookup: {}
 splitpath: null
