@@ -79,7 +79,7 @@ class GromacsGrappa(Grappa):
         return
 
 
-def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='grappa-1.3', device:str='cpu', include_list:list=[], exclude_list:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
+def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='latest', device:str='cpu', include_list:list=[], exclude_list:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
     if not modelpath is None:
         grappa = GromacsGrappa.from_ckpt(modelpath, device=device)
     else:
