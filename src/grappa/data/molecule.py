@@ -11,6 +11,7 @@ import torch
 from pathlib import Path
 import json
 import importlib
+import warnings
 
 
 class Molecule():
@@ -184,12 +185,14 @@ class Molecule():
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
 
         atom_ids = [int(atom.id) for atom in openmm_topology.atoms()] # assume that the id in the topology is the index in the system.
+        # ensure uniqueness:
+        assert len(atom_ids) == len(set(atom_ids)), f"atom ids must be unique but are not. Found {len(atom_ids)} unique ids out of {len(set(atom_ids))} total ids."
 
         bonds = []
         for bond in openmm_topology.bonds():
             bonds.append((bond[0].id, bond[1].id)) # here we use the id, as in atom_ids
 
-        neighbor_dict = tuple_indices.get_neighbor_dict(bonds, sort=True)
+        neighbor_dict = tuple_indices.get_neighbor_dict(bonds, sort=True, atom_ids=atom_ids)
         tuple_dict = tuple_indices.get_idx_tuples(bonds=bonds, is_sorted=True, neighbor_dict=neighbor_dict)
         angles = tuple_dict['angles']
         propers = tuple_dict['propers']
@@ -199,10 +202,10 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None'):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None', skip_impropers:bool=False):
         """
         Create a Molecule from an openmm system. The atom_ids, bonds, angles, and proper torsions are extracted from the topology. For improper torsions, those of the openmm system are used.
-        NOTE: The topology ids have to correspond to the indices of the atoms in the system!
+        NOTE: The topology ids have to correspond to the indices of the atoms in the system in order to get the impropers right!
         The topology may be a sub-topology of the full system, e.g. without solvant.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
             
@@ -213,6 +216,7 @@ class Molecule():
             ring_encoding (bool, optional): if True, the ring encoding feature (for which rdkit is needd) is added. Defaults to True.
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
             charge_model (str, optional): deprecated. Defaults to 'None'.
+            skip_impropers (bool, optional): if True, the impropers are not added to the molecule. Can be used for debugging. Defaults to False.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
@@ -227,30 +231,42 @@ class Molecule():
         if not len(list(openmm_topology.atoms())) <= openmm_system.getNumParticles():
             raise ValueError(f"the number of particles in the system ({openmm_system.getNumParticles()}) must be equal to or greater than the number of atoms in the topology ({len(list(openmm_topology.atoms()))})")
 
-        neighbor_dict, atom_idxs, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
+        neighbor_dict, atom_ids, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
-        # get the improper torsions:
-        all_torsions = []
-        for force in openmm_system.getForces():
-            if force.__class__.__name__ == 'PeriodicTorsionForce':
-                for i in range(force.getNumTorsions()):
-                    *torsion, _,_,_ = force.getTorsionParameters(i)
-                    assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
+        # IMPROPERS
+        if not skip_impropers:
+            all_torsions = []
+            for force in openmm_system.getForces():
+                if force.__class__.__name__ == 'PeriodicTorsionForce':
+                    for i in range(force.getNumTorsions()):
+                        *torsion, _,_,_ = force.getTorsionParameters(i)
+                        assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
 
-                    # add the torsion if it is between atoms included in the topology:
-                    if all([atom_idx in atom_idxs for atom_idx in torsion]):
-                        all_torsions.append(tuple(torsion))
+                        # add the torsion if it is between atoms included in the topology:
+                        if all([atom_idx in atom_ids for atom_idx in torsion]):
+                            all_torsions.append(tuple(torsion))
 
-        _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
+            _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
+        else:
+            impropers = []
+            warnings.warn(f"Skipping impropers. This is not recommended and should only be used for debugging or when they are manually provided.")
 
+        # PARTIAL CHARGES
+        num_nobonded_forces = 0
         if partial_charges is None:
             # get partial charges from the openmm system:
             partial_charges = []
             for force in openmm_system.getForces():
                 if force.__class__.__name__ == 'NonbondedForce':
-                    for i in atom_idxs:
+                    num_nobonded_forces += 1
+                    if num_nobonded_forces > 1:
+                        raise ValueError(f"More than one NonbondedForce found in the openmm system. This is not supported and indicates an error.")
+                    for i in atom_ids:
                         q, _, _ = force.getParticleParameters(i)
                         partial_charges.append(q.value_in_unit(openmm_unit.elementary_charge))
+            
+            if num_nobonded_forces == 0:
+                raise ValueError(f"No NonbondedForce found in the openmm system and no charges were manually provided. This is not supported and indicates an error.")
 
         elif isinstance(partial_charges, int):
             partial_charges = [partial_charges] * len(list(openmm_topology.atoms()))
@@ -260,12 +276,12 @@ class Molecule():
             if not isinstance(partial_charges, list):
                 raise ValueError(f"partial_charges must be None, int or np.ndarray but is {type(partial_charges)}")
 
-        # get atomic numbers (order is the same as atom_idxs)
+        # ATOMIC NUMBERS
         atomic_numbers = []
         for atom in openmm_topology.atoms():
             atomic_numbers.append(atom.element.atomic_number)
 
-        self = cls(atoms=atom_idxs, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True, charge_model=charge_model)
+        self = cls(atoms=atom_ids, bonds=bonds, angles=angles, propers=propers, impropers=impropers, atomic_numbers=atomic_numbers, partial_charges=partial_charges, improper_in_correct_format=True, ring_encoding=ring_encoding, mapped_smiles=mapped_smiles, degree=True, charge_model=charge_model)
 
 
         return self

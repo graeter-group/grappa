@@ -1,14 +1,21 @@
 
 import numpy as np
 from grappa.constants import IMPROPER_CENTRAL_IDX
-from typing import Tuple, Set, Dict, Union, List
+from typing import Tuple, Set, Dict, Union, List, Optional
+import warnings
 
 
 def get_idx_tuples(bonds:List[Tuple[int, int]], neighbor_dict:Dict=None, is_sorted:bool=False)->Dict[str, List[Tuple[int, ...]]]:
     """
     This method will return a dictionary with the keys 'bonds', 'angles' and 'propers'.
-    The values are lists of tuples, where each tuple contains the indices of the atoms involved in the bond, angle or proper torsion.
+    The values are lists of tuples, where each tuple contains the is of the atoms involved in the bond, angle or proper torsion.
     Equivalent tuples are excluded, we sort such that tuple[0] < tuple[-1].
+    
+    Args:
+    - bonds: List[Tuple[int, int]]: A list of tuples of atom ids, where each tuple contains two atom ids and describes a bond.
+    - neighbor_dict: Dict: A dictionary that maps atom ids to lists of neighbor atom ids. If None, it will be generated from the bonds.
+    - is_sorted: bool: If True, we assume that the neighbor lists are sorted, and we do not sort it again. We also assume that the bonds are sorted.
+
     If a neighbor_dict is provided, we use that to construct the angles and propers, otherwise we construct it ourselves.
     If the is_sorted flag is set to True, we assume that the neighbor lists are sorted, and we do not sort it again. We also assume that the bonds are sorted.
     """
@@ -63,7 +70,15 @@ def get_idx_tuples(bonds:List[Tuple[int, int]], neighbor_dict:Dict=None, is_sort
     return d
 
 
-def get_neighbor_dict(bonds:List[Tuple[int, int]], sort:bool=True)->Dict:
+def get_neighbor_dict(bonds:List[Tuple[int, int]], sort:bool=True, atom_ids:Optional[List[int]]=None)->Dict[int, List[int]]:
+    """
+    Returns a dictionary that maps atom ids to lists of neighbor atom ids.
+    The neighbor lists are sorted in ascending order if sort is True.
+    Args:
+    - bonds: List[Tuple[int, int]]: A list of tuples of atom ids, where each tuple contains two atom ids and describes a bond.
+    - sort: bool: If True, the neighbor lists are sorted in ascending order.
+    - atom_ids: Optional[List[int]]: A list of atom ids. If provided adds empty lists for all atom ids that are not in the bonds and prints a warning if any atom ids are not occuring as bond.
+    """
     # generate neighbor_dict dict such that neighbor_dict[atom_id] = [neighbor1, neighbor2, ...]
     neighbor_dict = {}
     for bond in bonds:
@@ -80,59 +95,60 @@ def get_neighbor_dict(bonds:List[Tuple[int, int]], sort:bool=True)->Dict:
         for atom_id, neighbor_list in neighbor_dict.items():
             neighbor_dict[atom_id] = sorted(neighbor_list)
 
+    isolated_atoms = 0
+    if atom_ids is not None:
+        # add empty lists for all atom ids that are not in the bonds
+        for atom_id in atom_ids:
+            if atom_id not in neighbor_dict:
+                neighbor_dict[atom_id] = []
+                isolated_atoms += 1
+    if isolated_atoms > 0:
+        warnings.warn(f"Encountered {isolated_atoms} isolated atoms that are not part of any bond.")
+
     return neighbor_dict
 
 
 
 def is_improper(ids:Tuple[int,int,int,int], neighbor_dict:Dict, central_atom_position:int=None)->bool:
-    # NOTE: this should also return the central atom position and this positions should be consistent in the Molecule class.
     """
     Returns is_improper, actual_central_atom_position.
-    Helper function to check whether the given tuple of indices describes an improper torsion, i.e. whether there is one atom that is connected to all other atoms in the tuple. The index of the central atom in the input tuple is returned as actual_central_atom_position. If known, this can offer an evaluation speedup. This is a convention. In amber force fields, the central atom is the third atom in the tuple, i.e. at position 2. It is advised to not rely on conventions but leave this argument as None.
+    Helper function to check whether the given tuple of indices describes an improper torsion, i.e. whether there is one atom that is connected to all other atoms in the tuple. The index of the central atom in the input tuple is returned as actual_central_atom_position.
     """
-    # check whether the central atom is the connected to all other atoms in the rdkit molecule.
+
+    if central_atom_position is not None:
+        raise DeprecationWarning('central_atom_position is deprecated and has no effect.')
 
     if isinstance(ids, np.ndarray):
         ids = tuple(ids.tolist())
 
-    if not central_atom_position is None:
+    assert all([a in neighbor_dict for a in ids]), f"Internal error. atom id {central_atom} not in ids {ids}. This should not happen."
 
-        central_atom = ids[central_atom_position]
+    # check if isolated atoms are present:
+    for atom_id in ids:
+        if len(neighbor_dict[atom_id]) == 0:
+            # this atom is isolated, so we cannot have an improper torsion
+            warnings.warn(f"Encountered isolated atom in grappa.utils.tuple_indices.check_improper.")
 
+    # try all atoms as potential central atom:
+    # order: 2,1,0,3 because position 2 is the central atom in amber force fields, so most likely (->small speedup)
+    for central_atom in (ids[i] for i in [2,1,0,3]):
         # get the neighbor_dict of the central atom
         neighbor_idxs = neighbor_dict[central_atom]
 
         # for each atom in the torsion, check if it's a neighbor of the central atom
-        for i, atom_id in enumerate(ids):
-            if i != central_atom_position:  # skip the central atom itself
-                if atom_id not in neighbor_idxs:
-                    # if one of the atoms is not connected to it, return False
-                    return False, None
-
-        # if all atoms are connected to the central atom, this is an improper torsion
-        return True, central_atom_position
+        if all([atom_id in neighbor_idxs for atom_id in ids if atom_id != central_atom]):
+            return True, ids.index(central_atom)
     
-    else:
-        # try all atoms as potential central atom:
-        # order: 2,1,0,3 because position 2 is the central atom in amber force fields (->small speedup)
-        for central_atom in (ids[i] for i in [2,1,0,3]):
-            # get the neighbor_dict of the central atom
-            neighbor_idxs = neighbor_dict[central_atom]
-
-            # for each atom in the torsion, check if it's a neighbor of the central atom
-            if all([atom_id in neighbor_idxs for atom_id in ids if atom_id != central_atom]):
-                return True, ids.index(central_atom)
-        
-        # we have not found a central atom.
-        return False, None
+    # we have not found a central atom.
+    return False, None
     
     
 def is_proper(ids:Tuple[int,int,int,int], neighbor_dict:Dict)->bool:
     """
-    Returns is_proper.
+    Returns whether the tuple is a proper torsion (as opposed to no torsion or an improper torsion).
     Helper function to check whether the given tuple of indices describes a proper torsion, i.e. whether ids[0] is connected to ids[1], ids[1] to ids[2] and ids[2] to ids[3].
-    is_proper and is_improper are not per se mutually exclusive. This would require, however, a ring of size 4 which is unusual for molecules.
     """
+    assert all([i in neighbor_dict for i in ids]), f"Internal error. atom id {ids} not in neighbor_dict. This should not happen."
     bond_01 = ids[0] in neighbor_dict[ids[1]]
     bond_12 = ids[1] in neighbor_dict[ids[2]]
     bond_23 = ids[2] in neighbor_dict[ids[3]]
@@ -150,7 +166,7 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
     Args:
     - torsion_ids: List[Tuple[int,int,int,int]]: A list of tuples of atom ids, where each tuple contains four atom ids and each tuple describes a proper or improper torsion.
     - neighbor_dict: Dict: A dictionary that maps atom ids to lists of neighbor atom ids.
-    - central_atom_position: int: The position of the central atom in the improper torsions. This is a convention.
+    - central_atom_position: int: The position in which to put the central atom in the improper torsions.
 
     
     Returns propers, impropers.
@@ -175,6 +191,7 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
         # if a torsion is both proper and improper, we consider it proper (this should not happen)
         if torsion_is_improper and torsion_is_proper:
             torsion_is_improper = False
+            warnings.warn(f"Encountered torsion that is both proper and improper: {torsion}. This should not happen. We will consider it as proper.")
 
         if not torsion_is_proper and not torsion_is_improper:
             raise RuntimeError(f"Internal error. Encountered torsion that is neither proper nor improper: {torsion}. This usually happens if torsions are obtained from a force field instead of calculating them directly from graph connectivity.")

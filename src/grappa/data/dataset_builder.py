@@ -71,6 +71,8 @@ class DatasetBuilder:
     entries: dict[str,MolData] = field(default_factory=dict)
     complete_entries: set[str] = field(default_factory=set)
 
+    skip_impropers: bool = False # can be used for debugging. skips the reading of impropers from the openmm system.
+
     # post init fct:
     def __post_init__(self):
         assert importlib.util.find_spec("openmm") is not None, "The dataset builder class requires the openmm package to be installed."
@@ -346,7 +348,7 @@ class DatasetBuilder:
             return
     
         ## create molecule
-        mol = Molecule.from_openmm_system(system,topology)
+        mol = Molecule.from_openmm_system(system,topology, skip_impropers=self.skip_impropers)
 
         ## get permutation and replace entry molecule
         # reorder atoms of QM data if atomic number list is different
