@@ -179,6 +179,8 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
     improper_set = set([])
     proper_set = set([])
 
+    bad_torsions = []
+
     for torsion in torsion_ids:
 
         if tuple(sorted(torsion)) in improper_set or tuple(sorted(torsion)) in proper_set:
@@ -194,8 +196,9 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
             warnings.warn(f"Encountered torsion that is both proper and improper: {torsion}. This should not happen. We will consider it as proper.")
 
         if not torsion_is_proper and not torsion_is_improper:
-            raise RuntimeError(f"Internal error. Encountered torsion that is neither proper nor improper: {torsion}. This usually happens if torsions are obtained from a force field instead of calculating them directly from graph connectivity.")
-
+            bad_torsions.append(torsion)
+            warnings.warn(f"Encountered torsion that is neither proper nor improper.")
+            continue
 
         if not torsion_is_improper:
             # append the torsion to the list of propers:
@@ -236,5 +239,8 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
 
             # also append the set of atoms
             improper_set.add(tuple(sorted(torsion1)))
+
+    if len(bad_torsions) > 0:
+        raise ValueError(f"Encountered {len(bad_torsions)} torsions that are neither proper nor improper. This should not happen. Problematic torsions: {bad_torsions[:3] if len(bad_torsions) > 3 else bad_torsions}.")
 
     return propers, impropers

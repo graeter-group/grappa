@@ -202,7 +202,7 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None', skip_impropers:bool=False):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None', skip_impropers:bool=False, validate_bonds:bool=True):
         """
         Create a Molecule from an openmm system. The atom_ids, bonds, angles, and proper torsions are extracted from the topology. For improper torsions, those of the openmm system are used.
         NOTE: The topology ids have to correspond to the indices of the atoms in the system in order to get the impropers right!
@@ -217,12 +217,14 @@ class Molecule():
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
             charge_model (str, optional): deprecated. Defaults to 'None'.
             skip_impropers (bool, optional): if True, the impropers are not added to the molecule. Can be used for debugging. Defaults to False.
+            validate_bonds (bool, optional): if True, checks whether the bonds in the openmm system are the same as in the obtained topology. Defaults to True.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
         import openmm.unit as openmm_unit
         from openmm import System
         from openmm.app import Topology as OpenMMTopology
+        from openmm import HarmonicBondForce, PeriodicTorsionForce
 
         assert isinstance(openmm_system, System), f"openmm_system must be an instance of openmm.app.System. but is: {type(openmm_system)}"
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
@@ -233,11 +235,27 @@ class Molecule():
 
         neighbor_dict, atom_ids, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
+        if validate_bonds:
+            num_bond_forces = 0
+            bad_bonds = []
+            for force in openmm_system.getForces():
+                if isinstance(force, HarmonicBondForce):
+                    num_bond_forces += 1
+                    if num_bond_forces > 1:
+                        raise ValueError(f"More than one HarmonicBondForce found in the openmm system. This is not supported and indicates an error.")
+                    for i in range(force.getNumBonds()):
+                        id1, id2, _,_ = force.getBondParameters(i)
+                        # check if the bond is in the topology:
+                        if (id1, id2) not in bonds and (id2, id1) not in bonds:
+                            bad_bonds.append((id1, id2))
+            if len(bad_bonds) > 0:
+                raise ValueError(f"Some bonds in the openmm system are not in the topology: {bad_bonds[:3] if len(bad_bonds) > 3 else bad_bonds}.")
+
         # IMPROPERS
         if not skip_impropers:
             all_torsions = []
             for force in openmm_system.getForces():
-                if force.__class__.__name__ == 'PeriodicTorsionForce':
+                if isinstance(force, PeriodicTorsionForce):
                     for i in range(force.getNumTorsions()):
                         *torsion, _,_,_ = force.getTorsionParameters(i)
                         assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
