@@ -2,6 +2,10 @@ import dgl
 import torch
 
 class InternalCoordinates(torch.nn.Module):
+    """
+    Calculate internal coordinates from Cartesian coordinates and store them as feature 'x' in the graph for the respective level:
+    'n2' for bond lengths, 'n3' for bond angles, 'n4' for proper dihedrals, and 'n4_improper' for improper dihedrals.
+    """
     def __init__(self, *args, **kwargs):
         super(InternalCoordinates, self).__init__()
         self.args = args
