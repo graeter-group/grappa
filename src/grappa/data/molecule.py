@@ -233,7 +233,6 @@ class Molecule():
 
         if verbose:
             logging.info(f"Loaded OpenMM system with {openmm_system.getNumParticles()} particles.")
-            logging.info(f"Loaded OpenMM topology with {len(list(openmm_topology.atoms()))} atoms.")
 
         # indices in the system:
         if not len(list(openmm_topology.atoms())) <= openmm_system.getNumParticles():
@@ -242,7 +241,7 @@ class Molecule():
         neighbor_dict, atom_ids, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
         if verbose:
-            logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds. Min atom id: {min(atom_ids)}, max atom id: {max(atom_ids)}")
+            logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
 
         if max(atom_ids) >= openmm_system.getNumParticles():
             raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max(atom_ids)} but the system has only {openmm_system.getNumParticles()} particles, so this can not be the case. You might need to shift your topology ids to start at zero.")

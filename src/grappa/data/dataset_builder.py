@@ -17,6 +17,7 @@ import importlib.util
 from openmm import System
 from openmm.app import Topology, ForceField, PDBFile
 import logging
+import warnings
 
 def match_molecules(molecules: list[Molecule], verbose = False, _topology_matching=False) -> dict[int,list[int]]:
     """
@@ -378,9 +379,14 @@ class DatasetBuilder:
         ## create molecule
         mol = Molecule.from_openmm_system(system, topology, skip_impropers=self.skip_impropers, verbose=True)
 
-        ## get permutation and replace entry molecule
-        # reorder atoms of QM data if atomic number list is different
-        if mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers or mol.bonds != self.entries[mol_id].molecule.bonds:
+        # if the atomic numbers match but the number of bonds is different, assume the order is fine and ASE merely didnt identify the right bonds. print a warning then.
+        if mol.atomic_numbers == self.entries[mol_id].molecule.atomic_numbers and len(mol.bonds) != len(self.entries[mol_id].molecule.bonds):
+            bonds_ase = self.entries[mol_id].molecule.bonds
+            bonds_top = mol.bonds
+            logging.warning(f"Number of bonds in molecule derived from the gromacs topology ({len(bonds_top)}) is not the same as in the molecule constructed from ASE ({len(bonds_ase)})!\nThe following bonds are present in the ASE molecule but not in the topology: {set(bonds_ase) - set(bonds_top)}\nThe following bonds are present in the topology but not in the ASE molecule: {set(bonds_top) - set(bonds_ase)}\nIgnoring this for now and picking the topology from the gromacs force field. But this indicates either broken states (atoms that are too close/far) or topologies that are not read properly. Check whether the gromacs-topology-bonds metioned above are what you intend.")
+
+        # it might be that the atoms are permuted, then resolve this by checking for isomorphism and calculating an isomorphic permutation:
+        elif mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers or mol.bonds != self.entries[mol_id].molecule.bonds:
             logging.info(f"Atomic numbers of QM data and force field topology doesn't match! Matching by graph isomorphism.")
             permutations = match_molecules([mol,self.entries[mol_id].molecule], _topology_matching=True)
             if len(permutations) != 2:
