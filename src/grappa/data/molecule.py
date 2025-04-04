@@ -12,6 +12,7 @@ from pathlib import Path
 import json
 import importlib
 import warnings
+import logging
 
 
 class Molecule():
@@ -202,10 +203,10 @@ class Molecule():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None', skip_impropers:bool=False):
+    def from_openmm_system(cls, openmm_system, openmm_topology, partial_charges:Union[list,float,np.ndarray]=None, ring_encoding:bool=True, mapped_smiles:str=None, charge_model:str='None', skip_impropers:bool=False, validate_bonds:bool=True, verbose:bool=False):
         """
         Create a Molecule from an openmm system. The atom_ids, bonds, angles, and proper torsions are extracted from the topology. For improper torsions, those of the openmm system are used.
-        NOTE: The topology ids have to correspond to the indices of the atoms in the system in order to get the impropers right!
+        NOTE: The topology ids have to correspond to the indices of the atoms in the system!
         The topology may be a sub-topology of the full system, e.g. without solvant.
         improper_central_atom_position: the position of the central atom in the improper torsions. Defaults to 2, i.e. the third atom in the tuple, which is the amber convention.
             
@@ -217,15 +218,21 @@ class Molecule():
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
             charge_model (str, optional): deprecated. Defaults to 'None'.
             skip_impropers (bool, optional): if True, the impropers are not added to the molecule. Can be used for debugging. Defaults to False.
+            validate_bonds (bool, optional): if True, checks whether the bonds in the openmm system are the same as in the obtained topology. Defaults to True.
+            verbose (bool, optional): if True, logs information about the molecule and the openmm system. Defaults to False.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
 
         import openmm.unit as openmm_unit
         from openmm import System
         from openmm.app import Topology as OpenMMTopology
+        from openmm import HarmonicBondForce, PeriodicTorsionForce
 
         assert isinstance(openmm_system, System), f"openmm_system must be an instance of openmm.app.System. but is: {type(openmm_system)}"
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
+
+        if verbose:
+            logging.info(f"Loaded OpenMM system with {openmm_system.getNumParticles()} particles.")
 
         # indices in the system:
         if not len(list(openmm_topology.atoms())) <= openmm_system.getNumParticles():
@@ -233,11 +240,38 @@ class Molecule():
 
         neighbor_dict, atom_ids, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
+        if verbose:
+            logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
+
+        if max(atom_ids) >= openmm_system.getNumParticles():
+            raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max(atom_ids)} but the system has only {openmm_system.getNumParticles()} particles, so this can not be the case. You might need to shift your topology ids to start at zero.")
+
+        if validate_bonds:
+            num_bond_forces = 0
+            bad_bonds = []
+            num_bonds_subsystem = 0
+            num_bonds_system = 0
+            for force in openmm_system.getForces():
+                if isinstance(force, HarmonicBondForce):
+                    num_bond_forces += 1
+                    if num_bond_forces > 1:
+                        raise ValueError(f"More than one HarmonicBondForce found in the openmm system. This is not supported and indicates an error.")
+                    for i in range(force.getNumBonds()):
+                        id1, id2, _,_ = force.getBondParameters(i)
+                        num_bonds_system += 1
+                        if id1 in atom_ids and id2 in atom_ids:
+                            num_bonds_subsystem += 1
+                            # check if the bond is in the topology:
+                            if (id1, id2) not in bonds and (id2, id1) not in bonds:
+                                bad_bonds.append((id1, id2))
+            if len(bad_bonds) > 0:
+                raise ValueError(f"Some bonds in the openmm system are not in the topology. Num bonds in the topology: {len(bonds)}, num bonds in the openmm (sub-)system: {num_bonds_subsystem}, num bonds in the full openmm system: {num_bonds_system}, problematic bonds: {str(bad_bonds[0])+', '+str(bad_bonds[1])+', '+str(bad_bonds[2])+',...' if len(bad_bonds) > 3 else bad_bonds}.")
+
         # IMPROPERS
         if not skip_impropers:
             all_torsions = []
             for force in openmm_system.getForces():
-                if force.__class__.__name__ == 'PeriodicTorsionForce':
+                if isinstance(force, PeriodicTorsionForce):
                     for i in range(force.getNumTorsions()):
                         *torsion, _,_,_ = force.getTorsionParameters(i)
                         assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
@@ -247,6 +281,8 @@ class Molecule():
                             all_torsions.append(tuple(torsion))
 
             _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
+            if verbose:
+                logging.info(f"Found {len(impropers)} impropers in the openmm system.")
         else:
             impropers = []
             warnings.warn(f"Skipping impropers. This is not recommended and should only be used for debugging or when they are manually provided.")
@@ -712,7 +748,7 @@ class Molecule():
     
 
     @classmethod
-    def from_ase(cls, atoms, bonds=None, partial_charges:List[float]=None, impropers=[]):
+    def from_ase(cls, atoms, bonds=None, partial_charges:List[float]=None, impropers=[], verbose:bool=False):
         """
         Args:
             atoms (ase.Atoms): an ase.Atoms object
@@ -726,6 +762,7 @@ class Molecule():
 
         assert isinstance(atoms, Atoms), f"atoms must be an ase.Atoms object but is {type(atoms)}"
 
+        logging.info(f"Loading ASE Atoms object with {len(atoms)} atoms")
 
         if bonds is None:
             if atoms.positions is None or np.all(atoms.positions == 0):
@@ -745,6 +782,9 @@ class Molecule():
                 for j in indices:
                     if j > i:
                         bonds.append((i, j))
+
+        if verbose:
+            logging.info(f"Extracted {len(bonds)} bonds from the ase atoms object")
 
         atom_idxs = list(range(len(atoms)))
         atomic_numbers = atoms.numbers

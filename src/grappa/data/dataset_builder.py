@@ -17,29 +17,58 @@ import importlib.util
 from openmm import System
 from openmm.app import Topology, ForceField, PDBFile
 import logging
+import warnings
 
-def match_molecules(molecules: list[Molecule], verbose = False) -> dict[int,list[int]]:
+def match_molecules(molecules: list[Molecule], verbose = False, _topology_matching=False) -> dict[int,list[int]]:
     """
-    Match relative to first Molecule in molecules. Assumes all entries of molecules represent the same molecule, but with different atom order.
-    Returns a dictionary of {idx: permutation} such that molecules[idx] with reordered atoms corresponds to the first molecule. This means that e.g. for elements: molecules[idx].atomic_number[permutation[idx]] = molecules[0].atomic_number
+    Each conformation is represented by an own Molecule instance, but possibly with different atom order. We check whether the corresponding graphs are all isomorphic, that is whether ase recognized the bonds correctly for all conformations.
+    We match all molceular graphs against the last Molecule in molecules. Then we calculate for each conformation the permutation of the atoms such that the atomic numbers match the last molecule. (We pick the last as it is probably the most stable one if the input is from an optimization trajectory.)
+    Returns a dictionary of {idx: permutation} such that molecules[idx] with reordered atoms corresponds to the first molecule. This means that e.g. for atomic numbers: molecules[idx].atomic_number[permutation[idx]] = molecules[0].atomic_number
+
+    _topology_matching: Internal flag that determines the warnings printed
     """
 
-    permutations = {0: list(range(len(molecules[0].atoms)))}
+    permutations = {}
     if len(molecules) == 1:
         return permutations
+    
+    # first check whether number of atoms and bonds is the same for all molecules, print warning otherwise (more informative than the isomorphism warning)
+    if not _topology_matching:
+        num_atoms, num_bonds = len(molecules[0].atoms), len(molecules[0].bonds)
+        for idx, mol in enumerate(molecules):
+            if len(mol.atoms) != num_atoms:
+                logging.warning(f"Number of atoms in molecular graph {idx} (num atoms:{len(mol.atoms)}) is not the same as in molecular graph 0 (num atoms:{num_atoms})!\nThe following atoms are present in 0 but not in {idx}: {set(molecules[0].atoms) - set(mol.atoms)}\nThe following atoms are present in {idx} but not in 0: {set(mol.atoms) - set(molecules[-1].atoms)}")
 
-    graphs = [mol.to_dgl() for mol in molecules]
+            if len(mol.bonds) != num_bonds:
+                logging.warning(f"Number of bonds in molecular graph {idx} (num bonds:{len(mol.bonds)}) is not the same as in molecular graph 0 (num bonds:{num_bonds})! This is most likely due to the state being too far away from equilibrium such that ASE does not recognize a bond where it should be.\nThe following bonds are present in 0 but not in {idx}: {set(molecules[0].bonds) - set(mol.bonds)}\nThe following bonds are present in {idx} but not in 0: {set(mol.bonds) - set(molecules[0].bonds)}")
+    else:
+        assert len(molecules) == 2, f"Internal error, bug! _topology_matching should only be used for two molecules. Got {len(molecules)}"
+        atoms_topology = molecules[0].atoms
+        atoms_ase = molecules[1].atoms
+
+        bonds_topology = molecules[0].bonds
+        bonds_ase = molecules[1].bonds
+
+        if len(atoms_topology) != len(atoms_ase):
+            logging.warning(f"Number of atoms in molecule derived from the gromacs topology ({len(atoms_topology)}) is not the same as in the molecule constructed from ASE ({len(atoms_ase)})!\nThe following atoms are present in the topology but not in the ASE molecule: {set(atoms_topology) - set(atoms_ase)}\nThe following atoms are present in the ASE molecule but not in the topology: {set(atoms_ase) - set(atoms_topology)}")
+        if len(bonds_topology) != len(bonds_ase):
+            logging.warning(f"Number of bonds in molecule derived from the gromacs topology ({len(bonds_topology)}) is not the same as in the molecule constructed from ASE ({len(bonds_ase)})!\nThe following bonds are present in the topology but not in the ASE molecule: {set(bonds_topology) - set(bonds_ase)}\nThe following bonds are present in the ASE molecule but not in the topology: {set(bonds_ase) - set(bonds_topology)}")
+
+    # convert to dgl graphs
+    graphs = [mol.to_dgl() for mol in molecules]        
 
     isomorphisms = get_isomorphisms([graphs[0]],graphs,silent=True)
     matched_idxs = [idxs[1] for idxs in list(isomorphisms)]
     if len(matched_idxs) < len(molecules):
-        logging.info(f"Couldn't match all graphs to first graph, only {matched_idxs}!")
+        if not _topology_matching:
+            logging.info(f"Couldn't match all molecular graphs of the {len(molecules)} states to the last graph, only {matched_idxs}!")
     if verbose:
         logging.info(isomorphisms)
 
     for isomorphism in list(isomorphisms):
-        [idx1,idx2] = isomorphism
-        permutation = get_isomorphic_permutation(graphs[idx1],graphs[idx2])
+        idx1, idx2 = isomorphism
+        assert idx1 == 0, f'Internal error, bug! idx1 should be 0 as we only have a lost with one graph above!'
+        permutation = get_isomorphic_permutation(graphs[0],graphs[idx2])
         permutations[idx2] = permutation
     if verbose:
         logging.info(permutations)
@@ -169,7 +198,7 @@ class DatasetBuilder:
         ## create Grappa Molecules
         molecules = []
         for conformations in QM_calculations:
-            molecules.append(Molecule.from_ase(conformations[-1]))  #taking [-1] could be better than [0] for optimizations, could check for conf with min energy 
+            molecules.append(Molecule.from_ase(conformations[-1]), verbose=True)  #taking [-1] could be better than [0] for optimizations, could check for conf with min energy 
                     
         ## different QM files could have different atom order, matching this  
         if len(molecules) > 1:  
@@ -261,7 +290,7 @@ class DatasetBuilder:
         if mol is None:
             # use ase to get bonds from positions
             atoms = Atoms(positions=xyz[-1],numbers=qm_dict['atomic_numbers'])
-            mol = Molecule.from_ase(atoms)
+            mol = Molecule.from_ase(atoms, verbose=True)
         mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
 
         self.entries[mol_id] = mol_data
@@ -327,7 +356,7 @@ class DatasetBuilder:
 
     def add_nonbonded(self, mol_id:str, system: System, topology: Topology):
         """	
-        Add nonbonded data from an OpenMM system to entry. Replaces the molecule of an existing entry with an OpenMM topology and permutes molecular data (xyz and forces) such that the atomic numbers match the topology if necessary.
+        Add nonbonded data from an OpenMM system to entry. Replaces the molecule of an existing entry with an OpenMM topology and permutes molecular data (xyz and forces) such that the atomic numbers match the topology if necessary. The id in the topology must correspond to the index in the system, which is zero-based. You might need to shift your topology ids to start at zero.
 
         Parameters
         ----------
@@ -344,20 +373,26 @@ class DatasetBuilder:
             This method modifies the entry in place and does not return a value.
         """
         if not mol_id in self.entries.keys():   
-            loggin.warning(f"Entry {mol_id} not in DatasetBuilder entries. Skipping!")
+            logging.warning(f"Entry {mol_id} not in DatasetBuilder entries. Skipping!")
             return
-    
+        
         ## create molecule
-        mol = Molecule.from_openmm_system(system,topology, skip_impropers=self.skip_impropers)
+        mol = Molecule.from_openmm_system(system, topology, skip_impropers=self.skip_impropers, verbose=True)
 
-        ## get permutation and replace entry molecule
-        # reorder atoms of QM data if atomic number list is different
-        if mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers or mol.bonds != self.entries[mol_id].molecule.bonds:
+        # if the atomic numbers match but the number of bonds is different, assume the order is fine and ASE merely didnt identify the right bonds. print a warning then.
+        if mol.atomic_numbers == self.entries[mol_id].molecule.atomic_numbers and len(mol.bonds) != len(self.entries[mol_id].molecule.bonds):
+            bonds_ase = self.entries[mol_id].molecule.bonds
+            bonds_top = mol.bonds
+            logging.warning(f"Number of bonds in molecule derived from the gromacs topology ({len(bonds_top)}) is not the same as in the molecule constructed from ASE ({len(bonds_ase)})!\nThe following bonds are present in the ASE molecule but not in the topology: {set(bonds_ase) - set(bonds_top)}\nThe following bonds are present in the topology but not in the ASE molecule: {set(bonds_top) - set(bonds_ase)}\nIgnoring this for now and picking the topology from the gromacs force field. But this indicates either broken states (atoms that are too close/far) or topologies that are not read properly. Check whether the gromacs-topology-bonds metioned above are what you intend.")
+
+        # it might be that the atoms are permuted, then resolve this by checking for isomorphism and calculating an isomorphic permutation:
+        elif mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers or mol.bonds != self.entries[mol_id].molecule.bonds:
             logging.info(f"Atomic numbers of QM data and force field topology doesn't match! Matching by graph isomorphism.")
-            permutations = match_molecules([mol,self.entries[mol_id].molecule])
+            permutations = match_molecules([mol,self.entries[mol_id].molecule], _topology_matching=True)
             if len(permutations) != 2:
-                logging.warning(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
-                return
+                # logging.warning(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
+                raise ValueError(f"Couldn't match QM-derived Molecule (via ASE) to molecular graph derived from the gromacs topology for {mol_id}. There is something wrong with the topology or bonds are not recognized by ASE! See warnings above.")
+                # return
             # replace data
             permutation = permutations[1]
             self.entries[mol_id].molecule = mol

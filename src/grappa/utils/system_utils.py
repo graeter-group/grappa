@@ -2,12 +2,42 @@ from typing import Optional, Union
 from pathlib import Path
 from openmm import System
 import openmm.app
+import warnings
+import logging
 
 
 def openmm_system_from_gmx_top(top_filepath: Union[str,Path]) -> tuple[openmm.System,openmm.app.Topology]:
     if isinstance(top_filepath,Path):
         top_filepath = top_filepath.as_posix()
     top_gmx = openmm.app.GromacsTopFile(top_filepath)
+
+    # make sure the topology ids range from 0 to num_particles such that they correspond to the system indices:
+    original_top_ids = [a.id for a in top_gmx.topology.atoms()]
+    # assert they are unique:
+    assert len(original_top_ids) == len(set(original_top_ids)), f"Duplicate atom ids in topology."
+    # check whether they are string integers:
+    assert all([i.isdigit() for i in original_top_ids]), f"Atom ids in topology are not integers."
+
+
+    # convert to integers:
+    original_top_ids = [int(i) for i in original_top_ids]
+
+    # raise a warning if they are not in order:
+    if original_top_ids != sorted(original_top_ids):
+        warnings.warn(f"Atom ids in topology are not in order. They will be overwritten to range(0,num_atoms) to mathc indices in the openmm system. Please make sure that this is intended.")
+
+    # if the ids are range(N,num_atoms+N) then we can just subtract N:
+    if original_top_ids[0] != 0 and original_top_ids[-1] == len(original_top_ids)-1 + original_top_ids[0]:
+        logging.info(f"Atom ids in the topology read form gromacs are in the range {original_top_ids[0]} to {original_top_ids[-1]}. They will be shifted to range(0,{len(original_top_ids)-1}) to match the indices in the openmm system.")
+
+        for i, a in enumerate(top_gmx.topology.atoms()):
+            a.id = i
+    else:
+        warnings.warn(f"Atom ids in topology are not in continuos, rising order. They will be set to range(0,num_atoms) to match the indices in the openmm system. Please make sure that this is intended.")
+        for i, a in enumerate(top_gmx.topology.atoms()):
+            a.id = i
+
+    # create the system
     system_gmx = top_gmx.createSystem()
     return system_gmx, top_gmx.topology
 
