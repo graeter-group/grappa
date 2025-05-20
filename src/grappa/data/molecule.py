@@ -189,6 +189,12 @@ class Molecule():
         # ensure uniqueness:
         assert len(atom_ids) == len(set(atom_ids)), f"atom ids must be unique but are not. Found {len(atom_ids)} unique ids out of {len(set(atom_ids))} total ids."
 
+        if atom_ids == list(range(1,len(atom_ids)+1)):
+            # shift the atom ids to start at zero. modify the openmm topology accordingly
+            atom_ids = [i for i in range(len(atom_ids))]
+            for i, atom in enumerate(openmm_topology.atoms()):
+                atom.id = i
+
         bonds = []
         for bond in openmm_topology.bonds():
             bonds.append((bond[0].id, bond[1].id)) # here we use the id, as in atom_ids
@@ -243,7 +249,6 @@ class Molecule():
         if verbose:
             logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
 
-        if max(atom_ids) >= openmm_system.getNumParticles():
             raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max(atom_ids)} but the system has only {openmm_system.getNumParticles()} particles, so this can not be the case. You might need to shift your topology ids to start at zero.")
 
         if validate_bonds:
