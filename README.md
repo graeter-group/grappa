@@ -233,8 +233,10 @@ Datasets of dgl graphs representing molecules can be obtained by using the `grap
 An example can be found at `examples/usage/dataset.py`, available tags are listed in `data/published_datasets.csv`.
 
 To re-create the benchmark experiment, also the splitting into train/val/test sets from Espaloma is needed. This can be done by running `dataset_creation/get_espaloma_split/save_split.py`, which will create a file `espaloma_split.json` that contains lists of smilestrings for each of the sub-datasets. These are used to classify molecules as being train/val/test molecules upon loading the dataset in the train scripts from `experiments/benchmark`.
+The datasets containing radicals and 1000K states were created as described in the GitHub repository [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
+Also the evaluation of Grappa on the 3bpa dataset is desribed there.
 
-For the creation of custom datasets, take a look at the tutorials `examples/dataset_creation/create_dataset.py` and `examples/dataset_creation/uncommon_molecule_dataset.py`.
+For the creation of custom datasets, take a look at the Colab notebook [Creating and training on custom datasets](https://colab.research.google.com/drive/143Ycnof3-9TLO7P8CWLsH7K0TMHMfr6s?usp=sharing), the `examples/` directory at [grappa-data-creation](https://github.com/LeifSeute/grappa-data-creation).
 
 | Tag                        | Description                                                                           |
 |----------------------------|---------------------------------------------------------------------------------------|
