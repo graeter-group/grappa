@@ -490,6 +490,18 @@ class MolData():
 
         return self
 
+    def set_ff_data(self, openmm_system, ff_name:str, partial_charges=None, xyz=None):
+        """
+        Deletes all force field derived data (of all force fields, not just ff_name!) and calls self.add_ff_data
+        """
+        for ffname in self.ff_energy.keys():
+            if ffname != 'qm':
+                del self.ff_energy[ffname]
+        for ffname in self.ff_gradient.keys():
+            if ffname != 'qm':
+                del self.ff_gradient[ffname]
+
+        return self.add_ff_data(openmm_system=openmm_system, ff_name=ff_name, partial_charges=partial_charges, xyz=xyz)
 
 
     def add_ff_data(self, openmm_system, ff_name=None, partial_charges=None, xyz=None):
@@ -504,6 +516,9 @@ class MolData():
             - xyz: (n_confs, n_atoms, 3)
         """
         from grappa.utils import openmm_utils
+        
+        if xyz is None:
+            xyz = self.xyz
 
         if ff_name is None:
             ff_name = 'reference_ff'
