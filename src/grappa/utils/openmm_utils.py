@@ -6,15 +6,18 @@ import importlib.util
 if importlib.util.find_spec('openmm') is not None:
     import openmm
     from openmm.app import PDBFile
-    from openmm.app import ForceField
+    from openmm.app import ForceField, Topology
+    from openmm.unit import dalton
+    from openmm.openmm import PeriodicTorsionForce
 
+from io import StringIO
 from collections import defaultdict
 from grappa.utils import get_repo_dir
 import numpy as np
 from typing import Union, Dict, List
 from pathlib import Path
 import tempfile
-from grappa.constants import get_grappa_units_in_openmm
+from grappa.constants import get_grappa_units_in_openmm, get_openmm_units
 from typing import Tuple
 import grappa.data
 import copy
@@ -468,3 +471,368 @@ def get_pdb(pdb_string:str)->'PDBFile':
         openmm_pdb = PDBFile(pdbpath)
 
     return openmm_pdb
+
+def get_forcefield_xml_base(atom_names, atom_types, charges, masses, elements, bonds):
+
+    xml_string = '<ForceField>\n'
+    xml_string += '  <AtomTypes>\n'
+
+    n_atoms = len(atom_names)
+
+    for i in range(n_atoms):
+        # Construct the AtomType XML tag with just the index i for a unique name
+        if atom_types[i] in atom_types[:i]:
+            continue
+        xml_string += f'    <Type element="{elements[i]}" name="{atom_types[i]}" class="{atom_types[i]}" mass="{masses[i]}"/>\n'
+
+    xml_string += '  </AtomTypes>\n'
+    #residues
+    xml_string += '  <Residues>\n'
+    xml_string += '    <Residue name="XXX">\n'
+    
+    #atoms
+    for i in range(n_atoms):
+        xml_string += f'      <Atom name="{atom_names[i]}" type="{atom_types[i]}" charge="{charges[i]}"/>\n'
+    
+    #bonds
+    for b in bonds:
+         xml_string += f'      <Bond atomName1="{b[0]}" atomName2="{b[1]}"/>\n'
+    
+    xml_string += '    </Residue>\n'
+    xml_string += '  </Residues>\n'
+
+    # end force field definition
+    xml_string += '</ForceField>'
+
+    return xml_string
+
+
+def get_nonbonded_force_xml(atom_types, epsilons, sigmas, lj14scale, coulomb14scale):
+    xml_string = ''
+    n_atoms = len(atom_types)
+
+    xml_string += f'  <NonbondedForce coulomb14scale="{coulomb14scale}" lj14scale="{lj14scale}">\n'
+    xml_string += f'    <UseAttributeFromResidue name="charge"/>\n'
+
+    for i in range(n_atoms):
+        xml_string += f'    <Atom type="{atom_types[i]}" sigma="{sigmas[i]:10.8f}" epsilon="{epsilons[i]:10.8f}"/>\n'
+
+    xml_string += '  </NonbondedForce>\n'
+
+    return xml_string
+
+
+def get_bond_force_xml(bond_idxs, bond_eqs, bond_ks):
+    xml = '  <HarmonicBondForce>\n'
+    for (i, j), eq, k in zip(bond_idxs, bond_eqs, bond_ks):
+        xml += f'    <Bond class1="{i}" class2="{j}" length="{eq:.8f}" k="{k:.8f}"/>\n'
+    xml += '  </HarmonicBondForce>\n'
+    return xml
+
+
+def get_angle_force_xml(angle_idxs, angle_eqs, angle_ks):
+    xml = '  <HarmonicAngleForce>\n'
+    for (i, j, k_), eq, k_angle in zip(angle_idxs, angle_eqs, angle_ks):
+        xml += f'    <Angle class1="{i}" class2="{j}" class3="{k_}" angle="{eq:.8f}" k="{k_angle:.8f}"/>\n'
+    xml += '  </HarmonicAngleForce>\n'
+    return xml
+
+
+def get_torsion_force_xml(torsion_idxs, torsion_phases, torsion_ks, name='Proper'):
+    xml = '  <PeriodicTorsionForce>\n'
+    for (i, j, k, l), ks, phases in zip(torsion_idxs, torsion_ks, torsion_phases):
+        if all([k_val == 0 for k_val in ks]):
+            continue
+        # if more than one term:
+        if sum([k_val != 0 for k_val in ks]) > 1:
+            xml += f'    <{name} class1="{i}" class2="{j}" class3="{k}" class4="{l}"\n'
+            term_counter = 1
+            for n, (k_val, phase) in enumerate(zip(ks, phases)):
+                if k_val == 0:
+                    continue
+                xml += f'        periodicity{term_counter}="{n+1}" phase{term_counter}="{phase:.8f}" k{term_counter}="{k_val:.8f}"'
+                if n < len(ks) - 1:
+                    xml += '\n'
+                term_counter += 1
+            xml += '/>\n'
+        else:
+            # if only one term:
+            # find non-zero term:
+            for n, (k_val, phase) in enumerate(zip(ks, phases)):
+                if k_val != 0:
+                    xml += f'    <{name} class1="{i}" class2="{j}" class3="{k}" class4="{l}" periodicity1="{n+1}" phase1="{phase:.8f}" k1="{k_val:.8f}"/>\n'
+                    break
+    xml += '  </PeriodicTorsionForce>\n'
+        
+    return xml
+
+
+def xml_from_lists(atom_names, atom_types, charges, masses, epsilons, sigmas,
+    elements, lj14scale, coulomb14scale, bonds,
+    bond_idxs=None, bond_eqs=None, bond_ks=None,
+    angle_idxs=None, angle_eqs=None, angle_ks=None,
+    proper_idxs=None, proper_phases=None, proper_ks=None,
+    improper_idxs=None, improper_phases=None, improper_ks=None):
+    xml = get_forcefield_xml_base(
+        atom_names=atom_names,
+        atom_types=atom_types,
+        charges=charges,
+        masses=masses,
+        elements=elements,
+        bonds=bonds
+    )
+    assert xml.endswith('</ForceField>'), "Internal error. XML string should end with '</ForceField>'"
+    xml = xml[:-len('</ForceField>')]
+
+    xml += get_nonbonded_force_xml(
+        atom_types=atom_types,
+        epsilons=epsilons,
+        sigmas=sigmas,
+        lj14scale=lj14scale,
+        coulomb14scale=coulomb14scale
+    )
+
+    if bond_idxs:
+        xml += get_bond_force_xml(
+            bond_idxs=bond_idxs,
+            bond_eqs=bond_eqs,
+            bond_ks=bond_ks
+        )
+
+    if angle_idxs:
+        xml += get_angle_force_xml(
+            angle_idxs=angle_idxs,
+            angle_eqs=angle_eqs,
+            angle_ks=angle_ks
+        )
+
+    if proper_idxs:
+        xml += get_torsion_force_xml(
+            torsion_idxs=proper_idxs,
+            torsion_phases=proper_phases,
+            torsion_ks=proper_ks,
+            name='Proper'
+        )
+
+    if improper_idxs:
+        xml += get_torsion_force_xml(
+            torsion_idxs=improper_idxs,
+            torsion_phases=improper_phases,
+            torsion_ks=improper_ks,
+            name='Improper'
+        )
+
+    xml += '</ForceField>'
+    return xml
+
+
+def create_forcefield(topology, parameters, coulomb_fudge=None, lj_fudge=None):
+    grappa_units = get_grappa_units_in_openmm()
+    openmm_units = get_openmm_units()
+
+    if coulomb_fudge is None:
+        coulomb_fudge = parameters.coulomb_fudge if parameters.coulomb_fudge is not None else 0.833
+    if lj_fudge is None:
+        lj_fudge = parameters.lj_fudge if parameters.lj_fudge is not None else 0.5
+
+    atom_names, atom_types, charges, masses, elements = [], [], [], [], []
+
+    for i, atom in enumerate(topology.atoms()):
+        atom_names.append(str(i))
+        atom_types.append(str(i))
+        q = parameters.partial_charges[i] * grappa_units["CHARGE"]
+        charges.append(q.value_in_unit(openmm_units["CHARGE"]))
+        masses.append(atom.element.mass.value_in_unit(dalton))
+        elements.append(atom.element.symbol)
+
+    epsilons = [
+        (parameters.epsilons[i] * grappa_units["EPSILON"]).value_in_unit(openmm_units["EPSILON"])
+        for i in range(len(parameters.atoms))
+    ]
+    sigmas = [
+        (parameters.sigmas[i] * grappa_units["SIGMA"]).value_in_unit(openmm_units["SIGMA"])
+        for i in range(len(parameters.atoms))
+    ]
+
+    bonds = [(a1.index, a2.index) for a1, a2 in topology.bonds()]
+
+    bond_idxs, bond_eqs, bond_ks = [], [], []
+    if hasattr(parameters, "bonds") and parameters.bonds is not None:
+        for (i, j), k, eq in zip(parameters.bonds, parameters.bond_k, parameters.bond_eq):
+            bond_idxs.append((i, j))
+            bond_eqs.append((eq * grappa_units["BOND_EQ"]).value_in_unit(openmm_units["BOND_EQ"]))
+            bond_ks.append((k * grappa_units["BOND_K"]).value_in_unit(openmm_units["BOND_K"]))
+
+    angle_idxs, angle_eqs, angle_ks = [], [], []
+    if hasattr(parameters, "angles") and parameters.angles is not None:
+        for (i, j, k_), k_angle, eq in zip(parameters.angles, parameters.angle_k, parameters.angle_eq):
+            angle_idxs.append((i, j, k_))
+            angle_eqs.append((eq * grappa_units["ANGLE_EQ"]).value_in_unit(openmm_units["ANGLE_EQ"]))
+            angle_ks.append((k_angle * grappa_units["ANGLE_K"]).value_in_unit(openmm_units["ANGLE_K"]))
+
+    proper_idxs, proper_phases, proper_ks = [], [], []
+    if hasattr(parameters, "propers") and parameters.propers is not None:
+        for (i, j, k, l), ks, phases in zip(parameters.propers, parameters.proper_ks, parameters.proper_phases):
+            proper_idxs.append((i, j, k, l))
+            proper_phases.append([(p * grappa_units["TORSION_PHASE"]).value_in_unit(openmm_units["TORSION_PHASE"]) for p in phases])
+            proper_ks.append([(k_ * grappa_units["TORSION_K"]).value_in_unit(openmm_units["TORSION_K"]) for k_ in ks])
+
+    improper_idxs, improper_phases, improper_ks = [], [], []
+    if hasattr(parameters, "impropers") and parameters.impropers is not None:
+        for (i, j, k, l), ks, phases in zip(parameters.impropers, parameters.improper_ks, parameters.improper_phases):
+            improper_idxs.append((i, j, k, l))
+            improper_phases.append([(p * grappa_units["TORSION_PHASE"]).value_in_unit(openmm_units["TORSION_PHASE"]) for p in phases])
+            improper_ks.append([(k_ * grappa_units["TORSION_K"]).value_in_unit(openmm_units["TORSION_K"]) for k_ in ks])
+
+    # xml doesnt work for properly for improper torsions, thus handle them separately
+
+    xml_string = xml_from_lists(
+        atom_names=atom_names,
+        atom_types=atom_types,
+        charges=charges,
+        masses=masses,
+        epsilons=epsilons,
+        sigmas=sigmas,
+        elements=elements,
+        lj14scale=lj_fudge,
+        coulomb14scale=coulomb_fudge,
+        bonds=bonds,
+        bond_idxs=bond_idxs,
+        bond_eqs=bond_eqs,
+        bond_ks=bond_ks,
+        angle_idxs=angle_idxs,
+        angle_eqs=angle_eqs,
+        angle_ks=angle_ks,
+        proper_idxs=None,
+        proper_phases=None,
+        proper_ks=None,
+        improper_idxs=None,
+        improper_phases=None,
+        improper_ks=None
+    )
+
+    return xml_string, proper_idxs, proper_phases, proper_ks, improper_idxs, improper_phases, improper_ks
+
+
+def get_single_res_top(topology:'openmm.app.topology.Topology')->'openmm.app.topology.Topology':
+    """
+    Returns a new topology with a single residue containing all atoms from the original topology.
+    The atom.id of the atoms in the new topology is the same as the atom.index in the original topology.
+    This is useful for creating a topology that can be used with the GrappaForceField, which requires a single residue.
+    """
+    topo = Topology()
+    chain = topo.addChain()
+    res = topo.addResidue("XXX", chain)
+
+    atom_map = {}
+
+    original_atoms = list(topology.atoms())
+    for i, atom in enumerate(original_atoms):
+        new_atom = topo.addAtom(str(i), atom.element, res)
+        atom_map[atom] = new_atom
+
+    for a1, a2 in topology.bonds():
+        if a1 in atom_map and a2 in atom_map:
+            topo.addBond(atom_map[a1], atom_map[a2])
+
+    return topo
+
+
+if importlib.util.find_spec('openmm') is None:
+    class GrappaForceField:
+        """
+        Dummy ForceField class that has an own atom type for each atom. allows for proper and improper torsions to be defined separately.
+        """
+        def __init__(self, xml_file, *args, **kwargs):
+            raise ImportError("OpenMM is not installed. Please install OpenMM to use the GrappaForceField class.")
+        
+else:
+    class GrappaForceField(ForceField):
+        def __init__(self, xml_file, proper_idxs=None, proper_phases=None, proper_ks=None, improper_idxs=None, improper_phases=None, improper_ks=None):
+            """
+            Dummy ForceField class that has an own atom type for each atom. allows for proper and improper torsions to be defined separately.
+            """
+            super().__init__(xml_file)
+            self.proper_idxs = proper_idxs
+            self.proper_phases = proper_phases
+            self.proper_ks = proper_ks
+            self.improper_idxs = improper_idxs
+            self.improper_phases = improper_phases
+            self.improper_ks = improper_ks
+
+        @classmethod
+        def from_parameters(cls, parameters, topology, coulomb_fudge=None, lj_fudge=None):
+            """
+            Create a GrappaForceField from parameters and topology.
+            Parameters:
+            - parameters: grappa.data.Parameters object containing the force field parameters.
+            - topology: openmm.app.topology.Topology object containing the topology of the system.
+            - coulomb_fudge: Coulomb fudge factor
+            - lj_fudge: Lennard-Jones fudge factor
+            Returns:
+            - An instance of GrappaForceField.
+            """
+
+            xml_string, proper_idxs, proper_phases, proper_ks, improper_idxs, improper_phases, improper_ks = create_forcefield(
+                topology=topology,
+                parameters=parameters,
+                coulomb_fudge=coulomb_fudge,
+                lj_fudge=lj_fudge
+            )
+
+            return cls(StringIO(xml_string),
+                       proper_idxs=proper_idxs,
+                       proper_phases=proper_phases,
+                       proper_ks=proper_ks,
+                       improper_idxs=improper_idxs,
+                       improper_phases=improper_phases,
+                       improper_ks=improper_ks)
+
+        def createSystem(
+            self,
+            topology,
+            flexibleConstraints=False,
+            drudeMass=None,
+            *args,
+            **kwargs
+        ):
+            # the arguments flexibleConstraints and drudeMass need to be called explicitly for some reason
+            topo = get_single_res_top(topology)
+            system = super().createSystem(
+                topology=topo,
+                flexibleConstraints=flexibleConstraints,
+                drudeMass=drudeMass,
+                *args,
+                **kwargs
+            )
+
+            system = self.add_torsions(system)
+            return system
+        
+        def add_torsions(self, system):
+            """
+            Add proper and improper torsions to the system.
+            """
+            if self.proper_idxs is not None:
+                torsion_force = PeriodicTorsionForce()
+                for (i, j, k, l), phases, ks in zip(self.proper_idxs, self.proper_phases, self.proper_ks):
+                    for n, (phase, k_) in enumerate(zip(phases, ks)):
+                        if k_ == 0:
+                            continue
+                        torsion_force.addTorsion(i, j, k, l, n + 1, phase, k_)
+            
+            if self.improper_idxs is not None:
+                improper_force = PeriodicTorsionForce()
+                for (i, j, k, l), phases, ks in zip(self.improper_idxs, self.improper_phases, self.improper_ks):
+                    for n, (phase, k_) in enumerate(zip(phases, ks)):
+                        if k_ == 0:
+                            continue
+                        improper_force.addTorsion(i, j, k, l, n + 1, phase, k_)
+
+            if self.proper_idxs is not None:
+                system.addForce(torsion_force)
+            if self.improper_idxs is not None:
+                system.addForce(improper_force)
+
+            return system
+

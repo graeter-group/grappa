@@ -7,7 +7,7 @@ import torch
 from grappa import constants
 from grappa.data import Molecule, Parameters
 from grappa.utils.model_loading_utils import model_from_tag, model_from_path
-from grappa.models.grappa import GrappaModel
+from grappa.models.grappa_model import GrappaModel
 from grappa.utils.dgl_utils import check_disconnected_graphs
 import logging
 from pathlib import Path

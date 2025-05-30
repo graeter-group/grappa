@@ -80,6 +80,7 @@ class Molecule():
         self.angles = angles
         self.propers = propers
         self.neighbor_dict = None  # Calculated from bonds if needed. key: atom id, value: list of neighbor atom ids
+        self.mapped_smiles = mapped_smiles
 
         self.charge_model = charge_model
 
@@ -629,6 +630,8 @@ class Molecule():
             'partial_charges':np.array(self.partial_charges).astype(np.float32),
             **self.additional_features,
         }
+        if self.mapped_smiles is not None:
+            array_dict['mapped_smiles'] = self.mapped_smiles
         return array_dict
     
 
@@ -653,6 +656,7 @@ class Molecule():
             atomic_numbers=array_dict['atomic_numbers'],
             partial_charges=array_dict['partial_charges'],
             additional_features=additional_features,
+            mapped_smiles=array_dict.get('mapped_smiles', None), # this is optional
             improper_in_correct_format=True, # assume this is already in the correct format since it was stored
         )
     

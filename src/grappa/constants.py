@@ -9,6 +9,7 @@ class GrappaUnits:
     LENGTH = units.angstrom
     ANGLE = units.radian
     ENERGY = units.kilocalorie_per_mol
+    CHARGE = units.elementary_charge
 
     BOND_K = ENERGY / (LENGTH ** 2)
     BOND_EQ = LENGTH
@@ -16,9 +17,27 @@ class GrappaUnits:
     ANGLE_EQ = ANGLE
     TORSION_K = ENERGY
     TORSION_PHASE = ANGLE
+    EPSILON = ENERGY
+    SIGMA = LENGTH
+
+class OpenmmUnits:
+    LENGTH = units.nanometer
+    ANGLE = units.radian
+    ENERGY = units.kilojoule_per_mole
+    CHARGE = units.elementary_charge
+
+    BOND_K = ENERGY / (LENGTH ** 2)
+    BOND_EQ = LENGTH
+    ANGLE_K = ENERGY / (ANGLE ** 2)
+    ANGLE_EQ = ANGLE
+    TORSION_K = ENERGY
+    TORSION_PHASE = ANGLE
+    EPSILON = ENERGY
+    SIGMA = LENGTH
+
 
 def get_grappa_units_in_openmm():
-    from openmm.unit import angstrom, kilocalorie_per_mole, radian
+    from openmm.unit import angstrom, kilocalorie_per_mole, radian, elementary_charge
     return {
         'LENGTH': angstrom,
         'ANGLE': radian,
@@ -28,9 +47,31 @@ def get_grappa_units_in_openmm():
         'ANGLE_K': kilocalorie_per_mole / (radian ** 2),
         'ANGLE_EQ': radian,
         'TORSION_K': kilocalorie_per_mole,
-        'TORSION_PHASE': radian
+        'TORSION_PHASE': radian,
+        'EPSILON': kilocalorie_per_mole,
+        'SIGMA': angstrom,
+        'CHARGE': elementary_charge
     }
     
+def get_openmm_units():
+    """
+    Returns the units used by OpenMM.
+    """
+    from openmm.unit import nanometer, kilojoule_per_mole, radian, elementary_charge
+    return {
+        'LENGTH': nanometer,
+        'ANGLE': radian,
+        'ENERGY': kilojoule_per_mole,
+        'BOND_K': kilojoule_per_mole / (nanometer ** 2),
+        'BOND_EQ': nanometer,
+        'ANGLE_K': kilojoule_per_mole / (radian ** 2),
+        'ANGLE_EQ': radian,
+        'TORSION_K': kilojoule_per_mole,
+        'TORSION_PHASE': radian,
+        'EPSILON': kilojoule_per_mole,
+        'SIGMA': nanometer,
+        'CHARGE': elementary_charge
+    }
 
 
 IMPROPER_CENTRAL_IDX = 2 # the index of the central atom in an improper torsion as used by grappa

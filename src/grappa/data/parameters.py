@@ -26,6 +26,12 @@ class Parameters():
     
     {
     "atoms":np.array, the ids of the atoms in the molecule that correspond to the parameters. These are ids, not indices, i.e. they are not necessarily consecutive or start at zero.
+    "partial_charges":np.array, the partial charges of the atoms in the molecule. In the same order as the ids in atoms.
+    "epsilons":np.array, the epsilon values of the atoms in the molecule. In the same order as the ids in atoms.
+    "sigmas":np.array, the sigma values of the atoms in the molecule. In the same order as the ids in atoms.
+
+    "coulomb_fudge":float, the fudge factor for the one-four coulomb interaction.
+    "lj_fudge":float, the fudge factor for the one-four lj interaction.
     
     "{bond/angle}s":np.array of shape (#2/3-body-terms, 2/3), the ids of the atoms in the molecule that correspond to the parameters. The permutation symmetry of the n-body term is already divided out, i.e. this is the minimal set of parameters needed to describe the interaction.
 
@@ -42,6 +48,7 @@ class Parameters():
 
     }
     """
+
     atoms: np.ndarray
 
     bonds: np.ndarray
@@ -59,6 +66,13 @@ class Parameters():
     impropers: Optional[np.ndarray] # optional because these are not needed for training grappa on classical parameters
     improper_ks: Optional[np.ndarray]
     improper_phases: Optional[np.ndarray]
+
+    partial_charges: np.ndarray = None # optional
+    epsilons: np.ndarray = None # optional
+    sigmas: np.ndarray = None # optional
+
+    coulomb_fudge: float = None # optional
+    lj_fudge: float = None # optional
 
     @classmethod
     def from_dgl(cls, g:DGLGraph, suffix:str='', check_eq_values:bool=True):
@@ -79,6 +93,20 @@ class Parameters():
         bonds = atom_ids[bonds]
 
         # Extract the classical parameters from the graph, assuming they have the suffix
+        if f'charge{suffix}' in g.nodes['n1'].data:
+            partial_charges = g.nodes['n1'].data[f'charge{suffix}'].detach().cpu().numpy()
+            epsilons = g.nodes['n1'].data[f'epsilon{suffix}'].detach().cpu().numpy()
+            sigmas = g.nodes['n1'].data[f'sigma{suffix}'].detach().cpu().numpy()
+            assert g.num_nodes('g') == 1, f"Expected exactly one global node 'g' for global parameters, got {g.num_nodes('g')} nodes."
+            coulomb_fudge = g.nodes['g'].data[f'coulomb_fudge{suffix}'].detach().cpu().item() if f'coulomb_fudge{suffix}' in g.nodes['g'].data else None
+            lj_fudge = g.nodes['g'].data[f'lj_fudge{suffix}'].detach().cpu().item() if f'lj_fudge{suffix}' in g.nodes['g'].data else None
+        else:
+            partial_charges = None
+            epsilons = None
+            sigmas = None
+            lj_fudge = None
+            coulomb_fudge = None
+
         bond_k = g.nodes['n2'].data[f'k{suffix}'].detach().cpu().numpy()
         bond_eq = g.nodes['n2'].data[f'eq{suffix}'].detach().cpu().numpy()
 
@@ -126,7 +154,12 @@ class Parameters():
 
         return cls(
             atoms=atom_ids,
+            partial_charges=partial_charges,
+            epsilons=epsilons,
+            sigmas=sigmas,
             bonds=bonds,
+            coulomb_fudge=coulomb_fudge,
+            lj_fudge=lj_fudge,
             bond_k=bond_k,
             bond_eq=bond_eq,
             angles=angles,
@@ -142,7 +175,7 @@ class Parameters():
 
 
     @classmethod
-    def from_openmm_system(cls, openmm_system, mol:Molecule, mol_is_sorted:bool=False, allow_skip_improper:bool=False):
+    def from_openmm_system(cls, openmm_system, mol:Molecule, mol_is_sorted:bool=False, allow_skip_improper:bool=False, coulomb_fudge:Optional[float]=None, lj_fudge:Optional[float]=None):
         """
         Uses an openmm system to obtain classical parameters. The molecule is used to obtain the atom and interacion ids (not the openmm system!). The order of atom in the openmm system must be the same as in mol.atoms. Improper torsion parameters are not obtained from the openmm system.
         mol_is_sorted: if True, then it is assumed that the id tuples are sorted:
@@ -150,6 +183,9 @@ class Parameters():
             angles[i][0] < angles[i][2] for all i
             propers[i][0] < propers[i][3] for all i
             impropers: the central atom is inferred from connectivity, then it is put at place grappa.constants.IMPROPER_CENTRAL_IDX by invariant permutations.
+        allow_skip_improper: if True, then improper torsions that cannot be expressed with the central atom at position grappa.constants.IMPROPER_CENTRAL_IDX are skipped. If False, an error is raised.
+        coulomb_fudge: if not None, then this value is used as the coulomb fudge factor. not stored in the openmm system, only implicitly in the exceptions
+        lj_fudge: if not None, then this value is used as the lj fudge factor.
         """
 
         # handle the units:
@@ -160,8 +196,15 @@ class Parameters():
         ANGLE_EQ_UNIT = grappa_units['ANGLE_EQ']
         TORSION_K_UNIT = grappa_units['TORSION_K']
         TORSION_PHASE_UNIT = grappa_units['TORSION_PHASE']
+        EPSILON_UNIT = grappa_units['EPSILON']
+        SIGMA_UNIT = grappa_units['SIGMA']
+        CHARGE_UNIT = grappa_units['CHARGE']
 
-        from openmm import HarmonicAngleForce, HarmonicBondForce, PeriodicTorsionForce
+        from openmm import HarmonicAngleForce, HarmonicBondForce, PeriodicTorsionForce, NonbondedForce
+
+        partial_charges = []
+        epsilons = []
+        sigmas = []
 
         bonds = []
         bond_k = []
@@ -182,6 +225,27 @@ class Parameters():
             name = force.__class__.__name__
             if not (name in ['HarmonicBondForce', 'HarmonicAngleForce', 'PeriodicTorsionForce'] or any([keyword in name.lower() for keyword in ['nonbonded', 'remover']])):
                 raise RuntimeError(f"Force {name} is not supported for parameter calculation, only HarmonicBondForce, HarmonicAngleForce, PeriodicTorsionForce and nonbonded forces are supported.")
+
+        # collect the nonbonded force parameters. assert that there is only one nonbonded force:
+        nonbonded_forces = [force for force in openmm_system.getForces() if isinstance(force, NonbondedForce)]
+        if len(nonbonded_forces) > 1:
+            raise RuntimeError(f"Found {len(nonbonded_forces)} nonbonded forces in the system, but only one is allowed. Please check your system.")
+        
+        if len(nonbonded_forces) == 1:
+            nonbonded_force = nonbonded_forces[0]
+            # get the parameters:
+            for i in range(nonbonded_force.getNumParticles()):
+                charge, sigma, epsilon = nonbonded_force.getParticleParameters(i)
+                # convert to grappa units:
+                charge = charge.value_in_unit(CHARGE_UNIT)
+                sigma = sigma.value_in_unit(SIGMA_UNIT)
+                epsilon = epsilon.value_in_unit(EPSILON_UNIT)
+
+                # append to lists:
+                partial_charges.append(charge)
+                sigmas.append(sigma)
+                epsilons.append(epsilon)
+
 
         for force in openmm_system.getForces():
             if isinstance(force, HarmonicBondForce):
@@ -230,6 +294,11 @@ class Parameters():
 
         return cls.from_lists(
             mol=mol,
+            partial_charges=partial_charges,
+            epsilons=epsilons,
+            sigmas=sigmas,
+            coulomb_fudge=coulomb_fudge,
+            lj_fudge=lj_fudge,
             bonds=bonds,
             bond_k=bond_k,
             bond_eq=bond_eq,
@@ -247,9 +316,9 @@ class Parameters():
 
 
     @classmethod
-    def from_lists(cls, mol, bonds, angles, torsions, bond_eq, angle_eq, bond_k, angle_k, torsion_ks, torsion_phases, torsion_periodicities, allow_skip_improper:bool=False, mol_is_sorted:bool=False):
+    def from_lists(cls, mol, partial_charges, epsilons, sigmas, coulomb_fudge, lj_fudge, bonds, angles, torsions, bond_eq, angle_eq, bond_k, angle_k, torsion_ks, torsion_phases, torsion_periodicities, allow_skip_improper:bool=False, mol_is_sorted:bool=False):
         """
-        Assume that the idxs in the bonds, angles, torsions lists correspond to entries at that idx position in mol.atoms.
+        Assume that the idxs that refer to atoms in the bonds, angles, torsions lists correspond to entries at that idx position in mol.atoms. in other words, a bond (3,4) corresponds to atoms 6 and 7 if mol.atoms is [3,4,5,6,7,...]. i.e. mol.atoms must not be sorted or zero-based, but the bond, angle and torsion lists must.
         The lists must contain all bonds, angles and torsions in the molecule but may also contain more than that.
         Initializes the parameters from lists of interaction idxs and lists of parameters.
         For torsions, determines whether improper/proper and, if possible, expresses improper torsions with the central atom at position grappa.constants.IMPROPER_CENTRAL_IDX. If this is not possible, raises an error.
@@ -262,6 +331,13 @@ class Parameters():
         atoms = mol.atoms
         if not isinstance(atoms, np.ndarray):
             atoms = np.array(atoms).astype(np.int32)
+
+        if not isinstance(partial_charges, np.ndarray):
+            partial_charges = np.array(partial_charges).astype(np.float32)
+        if not isinstance(epsilons, np.ndarray):
+            epsilons = np.array(epsilons).astype(np.float32)
+        if not isinstance(sigmas, np.ndarray):
+            sigmas = np.array(sigmas).astype(np.float32)
 
         # convert to array:
         if not isinstance(bonds, np.ndarray):
@@ -415,6 +491,11 @@ class Parameters():
 
         return cls(
             atoms=mol.atoms,
+            partial_charges=partial_charges,
+            epsilons=epsilons,
+            sigmas=sigmas,
+            coulomb_fudge=coulomb_fudge,
+            lj_fudge=lj_fudge,
             bonds=mol.bonds,
             bond_k=bond_k,
             bond_eq=bond_eq,
@@ -450,6 +531,12 @@ class Parameters():
             d['improper_ks'] = self.improper_ks
             d['improper_phases'] = self.improper_phases
 
+        if self.partial_charges is not None:
+            d['partial_charges'] = self.partial_charges
+            d['epsilons'] = self.epsilons
+            d['sigmas'] = self.sigmas
+            d['coulomb_fudge'] = self.coulomb_fudge
+            d['lj_fudge'] = self.lj_fudge
         return d
 
 
@@ -458,7 +545,13 @@ class Parameters():
         """
         Create a Parameters object from a dictionary of arrays.
         """
-        return cls(**array_dict)
+        self = cls(**array_dict)
+        if self.coulomb_fudge is not None:
+            self.coulomb_fudge = float(self.coulomb_fudge)
+        if self.lj_fudge is not None:
+            self.lj_fudge = float(self.lj_fudge)
+
+        return self
     
 
     def write_to_dgl(self, g:DGLGraph, n_periodicity_proper=constants.N_PERIODICITY_PROPER, n_periodicity_improper=constants.N_PERIODICITY_IMPROPER, suffix:str='_ref', allow_nan=True)->DGLGraph:
@@ -466,6 +559,16 @@ class Parameters():
         Write the parameters to a dgl graph.
         For torsion, we assume (and assert) that phases are only 0 or pi.
         """
+        if self.partial_charges is not None:
+            assert g.num_nodes('n1') == len(self.atoms), f"Expected {len(self.atoms)} nodes of type 'n1' but found {g.num_nodes('n1')} nodes."
+            # write the atom parameters
+            g.nodes['n1'].data[f'charge{suffix}'] = torch.tensor(self.partial_charges, dtype=torch.float32)
+            g.nodes['n1'].data[f'epsilon{suffix}'] = torch.tensor(self.epsilons, dtype=torch.float32)
+            g.nodes['n1'].data[f'sigma{suffix}'] = torch.tensor(self.sigmas, dtype=torch.float32)
+            assert g.num_nodes('g') == 1, f"Expected exactly one global node 'g' for global parameters, got {g.num_nodes('g')} nodes."
+            g.nodes['g'].data[f'coulomb_fudge{suffix}'] = torch.tensor((self.coulomb_fudge,), dtype=torch.float32)
+            g.nodes['g'].data[f'lj_fudge{suffix}'] = torch.tensor((self.lj_fudge,), dtype=torch.float32)
+
         # write the classical parameters
         g.nodes['n2'].data[f'k{suffix}'] = torch.tensor(self.bond_k, dtype=torch.float32)
         g.nodes['n2'].data[f'eq{suffix}'] = torch.tensor(self.bond_eq, dtype=torch.float32)
@@ -544,6 +647,12 @@ class Parameters():
         propers = np.array(mol.propers).astype(np.int32)
         impropers = np.array(mol.impropers).astype(np.int32)
 
+        partial_charges = np.full((len(atoms),), np.nan, dtype=np.float32)
+        epsilons = np.full((len(atoms),), np.nan, dtype=np.float32)
+        sigmas = np.full((len(atoms),), np.nan, dtype=np.float32)
+        coulomb_fudge = np.nan
+        lj_fudge = np.nan
+
         bond_k = np.full((len(bonds),), np.nan)
         bond_eq = np.full((len(bonds),), np.nan)
 
@@ -558,6 +667,11 @@ class Parameters():
 
         return cls(
             atoms=atoms,
+            partial_charges=partial_charges,
+            epsilons=epsilons,
+            sigmas=sigmas,
+            coulomb_fudge=coulomb_fudge,
+            lj_fudge=lj_fudge,
             bonds=bonds,
             bond_k=bond_k,
             bond_eq=bond_eq,
@@ -615,6 +729,12 @@ class Parameters():
         params = cls.get_nan_params(mol)
 
         # for every param, pick randn like:
+
+        params.partial_charges = np.random.randn(len(params.atoms)) * 0.1
+        params.epsilons = np.abs(np.random.randn(len(params.atoms)) * 0.1 + 0.1)
+        params.sigmas = np.abs(np.random.randn(len(params.atoms)) * 0.1 + 0.1)
+        params.coulomb_fudge = 0.8333
+        params.lj_fudge = 0.5
 
         params.bond_k = np.random.randn(len(params.bonds))*3 + 100
         params.bond_eq = np.random.randn(len(params.bonds)) + 10

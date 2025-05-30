@@ -1,2 +1,2 @@
 from .energy import Energy
-from .grappa import GrappaModel
+from .grappa_model import GrappaModel

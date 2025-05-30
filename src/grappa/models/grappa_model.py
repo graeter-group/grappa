@@ -1,5 +1,5 @@
-from .graph_attention import GrappaGNN
-from .interaction_parameters import WriteParameters
+from grappa.models.graph_attention import GrappaGNN
+from grappa.models.interaction_parameters import WriteParameters
 from typing import Union, List, Tuple, Dict
 import torch
 from grappa.utils.graph_utils import get_default_statistics
