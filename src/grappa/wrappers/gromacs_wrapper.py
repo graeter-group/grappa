@@ -26,7 +26,7 @@ class GromacsGrappa(Grappa):
     Then, a file 'path/to/topology_grappa.top' will be created, which contains the grappa-predicted parameters for the topology.
     """
     def __init__(self, *args, **kwargs):
-        assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
+        assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
         return super().__init__(*args, **kwargs)
 
     def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, include_list:list = [], exclude_list:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
@@ -40,7 +40,7 @@ class GromacsGrappa(Grappa):
             exclude_list: Exclude certain GROMACS topology molecules in `Reactive` molecule.
             plot_parameters (bool, optional): Defaults to False. If True, a plot of the parameters is created and saved in the same directory as the output file.
         """
-        assert importlib.util.find_spec('kimmdy') is not None, "kimmdy must be installed to use the GromacsGrappa class."
+        assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
 
         if not charge_model is None:
             warnings.warn("The charge_model argument for GromacsGrappa.parametrize is deprecated, has no effect and will be removed in the future.", DeprecationWarning)
@@ -50,26 +50,23 @@ class GromacsGrappa(Grappa):
 
         plot_path = Path(Path(top_outpath).stem + "_parameters.png") if plot_parameters else None
 
-        # import this only when the function is called to make grappas dependency on kimmdy optional
-        from kimmdy.topology.topology import Topology
-        from kimmdy.topology.utils import get_is_reactive_predicate_f
-        from kimmdy.parsing import read_top, write_top
+        # import this only when the function is called to make grappas dependency on gmx-top4py optional
+        from gmx_top4py.topology.topology import Topology
+        from gmx_top4py.topology.utils import get_is_selected_moleculetype_f
+        from gmx_top4py.parsing import read_top, write_top
 
-        from grappa.utils.kimmdy_utils import KimmdyGrappaParameterizer
+        from grappa.utils.kimmdy_utils import GrappaParameterizer
 
         # load the topology
         top_path = Path(top_path)
 
-        kimmdy_version = version("kimmdy")
-        logging.info(f"kimmdy version {kimmdy_version}")
-        if list(map(int,version("kimmdy").split('.'))) > [6,6,0]:
-            topology = Topology(read_top(Path(top_path)),radicals='',is_reactive_predicate_f=get_is_reactive_predicate_f(include=include_list, exclude=exclude_list))   #radicals='' means kimmdy won't search for radicals
-        else:
-            logging.info(f"version number below '6.6.0', ignoring explicit includes and excludes!")
-            topology = Topology(read_top(Path(top_path)),radicals='')
+        gmx_top4py_version = version("gmx_top4py")
+        logging.info(f"gmx-top4py version {gmx_top4py_version}")
+        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(include=include_list, exclude=exclude_list))   #radicals='' means gmx-top4py won't search for radicals
+
 
         # call grappa model to write the parameters to the topology
-        topology.parametrizer = KimmdyGrappaParameterizer(grappa_instance=self, plot_path=plot_path)
+        topology.parametrizer = GrappaParameterizer(grappa_instance=self, plot_path=plot_path)
         topology.needs_parameterization = True
         
         ## write top file
@@ -94,8 +91,8 @@ def main():
     parser.add_argument('--modeltag', '-t', type=str, default='grappa-1.3', help='tag of the grappa model to use')
     parser.add_argument('--modelpath', '-ckpt', type=str, default=None, help='Path to the grappa model checkpoint. Overwrites the modeltag argument.')
     parser.add_argument('--device', '-d', type=str, default='cpu', help='The device to use for grappas inference forward pass. Defaults to cpu.')
-    parser.add_argument("--include","-w",nargs='+',default=[],help="Include certain GROMACS topology molecules in `Reactive` molecule.")
-    parser.add_argument("--exclude","-b",nargs='+',default=[],help="Exclude certain GROMACS topology molecules in `Reactive` molecule.")    
+    parser.add_argument("--include","-w",nargs='+',default=[],help="Include certain GROMACS topology moleculetypes to be parameterized with grappa. Per default all moleculetypes except solvent and inorganic ions are included.")
+    parser.add_argument("--exclude","-b",nargs='+',default=[],help="Exclude certain GROMACS topology moleculetypes from being parameterized with grappa.")
     parser.add_argument('--plot_parameters', '-p', action='store_true', help='If set, a plot of the MM parameters is created and saved in the same directory as the output file.')
     args = parser.parse_args()
 
