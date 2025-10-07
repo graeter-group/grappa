@@ -179,7 +179,7 @@ pytest -m slow
 To install Grappa from source, clone the repository and install requirements and the package itself with pip:
 
 ```{bash}
-git clone https://github.com/hits-mbm-dev/grappa.git
+git clone git@github.com:graeter-group/grappa.git
 cd grappa
 
 pip install -r installation_utils/cpu_requirements.txt
