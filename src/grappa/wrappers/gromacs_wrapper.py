@@ -29,15 +29,15 @@ class GromacsGrappa(Grappa):
         assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
         return super().__init__(*args, **kwargs)
 
-    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, include_list:list = [], exclude_list:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
+    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, select_list:list = [], deselect_list:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
         """
         Creates a .top file with the grappa-predicted parameters for the topology
 
         Args:
             top_path (Union[str, Path]): 'path/to/topology.top' The path to the topology file, parametrised by a classical force field (nonbonded parameters and improper torsion idxs are needed)
             top_outpath (Union[str, Path], optional): Defaults to 'path/to/topology_grappa.top'. The path to the output file.
-            include list: Include certain GROMACS topology molecules in `Reactive` molecule.
-            exclude_list: Exclude certain GROMACS topology molecules in `Reactive` molecule.
+            select_list: Select certain GROMACS topology moleculetypes for parameterization with grappa.
+            deselect_list: Deselect certain GROMACS topology moleculetypes for parameterization with grappa.
             plot_parameters (bool, optional): Defaults to False. If True, a plot of the parameters is created and saved in the same directory as the output file.
         """
         assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
@@ -62,7 +62,7 @@ class GromacsGrappa(Grappa):
 
         gmx_top4py_version = version("gmx_top4py")
         logging.info(f"gmx-top4py version {gmx_top4py_version}")
-        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(include=include_list, exclude=exclude_list))   #radicals='' means gmx-top4py won't search for radicals
+        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(include=select_list, exclude=deselect_list))   #radicals='' means gmx-top4py won't search for radicals
 
 
         # call grappa model to write the parameters to the topology
@@ -76,12 +76,12 @@ class GromacsGrappa(Grappa):
         return
 
 
-def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='latest', device:str='cpu', include_list:list=[], exclude_list:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
+def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='latest', device:str='cpu', select_list:list=[], deselect_list:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
     if not modelpath is None:
         grappa = GromacsGrappa.from_ckpt(modelpath, device=device)
     else:
         grappa = GromacsGrappa.from_tag(modeltag, device=device)
-    grappa.parametrize(top_path, top_outpath, include_list=include_list, exclude_list=exclude_list, plot_parameters=plot_parameters)
+    grappa.parametrize(top_path, top_outpath, include_list=select_list, exclude_list=deselect_list, plot_parameters=plot_parameters)
     return
 
 def main():
@@ -91,10 +91,19 @@ def main():
     parser.add_argument('--modeltag', '-t', type=str, default='grappa-1.3', help='tag of the grappa model to use')
     parser.add_argument('--modelpath', '-ckpt', type=str, default=None, help='Path to the grappa model checkpoint. Overwrites the modeltag argument.')
     parser.add_argument('--device', '-d', type=str, default='cpu', help='The device to use for grappas inference forward pass. Defaults to cpu.')
-    parser.add_argument("--include","-w",nargs='+',default=[],help="Include certain GROMACS topology moleculetypes to be parameterized with grappa. Per default all moleculetypes except solvent and inorganic ions are included.")
-    parser.add_argument("--exclude","-b",nargs='+',default=[],help="Exclude certain GROMACS topology moleculetypes from being parameterized with grappa.")
+    parser.add_argument("--include", nargs='+',default=[],help=argparse.SUPPRESS)  # deprecated, use --select instead
+    parser.add_argument("--exclude", nargs='+',default=[],help=argparse.SUPPRESS)  # deprecated, use --deselect instead
+    parser.add_argument("--select", "-w",nargs='+',default=[],help="Select certain GROMACS topology moleculetypes for parameterization with grappa. Per default all moleculetypes except solvent and inorganic ions are selected.")
+    parser.add_argument("--deselect","-b",nargs='+',default=[],help="Deselect certain GROMACS topology moleculetypes for parameterization with grappa.")
     parser.add_argument('--plot_parameters', '-p', action='store_true', help='If set, a plot of the MM parameters is created and saved in the same directory as the output file.')
     args = parser.parse_args()
 
-    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, device=args.device, include_list=args.include, exclude_list=args.exclude, plot_parameters=args.plot_parameters, modelpath=args.modelpath)
+    if args.include or args.exclude:
+        warnings.warn("The commandline argument '--include' for grappa_gmx is deprecated and will be removed in the future. Use '--select' instead.", DeprecationWarning)
+        args.select += args.include
+    if args.exclude:
+        warnings.warn("The commandline argument '--exclude' for grappa_gmx is deprecated and will be removed in the future. Use '--deselect' instead.", DeprecationWarning)
+        args.deselect += args.exclude
+
+    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, device=args.device, select_list=args.select, deselect_list=args.deselect, plot_parameters=args.plot_parameters, modelpath=args.modelpath)
     
