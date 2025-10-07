@@ -55,7 +55,7 @@ class GromacsGrappa(Grappa):
         from gmx_top4py.topology.utils import get_is_selected_moleculetype_f
         from gmx_top4py.parsing import read_top, write_top
 
-        from grappa.utils.kimmdy_utils import GrappaParameterizer
+        from grappa.utils.gromacs_utils import GrappaParameterizer
 
         # load the topology
         top_path = Path(top_path)
