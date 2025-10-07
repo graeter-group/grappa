@@ -29,15 +29,15 @@ class GromacsGrappa(Grappa):
         assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
         return super().__init__(*args, **kwargs)
 
-    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, select_list:list = [], deselect_list:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
+    def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, selected:list = [], deselected:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
         """
         Creates a .top file with the grappa-predicted parameters for the topology
 
         Args:
             top_path (Union[str, Path]): 'path/to/topology.top' The path to the topology file, parametrised by a classical force field (nonbonded parameters and improper torsion idxs are needed)
             top_outpath (Union[str, Path], optional): Defaults to 'path/to/topology_grappa.top'. The path to the output file.
-            select_list: Select certain GROMACS topology moleculetypes for parameterization with grappa.
-            deselect_list: Deselect certain GROMACS topology moleculetypes for parameterization with grappa.
+            selected: Select certain GROMACS topology moleculetypes for parameterization with grappa.
+            deselected: Deselect certain GROMACS topology moleculetypes for parameterization with grappa.
             plot_parameters (bool, optional): Defaults to False. If True, a plot of the parameters is created and saved in the same directory as the output file.
         """
         assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
@@ -62,7 +62,7 @@ class GromacsGrappa(Grappa):
 
         gmx_top4py_version = version("gmx_top4py")
         logging.info(f"gmx-top4py version {gmx_top4py_version}")
-        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(include=select_list, exclude=deselect_list))   #radicals='' means gmx-top4py won't search for radicals
+        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(selected=selected, deselected=deselected))   #radicals='' means gmx-top4py won't search for radicals
 
 
         # call grappa model to write the parameters to the topology
@@ -76,12 +76,12 @@ class GromacsGrappa(Grappa):
         return
 
 
-def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='latest', device:str='cpu', select_list:list=[], deselect_list:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
+def main_(top_path:Union[str,Path], top_outpath:Union[str,Path]=None, modeltag:str='latest', device:str='cpu', selected:list=[], deselected:list=[], plot_parameters:bool=False, modelpath:Union[str,Path]=None):
     if not modelpath is None:
         grappa = GromacsGrappa.from_ckpt(modelpath, device=device)
     else:
         grappa = GromacsGrappa.from_tag(modeltag, device=device)
-    grappa.parametrize(top_path, top_outpath, include_list=select_list, exclude_list=deselect_list, plot_parameters=plot_parameters)
+    grappa.parametrize(top_path, top_outpath, selected=selected, deselected=deselected, plot_parameters=plot_parameters)
     return
 
 def main():
@@ -98,12 +98,12 @@ def main():
     parser.add_argument('--plot_parameters', '-p', action='store_true', help='If set, a plot of the MM parameters is created and saved in the same directory as the output file.')
     args = parser.parse_args()
 
-    if args.include or args.exclude:
+    if args.include:
         warnings.warn("The commandline argument '--include' for grappa_gmx is deprecated and will be removed in the future. Use '--select' instead.", DeprecationWarning)
         args.select += args.include
     if args.exclude:
         warnings.warn("The commandline argument '--exclude' for grappa_gmx is deprecated and will be removed in the future. Use '--deselect' instead.", DeprecationWarning)
         args.deselect += args.exclude
 
-    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, device=args.device, select_list=args.select, deselect_list=args.deselect, plot_parameters=args.plot_parameters, modelpath=args.modelpath)
+    return main_(args.top_path, top_outpath=args.top_outpath, modeltag=args.modeltag, device=args.device, selected=args.select, deselected=args.deselect, plot_parameters=args.plot_parameters, modelpath=args.modelpath)
     
