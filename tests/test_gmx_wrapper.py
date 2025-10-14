@@ -6,9 +6,13 @@ def is_gmx_available():
 
 def gmx_wrapper_pdb(pdb_path:str):
     from pathlib import Path
+    import importlib.util
     import shutil
     import os
     import numpy as np
+
+    if importlib.util.find_spec("gmx-top4py") is None:
+        pytest.skip("gmx-top4py not installed; skipping Gromacs wrapper test")
 
     gmx_dir = Path(__file__).parent / "gmx_temp_files"
     gmx_dir.mkdir(exist_ok=True, parents=True)
@@ -44,9 +48,9 @@ def gmx_wrapper_pdb(pdb_path:str):
     assert np.sqrt(np.mean((forces_amber - forces_grappa) ** 2)) < 12, f"Gradient cRMSE between amber99 and grappa-light larger than 12 kcal/mol/A: {np.sqrt(np.mean((forces_amber - forces_grappa) ** 2))}"
     assert np.max(np.abs(forces_amber - forces_grappa)) < 80, f"Max force deviation between amber99 and grappa-light larger than 80 kcal/mol/A: {np.max(np.abs(forces_amber - forces_grappa))}"
 
-    # remove all files generated:
-    os.chdir("..")
-    shutil.rmtree(gmx_dir)
+    # remove all temporary files ending with '#'
+    for f in gmx_dir.glob("*#"):
+        f.unlink()
 
 
 def get_forces_gmx(grofile:str, topfile:str):
