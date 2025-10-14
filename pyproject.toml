@@ -44,7 +44,7 @@ grappa_inspect-dataset = "grappa.data.dataset:inspect_dataset"
 grappa_upload = "grappa.training.export_model:upload"
 
 [tool.pytest.ini_options]
-addopts = "-m 'not slow and not gpu'"
+addopts = "-m 'not slow and not gpu' -vv -rA --tb=long --disable-warnings"
 markers = [
     "slow: mark test as slow",
     "gpu: mark test as requiring a CUDA installation of torch and dgl",

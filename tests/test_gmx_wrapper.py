@@ -11,9 +11,13 @@ def is_gmx_available():
 @pytest.mark.slow
 def test_gmx_wrapper():
     from pathlib import Path
+    import importlib.util
     import shutil
     import os
     import numpy as np
+
+    if importlib.util.find_spec("kimmdy") is None:
+        pytest.skip("kimmdy not installed; skipping Gromacs wrapper test")
 
     gmx_dir = Path(__file__).parent / "gmx_temp_files"
     gmx_dir.mkdir(exist_ok=True, parents=True)
@@ -31,7 +35,7 @@ def test_gmx_wrapper():
 
     if not os.path.exists("two_ubqs.top"):
         raise FileNotFoundError("two_ubqs.top not found. Parametrization failed.")
-
+    
     # Then, run grappa_gmx to create a new topology file using the grappa model
     ############################################
     os.system('grappa_gmx -f two_ubqs.top -o two_ubqs_grappa.top -t grappa-1.4.1-light')
@@ -51,9 +55,9 @@ def test_gmx_wrapper():
     assert np.sqrt(np.mean((forces_amber - forces_grappa) ** 2)) < 12, f"Gradient cRMSE between amber99 and grappa-light larger than 12 kcal/mol/A: {np.sqrt(np.mean((forces_amber - forces_grappa) ** 2))}"
     assert np.max(np.abs(forces_amber - forces_grappa)) < 80, f"Max force deviation between amber99 and grappa-light larger than 80 kcal/mol/A: {np.max(np.abs(forces_amber - forces_grappa))}"
 
-    # remove all files generated:
-    os.chdir("..")
-    shutil.rmtree(gmx_dir)
+    # remove all temporary files ending with '#'
+    for f in gmx_dir.glob("*#"):
+        f.unlink()
 
 
 def get_forces_gmx(grofile:str, topfile:str):
