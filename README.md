@@ -137,7 +137,7 @@ pip install grappa-ff
 ```
 
 Depending on the MD engine used, an installation of OpenMM or GROMACS is needed (see below).
-For GROMACS, also the [kimmdy](https://github.com/hits-mbm-dev/kimmdy) package is required:
+For GROMACS, also the [kimmdy](https://github.com/graeter-group/kimmdy) package is required:
 ```{bash}
 pip install kimmdy>=6.8.3
 ```
@@ -146,7 +146,7 @@ The installation is also part of the Colab Notebooks [Grappa as GROMACS force fi
 
 ### GROMACS
 
-The creation of custom GROMACS topology files is handled by [kimmdy](https://github.com/hits-mbm-dev/kimmdy), which can be installed in the same environment as Grappa via pip,
+The creation of custom GROMACS topology files is handled by [kimmdy](https://github.com/graeter-group/kimmdy), which can be installed in the same environment as Grappa via pip,
 
 ```{bash}
 pip install kimmdy>=6.8.3
@@ -179,7 +179,7 @@ pytest -m slow
 To install Grappa from source, clone the repository and install requirements and the package itself with pip:
 
 ```{bash}
-git clone https://github.com/hits-mbm-dev/grappa.git
+git clone git@github.com:graeter-group/grappa.git
 cd grappa
 
 pip install -r installation_utils/cpu_requirements.txt
