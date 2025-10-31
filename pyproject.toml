@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "grappa"
-version = "1.4.1"
+version = "1.5.0"
 authors = [
     { name="Leif Seute", email="leif.seute@h-its.org" }
 ]
@@ -26,10 +26,12 @@ dependencies = [
     "charset-normalizer",
     "hydra-core",
     "torch",
+    "torchdata",
     "dgl",
     "torchdata",
     "lightning>=2.3.3",
-    "gmx-top4py>=0.1.0"
+    "gmx-top4py",
+    "pytest"
 ]
 
 [tool.setuptools]

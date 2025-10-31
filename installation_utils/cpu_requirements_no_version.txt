@@ -16,3 +16,4 @@ dgl==2.1.0
 rdkit==2023.9.1
 lightning>=2.3.3
 pytest
+gmx-top4py
