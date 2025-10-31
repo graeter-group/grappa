@@ -4,50 +4,43 @@ import pytest
 def is_gmx_available():
     return shutil.which("gmx") is not None
 
-
-
-# skip if gmx is not available:
-@pytest.mark.skipif(not is_gmx_available(), reason="Gromacs not available")
-@pytest.mark.slow
-def test_gmx_wrapper():
+def gmx_wrapper_pdb(pdb_path:str):
     from pathlib import Path
     import importlib.util
     import shutil
     import os
     import numpy as np
 
-    if importlib.util.find_spec("kimmdy") is None:
-        pytest.skip("kimmdy not installed; skipping Gromacs wrapper test")
+    if importlib.util.find_spec("gmx_top4py") is None:
+        pytest.skip("gmx-top4py not installed; skipping Gromacs wrapper test")
 
     gmx_dir = Path(__file__).parent / "gmx_temp_files"
     gmx_dir.mkdir(exist_ok=True, parents=True)
 
-    # this is a tets system with two ubiquitins and a few water molecules
-    pdbfile = Path(__file__).parent / "testfiles/two_ubqs.pdb"
     # copy the pdbfile to the gmx_dir:
-    shutil.copy(pdbfile, gmx_dir)
-    
+    shutil.copy(pdb_path, gmx_dir)
+    file_name = Path(pdb_path).name
     os.chdir(f"{str(gmx_dir.absolute())}")
 
     # parameterize the system with amber99sbildn:
     # (the 6 1 flags are to select the traditional forcefield and water model)
-    os.system('printf "6\n1\n "|gmx pdb2gmx -f two_ubqs.pdb -o two_ubqs.gro -p two_ubqs.top -ignh')
+    os.system(f'printf "6\n1\n "|gmx pdb2gmx -f {file_name} -o {file_name}.gro -p {file_name}.top -ignh')
 
-    if not os.path.exists("two_ubqs.top"):
-        raise FileNotFoundError("two_ubqs.top not found. Parametrization failed.")
-    
+    if not os.path.exists(f"{file_name}.top"):
+        raise FileNotFoundError(f"{file_name}.top not found. Parametrization failed.")
+
     # Then, run grappa_gmx to create a new topology file using the grappa model
     ############################################
-    os.system('grappa_gmx -f two_ubqs.top -o two_ubqs_grappa.top -t grappa-1.4.1-light')
+    os.system(f'grappa_gmx -f {file_name}.top -o {file_name}_grappa.top -t grappa-1.4.1-light')
     ############################################
 
-    if not os.path.exists("two_ubqs_grappa.top"):
-        raise FileNotFoundError("two_ubqs_grappa.top not found")
+    if not os.path.exists(f"{file_name}_grappa.top"):
+        raise FileNotFoundError(f"{file_name}_grappa.top not found")
 
 
-    forces_amber = get_forces_gmx("two_ubqs.gro", "two_ubqs.top")
-    forces_grappa = get_forces_gmx("two_ubqs.gro", "two_ubqs_grappa.top")
-    
+    forces_amber = get_forces_gmx(f"{file_name}.gro", f"{file_name}.top")
+    forces_grappa = get_forces_gmx(f"{file_name}.gro", f"{file_name}_grappa.top")
+
     import matplotlib.pyplot as plt
     plt.scatter(forces_amber, forces_grappa)
     plt.savefig("forces.png")
@@ -118,3 +111,23 @@ def get_forces_gmx(grofile:str, topfile:str):
     forces = forces / 10.
 
     return forces
+
+# skip if gmx is not available:
+@pytest.mark.skipif(not is_gmx_available(), reason="Gromacs not available")
+@pytest.mark.slow
+def test_gmx_wrapper_monomer():
+    """Test gmx wrapper by comparing Grappa and Amber gradients for a monomer."""
+    from pathlib import Path
+    thisdir = Path(__file__).parent
+    pdb_path = str(thisdir/'testfiles/T4.pdb')
+    gmx_wrapper_pdb(pdb_path)
+
+# skip if gmx is not available:
+@pytest.mark.skipif(not is_gmx_available(), reason="Gromacs not available")
+@pytest.mark.slow
+def test_gmx_wrapper_multimer():
+    """Test gmx wrapper by comparing Grappa and Amber gradients for a multimer."""
+    from pathlib import Path
+    thisdir = Path(__file__).parent
+    pdb_path = str(thisdir/'testfiles/two_ubqs.pdb')
+    gmx_wrapper_pdb(pdb_path)

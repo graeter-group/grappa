@@ -28,7 +28,8 @@ dependencies = [
     "torch",
     "dgl",
     "torchdata",
-    "lightning>=2.3.3"
+    "lightning>=2.3.3",
+    "gmx-top4py>=0.1.0"
 ]
 
 [tool.setuptools]
