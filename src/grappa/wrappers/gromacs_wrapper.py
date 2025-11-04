@@ -26,7 +26,7 @@ class GromacsGrappa(Grappa):
     Then, a file 'path/to/topology_grappa.top' will be created, which contains the grappa-predicted parameters for the topology.
     """
     def __init__(self, *args, **kwargs):
-        assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
+        assert importlib.util.find_spec('gmxtop') is not None, "gmxtop must be installed to use the GromacsGrappa class."
         return super().__init__(*args, **kwargs)
 
     def parametrize(self, top_path:Union[str, Path], top_outpath:Union[str, Path]=None, selected:list = [], deselected:list = [], plot_parameters:bool=False, charge_model:Deprecated=None):
@@ -40,7 +40,7 @@ class GromacsGrappa(Grappa):
             deselected: Deselect certain GROMACS topology moleculetypes for parameterization with grappa.
             plot_parameters (bool, optional): Defaults to False. If True, a plot of the parameters is created and saved in the same directory as the output file.
         """
-        assert importlib.util.find_spec('gmx_top4py') is not None, "gmx-top4py must be installed to use the GromacsGrappa class."
+        assert importlib.util.find_spec('gmxtop') is not None, "gmxtop must be installed to use the GromacsGrappa class."
 
         if not charge_model is None:
             warnings.warn("The charge_model argument for GromacsGrappa.parametrize is deprecated, has no effect and will be removed in the future.", DeprecationWarning)
@@ -50,19 +50,19 @@ class GromacsGrappa(Grappa):
 
         plot_path = Path(Path(top_outpath).stem + "_parameters.png") if plot_parameters else None
 
-        # import this only when the function is called to make grappas dependency on gmx-top4py optional
-        from gmx_top4py.topology.topology import Topology
-        from gmx_top4py.topology.utils import get_is_selected_moleculetype_f
-        from gmx_top4py.parsing import read_top, write_top
+        # import this only when the function is called to make grappas dependency on gmxtop optional
+        from gmxtop.topology.topology import Topology
+        from gmxtop.topology.utils import get_is_selected_moleculetype_f
+        from gmxtop.parsing import read_top, write_top
 
         from grappa.utils.gromacs_utils import GrappaParameterizer
 
         # load the topology
         top_path = Path(top_path)
 
-        gmx_top4py_version = version("gmx_top4py")
-        logging.info(f"gmx-top4py version {gmx_top4py_version}")
-        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(selected=selected, deselected=deselected))   #radicals='' means gmx-top4py won't search for radicals
+        gmxtop_version = version("gmxtop")
+        logging.info(f"gmxtop version {gmxtop_version}")
+        topology = Topology(read_top(Path(top_path)),radicals='',is_selected_moleculetype_f=get_is_selected_moleculetype_f(selected=selected, deselected=deselected))   #radicals='' means gmxtop won't search for radicals
 
 
         # call grappa model to write the parameters to the topology

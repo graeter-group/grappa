@@ -11,8 +11,8 @@ def gmx_wrapper_pdb(pdb_path:str):
     import os
     import numpy as np
 
-    if importlib.util.find_spec("gmx_top4py") is None:
-        pytest.skip("gmx-top4py not installed; skipping Gromacs wrapper test")
+    if importlib.util.find_spec("gmxtop") is None:
+        pytest.skip("gmxtop not installed; skipping Gromacs wrapper test")
 
     gmx_dir = Path(__file__).parent / "gmx_temp_files"
     gmx_dir.mkdir(exist_ok=True, parents=True)

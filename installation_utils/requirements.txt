@@ -14,4 +14,4 @@ networkx
 charset-normalizer
 hydra-core
 pytest
-gmx-top4py
+gmxtop
