@@ -30,7 +30,7 @@ dependencies = [
     "dgl",
     "torchdata",
     "lightning>=2.3.3",
-    "gmx-top4py",
+    "gmxtop",
     "pytest"
 ]
 

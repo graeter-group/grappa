@@ -5,10 +5,10 @@ import importlib
 This is used for the gromacs wrapper.
 """
 
-# The following conditional imnports are only for pylint, we import the packages in each function call again. otherwise, it will not work if one first installs grappa and only then gmx-top4py.
-if importlib.util.find_spec('gmx_top4py') is not None:
-    from gmx_top4py.topology.topology import Topology
-    from gmx_top4py.parameterizing import Parameterizer
+# The following conditional imnports are only for pylint, we import the packages in each function call again. otherwise, it will not work if one first installs grappa and only then gmxtop.
+if importlib.util.find_spec('gmxtop') is not None:
+    from gmxtop.topology.topology import Topology
+    from gmxtop.parameterizing import Parameterizer
 
 import logging
 import numpy as np
@@ -60,7 +60,7 @@ def order_proper(idxs: np.ndarray) -> np.ndarray:
 # workflow functions
 def build_molecule(top: 'Topology', build_nrs:Set[str], charge_model:str='amber99') -> Molecule:
     '''
-    Build a grappa.data.Molecule from a gmx_top4py.topology.topology.Topology
+    Build a grappa.data.Molecule from a gmxtop.topology.topology.Topology
 
     - top: Topology to be represented by the Molecule
     - charge_model: tag that describes where the partial charges in the topology will come from. Possible values:
@@ -155,7 +155,7 @@ def apply_parameters(top: 'Topology', parameters: Parameters, apply_nrs: Set[str
     namely: length [nm], mass [kg], time [ps], energy [kJ/mol], force [kJ mol-1 nm-1], angle [deg]
     """
 
-    from gmx_top4py.topology.atomic import Bond, Angle, Dihedral, MultipleDihedrals
+    from gmxtop.topology.atomic import Bond, Angle, Dihedral, MultipleDihedrals
 
     ## atoms
     # Nothing to do here because partial charges are dealt with elsewhere
@@ -241,10 +241,10 @@ def apply_parameters(top: 'Topology', parameters: Parameters, apply_nrs: Set[str
     return
 
 
-if importlib.util.find_spec('gmx_top4py') is not None:
-    from gmx_top4py.topology.topology import Topology
-    from gmx_top4py.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
-    from gmx_top4py.parameterizing import Parameterizer
+if importlib.util.find_spec('gmxtop') is not None:
+    from gmxtop.topology.topology import Topology
+    from gmxtop.topology.atomic import Atom, Bond, Angle, Dihedral, MultipleDihedrals
+    from gmxtop.parameterizing import Parameterizer
 
     class GrappaParameterizer(Parameterizer):
         '''
@@ -385,4 +385,4 @@ if importlib.util.find_spec('gmx_top4py') is not None:
 else:
     class GrappaParameterizer:
         def __init__(self, *args, **kwargs):
-            raise ImportError("gmx-top4py package not found. Please install gmx-top4py BEFORE installing grappa to use the GrappaParameterizer. You can install gmx-top4py via pip install gmx-top4py.")
+            raise ImportError("gmxtop package not found. Please install gmxtop BEFORE installing grappa to use the GrappaParameterizer. You can install gmxtop via pip install gmxtop.")

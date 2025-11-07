@@ -142,7 +142,7 @@ The installation is also part of the Colab Notebooks [Grappa as GROMACS force fi
 
 ### GROMACS
 
-The creation of custom GROMACS topology files is handled by [gmx-top4py](https://github.com/graeter-group/gmx-top4py).
+The creation of custom GROMACS topology files is handled by [gmxtop](https://github.com/graeter-group/gmxtop).
 
 If Grappa was installed from source, verify the Grappa-gmx installation by running
 ```{bash}
