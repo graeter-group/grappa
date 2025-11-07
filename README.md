@@ -155,7 +155,7 @@ pytest -m slow
 OpenMM has to be installed in the same environment as Grappa. It is advised to install OpenMM via conda:
 
 ```{bash}
-conda install -c conda-forge openmm # optional: cudatoolkit=<YOUR CUDA>
+conda install -y -c conda-forge openmm # optional: cudatoolkit=<YOUR CUDA>
 ```
 
 Since the resolution of package dependencies can be slow in conda, it is recommended to install OpenMM first and then install Grappa.

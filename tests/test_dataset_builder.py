@@ -3,7 +3,6 @@ from __future__ import annotations
 import shutil
 import pytest
 
-from dataset_builder_workflows import example_dataset_builder_gromacs, example_dataset_builder_openmm
 
 
 @pytest.mark.dataset_builder
@@ -14,6 +13,7 @@ def test_dataset_builder_tutorial_dataset(tmp_path):
     """
     pytest.importorskip("openmm", reason="DatasetBuilder requires OpenMM to obtain nonbonded data.")
 
+    from dataset_builder_workflows import example_dataset_builder_gromacs, example_dataset_builder_openmm
     example_dataset_builder_openmm(tmp_path / "openmm")
 
 @pytest.mark.dataset_builder
@@ -25,5 +25,7 @@ def test_dataset_builder_gromacs_topology(tmp_path):
     gmx_executable = shutil.which("gmx")
     if gmx_executable is None:
         pytest.skip("gmx executable not found; skipping GROMACS topology integration test.")
+
+    from dataset_builder_workflows import example_dataset_builder_gromacs, example_dataset_builder_openmm
 
     example_dataset_builder_gromacs(tmp_path)

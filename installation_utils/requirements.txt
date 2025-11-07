@@ -1,4 +1,4 @@
-numpy==1.26.4
+numpy
 pandas
 scipy
 pyyaml
@@ -6,10 +6,10 @@ pydantic
 torchdata
 seaborn
 tqdm
-rdkit==2023.9.1
+rdkit
 matplotlib
 wandb
-lightning==2.3.3
+lightning
 networkx
 charset-normalizer
 hydra-core
