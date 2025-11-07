@@ -183,11 +183,18 @@ Verify the installation by running
 pytest
 ```
 
-## Installation for the development of custom Grappa force fields
+## Installation from source (GPU mode)
 
-For training Grappa models, neither OpenMM nor Kimmdy ar needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice.
+For training Grappa models, neither OpenMM nor GROMACS are needed, only an environment with a working installation of [PyTorch](https://pytorch.org/) and [DGL](https://www.dgl.ai/) for the cuda version of choice.
 Note that installing Grappa in GPU mode is only recommended if training a model is intended.
-Instructions for installing dgl with cuda can be found at `installation_utils/README.md`.
+Instructions for installing dgl with cuda can be found at `installation_utils/README.md`. For torch 2.4 and cuda 12.4, this can be done by
+```{bash}
+conda create -n grappa-dev python=3.10 -y
+conda activate grappa-dev
+pip install torch==2.4 --index-url https://download.pytorch.org/whl/cu124
+pip install dgl -f https://data.dgl.ai/wheels/torch-2.4/repo.html
+```
+
 In this environment, Grappa can be installed by
 
 ```{bash}
@@ -309,6 +316,10 @@ grappa_ff = OpenmmGrappa.from_ckpt('path/to/your/checkpoint.ckpt')
 ```
 
 You can also simply put the checkpoint and a config.yaml file in the repository `grappa/models/<your_model_tag>` and use `<your_model_tag>` as a tag for loading the model.
+
+### Generation of custom datasets
+
+You can trian Grappa on custom datasets that shpuld contain single point calculations of perturbed states, sampled e.g. via MD simulations, torsion scans or optimizations. We provide a tutorial at [Creating and training on custom datasets](https://colab.research.google.com/drive/143Ycnof3-9TLO7P8CWLsH7K0TMHMfr6s?usp=sharing) as well as example workflows at `tests/dataset_builder_workflows.py` that show how to create datasets from QM energies and forces, obtaining nonbonded parameters from GROMACS or OpenMM force fields.
 
 ## Common pitfalls
 

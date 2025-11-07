@@ -12,7 +12,7 @@ readme = "README.md"
 license = {file = "LICENSE"}
 
 dependencies = [
-    "numpy<=1.26.4",
+    "numpy",
     "pandas",
     "scipy",
     "pyyaml",
@@ -29,9 +29,10 @@ dependencies = [
     "torchdata",
     "dgl",
     "torchdata",
-    "lightning>=2.3.3",
+    "lightning",
     "gmxtop",
-    "pytest"
+    "pytest",
+    "ase"
 ]
 
 [tool.setuptools]
@@ -51,4 +52,5 @@ addopts = "-m 'not slow and not gpu' -vv -rA --tb=long --disable-warnings"
 markers = [
     "slow: mark test as slow",
     "gpu: mark test as requiring a CUDA installation of torch and dgl",
+    "dataset_builder: mark DatasetBuilder tutorial/GROMACS integration tests (skipped unless --run-dataset-builder or -m dataset_builder)",
 ]

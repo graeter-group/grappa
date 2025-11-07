@@ -249,7 +249,10 @@ class Molecule():
         if verbose:
             logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
 
-            raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max(atom_ids)} but the system has only {openmm_system.getNumParticles()} particles, so this can not be the case. You might need to shift your topology ids to start at zero.")
+        # validate that the atom_ids correspond to the indices in the system:
+        max_atom_id = max(atom_ids)
+        if max_atom_id >= openmm_system.getNumParticles():
+            raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max_atom_id} but the system has only {openmm_system.getNumParticles()} particles. You might need to shift your topology ids to start at zero.")
 
         if validate_bonds:
             num_bond_forces = 0
@@ -510,11 +513,11 @@ class Molecule():
 
         # transform entries of n{>1} to idxs of the atoms:
         idxs = {
-            "n1": torch.tensor(self.atoms, dtype=torch.int64), # these are ids
-            "n2": torch.tensor([(idx_from_id[bond[0]], idx_from_id[bond[1]]) for bond in self.bonds], dtype=torch.int64), # these are idxs
-            "n3": torch.tensor([(idx_from_id[angle[0]], idx_from_id[angle[1]], idx_from_id[angle[2]]) for angle in self.angles], dtype=torch.int64), # these are idxs
-            "n4": torch.tensor([(idx_from_id[proper[0]], idx_from_id[proper[1]], idx_from_id[proper[2]], idx_from_id[proper[3]]) for proper in self.propers], dtype=torch.int64), # these are idxs
-            "n4_improper": torch.tensor([(idx_from_id[improper[0]], idx_from_id[improper[1]], idx_from_id[improper[2]], idx_from_id[improper[3]]) for improper in self.impropers], dtype=torch.int64), # these are idxs
+            "n1": torch.tensor(self.atoms, dtype=torch.long), # these are ids
+            "n2": torch.tensor([(idx_from_id[bond[0]], idx_from_id[bond[1]]) for bond in self.bonds], dtype=torch.long), # these are idxs
+            "n3": torch.tensor([(idx_from_id[angle[0]], idx_from_id[angle[1]], idx_from_id[angle[2]]) for angle in self.angles], dtype=torch.long), # these are idxs
+            "n4": torch.tensor([(idx_from_id[proper[0]], idx_from_id[proper[1]], idx_from_id[proper[2]], idx_from_id[proper[3]]) for proper in self.propers], dtype=torch.long), # these are idxs
+            "n4_improper": torch.tensor([(idx_from_id[improper[0]], idx_from_id[improper[1]], idx_from_id[improper[2]], idx_from_id[improper[3]]) for improper in self.impropers], dtype=torch.long), # these are idxs
         }
 
         # define the heterograph structure:
@@ -546,7 +549,7 @@ class Molecule():
                 [
                     torch.arange(n_nodes),
                     torch.arange(n_nodes),
-                ], dim=0).int()
+                ], dim=0).long()
 
         # transform to tuples of tensors:
         hg = {key: (value[0], value[1]) for key, value in hg.items()}

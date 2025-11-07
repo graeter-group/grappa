@@ -55,9 +55,9 @@ def match_molecules(molecules: list[Molecule], verbose = False, _topology_matchi
             logging.warning(f"Number of bonds in molecule derived from the gromacs topology ({len(bonds_topology)}) is not the same as in the molecule constructed from ASE ({len(bonds_ase)})!\nThe following bonds are present in the topology but not in the ASE molecule: {set(bonds_topology) - set(bonds_ase)}\nThe following bonds are present in the ASE molecule but not in the topology: {set(bonds_ase) - set(bonds_topology)}")
 
     # convert to dgl graphs
-    graphs = [mol.to_dgl() for mol in molecules]        
+    graphs = [mol.to_dgl() for mol in molecules]
 
-    isomorphisms = get_isomorphisms([graphs[0]],graphs,silent=True)
+    isomorphisms = get_isomorphisms([graphs[0]], graphs, silent=True)
     matched_idxs = [idxs[1] for idxs in list(isomorphisms)]
     if len(matched_idxs) < len(molecules):
         if not _topology_matching:
@@ -68,8 +68,9 @@ def match_molecules(molecules: list[Molecule], verbose = False, _topology_matchi
     for isomorphism in list(isomorphisms):
         idx1, idx2 = isomorphism
         assert idx1 == 0, f'Internal error, bug! idx1 should be 0 as we only have a lost with one graph above!'
-        permutation = get_isomorphic_permutation(graphs[0],graphs[idx2])
+        permutation = get_isomorphic_permutation(graphs[0], graphs[idx2])
         permutations[idx2] = permutation
+
     if verbose:
         logging.info(permutations)
     return permutations

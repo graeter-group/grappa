@@ -1,4 +1,4 @@
-numpy<=1.26.4
+numpy==1.26.4
 pandas
 scipy
 pyyaml
@@ -9,9 +9,10 @@ tqdm
 rdkit==2023.9.1
 matplotlib
 wandb
-lightning>=2.3.3
+lightning==2.3.3
 networkx
 charset-normalizer
 hydra-core
 pytest
 gmxtop
+ase
