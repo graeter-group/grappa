@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union, Mapping
+from typing import Union, Mapping, Optional
 from pathlib import Path
 import numpy as np
 
@@ -103,9 +103,38 @@ class DatasetBuilder:
 
     skip_impropers: bool = False # can be used for debugging. skips the reading of impropers from the openmm system.
 
-    # post init fct:
-    def __post_init__(self):
-        assert importlib.util.find_spec("openmm") is not None, "The dataset builder class requires the openmm package to be installed."
+    @staticmethod
+    def _get_ref_from_gmx_topology(top_file: Union[str,Path]):
+        """Add a GROMACS topology file as reference for connectivity checking during entry addition.
+        """
+        top_path = Path(top_file)
+        system, topology = openmm_system_from_gmx_top(top_path)
+        _reference_topology_molecule = Molecule.from_openmm_topology(topology, partial_charges=[0.0 for _ in range(len(list(topology.atoms())))], impropers=[])
+        return _reference_topology_molecule
+
+    @staticmethod
+    def _get_ref_from_openmm_topology(topology: Topology):
+        """Add an OpenMM system and topology as reference for connectivity checking during entry addition.
+        """
+        _reference_topology_molecule = Molecule.from_openmm_topology(topology, partial_charges=[0.0 for _ in range(len(list(topology.atoms())))], impropers=[])
+        return _reference_topology_molecule
+
+    @ staticmethod
+    def _get_ref_topology(reference_topology: Optional[Union[str,Path,Topology]]):
+        """Get reference topology molecule from either a gromacs topology file or an openmm Topology object.
+        """
+        try:
+            _reference_topology_molecule = None
+            if reference_topology is not None:
+                if isinstance(reference_topology, (str,Path)):
+                    _reference_topology_molecule = DatasetBuilder._get_ref_from_gmx_topology(reference_topology)
+                elif isinstance(reference_topology, Topology):
+                    _reference_topology_molecule = DatasetBuilder._get_ref_from_openmm_topology(reference_topology)
+                else:
+                    raise ValueError(f"reference_topology must be either a path to a GROMACS topology file or an OpenMM Topology object. Got {type(reference_topology)}")
+        except Exception as e:
+            raise ValueError(f"Could not read reference topology from {reference_topology}. Set the reference_topology to None if you don't want to use a reference topology for connectivity checking.") from e
+        return _reference_topology_molecule
 
     ### Dataset creation ###
     @classmethod
@@ -125,7 +154,7 @@ class DatasetBuilder:
             complete_entries.add(moldata.mol_id)
         return cls(entries=entries,complete_entries=complete_entries)
 
-    def entry_from_qm_dict_file(self, mol_id:str, filename: Union[str,Path]):
+    def entry_from_qm_dict_file(self, mol_id:str, filename: Union[str,Path], reference_topology: Optional[Union[str,Path,Topology]] = None) -> None:
         """ Creates a DatasetBuilder entry from specified QM data array files. Assuming units to be default grappa units.
         
         Parameters
@@ -135,6 +164,8 @@ class DatasetBuilder:
         filename
             File name of the QM data dictionary. Must include keys
             'xyz', 'energy', 'atomic_numbers', and either 'force' or 'gradient'.
+        reference_topology
+            Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
 
         Returns
         -------
@@ -144,7 +175,7 @@ class DatasetBuilder:
 
         ## load qm dict and create entry
         qm_dict = np.load(filename)
-        self._entry_from_qm_dict(qm_dict=qm_dict, mol_id=mol_id, mol=None, overwrite=False, validate=True)
+        self._entry_from_qm_dict(qm_dict=qm_dict, mol_id=mol_id, mol=None, overwrite=False, validate=True, reference_topology=None)
 
     def entry_from_qm_array_files(self, mol_id: str, filename_dict:dict[str,str]) -> None:
         """
@@ -171,7 +202,7 @@ class DatasetBuilder:
         ## add entry
         self._entry_from_qm_dict(mol_id=mol_id, qm_dict=qm_dict, mol=None, overwrite=False, validate=True)
 
-    def entry_from_qm_output_file(self, mol_id:str, qm_output_files:list[Union[Path,str]],  ase_index_str: str = ':'):
+    def entry_from_qm_output_file(self, mol_id:str, qm_output_files:list[Union[Path,str]],  ase_index_str: str = ':', reference_topology: Optional[Union[str,Path,Topology]] = None) -> None:
         """
             Using ASE, processes QM output files to extract geometries, energies, and gradients. From this, a DatasetBuilder entry is created.
             Since ASE uses eV and Angstrom as internal units, the energies and gradients are converted to the Grappa units kcal/mol and A, respectively.
@@ -179,11 +210,13 @@ class DatasetBuilder:
             Parameters
             ----------
             mol_id 
+                Unique identifier for the molecule.
             qm_output_files : list of Union[Path, str]
                 List of paths or strings representing the QM output files to be processed.
-                Unique identifier for the molecule.
             ase_index_str
                 The ASE index string to specify the atomic index to be used when reading the QM output files.
+            reference_topology
+                Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
 
             Returns
             -------
@@ -192,14 +225,19 @@ class DatasetBuilder:
         """
 
         ## read geometries
-        QM_calculations: list[list[Atoms]] = []
+        QM_calculations: list[list[Atoms]] = [] # list where each entry is a set of conformations of the given molecule (in case there are several qm output files)
         for qm_output_file in qm_output_files:
             QM_calculations.append(read(qm_output_file,index=ase_index_str))
         
-        ## create Grappa Molecules
+        ## create Grappa Molecules for each qm file.
+        # the order of atoms can be different for each qm file, but the same within the qm file.
         molecules = []
-        for conformations in QM_calculations:
-            molecules.append(Molecule.from_ase(conformations[-1]), verbose=True)  #taking [-1] could be better than [0] for optimizations, could check for conf with min energy 
+        for idx, conformations in enumerate(QM_calculations):
+            # create a mol to get the atom order:
+            mol = Molecule.from_ase(conformations[-1], verbose=True)
+            # NOTE: taking [-1] could be better than [0] for optimizations, could also check for conf with min energy
+            self._connectivity_check(mol, reference_topology, mol_id, idx, molecules)
+            molecules.append(mol)
                     
         ## different QM files could have different atom order, matching this  
         if len(molecules) > 1:  
@@ -240,7 +278,7 @@ class DatasetBuilder:
         ## add entry
         self._entry_from_qm_dict(mol_id=mol_id, qm_dict=qm_dict, mol=molecules[0], overwrite=False, validate=False)
 
-    def _entry_from_qm_dict(self,mol_id: str, qm_dict: Mapping,  mol: Union[Molecule,None] = None, overwrite:bool = False, validate:bool = True) -> None:
+    def _entry_from_qm_dict(self, mol_id: str, qm_dict: Mapping,  mol: Union[Molecule,None] = None, overwrite:bool = False, validate:bool = True, reference_topology: Optional[Union[str,Path,Topology]] = None) -> None:
         """
         Creates or updates an entry in the DatasetBuilder from the provided quantum mechanical data dictionary.
 
@@ -257,6 +295,8 @@ class DatasetBuilder:
             If True, will overwrite an existing entry with the same mol_id.
         validate
             If True, validates the qm_dict before processing.
+        reference_topology
+            Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
 
         Returns
         -------
@@ -292,11 +332,28 @@ class DatasetBuilder:
             # use ase to get bonds from positions
             atoms = Atoms(positions=xyz[-1],numbers=qm_dict['atomic_numbers'])
             mol = Molecule.from_ase(atoms, verbose=True)
+        
+        # perform the check whether the bonds match the reference topology
+        if reference_topology is not None:
+            self._compare_with_reference_topology(mol=mol, reference_mol=DatasetBuilder._get_ref_topology(reference_topology), context=mol_id)
+
         mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
 
         self.entries[mol_id] = mol_data
         return
     
+    def _connectivity_check(self, mol: Molecule, reference_topology: Optional[Union[str,Path,Topology]], mol_id: str, idx: int, molecules: list) -> None:
+            # check that the set of bonds fits:
+            perform_connectivity_check = True
+            if reference_topology is not None:
+                reference_mol = DatasetBuilder._get_ref_topology(reference_topology)
+            elif idx > 0:
+                reference_mol = molecules[0]
+            else:
+                perform_connectivity_check = False
+            if perform_connectivity_check:
+                self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=f"{mol_id}/qm_file_{idx}")
+
     def _validate_qm_dict(self, qm_dict:Mapping, mold_id: str) -> bool:
         """Validate that QM dict has the required keys and enough conformations (>3) to be included in a dataset.
         """
@@ -316,6 +373,37 @@ class DatasetBuilder:
             logging.warning(f"Too few conformations: {len(valid_idxs)} < 3. Skipping entry!")
             valid = False
         return valid
+
+    def _compare_with_reference_topology(self, mol: Molecule, reference_mol:Molecule, context: str) -> None:
+        """
+        Compare the ASE-derived molecule bonds against the optional reference topology.
+        """
+        if mol is None or self._reference_topology_molecule is None:
+            return
+
+        topo_atoms = len(reference_mol.atoms)
+        mol_atoms = len(mol.atoms)
+        if topo_atoms != mol_atoms:
+            raise ValueError(
+                f"Atom count mismatch between topology ({topo_atoms}) and ASE molecule ({mol_atoms}) for {context}."
+            )
+
+        def _normalized_bonds(bonds):
+            normalized = set()
+            for bond in bonds:
+                a, b = bond
+                normalized.add((a, b) if a <= b else (b, a))
+            return normalized
+
+        ref_bonds = _normalized_bonds(reference_mol.bonds)
+        mol_bonds = _normalized_bonds(mol.bonds)
+        if ref_bonds != mol_bonds:
+            missing = ref_bonds - mol_bonds
+            additional = mol_bonds - ref_bonds
+            logging.warning(
+                f"Bond mismatch for {context}: missing {missing if missing else 'none'}, "
+                f"additional {additional if additional else 'none'}."
+            )
 
     def add_nonbonded_from_gmx_top(self, mol_id:str, top_file: Union[str,Path], add_pdb:bool=False):
         """

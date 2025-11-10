@@ -801,3 +801,37 @@ class Molecule():
 
 
         return cls(atoms=atom_idxs, bonds=bonds, atomic_numbers=atomic_numbers, partial_charges=partial_charges, impropers=impropers)
+
+
+    @classmethod
+    def from_openmm_topology(cls, openmm_topology, partial_charges:List[float]=None, impropers=[]):
+        """
+        Extracts the atom ids and bonds from an openmm topology. Partial charges and impropers need to be provided separately.
+        Args:
+            openmm_topology (openmm.app.Topology): an openmm topology
+            partial_charges (List[float], optional): partial charges of the atoms. If None, partial charges are not extracted. Defaults to None.
+            impropers (list, optional): list of tuples of atom ids that are impropers. If empty, impropers are not extracted. Defaults to [].
+        """
+        from openmm.app import Topology as OpenMMTopology
+        assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
+
+        atom_ids = []
+        atomic_numbers = []
+        for atom in openmm_topology.atoms():
+            atom_ids.append(atom.index)
+            atomic_numbers.append(atom.element.atomic_number)
+
+        neighbor_dict = {atom_id: set() for atom_id in atom_ids}
+        bonds = []
+        for bond in openmm_topology.bonds():
+            id1 = bond.atom1.index
+            id2 = bond.atom2.index
+            bonds.append((id1, id2))
+            neighbor_dict[id1].add(id2)
+            neighbor_dict[id2].add(id1)
+
+        if partial_charges is None:
+            warnings.warn(f"Partial charges not provided. Initializing to all zero.")
+            partial_charges = [0.0 for _ in atom_ids]
+
+        return cls(atoms=atom_ids, bonds=bonds, atomic_numbers=atomic_numbers, partial_charges=partial_charges, impropers=impropers)

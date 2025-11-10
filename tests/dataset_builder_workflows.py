@@ -156,13 +156,12 @@ def example_dataset_builder_gromacs(output_dir: Path):
 
     # add QM data to the dataset builder from npz files
     for qm_entry in sorted(qm_dir.iterdir()):
-        builder.entry_from_qm_dict_file(mol_id=qm_entry.name, filename=qm_entry / "qm_data.npz")
+        top_file = md_dir / qm_entry.name / "pep.top"
+        assert top_file.exists(), f"Prepared GROMACS topology missing for {qm_entry.name}"
+        builder.entry_from_qm_dict_file(mol_id=qm_entry.name, filename=qm_entry / "qm_data.npz", reference_topology=top_file)
 
-    # obtain nonbonded parameters from GROMACS topology files
-    for top_entry in sorted(md_dir.iterdir()):
-        if top_entry.suffix == ".ff":
-            continue
-        builder.add_nonbonded_from_gmx_top(mol_id=top_entry.name, top_file=top_entry / "pep.top", add_pdb=True)
+        # obtain nonbonded parameters from GROMACS topology files
+        builder.add_nonbonded_from_gmx_top(mol_id=qm_entry.name, top_file=top_file, add_pdb=True)
 
     # builder is initialized, now just verify contents
     expected_ids = set(mol_ids)
@@ -191,6 +190,8 @@ def example_dataset_builder_openmm(output_dir):
     Download the dataset, build QM entries, add nonbonded parameters predicted by the OpenMM amber99sbildn forcefield,
     and ensure serialized MolData files pass validation.
     """
+    from openmm.app import PDBFile, ForceField
+
     download_dir = output_dir / "download"
     dataset_root = _download_tripeptide_example(download_dir)
 
@@ -200,8 +201,12 @@ def example_dataset_builder_openmm(output_dir):
     assert qm_dirs, "example archive did not contain any molecule directories."
 
     for qm_dir in qm_dirs:
-        builder.entry_from_qm_dict_file(mol_id=qm_dir.name, filename=qm_dir / "qm_data.npz")
-        builder.add_nonbonded_from_pdb(mol_id=qm_dir.name, pdb_file=qm_dir / "pep.pdb")
+        # first load a topology to check that the bonds match:
+        reference_topology = PDBFile(str(qm_dir / "pep.pdb")).getTopology()
+        # then load QM data:
+        builder.entry_from_qm_dict_file(mol_id=qm_dir.name, filename=qm_dir / "qm_data.npz", reference_topology=reference_topology)
+        # finally, add nonbonded parameters using a force field:
+        builder.add_nonbonded_from_pdb(mol_id=qm_dir.name, pdb_file=qm_dir / "pep.pdb", forcefield=ForceField('amber99sbildn.xml'))
 
     assert builder.entries, "DatasetBuilder did not register any QM entries."
     assert builder.complete_entries == set(builder.entries.keys()), "Nonbonded augmentation missing for some entries."
