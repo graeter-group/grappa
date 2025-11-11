@@ -378,7 +378,7 @@ class DatasetBuilder:
         """
         Compare the ASE-derived molecule bonds against the optional reference topology.
         """
-        if mol is None or self._reference_topology_molecule is None:
+        if mol is None or reference_mol is None:
             return
 
         topo_atoms = len(reference_mol.atoms)
