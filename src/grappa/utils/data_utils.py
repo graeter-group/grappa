@@ -8,7 +8,10 @@ import logging
 import pandas as pd
 import numpy as np
 import shutil
-import pkg_resources
+try:
+    from importlib.metadata import distribution, PackageNotFoundError
+except ImportError:  # pragma: no cover
+    from importlib_metadata import distribution, PackageNotFoundError
 import grappa
 import json
 
@@ -29,7 +32,9 @@ def is_installed_via_pypi()->bool:
     Returns True if the package is installed via pypi, False otherwise.
     Assumes that the package is installed via pypi if the package is in the working set and the path to the package contains 'site-packages' or 'dist-packages'. NOTE: Make this better.
     '''
-    if not 'grappa-ff' in pkg_resources.working_set.by_key:
+    try:
+        distribution("grappa-ff")
+    except PackageNotFoundError:
         return False
     package_path = os.path.abspath(grappa.__file__)
     if 'site-packages' in package_path or 'dist-packages' in package_path:
