@@ -234,10 +234,10 @@ class DatasetBuilder:
         molecules = []
         for idx, conformations in enumerate(QM_calculations):
             # create a mol to get the atom order:
-            mol = Molecule.from_ase(conformations[-1], verbose=True)
+            molecule = Molecule.from_ase(conformations[-1], verbose=True)
             # NOTE: taking [-1] could be better than [0] for optimizations, could also check for conf with min energy
-            self._connectivity_check(mol, reference_topology, mol_id, idx, molecules)
-            molecules.append(mol)
+            self._connectivity_check(molecule, reference_topology, mol_id, idx, molecules)
+            molecules.append(molecule)
                     
         ## different QM files could have different atom order, matching this  
         if len(molecules) > 1:  
