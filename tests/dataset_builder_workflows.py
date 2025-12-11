@@ -158,7 +158,12 @@ def example_dataset_builder_gromacs(output_dir: Path):
     for qm_entry in sorted(qm_dir.iterdir()):
         top_file = md_dir / qm_entry.name / "pep.top"
         assert top_file.exists(), f"Prepared GROMACS topology missing for {qm_entry.name}"
-        builder.entry_from_qm_dict_file(mol_id=qm_entry.name, filename=qm_entry / "qm_data.npz", reference_topology=top_file)
+        builder.entry_from_qm_dict_file(
+            mol_id=qm_entry.name,
+            filename=qm_entry / "qm_data.npz",
+            reference_topology=top_file,
+            enforce_topology=True,
+        )
 
         # obtain nonbonded parameters from GROMACS topology files
         builder.add_nonbonded_from_gmx_top(mol_id=qm_entry.name, top_file=top_file, add_pdb=True)
@@ -204,7 +209,12 @@ def example_dataset_builder_openmm(output_dir):
         # first load a topology to check that the bonds match:
         reference_topology = PDBFile(str(qm_dir / "pep.pdb")).getTopology()
         # then load QM data:
-        builder.entry_from_qm_dict_file(mol_id=qm_dir.name, filename=qm_dir / "qm_data.npz", reference_topology=reference_topology)
+        builder.entry_from_qm_dict_file(
+            mol_id=qm_dir.name,
+            filename=qm_dir / "qm_data.npz",
+            reference_topology=reference_topology,
+            enforce_topology=True,
+        )
         # finally, add nonbonded parameters using a force field:
         builder.add_nonbonded_from_pdb(mol_id=qm_dir.name, pdb_file=qm_dir / "pep.pdb", forcefield=ForceField('amber99sbildn.xml'))
 

@@ -154,7 +154,7 @@ class DatasetBuilder:
             complete_entries.add(moldata.mol_id)
         return cls(entries=entries,complete_entries=complete_entries)
 
-    def entry_from_qm_dict_file(self, mol_id:str, filename: Union[str,Path], reference_topology: Optional[Union[str,Path,Topology]] = None) -> None:
+    def entry_from_qm_dict_file(self, mol_id:str, filename: Union[str,Path], reference_topology: Optional[Union[str,Path,Topology]] = None, enforce_topology: bool=False) -> None:
         """ Creates a DatasetBuilder entry from specified QM data array files. Assuming units to be default grappa units.
         
         Parameters
@@ -166,6 +166,9 @@ class DatasetBuilder:
             'xyz', 'energy', 'atomic_numbers', and either 'force' or 'gradient'.
         reference_topology
             Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
+        enforce_topology
+            If True, bonds from the reference topology are used instead of ASE-derived connectivity (raises if the
+            topology cannot be applied).
 
         Returns
         -------
@@ -175,9 +178,9 @@ class DatasetBuilder:
 
         ## load qm dict and create entry
         qm_dict = np.load(filename)
-        self._entry_from_qm_dict(qm_dict=qm_dict, mol_id=mol_id, mol=None, overwrite=False, validate=True, reference_topology=None)
+        self._entry_from_qm_dict(qm_dict=qm_dict, mol_id=mol_id, mol=None, overwrite=False, validate=True, reference_topology=reference_topology, enforce_topology=enforce_topology)
 
-    def entry_from_qm_array_files(self, mol_id: str, filename_dict:dict[str,str]) -> None:
+    def entry_from_qm_array_files(self, mol_id: str, filename_dict:dict[str,str], reference_topology: Optional[Union[str,Path,Topology]] = None, enforce_topology: bool=False) -> None:
         """
         Creates a DatasetBuilder entry from specified QM data array files. Assuming units to be default grappa units.
 
@@ -187,6 +190,11 @@ class DatasetBuilder:
             The identifier for the molecule entry.
         filename_dict 
             A dictionary mapping the keys 'energy', 'force'/'gradient', 'xyz', and 'atomic_numbers' to filenames. 
+        reference_topology
+            Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
+        enforce_topology
+            If True, bonds from the reference topology are used instead of ASE-derived connectivity (raises if the
+            topology cannot be applied).
 
         Returns
         -------
@@ -200,9 +208,9 @@ class DatasetBuilder:
             qm_dict[k] = np.load(v)
 
         ## add entry
-        self._entry_from_qm_dict(mol_id=mol_id, qm_dict=qm_dict, mol=None, overwrite=False, validate=True)
+        self._entry_from_qm_dict(mol_id=mol_id, qm_dict=qm_dict, mol=None, overwrite=False, validate=True, reference_topology=reference_topology, enforce_topology=enforce_topology)
 
-    def entry_from_qm_output_file(self, mol_id:str, qm_output_files:list[Union[Path,str]],  ase_index_str: str = ':', reference_topology: Optional[Union[str,Path,Topology]] = None) -> None:
+    def entry_from_qm_output_file(self, mol_id:str, qm_output_files:list[Union[Path,str]],  ase_index_str: str = ':', reference_topology: Optional[Union[str,Path,Topology]] = None, enforce_topology:bool=False) -> None:
         """
             Using ASE, processes QM output files to extract geometries, energies, and gradients. From this, a DatasetBuilder entry is created.
             Since ASE uses eV and Angstrom as internal units, the energies and gradients are converted to the Grappa units kcal/mol and A, respectively.
@@ -217,6 +225,9 @@ class DatasetBuilder:
                 The ASE index string to specify the atomic index to be used when reading the QM output files.
             reference_topology
                 Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
+            enforce_topology
+                If True, bonds from the reference topology are used instead of ASE-derived connectivity (raises if the
+                topology cannot be applied).
 
             Returns
             -------
@@ -236,7 +247,7 @@ class DatasetBuilder:
             # create a mol to get the atom order:
             molecule = Molecule.from_ase(conformations[-1], verbose=True)
             # NOTE: taking [-1] could be better than [0] for optimizations, could also check for conf with min energy
-            self._connectivity_check(molecule, reference_topology, mol_id, idx, molecules)
+            self._connectivity_check(molecule, reference_topology, mol_id, idx, molecules, enforce_topology=enforce_topology)
             molecules.append(molecule)
                     
         ## different QM files could have different atom order, matching this  
@@ -276,9 +287,9 @@ class DatasetBuilder:
             qm_dict[k] = np.asarray(qm_dict[k]).squeeze()
 
         ## add entry
-        self._entry_from_qm_dict(mol_id=mol_id, qm_dict=qm_dict, mol=molecules[0], overwrite=False, validate=False)
+        self._entry_from_qm_dict(mol_id=mol_id, qm_dict=qm_dict, mol=molecules[0], overwrite=False, validate=False, reference_topology=reference_topology, enforce_topology=enforce_topology)
 
-    def _entry_from_qm_dict(self, mol_id: str, qm_dict: Mapping,  mol: Union[Molecule,None] = None, overwrite:bool = False, validate:bool = True, reference_topology: Optional[Union[str,Path,Topology]] = None) -> None:
+    def _entry_from_qm_dict(self, mol_id: str, qm_dict: Mapping,  mol: Union[Molecule,None] = None, overwrite:bool = False, validate:bool = True, reference_topology: Optional[Union[str,Path,Topology]] = None, enforce_topology: bool=False) -> None:
         """
         Creates or updates an entry in the DatasetBuilder from the provided quantum mechanical data dictionary.
 
@@ -297,6 +308,9 @@ class DatasetBuilder:
             If True, validates the qm_dict before processing.
         reference_topology
             Optional reference topology for connectivity checking during entry addition. Can be a path to a GROMACS topology file or an OpenMM Topology object.
+        enforce_topology
+            If True, use the reference topology to define bonds instead of ASE-derived connectivity. Falls back to ASE
+            if no compatible topology is provided.
 
         Returns
         -------
@@ -307,7 +321,7 @@ class DatasetBuilder:
         ## check whether entry exists ##
         if mol_id in self.entries.keys():
             if overwrite is False:
-                logging.warning(f"Entry {mol_id} already exists in DatasetBuilder. Will not create a new entry!")
+                logging.warning(f"Entry {mol_id} already exists in DatasetBuilder. Skipping creation; set overwrite=True to replace it.")
                 return
             else:
                 logging.info(f"Entry {mol_id} already exists in DatasetBuilder. Overwriting it with new entry!")
@@ -328,21 +342,29 @@ class DatasetBuilder:
         else:
             gradient = qm_dict['gradient'][valid_idxs]
 
-        if mol is None:
+        reference_mol = DatasetBuilder._get_ref_topology(reference_topology) if reference_topology is not None else None
+
+        if enforce_topology and reference_topology is None:
+            raise ValueError(f"enforce_topology=True for {mol_id} but no reference_topology was provided. Falling back to ASE-derived connectivity.")
+
+        # pick the molecule to use
+        if enforce_topology and reference_mol is not None:
+            mol = reference_mol
+        elif mol is None:
             # use ase to get bonds from positions
             atoms = Atoms(positions=xyz[-1],numbers=qm_dict['atomic_numbers'])
             mol = Molecule.from_ase(atoms, verbose=True)
-        
+
         # perform the check whether the bonds match the reference topology
-        if reference_topology is not None:
-            self._compare_with_reference_topology(mol=mol, reference_mol=DatasetBuilder._get_ref_topology(reference_topology), context=mol_id)
+        if reference_mol is not None and not enforce_topology:
+            self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=mol_id)
 
         mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
 
         self.entries[mol_id] = mol_data
         return
     
-    def _connectivity_check(self, mol: Molecule, reference_topology: Optional[Union[str,Path,Topology]], mol_id: str, idx: int, molecules: list) -> None:
+    def _connectivity_check(self, mol: Molecule, reference_topology: Optional[Union[str,Path,Topology]], mol_id: str, idx: int, molecules: list, enforce_topology: bool=False) -> None:
             # check that the set of bonds fits:
             perform_connectivity_check = True
             if reference_topology is not None:
@@ -352,7 +374,7 @@ class DatasetBuilder:
             else:
                 perform_connectivity_check = False
             if perform_connectivity_check:
-                self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=f"{mol_id}/qm_file_{idx}")
+                self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=f"{mol_id}/qm_file_{idx}", enforce_topology=enforce_topology)
 
     def _validate_qm_dict(self, qm_dict:Mapping, mold_id: str) -> bool:
         """Validate that QM dict has the required keys and enough conformations (>3) to be included in a dataset.
@@ -374,12 +396,12 @@ class DatasetBuilder:
             valid = False
         return valid
 
-    def _compare_with_reference_topology(self, mol: Molecule, reference_mol:Molecule, context: str) -> None:
+    def _compare_with_reference_topology(self, mol: Molecule, reference_mol:Molecule, context: str) -> bool:
         """
         Compare the ASE-derived molecule bonds against the optional reference topology.
         """
         if mol is None or reference_mol is None:
-            return
+            return True
 
         topo_atoms = len(reference_mol.atoms)
         mol_atoms = len(mol.atoms)
@@ -400,10 +422,13 @@ class DatasetBuilder:
         if ref_bonds != mol_bonds:
             missing = ref_bonds - mol_bonds
             additional = mol_bonds - ref_bonds
-            logging.warning(
+            msg = (
                 f"Bond mismatch for {context}: missing {missing if missing else 'none'}, "
                 f"additional {additional if additional else 'none'}."
             )
+            logging.warning(msg)
+            return False
+        return True
 
     def add_nonbonded_from_gmx_top(self, mol_id:str, top_file: Union[str,Path], add_pdb:bool=False):
         """
