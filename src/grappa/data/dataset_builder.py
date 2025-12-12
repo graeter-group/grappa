@@ -63,7 +63,7 @@ def match_molecules(molecules: list[Molecule], verbose = False, _topology_matchi
         if not _topology_matching:
             logging.info(f"Couldn't match all molecular graphs of the {len(molecules)} states to the last graph, only {matched_idxs}!")
     if verbose:
-        logging.info(isomorphisms)
+        logging.debug(isomorphisms)
 
     for isomorphism in list(isomorphisms):
         idx1, idx2 = isomorphism
@@ -72,7 +72,7 @@ def match_molecules(molecules: list[Molecule], verbose = False, _topology_matchi
         permutations[idx2] = permutation
 
     if verbose:
-        logging.info(permutations)
+        logging.debug(permutations)
     return permutations
 
 @dataclass
@@ -252,7 +252,7 @@ class DatasetBuilder:
                     
         ## different QM files could have different atom order, matching this  
         if len(molecules) > 1:  
-            logging.info("Matching atom order in QM files")     
+            logging.debug("Matching atom order in QM files")     
             permutations = match_molecules(molecules, verbose=False)     
         else:
             permutations = {0:list(range(QM_calculations[0][0].get_positions().shape[0]))}                      
@@ -343,21 +343,29 @@ class DatasetBuilder:
             gradient = qm_dict['gradient'][valid_idxs]
 
         reference_mol = DatasetBuilder._get_ref_topology(reference_topology) if reference_topology is not None else None
+        ase_mol = mol
 
         if enforce_topology and reference_topology is None:
-            raise ValueError(f"enforce_topology=True for {mol_id} but no reference_topology was provided. Falling back to ASE-derived connectivity.")
+            raise ValueError(f"enforce_topology=True for {mol_id} but no reference_topology was provided. Provide a topology or set enforce_topology=False.")
 
-        # pick the molecule to use
-        if enforce_topology and reference_mol is not None:
-            mol = reference_mol
-        elif mol is None:
-            # use ase to get bonds from positions
+        # pick/build the molecule to use
+        if mol is None:
             atoms = Atoms(positions=xyz[-1],numbers=qm_dict['atomic_numbers'])
             mol = Molecule.from_ase(atoms, verbose=True)
+            ase_mol = mol
 
-        # perform the check whether the bonds match the reference topology
-        if reference_mol is not None and not enforce_topology:
-            self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=mol_id)
+        if enforce_topology:
+            assert reference_mol is not None, "reference_mol must exist when enforce_topology is True"  # sanity
+            # align QM data to topology ordering
+            permutations = match_molecules([reference_mol, ase_mol], _topology_matching=True)
+            if len(permutations) != 2:
+                raise ValueError(f"Couldn't match QM-derived Molecule (via ASE) to molecular graph derived from the topology for {mol_id} when enforcing topology connectivity. See warnings above.")
+            permutation = permutations[1]
+            xyz = xyz[:, permutation]
+            gradient = gradient[:, permutation]
+            mol = reference_mol
+        elif reference_mol is not None:
+            self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=f'{mol_id} between topology derived from xyz via ASE and reference topology')
 
         mol_data = MolData(molecule=mol,xyz=xyz,energy=energy,gradient=gradient,mol_id=mol_id)
 
@@ -374,7 +382,7 @@ class DatasetBuilder:
             else:
                 perform_connectivity_check = False
             if perform_connectivity_check:
-                self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=f"{mol_id}/qm_file_{idx}", enforce_topology=enforce_topology)
+                self._compare_with_reference_topology(mol=mol, reference_mol=reference_mol, context=f"{mol_id}/qm_file_{idx} between topology derived via xyz from first state and reference topology")
 
     def _validate_qm_dict(self, qm_dict:Mapping, mold_id: str) -> bool:
         """Validate that QM dict has the required keys and enough conformations (>3) to be included in a dataset.
@@ -470,7 +478,7 @@ class DatasetBuilder:
 
     def add_nonbonded(self, mol_id:str, system: System, topology: Topology):
         """	
-        Add nonbonded data from an OpenMM system to entry. Replaces the molecule of an existing entry with an OpenMM topology and permutes molecular data (xyz and forces) such that the atomic numbers match the topology if necessary. The id in the topology must correspond to the index in the system, which is zero-based. You might need to shift your topology ids to start at zero.
+        Calculates classical force field contributions with parameters given by the openmm system and writes those to the entry. For this, permutes molecular data (xyz and forces) such that the atomic numbers match the topology if necessary. The id in the topology must correspond to the index in the system, which is zero-based.
 
         Parameters
         ----------
@@ -501,7 +509,7 @@ class DatasetBuilder:
 
         # it might be that the atoms are permuted, then resolve this by checking for isomorphism and calculating an isomorphic permutation:
         elif mol.atomic_numbers != self.entries[mol_id].molecule.atomic_numbers or mol.bonds != self.entries[mol_id].molecule.bonds:
-            logging.info(f"Atomic numbers of QM data and force field topology doesn't match! Matching by graph isomorphism.")
+            logging.debug(f"Atomic numbers of QM data and force field topology doesn't match! Matching by graph isomorphism.")
             permutations = match_molecules([mol,self.entries[mol_id].molecule], _topology_matching=True)
             if len(permutations) != 2:
                 # logging.warning(f"Couldn't match QM-derived Molecule to gmx top Molecule for {mol_id}.Skipping!")
@@ -558,7 +566,7 @@ class DatasetBuilder:
     def filter_bad_nonbonded(self):
         """ Remove conformations where the nonbonded contribution to energy and gradient is much higher than the QM energy and gradient
         """
-            #filter out bad energies
+        # filter out bad energies
         count_remove = {'entries':0,'conformations':0}
         rmv_entries = []
         for mol_id, entry in self.entries.items():
@@ -574,8 +582,13 @@ class DatasetBuilder:
 
             bad_idxs = []
             for j in range(len(energy_qm)):
-                if (np.abs(energy_mm[j]) / np.abs((energy_qm[j]+EPS)) > 2 and energy_mm[j] > 10 ) or (np.abs(gradient_norm_mm[j])/(np.abs(gradient_norm_qm[j])+EPS) > 2 and gradient_norm_mm[j] > 10):
+                # if nonbonded mm energy is more than twice qm energy and mm energy is larger than 10 kcal/mol
+                if (np.abs(energy_mm[j]) / np.abs((energy_qm[j]+EPS)) > 2 and energy_mm[j] > 10 ):
                     logging.info(f"bad MM energy for {mol_id} conformation {j}")
+                    bad_idxs.append(j)
+                # if nonbonded mm gradient is more than twice qm gradient and mm gradient is larger than 10 kcal/mol A
+                elif (np.abs(gradient_norm_mm[j])/(np.abs(gradient_norm_qm[j])+EPS) > 2 and gradient_norm_mm[j] > 10):
+                    logging.info(f"bad MM gradient for {mol_id} conformation {j}")
                     bad_idxs.append(j)
             if len(bad_idxs) > 0:
                 logging.info(f" Removing conformations {bad_idxs}")
@@ -587,12 +600,14 @@ class DatasetBuilder:
                     logging.info(f"Removing dataset entry {mol_id}")
                     rmv_entries.append(mol_id)
 
-        logging.info(f"Removing entries: {rmv_entries}")
+        if rmv_entries:
+            logging.info(f"Removing entries: {rmv_entries}")
         for rmv_entry in rmv_entries:
             self.entries.pop(rmv_entry,None)
             self.complete_entries.remove(rmv_entry)
         count_remove['entries'] = len(rmv_entries)
-        logging.info(f"Removed {count_remove['entries']} molecule entries and {count_remove['conformations']} conformations.")
+        if count_remove['entries'] > 0 or count_remove['conformations'] > 0:
+            logging.info(f"Removed {count_remove['entries']} molecule entries and {count_remove['conformations']} conformations.")
 
 
     ### Dataset Writing ###
@@ -631,6 +646,57 @@ class DatasetBuilder:
             if entry.pdb is not None:
                 with open(pdb_dir / f"{entry.mol_id}.pdb",'w') as f:
                     f.write(entry.pdb)
+
+    def visualize_mm_energies(self, output_dir: Union[str, Path], max_num_mols: int = 10, dpi: int = 150) -> None:
+        """
+        Save scatter plots comparing QM energies/gradients to reference force-field totals for a subset of molecules.
+
+        Parameters
+        ----------
+        output_dir
+            Directory where plots will be written. Created if missing.
+        max_num_mols
+            Maximum number of molecules to plot (ordered by mol_id).
+        dpi
+            DPI used when saving figures (kept low for speed).
+        """
+        from grappa.utils.plotting import scatter_plot
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as exc:
+            raise ImportError("matplotlib is required for visualize_mm_energies") from exc
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        mol_ids = sorted(list(self.entries.keys()))
+        if max_num_mols is not None:
+            mol_ids = mol_ids[:max_num_mols]
+
+        for mol_id in mol_ids:
+            entry = self.entries[mol_id]
+            if "reference_ff" not in entry.ff_energy or "total" not in entry.ff_energy["reference_ff"]:
+                continue
+
+            energy_qm = entry.energy - np.mean(entry.energy)
+            energy_ref_ff = entry.ff_energy["reference_ff"]["total"] - np.mean(entry.ff_energy["reference_ff"]["total"])
+            gradient_qm = entry.gradient
+            gradient_ref_ff = entry.ff_gradient["reference_ff"]["total"]
+
+            fig, axes = plt.subplots(1, 2, figsize=(9, 4.5))
+            scatter_plot(axes[0], energy_qm, energy_ref_ff)
+            axes[0].set_xlabel("QM energy [kcal/mol]")
+            axes[0].set_ylabel("Reference FF energy [kcal/mol]")
+            axes[0].set_title(f"{mol_id}: energies")
+
+            scatter_plot(axes[1], gradient_qm.flatten(), gradient_ref_ff.flatten())
+            axes[1].set_xlabel("QM force field gradients")
+            axes[1].set_ylabel("Reference FF gradients")
+            axes[1].set_title(f"{mol_id}: gradients")
+
+            plt.tight_layout()
+            fig.savefig(output_dir / f"{mol_id}_comparison.png", dpi=dpi)
+            plt.close(fig)
 
     def _validate(self):
         """ """

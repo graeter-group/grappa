@@ -238,7 +238,7 @@ class Molecule():
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
 
         if verbose:
-            logging.info(f"Loaded OpenMM system with {openmm_system.getNumParticles()} particles.")
+            logging.debug(f"Loaded OpenMM system with {openmm_system.getNumParticles()} particles.")
 
         # indices in the system:
         if not len(list(openmm_topology.atoms())) <= openmm_system.getNumParticles():
@@ -247,7 +247,7 @@ class Molecule():
         neighbor_dict, atom_ids, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
         if verbose:
-            logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
+            logging.debug(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
 
         # validate that the atom_ids correspond to the indices in the system:
         max_atom_id = max(atom_ids)
@@ -290,7 +290,7 @@ class Molecule():
 
             _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
             if verbose:
-                logging.info(f"Found {len(impropers)} impropers in the openmm system.")
+                logging.debug(f"Found {len(impropers)} impropers in the openmm system.")
         else:
             impropers = []
             warnings.warn(f"Skipping impropers. This is not recommended and should only be used for debugging or when they are manually provided.")
@@ -770,7 +770,7 @@ class Molecule():
 
         assert isinstance(atoms, Atoms), f"atoms must be an ase.Atoms object but is {type(atoms)}"
 
-        logging.info(f"Loading ASE Atoms object with {len(atoms)} atoms")
+        logging.debug(f"Loading ASE Atoms object with {len(atoms)} atoms")
 
         if bonds is None:
             if atoms.positions is None or np.all(atoms.positions == 0):
@@ -792,7 +792,7 @@ class Molecule():
                         bonds.append((i, j))
 
         if verbose:
-            logging.info(f"Extracted {len(bonds)} bonds from the ase atoms object")
+            logging.debug(f"Extracted {len(bonds)} bonds from the ase atoms object")
 
         atom_idxs = list(range(len(atoms)))
         atomic_numbers = atoms.numbers

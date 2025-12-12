@@ -14,7 +14,8 @@ import numpy as np
 from grappa.data import MolData
 from grappa.data.dataset_builder import DatasetBuilder
 
-MAX_GROMACS_MOLECULES = 2
+MAX_MOLECULES = 2
+
 TRIPEPTIDE_ZIP_URL = "https://github.com/graeter-group/grappa/releases/download/v.1.4.1/tripeptide_example_data.zip"
 
 _CAPPING_RENAMES = {
@@ -102,7 +103,7 @@ def _prepare_example_inputs(
     tmp_root: Path,
     gmx_executable: str,
     *,
-    max_molecules: int = MAX_GROMACS_MOLECULES,
+    max_molecules: int = MAX_MOLECULES,
 ) -> tuple[Path, Path, list[str]]:
     """
     Constructing example-QM-input and example-gmx-input directories and copying files there.
@@ -132,7 +133,7 @@ def _prepare_example_inputs(
     return qm_dir, md_dir, processed
 
 
-def example_dataset_builder_gromacs(output_dir: Path):
+def example_dataset_builder_gromacs(output_dir: Path, enforce_topology: bool = False):
     """
     Download a dataset of npz files, construct gromacs .top files using pdb2gmx with the amber99sbildn force field. Then construct a dataset builder from it, and make sure that it is consistent.
     """
@@ -148,7 +149,7 @@ def example_dataset_builder_gromacs(output_dir: Path):
         dataset_root,
         output_dir,
         gmx_executable,
-        max_molecules=MAX_GROMACS_MOLECULES,
+        max_molecules=MAX_MOLECULES,
     )
 
     assert mol_ids, "example preparation failed to select any molecules."
@@ -162,7 +163,7 @@ def example_dataset_builder_gromacs(output_dir: Path):
             mol_id=qm_entry.name,
             filename=qm_entry / "qm_data.npz",
             reference_topology=top_file,
-            enforce_topology=True,
+            enforce_topology=enforce_topology,
         )
 
         # obtain nonbonded parameters from GROMACS topology files
@@ -173,8 +174,9 @@ def example_dataset_builder_gromacs(output_dir: Path):
     assert builder.complete_entries == expected_ids
     assert all(builder.entries[mol_id].pdb for mol_id in expected_ids)
 
-    builder.remove_bonded_parameters()
     builder.filter_bad_nonbonded()
+
+    builder.visualize_mm_energies(output_dir / "plots")
 
     output_dir = output_dir / "example-dataset-grappa-format"
     builder.write_to_dir(output_dir, overwrite=True, delete_dgl=True)
@@ -190,7 +192,7 @@ def example_dataset_builder_gromacs(output_dir: Path):
     assert np.isfinite(sample.energy).all()
 
 
-def example_dataset_builder_openmm(output_dir):
+def example_dataset_builder_openmm(output_dir, enforce_topology: bool = False):
     """
     Download the dataset, build QM entries, add nonbonded parameters predicted by the OpenMM amber99sbildn forcefield,
     and ensure serialized MolData files pass validation.
@@ -202,10 +204,10 @@ def example_dataset_builder_openmm(output_dir):
 
     builder = DatasetBuilder()
 
-    qm_dirs = sorted(path for path in dataset_root.iterdir() if path.is_dir())
+    qm_dirs = list(sorted(path for path in dataset_root.iterdir() if path.is_dir()))
     assert qm_dirs, "example archive did not contain any molecule directories."
 
-    for qm_dir in qm_dirs:
+    for qm_dir in qm_dirs[:MAX_MOLECULES]:
         # first load a topology to check that the bonds match:
         reference_topology = PDBFile(str(qm_dir / "pep.pdb")).getTopology()
         # then load QM data:
@@ -213,16 +215,17 @@ def example_dataset_builder_openmm(output_dir):
             mol_id=qm_dir.name,
             filename=qm_dir / "qm_data.npz",
             reference_topology=reference_topology,
-            enforce_topology=True,
+            enforce_topology=enforce_topology,
         )
         # finally, add nonbonded parameters using a force field:
         builder.add_nonbonded_from_pdb(mol_id=qm_dir.name, pdb_file=qm_dir / "pep.pdb", forcefield=ForceField('amber99sbildn.xml'))
 
     assert builder.entries, "DatasetBuilder did not register any QM entries."
     assert builder.complete_entries == set(builder.entries.keys()), "Nonbonded augmentation missing for some entries."
-
-    builder.remove_bonded_parameters()
+    
     builder.filter_bad_nonbonded()
+
+    builder.visualize_mm_energies(output_dir / "plots")
 
     output_dir = output_dir / "example-moldata"
     builder.write_to_dir(output_dir, overwrite=True, delete_dgl=False)
@@ -244,16 +247,20 @@ def example_dataset_builder_openmm(output_dir):
 
 
 if __name__ == "__main__":
-    output_dir = Path("./tmp/").resolve().absolute()
+    output_dir = (Path(__file__).parent/"temp_dataset_builder_workflow").resolve().absolute()
     print(f"Running GROMACS and openmm example dataset builders in {output_dir}")
 
     print(f"Running OpenMM example in {output_dir / 'openmm'}...")
     example_dataset_builder_openmm(output_dir / "openmm")
     print(f"OpenMM example completed successfully. Output in {output_dir / 'openmm'}.")
+    example_dataset_builder_openmm(output_dir / "openmm_enforced", enforce_topology=True)
+    print(f"OpenMM enforced-topology example completed successfully. Output in {output_dir / 'openmm_enforced'}.")
 
     if shutil.which("gmx") is not None:
         print(f"Running GROMACS example in {output_dir / 'gromacs'}...")
-        example_dataset_builder_gromacs(output_dir / "gromacs")
+        example_dataset_builder_gromacs(output_dir / "gromacs", enforce_topology=False)
         print(f"GROMACS example completed successfully. Output in {output_dir / 'gromacs'}.")
+        example_dataset_builder_gromacs(output_dir / "gromacs_enforced", enforce_topology=True)
+        print(f"GROMACS enforced-topology example completed successfully. Output in {output_dir / 'gromacs_enforced'}.")
     else:
         print("Skipping GROMACS example, gmx executable not found.")

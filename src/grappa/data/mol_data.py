@@ -43,6 +43,7 @@ class MolData():
 
     # classical forcefield energy contributions: dictionaries mapping a force field name to an array of bonded energies
     # this will be used in grappa.data.Dataset
+    # dictionary structure: ff_energy[ff_name][contribution_name] = np.ndarray
     ff_energy: Dict[str, Dict[str, np.ndarray]] = None
     ff_gradient: Dict[str, Dict[str, np.ndarray]] = None
 
