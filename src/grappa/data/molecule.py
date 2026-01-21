@@ -238,7 +238,7 @@ class Molecule():
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
 
         if verbose:
-            logging.info(f"Loaded OpenMM system with {openmm_system.getNumParticles()} particles.")
+            logging.debug(f"Loaded OpenMM system with {openmm_system.getNumParticles()} particles.")
 
         # indices in the system:
         if not len(list(openmm_topology.atoms())) <= openmm_system.getNumParticles():
@@ -247,9 +247,12 @@ class Molecule():
         neighbor_dict, atom_ids, bonds, angles, propers = cls.interactions_from_openmm_topology(openmm_topology)
 
         if verbose:
-            logging.info(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
+            logging.debug(f"Loaded OpenMM topology with {len(atom_ids)} atoms and {len(bonds)} bonds.")
 
-            raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max(atom_ids)} but the system has only {openmm_system.getNumParticles()} particles, so this can not be the case. You might need to shift your topology ids to start at zero.")
+        # validate that the atom_ids correspond to the indices in the system:
+        max_atom_id = max(atom_ids)
+        if max_atom_id >= openmm_system.getNumParticles():
+            raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max_atom_id} but the system has only {openmm_system.getNumParticles()} particles. You might need to shift your topology ids to start at zero.")
 
         if validate_bonds:
             num_bond_forces = 0
@@ -287,7 +290,7 @@ class Molecule():
 
             _, impropers = tuple_indices.get_torsions(all_torsions, neighbor_dict=neighbor_dict, central_atom_position=constants.IMPROPER_CENTRAL_IDX)
             if verbose:
-                logging.info(f"Found {len(impropers)} impropers in the openmm system.")
+                logging.debug(f"Found {len(impropers)} impropers in the openmm system.")
         else:
             impropers = []
             warnings.warn(f"Skipping impropers. This is not recommended and should only be used for debugging or when they are manually provided.")
@@ -510,11 +513,11 @@ class Molecule():
 
         # transform entries of n{>1} to idxs of the atoms:
         idxs = {
-            "n1": torch.tensor(self.atoms, dtype=torch.int64), # these are ids
-            "n2": torch.tensor([(idx_from_id[bond[0]], idx_from_id[bond[1]]) for bond in self.bonds], dtype=torch.int64), # these are idxs
-            "n3": torch.tensor([(idx_from_id[angle[0]], idx_from_id[angle[1]], idx_from_id[angle[2]]) for angle in self.angles], dtype=torch.int64), # these are idxs
-            "n4": torch.tensor([(idx_from_id[proper[0]], idx_from_id[proper[1]], idx_from_id[proper[2]], idx_from_id[proper[3]]) for proper in self.propers], dtype=torch.int64), # these are idxs
-            "n4_improper": torch.tensor([(idx_from_id[improper[0]], idx_from_id[improper[1]], idx_from_id[improper[2]], idx_from_id[improper[3]]) for improper in self.impropers], dtype=torch.int64), # these are idxs
+            "n1": torch.tensor(self.atoms, dtype=torch.long), # these are ids
+            "n2": torch.tensor([(idx_from_id[bond[0]], idx_from_id[bond[1]]) for bond in self.bonds], dtype=torch.long), # these are idxs
+            "n3": torch.tensor([(idx_from_id[angle[0]], idx_from_id[angle[1]], idx_from_id[angle[2]]) for angle in self.angles], dtype=torch.long), # these are idxs
+            "n4": torch.tensor([(idx_from_id[proper[0]], idx_from_id[proper[1]], idx_from_id[proper[2]], idx_from_id[proper[3]]) for proper in self.propers], dtype=torch.long), # these are idxs
+            "n4_improper": torch.tensor([(idx_from_id[improper[0]], idx_from_id[improper[1]], idx_from_id[improper[2]], idx_from_id[improper[3]]) for improper in self.impropers], dtype=torch.long), # these are idxs
         }
 
         # define the heterograph structure:
@@ -546,7 +549,7 @@ class Molecule():
                 [
                     torch.arange(n_nodes),
                     torch.arange(n_nodes),
-                ], dim=0).int()
+                ], dim=0).long()
 
         # transform to tuples of tensors:
         hg = {key: (value[0], value[1]) for key, value in hg.items()}
@@ -767,7 +770,7 @@ class Molecule():
 
         assert isinstance(atoms, Atoms), f"atoms must be an ase.Atoms object but is {type(atoms)}"
 
-        logging.info(f"Loading ASE Atoms object with {len(atoms)} atoms")
+        logging.debug(f"Loading ASE Atoms object with {len(atoms)} atoms")
 
         if bonds is None:
             if atoms.positions is None or np.all(atoms.positions == 0):
@@ -789,7 +792,7 @@ class Molecule():
                         bonds.append((i, j))
 
         if verbose:
-            logging.info(f"Extracted {len(bonds)} bonds from the ase atoms object")
+            logging.debug(f"Extracted {len(bonds)} bonds from the ase atoms object")
 
         atom_idxs = list(range(len(atoms)))
         atomic_numbers = atoms.numbers
@@ -798,3 +801,37 @@ class Molecule():
 
 
         return cls(atoms=atom_idxs, bonds=bonds, atomic_numbers=atomic_numbers, partial_charges=partial_charges, impropers=impropers)
+
+
+    @classmethod
+    def from_openmm_topology(cls, openmm_topology, partial_charges:List[float]=None, impropers=[]):
+        """
+        Extracts the atom ids and bonds from an openmm topology. Partial charges and impropers need to be provided separately.
+        Args:
+            openmm_topology (openmm.app.Topology): an openmm topology
+            partial_charges (List[float], optional): partial charges of the atoms. If None, partial charges are not extracted. Defaults to None.
+            impropers (list, optional): list of tuples of atom ids that are impropers. If empty, impropers are not extracted. Defaults to [].
+        """
+        from openmm.app import Topology as OpenMMTopology
+        assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
+
+        atom_ids = []
+        atomic_numbers = []
+        for atom in openmm_topology.atoms():
+            atom_ids.append(atom.index)
+            atomic_numbers.append(atom.element.atomic_number)
+
+        neighbor_dict = {atom_id: set() for atom_id in atom_ids}
+        bonds = []
+        for bond in openmm_topology.bonds():
+            id1 = bond.atom1.index
+            id2 = bond.atom2.index
+            bonds.append((id1, id2))
+            neighbor_dict[id1].add(id2)
+            neighbor_dict[id2].add(id1)
+
+        if partial_charges is None:
+            warnings.warn(f"Partial charges not provided. Initializing to all zero.")
+            partial_charges = [0.0 for _ in atom_ids]
+
+        return cls(atoms=atom_ids, bonds=bonds, atomic_numbers=atomic_numbers, partial_charges=partial_charges, impropers=impropers)

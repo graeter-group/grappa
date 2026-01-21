@@ -389,8 +389,14 @@ def get_isomorphic_permutation(graph1: dgl.DGLGraph, graph2: dgl.DGLGraph) -> Li
     def node_match(n1, n2):
         return np.all(n1['atomic_number'].numpy() == n2['atomic_number'].numpy())
     
-    # Find the isomorphism mapping between graph1 and graph2 nodes
-    gm = nx.isomorphism.GraphMatcher(nx_graph1, nx_graph2, node_match=node_match)
+    # Pick the matcher that is compatible with the NetworkX graph type produced by DGL.
+    if nx_graph1.is_multigraph():
+        matcher_cls = nx.isomorphism.MultiDiGraphMatcher if nx_graph1.is_directed() else nx.isomorphism.MultiGraphMatcher
+    else:
+        matcher_cls = nx.isomorphism.DiGraphMatcher if nx_graph1.is_directed() else nx.isomorphism.GraphMatcher
+
+    # Find the isomorphism mapping between graph1 and graph2 nodes using the correct matcher type.
+    gm = matcher_cls(nx_graph1, nx_graph2, node_match=node_match)
     
     if gm.is_isomorphic():
         # Extract the node correspondence mapping from graph1 to graph2
