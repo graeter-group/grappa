@@ -321,6 +321,9 @@ You can also simply put the checkpoint and a config.yaml file in the repository 
 
 You can trian Grappa on custom datasets that shpuld contain single point calculations of perturbed states, sampled e.g. via MD simulations, torsion scans or optimizations. We provide a tutorial at [Creating and training on custom datasets](https://colab.research.google.com/drive/143Ycnof3-9TLO7P8CWLsH7K0TMHMfr6s?usp=sharing) as well as example workflows at `tests/dataset_builder_workflows.py` that show how to create datasets from QM energies and forces, obtaining nonbonded parameters from GROMACS or OpenMM force fields.
 
+## Acknowledgements
+This research was supported by the Klaus Tschira Foundation. The project has also received funding from the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement no. 101002812) [F. G.].
+
 ## Common pitfalls
 
 ### Deployment
