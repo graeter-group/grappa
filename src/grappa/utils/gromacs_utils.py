@@ -197,8 +197,9 @@ def apply_parameters(top: 'Topology', parameters: Parameters, apply_nrs: Set[str
 
             # find the proper dihedral tuple in the topology that is equivalent to the given tuple
             tup = find_proper(tup, top)
-            if not tup:
-                raise ValueError(f"Invalid proper dihedral tuple {tup}")
+            if tup is None:
+                tup = tuple(idx)
+                logging.warning(f"Adding new proper dihedral {tup} that was not in the original topology.")
 
             dihedral_dict = {}
             for ii in range(len(parameters.proper_ks[i])):
@@ -295,10 +296,10 @@ if importlib.util.find_spec('gmxtop') is not None:
             apply_parameters(current_topology, parameters, build_nrs)
             return current_topology
             
-    def find_angle(tup: tuple, top: 'Topology') -> Tuple[int, int, int]:
+    def find_angle(tup: tuple, top: 'Topology') -> Tuple[int, int, int] | None:
         """
         Find the angle tuple in the topology that is equivalent to the given tuple.
-        If no equivalent tuple is found, it logs a warning and returns False.
+        If no equivalent tuple is found, it logs a warning and returns None.
         """
         if not top.angles.get(tup):
             # try equivalent tuples using the symmetries of the angle:
@@ -311,21 +312,21 @@ if importlib.util.find_spec('gmxtop') is not None:
 
             if len(tups_in_topology) == 0:
                 logging.warning(
-                    f"Ignored parameters with invalid ids: {tup} for angles"
+                    f"No equivalent tuple found for {tup} in angles from topology."
                 )
                 return None
             elif len(tups_in_topology) > 1:
                 logging.warning(
-                    f"Multiple equivalent tuples found for {tup} in angles"
+                    f"Multiple equivalent tuples found for {tup} in angles from topology."
                 )
             else:
                 tup = tups_in_topology[0]
         return tup
 
-    def find_bond(tup: tuple, top: 'Topology') -> Tuple[int, int]:
+    def find_bond(tup: tuple, top: 'Topology') -> Tuple[int, int] | None:
         """
         Find the bond tuple in the topology that is equivalent to the given tuple.
-        If no equivalent tuple is found, it logs a warning and returns False.
+        If no equivalent tuple is found, it logs a warning and returns None.
         """
         if not top.bonds.get(tup):
             # try equivalent tuples using the symmetries of the bond:
@@ -338,22 +339,22 @@ if importlib.util.find_spec('gmxtop') is not None:
 
             if len(tups_in_topology) == 0:
                 logging.warning(
-                    f"Ignored parameters with invalid ids: {tup} for bonds"
+                    f"No equivalent tuple found for {tup} in bonds from topology."
                 )
                 return None
             elif len(tups_in_topology) > 1:
                 logging.warning(
-                    f"Multiple equivalent tuples found for {tup} in bonds"
+                    f"Multiple equivalent tuples found for {tup} in bonds from topology."
                 )
             else:
                 tup = tups_in_topology[0]
         return tup
 
 
-    def find_proper(tup: tuple, top: 'Topology') -> Tuple[int, int, int, int]:
+    def find_proper(tup: tuple, top: 'Topology') -> Tuple[int, int, int, int] | None:
         """
         Find the proper dihedral tuple in the topology that is equivalent to the given tuple.
-        If no equivalent tuple is found, it logs a warning and returns False.
+        If no equivalent tuple is found, it logs a warning and returns None.
         """
 
         if not top.proper_dihedrals.get(tup):
@@ -370,12 +371,12 @@ if importlib.util.find_spec('gmxtop') is not None:
 
             if len(tups_in_topology) == 0:
                 logging.warning(
-                    f"Ignored parameters with invalid ids: {tup} for proper dihedrals"
+                    f"No equivalent tuple found for {tup} in proper dihedrals from topology."
                 )
                 return None
             elif len(tups_in_topology) > 1:
                 logging.warning(
-                    f"Multiple equivalent tuples found for {tup} in proper dihedrals"
+                    f"Multiple equivalent tuples found for {tup} in proper dihedrals from topology."
                 )
             else:
                 tup = tups_in_topology[0]
