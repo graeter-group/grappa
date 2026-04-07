@@ -1,0 +1,26 @@
+defaults:
+  - grappa-1.4.0
+  - _self_
+
+extra_datasets:
+  - spice-dipeptide-amber99-charge-noise-std0.1-seed0
+  - spice-dipeptide-amber99-charge-noise-std0.2-seed0
+  - spice-pubchem-filtered-charge-noise-std0.1-seed0
+  - spice-pubchem-filtered-charge-noise-std0.2-seed0
+extra_train_datasets: []
+extra_val_datasets: []
+extra_test_datasets: []
+
+data_module:
+  weights:
+    spice-pubchem-filtered: 0.8
+    spice-pubchem-filtered-charge-noise-std0.1-seed0: 0.8
+    spice-pubchem-filtered-charge-noise-std0.2-seed0: 0.8
+    spice-dipeptide-amber99: 1.
+    spice-dipeptide-amber99-charge-noise-std0.1-seed0: 1.
+    spice-dipeptide-amber99-charge-noise-std0.2-seed0: 1.
+    spice-dipeptide-charmm36: ${data.data_module.weights.spice-dipeptide-amber99}
+    protein-torsion-amber99: ${data.data_module.weights.spice-dipeptide-amber99}
+    protein-torsion-charmm36: ${data.data_module.weights.spice-dipeptide-amber99}
+    dipeptides-radical-300K: 0
+    bondbreak-radical-peptides-300K: 0
