@@ -9,6 +9,7 @@ from grappa.data.dataset import Dataset
 from grappa.data.graph_data_loader import GraphDataLoader
 from grappa.utils.data_utils import load_splitfile
 from tqdm.auto import tqdm
+import numpy as np
 
 class GrappaData(pl.LightningDataModule):
     def __init__(self,
@@ -39,7 +40,8 @@ class GrappaData(pl.LightningDataModule):
                  split_ids: Dict[str, List[str]] = None,
                  keep_features: bool = False,
                  max_energy: float=None,
-                 max_force: float=None
+                 max_force: float=None,
+                 val_rep_factors: Dict[str, float]=None
                 ):
         """
         This class handles the preparation of train, validation, and test dataloaders for a given list of datasets.
@@ -71,6 +73,7 @@ class GrappaData(pl.LightningDataModule):
             val_conf_strategy (int, optional): Strategy for sampling conformations for the validation dataloader. Defaults to 200.
             split_ids (Dict[str, List[str]], optional): Dictionary containing the split IDs. Defaults to None.
             keep_features (bool, optional): Whether to keep features during processing. Defaults to False.
+            val_rep_factors (Dict[str, float], optional): Dictionary mapping subdataset names to replication factors for the validation set. A replication factor of 2 doubles the number of molecules of the corresponding subdataset in the validation set. Defaults to None, which means no replication.
             """
         super().__init__()
         self.datasets = datasets
@@ -101,6 +104,7 @@ class GrappaData(pl.LightningDataModule):
         self.ff_lookup = ff_lookup
         self.max_energy = max_energy
         self.max_force = max_force
+        self.val_rep_factors = val_rep_factors
 
         self.train_cleanup = True # set this to manually to False if you want to keep the reference ff data in the training set (e.g. for evaluating the reference data on the training set)
         self.num_test_mols = None # number of molecules in the test set, we might need to keep track of this for the evaluation
@@ -190,6 +194,13 @@ class GrappaData(pl.LightningDataModule):
             if self.tr_max_confs == 0:
                 logging.warning("Maximum number of conformations is 0, training set will be empty.")
             self.tr = self.tr.remove_confs(int(self.tr_max_confs), seed=self.seed)
+
+        # replicate subdatasets of the validation split
+        if self.val_rep_factors is not None:
+            for ds_name, factor in self.val_rep_factors.items():
+                if ds_name in self.vl.subdataset:
+                    mask = [name == ds_name for name in self.vl.subdataset]
+                    self.vl = self.vl.where([not m for m in mask]) + self.vl.where(mask) * factor
 
         # write reference data as energy_ref = energy_qm - sum(energy_ref_terms) / gradient_ref = ...
         self.tr.create_reference(ref_terms=self.ref_terms, ff_lookup=copy.deepcopy(self.ff_lookup), cleanup=self.train_cleanup)
