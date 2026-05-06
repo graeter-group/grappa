@@ -259,6 +259,24 @@ class Dataset(torch.utils.data.Dataset):
         subdataset = self.subdataset + other.subdataset
         return Dataset(graphs, mol_ids, subdataset)
 
+    def __mul__(self, factor: int) -> 'Dataset':
+        """Replicates the dataset by a factor. The replication is done by concatenating the dataset with itself factor times.
+        
+        Args:
+            factor (int): factor by which the dataset should be replicated. Must be a non-negative integer. If 0, an empty dataset is returned.
+        Returns:
+            dataset (Dataset): replicated dataset"""
+        if not isinstance(factor, int):
+            raise ValueError(f'Factor must be an integer, but got {type(factor)}.')
+        
+        if factor < 0:
+            raise ValueError(f'Factor must be a non-negative integer, but got {factor}.')
+        elif factor == 0:
+            return Dataset([], [], [])
+        elif factor == 1:
+            return self
+        else:
+            return Dataset.concatenate(*[copy.deepcopy(self) for _ in range(factor)])
 
     def remove_uncommon_features(self, create_feats:Dict[str, Union[float,torch.Tensor]]={'is_radical':0.}):
         """
