@@ -10,7 +10,7 @@ torch.set_default_dtype(torch.float32)
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers.wandb import WandbLogger
 from pytorch_lightning.trainer import Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from grappa.data.grappa_data import GrappaData
 from grappa.training.evaluator import eval_ds
@@ -128,6 +128,10 @@ class Experiment:
         # Model checkpoints
         callbacks.append(ModelCheckpoint(**self._experiment_cfg.checkpointer))
         
+        # Early stopping
+        if self._experiment_cfg.early_stopping is not None:
+            callbacks.append(EarlyStopping(**self._experiment_cfg.early_stopping))
+
         # Save config
         cfg_path = self.ckpt_dir / 'config.yaml'
         with open(cfg_path, 'w') as f:
