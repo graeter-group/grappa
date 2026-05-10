@@ -111,8 +111,14 @@ class Experiment:
             Energy(suffix='', **energy_cfg)
         )
 
-        # wrap a lightning model around it (which handles the training procedure)
-        self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in self._energy_cfg.terms if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
+        # load model weights from checkpoint
+        if getattr(self._experiment_cfg, 'ckpt_load_only_weights', False) and self._experiment_cfg.ckpt_path is not None:
+            use_tag_if_possible(self._experiment_cfg.ckpt_path)
+            logging.info(f"Loading model weights from {self._experiment_cfg.ckpt_path}.")
+            self.grappa_module = GrappaLightningModel.load_from_checkpoint(self._experiment_cfg.ckpt_path, model=model, **train_cfg, param_loss_terms=[t for t in self._energy_cfg.terms if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
+        # initialize a model with fresh weights
+        else:   
+            self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in self._energy_cfg.terms if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
 
 
     def train(self):
@@ -169,10 +175,14 @@ class Experiment:
             inference_mode=False, # important for test call, force calculation needs autograd
             devices=1
         )
+        
+        # Do not load training state from checkpoint if we only want to load the weights
+        ckpt_path=None if getattr(self._experiment_cfg, 'ckpt_load_only_weights', False) else self._experiment_cfg.ckpt_path
+        
         self.trainer.fit(
             model=self.grappa_module,
             datamodule=self.datamodule,
-            ckpt_path=self._experiment_cfg.ckpt_path
+            ckpt_path=ckpt_path
         )
 
 
