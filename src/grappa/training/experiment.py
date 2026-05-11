@@ -136,7 +136,7 @@ class Experiment:
         
         # Early stopping
         if self._experiment_cfg.early_stopping is not None:
-            callbacks.append(EarlyStopping(**self._experiment_cfg.early_stopping))
+            callbacks.append(EarlyStopping(**self._experiment_cfg.early_stopping, check_on_train_epoch_end=False, check_finite=False, strict=False))
 
         # Save config
         cfg_path = self.ckpt_dir / 'config.yaml'
