@@ -1,3 +1,6 @@
+--extra-index-url https://download.pytorch.org/whl/cpu   # torch==2.4.0+cpu is not available on pypi
+-f https://data.dgl.ai/wheels/torch-2.4/repo.html  # dgl==2.4.0 is not available on pypi
+
 numpy==1.26.4
 scipy==1.13.0
 pyyaml==6.0.1
@@ -7,14 +10,14 @@ pydantic==2.7.1
 seaborn==0.13.2
 rdkit==2023.9.1
 matplotlib==3.8.2
-wandb==0.16.1
+wandb==0.28.0
 lightning==2.3.3
 networkx==3.2.1
 charset-normalizer==2.1.0
 hydra-core==1.3.2
 pytest==8.3.4
 torchdata==0.7.1
-torch==2.6.0
+torch==2.4.0+cpu  # no cuda
 dgl==2.4.0
-gmxtop==0.0.1
+gmxtop==0.0.2
 ase==3.26.0
