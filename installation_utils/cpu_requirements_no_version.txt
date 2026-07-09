@@ -11,7 +11,7 @@ seaborn
 tqdm
 charset-normalizer
 hydra-core
-torch==2.6.0
+torch==2.4.0
 dgl==2.4.0
 rdkit==2023.9.1
 lightning==2.3.3
