@@ -139,7 +139,7 @@ class Experiment:
         callbacks.append(ModelCheckpoint(**self._experiment_cfg.checkpointer))
         
         # Early stopping
-        if self._experiment_cfg.early_stopping is not None:
+        if getattr(self._experiment_cfg, 'early_stopping', None) is not None:
             callbacks.append(EarlyStopping(**self._experiment_cfg.early_stopping, check_on_train_epoch_end=False, check_finite=False, strict=False))
 
         # Save config
