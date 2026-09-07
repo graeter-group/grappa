@@ -11,7 +11,8 @@ from grappa.data.parameters import compare_parameters, plot_parameters
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 import logging
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Iterable
+from difflib import get_close_matches
 from grappa.utils import flatten_dict
 from grappa.data import GraphDataLoader
 
@@ -28,9 +29,10 @@ class FastEvaluator:
 
     the pool function returns a dictionary containing dictionaries for each dsname with the averaged metrics. For energies, this average is per conformation, for gradients it is per 3-vector, that is total number of atoms times conformations.
     """
-    def __init__(self, log_parameters=False, log_classical_values=False, metric_names:List[str]=None, gradients:bool=True):
+    def __init__(self, log_parameters=False, log_classical_values=False, metric_names:List[str]=None, gradients:bool=True, dataset_weights:Dict[str, float] | None=None):
         """
         metric_names: list of strings for filtering metrics that should be logged. e.g. ['rmse_energies', 'rmse_gradients'] will only log these two metrics.
+        dataset_weights: dictionary with dataset names as keys and weights as values. The weights are used to calculate a weighted average of the metrics across datasets. Datasets that are not listed are weighted with 1.0. If None, all datasets are weighted equally. Use check_dataset_names to verify that the keys refer to datasets that actually occur in the data.
         """
         if log_parameters:
             raise NotImplementedError("Logging of parameters is not supported anymore.")
@@ -39,8 +41,29 @@ class FastEvaluator:
         self.metric_names = metric_names
 
         self.gradients = gradients
+        self.dataset_weights = dataset_weights
 
         self.init_storage()
+
+
+    def check_dataset_names(self, dsnames:Iterable[str]):
+        """
+        Raises a ValueError if dataset_weights contains dataset names that do not occur in dsnames.
+        Since datasets that are not listed in dataset_weights fall back to a weight of 1.0, a typo in a dataset name would otherwise silently have no effect.
+        dsnames: the dataset names that will be passed to step(), e.g. datamodule.vl.subdataset.
+        """
+        if self.dataset_weights is None:
+            return
+
+        dsnames = sorted(set(dsnames))
+        unknown = [name for name in self.dataset_weights.keys() if name not in dsnames]
+
+        if len(unknown) > 0:
+            msg = f"dataset_weights contains {len(unknown)} dataset name(s) that do not occur in the data:"
+            for name in unknown:
+                suggestions = get_close_matches(name, dsnames, n=3)
+                msg += f"\n  '{name}'" + (f" -> did you mean {' or '.join(repr(s) for s in suggestions)}?" if len(suggestions) > 0 else '')
+            raise ValueError(msg + f"\nThe available dataset names are {dsnames}.")
 
 
     def init_storage(self):
@@ -141,7 +164,7 @@ class FastEvaluator:
                     if key not in self.metric_names:
                         del metrics[dsname][key]
 
-        # now calculate an averaged metric for the different datasets where each dataset gets the same weight, i.e. just form the average along the datasets:
+        # now calculate an averaged metric for the different datasets
         metrics['avg'] = {}
         for key in ['rmse_energies', 'rmse_gradients']:
             if not self.metric_names is None:
@@ -153,7 +176,13 @@ class FastEvaluator:
             if len(mlist) == 0:
                 metrics['avg'][key] = None
             else:
-                metrics['avg'][key] = np.mean(mlist)
+                # each dataset gets the same weight, i.e. just form the average along the datasets
+                if self.dataset_weights is None:
+                    metrics['avg'][key] = np.mean(mlist)
+                # each dataset gets a weight according to the dataset_weights dictionary
+                else:
+                    weights = [self.dataset_weights.get(dsname, 1.0) for dsname in metrics.keys() if dsname not in ['avg', 'all'] and metrics[dsname][key] is not None]
+                    metrics['avg'][key] = np.average(mlist, weights=weights)
 
 
         # reset the storage

@@ -120,6 +120,10 @@ class Experiment:
         else:   
             self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in self._energy_cfg.terms if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
 
+        # fail before training starts if val_weights refers to datasets that are not in the validation set (e.g. because of a typo)
+        if hasattr(self, 'datamodule'):
+            self.grappa_module.evaluator.check_dataset_names(self.datamodule.vl.subdataset)
+
 
     def train(self):
 

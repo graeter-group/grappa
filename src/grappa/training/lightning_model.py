@@ -36,6 +36,7 @@ class GrappaLightningModel(pl.LightningModule):
                  start_logging:int=0,
                  reset_optimizer_on_load:bool=False,
                  add_noise_on_load:float=0.0,
+                 val_weights: Dict[str, float] | None=None
                 ):
         """
         LightningModule for training a Grappa model.
@@ -66,6 +67,7 @@ class GrappaLightningModel(pl.LightningModule):
             start_logging (int, optional): Epoch from which to start logging the validation metrics. Defaults to 0.
             reset_optimizer_on_load (bool, optional): Whether to reset the optimizer when loading a checkpoint. Defaults to False.
             add_noise_on_load (float, optional): Standard deviation of the noise to add to the parameters when loading a checkpoint. Defaults to 0.0.
+            val_weights (Dict[str, float], optional): Dictionary mapping from dataset name to weight the validation loss. Defaults to None.
         """
         super().__init__()
         
@@ -105,7 +107,7 @@ class GrappaLightningModel(pl.LightningModule):
 
         self.finish_criterion = finish_criterion
 
-        self.evaluator = FastEvaluator()
+        self.evaluator = FastEvaluator(dataset_weights=val_weights)
         self.train_evaluator = FastEvaluator()
         self.test_evaluator = Evaluator()
 
