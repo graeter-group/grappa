@@ -478,7 +478,8 @@ class Dataset(torch.utils.data.Dataset):
             for (g, dsname, mol_id) in zip(self.graphs, self.subdataset, self.mol_ids):
                 self.num_mols[dsname] = self.num_mols.get(dsname, 0) + 1
                 if g.nodes['g'].data['energy_qm'].flatten().shape[0] > confs:
-                    num_graphs = g.nodes['g'].data['energy_qm'].flatten().shape[0] // confs
+                    # ceil division such that the last entry holds the remaining conformations:
+                    num_graphs = -(-g.nodes['g'].data['energy_qm'].flatten().shape[0] // confs)
                     base_graphs = [copy.deepcopy(g) for _ in range(num_graphs)]
                     # split the tensors with conf dimension:
                     conf_entries = [('n1', 'xyz')]
@@ -489,9 +490,7 @@ class Dataset(torch.utils.data.Dataset):
                         if feat.startswith('gradient_'):
                             conf_entries.append(('n1', feat))
                     for lvl, feat in conf_entries:
-                        base_graphs[0].nodes[lvl].data[feat] = base_graphs[0].nodes[lvl].data[feat][:, :confs]
-                        base_graphs[-1].nodes[lvl].data[feat] = base_graphs[-1].nodes[lvl].data[feat][:, -(g.nodes[lvl].data[feat].shape[1] % confs):]
-                        for i in range(1, num_graphs-1):
+                        for i in range(num_graphs):
                             base_graphs[i].nodes[lvl].data[feat] = g.nodes[lvl].data[feat][:, i*confs:(i+1)*confs]
                         
                     new_graphs += base_graphs

@@ -300,7 +300,7 @@ class Experiment:
 
 
 
-    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], store_test_data:bool=True, splitpath:Path=None):
+    def eval_classical(self, classical_force_fields:List[str], ckpt_dir:Path=None, ckpt_path:Path=None, n_bootstrap:int=None, test_data_path:Path=None, load_split:bool=False, plot:bool=False, gradient_contributions:List[str]=[], store_test_data:bool=True, splitpath:Path=None, ckpt_data_config=None):
         """
         Evaluate the performance of classical force fields (with values stored in the dataset) on the test set.
         Args:
@@ -312,6 +312,7 @@ class Experiment:
             load_split: bool, whether to load the file defining the split for train/validation/test from the checkpoint directory. If False, it can be assumed that the data module is already set up such that this is the case.
             plot: bool, whether to plot the results
             gradient_contributions: List[str], list of energy terms for which to calculate the gradient contributions
+            ckpt_data_config: DictConfig, configuration for the data module that was used to train the model
         """
         assert not (ckpt_dir is not None and ckpt_path is not None), "Either ckpt_dir or ckpt_path must be provided, but not both."
 
@@ -327,7 +328,7 @@ class Experiment:
             if splitpath is not None:
                 self.load_split_from_file(splitpath=splitpath)
             else:
-                self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path)
+                self.load_split(ckpt_dir=ckpt_dir, ckpt_path=ckpt_path, ckpt_data_config=ckpt_data_config)
 
 
         for ff in classical_force_fields:
