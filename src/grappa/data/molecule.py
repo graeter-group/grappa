@@ -233,6 +233,7 @@ class Molecule():
         from openmm import System
         from openmm.app import Topology as OpenMMTopology
         from openmm import HarmonicBondForce, PeriodicTorsionForce
+        from grappa.utils.openmm_utils import is_harmonic_torsion_force
 
         assert isinstance(openmm_system, System), f"openmm_system must be an instance of openmm.app.System. but is: {type(openmm_system)}"
         assert isinstance(openmm_topology, OpenMMTopology), f"openmm_topology must be an instance of openmm.app.Topology. but is: {type(openmm_topology)}"
@@ -279,10 +280,11 @@ class Molecule():
         if not skip_impropers:
             all_torsions = []
             for force in openmm_system.getForces():
-                if isinstance(force, PeriodicTorsionForce):
+                # OpenMM represents harmonic impropers from a GROMACS top file (function type 2, e.g. CHARMM) not as PeriodicTorsionForce but as a CustomTorsionForce named 'HarmonicTorsionForce'
+                if isinstance(force, PeriodicTorsionForce) or is_harmonic_torsion_force(force):
                     for i in range(force.getNumTorsions()):
-                        *torsion, _,_,_ = force.getTorsionParameters(i)
-                        assert len(torsion) == 4, f"torsion must have length 4 but has length {len(torsion)}"
+                        # the first four entries are the atom indices, the rest are the torsion parameters
+                        torsion = force.getTorsionParameters(i)[:4]
 
                         # add the torsion if it is between atoms included in the topology:
                         if all([atom_idx in atom_ids for atom_idx in torsion]):

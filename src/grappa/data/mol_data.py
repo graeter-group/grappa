@@ -446,7 +446,7 @@ class MolData():
             - bond: bond energy and gradient
             - angle: angle energy and gradient
             - proper: proper torsion energy and gradient
-            - improper: improper torsion energy and gradient (Only works if the impropers are given as PeriodicTorsionForce in the openmm system)
+            - improper: improper torsion energy and gradient (Only works if the impropers are given as PeriodicTorsionForce in the openmm system or, for systems created from a GROMACS top file, as harmonic impropers (GROMACS function type 2), which OpenMM represents as a CustomTorsionForce named 'HarmonicTorsionForce')
 
         If partial charges is None, the charges are obtained from the openmm system.
         mapped_smiles and pdb have no effect on the system, are optional and only required for reproducibility.
