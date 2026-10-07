@@ -107,3 +107,18 @@ ATOMIC_MASSES = {
     52: 127.6,
     53: 126.904
 }
+
+TERM_TO_LEVEL = {
+    "bond": "n2",
+    "angle": "n3",
+    "proper": "n4",
+    "torsion": "n4", # also allow "torsion" for "proper" for backwards compatibility
+    "improper": "n4_improper"
+}
+
+LEVEL_TO_TERM = {
+    "n2": "bond",
+    "n3": "angle",
+    "n4": "proper",
+    "n4_improper": "improper"
+}

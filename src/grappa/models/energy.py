@@ -3,6 +3,7 @@ import dgl
 from grappa.utils.dgl_utils import grad_available
  
 from grappa.models.internal_coordinates import InternalCoordinates
+from grappa.constants import LEVEL_TO_TERM
 import copy
 
 def torsion_energy(k, angle, offset=True):
@@ -72,14 +73,14 @@ def pool_energy(g, energies, term, suffix):
 
 
 class Energy(torch.nn.Module):
-    def __init__(self, terms:list=["bond", "angle", "torsion", "improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False):
+    def __init__(self, terms:list=["n2", "n3", "n4", "n4_improper"], suffix:str="", offset_torsion:bool=False, write_suffix=None, gradients:bool=True, gradient_contributions:bool=False):
         """
         Module that writes the energy of molecular conformations into a dgl graph. First, internal coordinates such as torsional angles, angles and distances are calculated, then their energy contributions are added and stored at g.nodes["g"].data["energy"] and g.nodes["g"].data["energy_"+term] for each term. The gradients of the total energy w.r.t. the xyz coordinates are calculated and stored at g.nodes["n1"].data["gradient"].
         
         ----------
         Args:
         ----------
-        terms: list of terms to be considered. must be a subset of ["bond", "angle", "torsion", "improper"]
+        terms: list of terms to be considered. must be a subset of ["n2", "n3", "n4", "n4_improper"]
         suffix: suffix of the parameters stored in the graph.
         offset_torsion: whether to include the constant offset term (that makes the contribution positive) in the torsion energy calculation
         write_suffix: suffix of the energy and gradient attributes written to the graph. if None, write_suffix is set to suffix.
@@ -95,17 +96,7 @@ class Energy(torch.nn.Module):
         self.gradients = gradients
         self.gradient_contributions = gradient_contributions
         self.geom = InternalCoordinates()
-        
-        self.TERM_TO_LEVEL = {
-            "bond": "n2",
-            "angle": "n3",
-            "proper": "n4",
-            "torsion": "n4", # also allow "torsion" for "proper" for backwards compatibility
-            "improper": "n4_improper"
-        }
-        self.LEVEL_TO_TERM = {v: k for k, v in self.TERM_TO_LEVEL.items()}
-        self.LEVEL_TO_TERM["n4"] = "proper"
-        self.terms = [self.TERM_TO_LEVEL[t] for t in terms]
+        self.terms = terms
 
     def forward(self, g):
         """
@@ -135,7 +126,7 @@ class Energy(torch.nn.Module):
         energy = torch.zeros((num_batch, num_confs), device=g.nodes['n1'].data["xyz"].device)
 
         for term in self.terms:
-            termname = self.LEVEL_TO_TERM[term]
+            termname = LEVEL_TO_TERM[term]
             if not term in g.ntypes:
                 raise ValueError(f"term {term} not in g.ntypes")
 

@@ -21,6 +21,7 @@ from grappa.utils.plotting import make_scatter_plots, compare_scatter_plots
 from grappa.utils.model_loading_utils import get_model_dir, get_published_csv_path, get_path_from_tag
 from grappa.utils.data_utils import get_moldata_path
 from grappa.models import GrappaModel, Energy
+from grappa.constants import TERM_TO_LEVEL
 import pandas as pd
 import torch
 import logging
@@ -99,6 +100,7 @@ class Experiment:
         # create a dictionary from omegaconf config:
         model_cfg = OmegaConf.to_container(self._model_cfg, resolve=True)
         energy_cfg = OmegaConf.to_container(self._energy_cfg, resolve=True)
+        energy_cfg['terms'] = [TERM_TO_LEVEL[t] for t in energy_cfg['terms']]
         train_cfg = OmegaConf.to_container(self._train_cfg, resolve=True)
 
         # calculate the statistics of the MM parameters in the training set for scaling NN outputs
@@ -112,7 +114,7 @@ class Experiment:
         )
 
         # wrap a lightning model around it (which handles the training procedure)
-        self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in self._energy_cfg.terms if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
+        self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in energy_cfg['terms'] if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
 
 
     def train(self):
