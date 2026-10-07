@@ -156,6 +156,17 @@ def is_proper(ids:Tuple[int,int,int,int], neighbor_dict:Dict)->bool:
     return bond_01 and bond_12 and bond_23
 
 
+def get_urey_bradley_pairs(bonds:List[Tuple[int,int]], angles:List[Tuple[int,int,int]])->Set[Tuple[int,int]]:
+    """
+    Returns the pairs of outer atoms of the angles that are not bonded, as sorted tuples.
+    A harmonic term between such atoms is no bond but a Urey-Bradley term, i.e. the 1-3 distance term of an angle. Force fields like CHARMM use them (GROMACS angle funct 5) and openmm.app.GromacsTopFile adds them to the HarmonicBondForce.
+
+    Known limitation: In three-membered rings (e.g. cyclopropanes or epoxides, which proteins do not have), the outer atoms of an angle are also bonded. A Urey-Bradley term between them is in the HarmonicBondForce next to the bond term of the same pair and cannot be told apart from it by the atom pair. Such pairs are therefore not returned. At inference, write_to_system in grappa.utils.openmm_utils removes their Urey-Bradley terms anyway, as further terms of a bond. In the reference energies, however, they remain in the bond contribution (see get_urey_bradley_contribution in grappa.utils.openmm_utils). Telling them apart would require relying on the order of the terms in the force (OpenMM adds the bonds before the Urey-Bradley terms).
+    """
+    bond_set = {tuple(sorted((int(b[0]), int(b[1])))) for b in bonds}
+    return {tuple(sorted((int(a[0]), int(a[2])))) for a in angles} - bond_set
+
+
 
 def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, central_atom_position:int=IMPROPER_CENTRAL_IDX)->Tuple[List[Tuple[int,int,int,int]], List[Tuple[int,int,int,int]]]:
     """

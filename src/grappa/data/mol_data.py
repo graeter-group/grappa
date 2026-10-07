@@ -550,13 +550,17 @@ class MolData():
         self.ff_energy[ff_name]['improper'] = improper_energy_ff
         self.ff_gradient[ff_name]['improper'] = improper_gradient_ff
 
+        # Urey-Bradley terms (e.g. CHARMM) are in the HarmonicBondForce, but they belong to the angle term (which grappa's angles replace). Thus, count them as angle contribution.
+        # Known limitation: Urey-Bradley terms of angles in three-membered rings stay in the bond contribution, see openmm_utils.get_urey_bradley_contribution.
+        urey_bradley_energy_ff, urey_bradley_gradient_ff = openmm_utils.get_urey_bradley_contribution(openmm_system, xyz, molecule=self.molecule)
+
         bond_energy_ff, bond_gradient_ff = openmm_utils.get_bond_contribution(openmm_system, xyz)
-        self.ff_energy[ff_name]['bond'] = bond_energy_ff
-        self.ff_gradient[ff_name]['bond'] = bond_gradient_ff
+        self.ff_energy[ff_name]['bond'] = bond_energy_ff - urey_bradley_energy_ff
+        self.ff_gradient[ff_name]['bond'] = bond_gradient_ff - urey_bradley_gradient_ff
 
         angle_energy_ff, angle_gradient_ff = openmm_utils.get_angle_contribution(openmm_system, xyz)
-        self.ff_energy[ff_name]['angle'] = angle_energy_ff
-        self.ff_gradient[ff_name]['angle'] = angle_gradient_ff
+        self.ff_energy[ff_name]['angle'] = angle_energy_ff + urey_bradley_energy_ff
+        self.ff_gradient[ff_name]['angle'] = angle_gradient_ff + urey_bradley_gradient_ff
 
         torsion_energy_ff, torsion_gradient_ff = openmm_utils.get_torsion_contribution(openmm_system, xyz)
         self.ff_energy[ff_name]['proper'] = torsion_energy_ff - improper_energy_ff

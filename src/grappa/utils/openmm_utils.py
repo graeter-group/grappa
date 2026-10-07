@@ -207,11 +207,14 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
     Writes bonded parameters in an openmm system. For interactions that are already present in the system, overwrite the parameters; otherwise add the interaction to the system. The forces, however, must be already present in the system.
     The ids of the atoms, bonds, etc in the parameters object must be the same as the system indices.
     The ids must n0t necessarily run from 0 to N-1, they can also represent a subset of the system indices.
+    Urey-Bradley terms (e.g. CHARMM) of the angles in the parameters object are removed from the HarmonicBondForce since grappa's angles replace them.
+    If the HarmonicBondForce contains several terms for a bond in the parameters object, the first one gets grappa's bond parameters and the further ones are removed. This also removes the Urey-Bradley terms of angles in three-membered rings, whose outer atoms are bonded, without having to tell them apart from the bond term (see grappa.utils.tuple_indices.get_urey_bradley_pairs): both are harmonic in the same distance, so it does not matter which of the terms gets grappa's parameters.
     """
 
     # handle units:
     from openmm.unit import Quantity
     import openmm
+    from grappa.utils.tuple_indices import get_urey_bradley_pairs
 
     grappa_units = get_grappa_units_in_openmm()
     BOND_K_UNIT = grappa_units['BOND_K']
@@ -246,6 +249,11 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
 
     ordered_torsions = {tuple(sorted(p)) for p in list([imp for imp in impropers]) + list([prop for prop in propers])}
 
+    # Urey-Bradley terms are harmonic terms in the HarmonicBondForce between the outer atoms of an angle. They belong to the angle term, which grappa replaces.
+    # Pairs that are also bonded (three-membered rings) are not included, their Urey-Bradley terms are removed as further terms of a bond, see below.
+    urey_bradley_pairs = get_urey_bradley_pairs(bonds=bonds, angles=angles)
+    bond_pairs = {tuple(sorted(b)) for b in bonds}
+
     # loop through the system forces, for all parameters in the parameters object, overwrite the system parameters if present, otherwise add the interaction.
     # Note that if the system contains bonds/angles/... between atoms that are not in the parameters object, these bonds/angles... will be untouched, i.e. kept as they are.
     # in each step, first transform the parameter id to the system index.
@@ -269,6 +277,12 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
                     # Update the parameters
                     new_k, new_length = bond_param
                     force.setBondParameters(i, atom1, atom2, new_length, new_k)
+                elif tuple(sorted((atom1, atom2))) in urey_bradley_pairs:
+                    # Set k to zero to remove the Urey-Bradley term of an angle that grappa parametrizes.
+                    force.setBondParameters(i, atom1, atom2, length, 0)
+                elif tuple(sorted((atom1, atom2))) in bond_pairs:
+                    # A further term of a bond whose first term already got grappa's parameters, e.g. the Urey-Bradley term of an angle in a three-membered ring. Set k to zero to remove it.
+                    force.setBondParameters(i, atom1, atom2, length, 0)
 
 
         elif isinstance(force, openmm.HarmonicAngleForce):
@@ -454,6 +468,38 @@ def get_improper_contribution(openmm_system:'openmm.System', xyz:np.ndarray, mol
         improper_gradient = -improper_gradient # the reference gradient is the negative of the force
 
         return improper_energy, improper_gradient
+
+
+def get_urey_bradley_contribution(openmm_system:'openmm.System', xyz:np.ndarray, molecule):
+    """
+    Returns the energy and gradient of the Urey-Bradley terms in the HarmonicBondForce, i.e. of the harmonic terms between the outer atoms of an angle of the molecule. Force fields like CHARMM use them (GROMACS angle funct 5) and openmm.app.GromacsTopFile adds them to the HarmonicBondForce.
+    Known limitation: Urey-Bradley terms of angles in three-membered rings are not included, because their outer atoms are bonded and the term cannot be told apart from the bond term (see grappa.utils.tuple_indices.get_urey_bradley_pairs). Their energy thus remains in the bond contribution.
+    """
+    from grappa.utils.tuple_indices import get_urey_bradley_pairs
+
+    openmm_system = copy.deepcopy(openmm_system)
+    openmm_system = remove_forces_from_system(openmm_system, keep=['HarmonicBondForce'])
+
+    urey_bradley_pairs = get_urey_bradley_pairs(bonds=molecule.bonds, angles=molecule.angles)
+
+    # set all ks to zero that are not Urey-Bradley terms:
+    num_urey_bradley = 0
+    for force in openmm_system.getForces():
+        for i in range(force.getNumBonds()):
+            atom1, atom2, length, k = force.getBondParameters(i)
+            if tuple(sorted((molecule.atoms[atom1], molecule.atoms[atom2]))) in urey_bradley_pairs:
+                num_urey_bradley += 1
+            else:
+                force.setBondParameters(i, atom1, atom2, length, 0)
+
+    # most force fields have no Urey-Bradley terms, then we can skip the energy calculation:
+    if num_urey_bradley == 0:
+        return np.zeros(xyz.shape[0]), np.zeros(xyz.shape)
+
+    urey_bradley_energy, urey_bradley_gradient = get_energies(openmm_system=openmm_system, xyz=xyz)
+    urey_bradley_gradient = -urey_bradley_gradient # the reference gradient is the negative of the force
+
+    return urey_bradley_energy, urey_bradley_gradient
 
 
 def get_pdb(pdb_string:str)->'PDBFile':
