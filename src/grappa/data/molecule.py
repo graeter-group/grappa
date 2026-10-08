@@ -224,7 +224,7 @@ class Molecule():
             mapped_smiles (str, optional): the mapped smiles string of the molecule. If not None, this information is used to initialize the additional feature 'sp_hybridization'. Defaults to None.
             charge_model (str, optional): deprecated. Defaults to 'None'.
             skip_impropers (bool, optional): if True, the impropers are not added to the molecule. Can be used for debugging. Defaults to False.
-            validate_bonds (bool, optional): if True, checks whether the bonds in the openmm system are the same as in the obtained topology. Defaults to True.
+            validate_bonds (bool, optional): if True, checks whether the bonds in the openmm system are the same as in the obtained topology. Urey-Bradley terms, i.e. harmonic terms between the outer atoms of an angle in the topology, are allowed. Defaults to True.
             verbose (bool, optional): if True, logs information about the molecule and the openmm system. Defaults to False.
             """
         assert importlib.util.find_spec("openmm") is not None, "openmm must be installed to use this constructor."
@@ -255,6 +255,9 @@ class Molecule():
             raise ValueError(f"The atom_ids in the topology must corresponds to the (zero-based) index in the openmm system. The maximum atom id in the topology is {max_atom_id} but the system has only {openmm_system.getNumParticles()} particles. You might need to shift your topology ids to start at zero.")
 
         if validate_bonds:
+            # Urey-Bradley terms (e.g. CHARMM) are harmonic terms between the outer atoms of an angle that openmm.app.GromacsTopFile adds to the HarmonicBondForce. They are no bonds.
+            urey_bradley_pairs = tuple_indices.get_urey_bradley_pairs(bonds=bonds, angles=angles)
+            num_urey_bradley = 0
             num_bond_forces = 0
             bad_bonds = []
             num_bonds_subsystem = 0
@@ -271,9 +274,14 @@ class Molecule():
                             num_bonds_subsystem += 1
                             # check if the bond is in the topology:
                             if (id1, id2) not in bonds and (id2, id1) not in bonds:
-                                bad_bonds.append((id1, id2))
+                                if tuple(sorted((id1, id2))) in urey_bradley_pairs:
+                                    num_urey_bradley += 1
+                                else:
+                                    bad_bonds.append((id1, id2))
             if len(bad_bonds) > 0:
                 raise ValueError(f"Some bonds in the openmm system are not in the topology. Num bonds in the topology: {len(bonds)}, num bonds in the openmm (sub-)system: {num_bonds_subsystem}, num bonds in the full openmm system: {num_bonds_system}, problematic bonds: {str(bad_bonds[0])+', '+str(bad_bonds[1])+', '+str(bad_bonds[2])+',...' if len(bad_bonds) > 3 else bad_bonds}.")
+            if num_urey_bradley > 0:
+                logging.info(f"Found {num_urey_bradley} Urey-Bradley terms (harmonic terms between the outer atoms of an angle) in the HarmonicBondForce of the openmm system. They are not treated as bonds.")
 
         # IMPROPERS
         if not skip_impropers:
