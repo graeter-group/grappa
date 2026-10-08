@@ -215,6 +215,19 @@ def apply_parameters(top: 'Topology', parameters: Parameters, apply_nrs: Set[str
                 *tup, funct="9", dihedrals=dihedral_dict
             )
 
+    ## cmap
+    # CMAP terms (e.g. CHARMM) are corrections on two consecutive proper dihedrals (phi and psi of the backbone). If grappa parametrizes both dihedrals, grappa's propers replace the CMAP term, so remove it.
+    # gmxtop does not parse [ cmap ] but passes its lines through as lists of strings: ai aj ak al am funct
+    if "cmap" in top.top:
+        raise ValueError("The topology contains a [ cmap ] section that gmxtop parsed as a global section instead of as part of its [ moleculetype ]. Thus, grappa cannot remove the CMAP terms of the dihedrals it parametrizes, and gromacs would reject the written topology. Please update gmxtop.")
+    replaced_propers = {tuple(sorted(idx)) for idx in parameters.propers if all(atom_nr in apply_nrs for atom_nr in idx)}
+    cmap = top.selected_molecule.atomics.get("cmap")
+    if cmap:
+        top.selected_molecule.atomics["cmap"] = [
+            line for line in cmap
+            if not (tuple(sorted(line[0:4])) in replaced_propers and tuple(sorted(line[1:5])) in replaced_propers)
+        ]
+
     ## improper dihedrals
     # clear old dihedrals for the apply_nrs region
     for improper in list(top.improper_dihedrals.values()):
