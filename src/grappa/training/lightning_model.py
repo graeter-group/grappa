@@ -31,7 +31,7 @@ class GrappaLightningModel(pl.LightningModule):
                  time_limit:float=None,
                  finish_criterion:Dict[int, float]={},
                  param_weights_by_dataset:Dict[str,float]={},
-                 param_loss_terms:List[str]=['n2', 'n3', 'n4'],
+                 param_loss_terms:List[str]=['n2', 'n3'],
                  log_train_interval:int=10,
                  start_logging:int=0,
                  reset_optimizer_on_load:bool=False,
@@ -61,7 +61,7 @@ class GrappaLightningModel(pl.LightningModule):
             time_limit (float, optional): Time limit in hours. If the training takes longer than this, the training is stopped. Defaults to None.
             finish_criterion (Dict[int, float], optional): Dictionary mapping from time in hours to maximum early stopping criterion value. Defaults to {}.
             param_weights_by_dataset (Dict[str, float], optional): Dictionary mapping from dataset name to weight of the parameter loss for this dataset. Defaults to {}.
-            param_loss_terms (List[str], optional): Which parameters to train on directly during epoch < param_loss_epochs. Defaults to ['n2', 'n3', 'n4'].
+            param_loss_terms (List[str], optional): Which parameters to train on directly during epoch < param_loss_epochs. Defaults to ['n2', 'n3'].
             log_train_interval (int, optional): Interval in epochs for logging the training metrics (instead of logging every epoch since this slows down the train steps). Defaults to 10.
             start_logging (int, optional): Epoch from which to start logging the validation metrics. Defaults to 0.
             reset_optimizer_on_load (bool, optional): Whether to reset the optimizer when loading a checkpoint. Defaults to False.

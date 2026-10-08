@@ -114,7 +114,7 @@ class Experiment:
         )
 
         # wrap a lightning model around it (which handles the training procedure)
-        self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in energy_cfg['terms'] if t != 'n4_improper'], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
+        self.grappa_module = GrappaLightningModel(model=model, **train_cfg, param_loss_terms=[t for t in energy_cfg['terms'] if t not in ['n4_improper', 'n4']], start_logging=min(self._experiment_cfg.checkpointer.every_n_epochs, self._train_cfg.start_qm_epochs))
 
 
     def train(self):
