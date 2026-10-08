@@ -3,6 +3,7 @@ import numpy as np
 from grappa.constants import IMPROPER_CENTRAL_IDX
 from typing import Tuple, Set, Dict, Union, List, Optional
 import warnings
+from itertools import permutations
 
 
 def get_idx_tuples(bonds:List[Tuple[int, int]], neighbor_dict:Dict=None, is_sorted:bool=False)->Dict[str, List[Tuple[int, ...]]]:
@@ -156,6 +157,20 @@ def is_proper(ids:Tuple[int,int,int,int], neighbor_dict:Dict)->bool:
     return bond_01 and bond_12 and bond_23
 
 
+def get_proper_order(ids:Tuple[int,int,int,int], neighbor_dict:Dict)->Optional[Tuple[int,int,int,int]]:
+    """
+    Returns a permutation of ids that is a proper torsion, i.e. in which consecutive atoms are bonded, or None if no such permutation exists.
+    Helper function to identify torsions that are listed with a non-standard atom order, e.g. the improper -C CH3 N -O of the CT3 cap in the charmm27 force field of gromacs, whose atoms form the proper torsion -O -C N CH3.
+    """
+    for perm in permutations(ids):
+        # divide out the reversal symmetry (abcd) = (dcba)
+        if perm[0] > perm[-1]:
+            continue
+        if is_proper(ids=perm, neighbor_dict=neighbor_dict):
+            return perm
+    return None
+
+
 
 def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, central_atom_position:int=IMPROPER_CENTRAL_IDX)->Tuple[List[Tuple[int,int,int,int]], List[Tuple[int,int,int,int]]]:
     """
@@ -196,9 +211,15 @@ def get_torsions(torsion_ids:List[Tuple[int,int,int,int]], neighbor_dict:Dict, c
             warnings.warn(f"Encountered torsion that is both proper and improper: {torsion}. This should not happen. We will consider it as proper.")
 
         if not torsion_is_proper and not torsion_is_improper:
-            bad_torsions.append(torsion)
-            warnings.warn(f"Encountered torsion that is neither proper nor improper.")
-            continue
+            # the atoms might still form a proper torsion if they are listed in a different order:
+            proper_order = get_proper_order(ids=torsion, neighbor_dict=neighbor_dict)
+            if proper_order is None:
+                bad_torsions.append(torsion)
+                warnings.warn(f"Encountered torsion that is neither proper nor improper.")
+                continue
+            warnings.warn(f"Encountered torsion {torsion} that is neither proper nor improper in the given atom order, but its atoms form the proper torsion {proper_order}. We will consider it as proper.")
+            torsion = proper_order
+            torsion_is_proper = True
 
         if not torsion_is_improper:
             # append the torsion to the list of propers:
