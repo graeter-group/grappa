@@ -207,6 +207,7 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
     Writes bonded parameters in an openmm system. For interactions that are already present in the system, overwrite the parameters; otherwise add the interaction to the system. The forces, however, must be already present in the system.
     The ids of the atoms, bonds, etc in the parameters object must be the same as the system indices.
     The ids must n0t necessarily run from 0 to N-1, they can also represent a subset of the system indices.
+    CMAP terms (e.g. CHARMM) whose two torsions are both grappa propers are switched off, since grappa's propers replace them.
     """
 
     # handle units:
@@ -245,6 +246,7 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
     angle_lookup = {tuple(a): (angle_ks[i], angle_eqs[i]) for i, a in enumerate(angles)}
 
     ordered_torsions = {tuple(sorted(p)) for p in list([imp for imp in impropers]) + list([prop for prop in propers])}
+    proper_set = {tuple(sorted(p)) for p in propers}
 
     # loop through the system forces, for all parameters in the parameters object, overwrite the system parameters if present, otherwise add the interaction.
     # Note that if the system contains bonds/angles/... between atoms that are not in the parameters object, these bonds/angles... will be untouched, i.e. kept as they are.
@@ -294,7 +296,19 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
                     # Set k to zero to effectively remove from the system. We will add another torsion force later.
                     force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
 
-    
+        # CMAP terms (e.g. CHARMM) are corrections on two consecutive proper torsions (phi and psi of the backbone). If grappa parametrizes both torsions, grappa's propers replace the CMAP term.
+        # CMAP terms have no force constant that could be set to zero, so point them to a map with zero energy instead.
+        elif isinstance(force, openmm.CMAPTorsionForce):
+            zero_maps = {}
+            for i in range(force.getNumTorsions()):
+                map_idx, a1, a2, a3, a4, b1, b2, b3, b4 = force.getTorsionParameters(i)
+                if tuple(sorted((a1, a2, a3, a4))) in proper_set and tuple(sorted((b1, b2, b3, b4))) in proper_set:
+                    size = force.getMapParameters(map_idx)[0]
+                    if size not in zero_maps:
+                        zero_maps[size] = force.addMap(size, [0.0] * size**2)
+                    force.setTorsionParameters(i, zero_maps[size], a1, a2, a3, a4, b1, b2, b3, b4)
+
+
         # now add the bonds and angles that have not been added yet as new forces.
         # also add a new torsion force, one for proper, one for improper.
 
