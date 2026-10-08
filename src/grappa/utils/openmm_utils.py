@@ -149,6 +149,29 @@ def remove_forces_from_system(system:'openmm.System', remove:Union[List[str], st
     return system
 
 
+def is_harmonic_torsion_force(force:'openmm.Force')->bool:
+    """
+    Returns True if the force contains the harmonic impropers of a GROMACS top file. OpenMM represents harmonic impropers (GROMACS function type 2, used e.g. by CHARMM) from a GROMACS top file as a CustomTorsionForce named 'HarmonicTorsionForce', while periodic torsions (function types 1, 4 and 9) end up in a PeriodicTorsionForce.
+    """
+    import openmm
+    return isinstance(force, openmm.CustomTorsionForce) and force.getName() == 'HarmonicTorsionForce'
+
+
+def set_torsion_k_to_zero(force:'openmm.Force', i:int):
+    """
+    Sets the force constant of the i-th torsion of a PeriodicTorsionForce or HarmonicTorsionForce to zero, effectively removing the torsion.
+    """
+    import openmm
+    if isinstance(force, openmm.PeriodicTorsionForce):
+        atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
+        force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
+    elif is_harmonic_torsion_force(force):
+        atom1, atom2, atom3, atom4, (theta0, k) = force.getTorsionParameters(i)
+        force.setTorsionParameters(i, atom1, atom2, atom3, atom4, (theta0, 0))
+    else:
+        raise NotImplementedError(f"Expected a PeriodicTorsionForce or HarmonicTorsionForce, but found {force.__class__.__name__} with name {force.getName()}")
+
+
 def set_partial_charges(system:'openmm.System', partial_charges:Union[list, np.ndarray])->'openmm.System':
     """
     Set partial charges of a system. The charge must be in units of elementary charge.
@@ -285,14 +308,14 @@ def write_to_system(system:'openmm.System', parameters:grappa.data.Parameters)->
 
 
         # check whether torsion is contained in both proper or improper. if so, set its k to zero, effectively removing the force.
-        if isinstance(force, openmm.PeriodicTorsionForce):
+        if isinstance(force, openmm.PeriodicTorsionForce) or is_harmonic_torsion_force(force):
             for i in range(force.getNumTorsions()):
-                atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
+                atom1, atom2, atom3, atom4 = force.getTorsionParameters(i)[:4]
 
                 # Check in proper and improper torsions
                 if tuple(sorted((atom1, atom2, atom3, atom4))) in ordered_torsions:
                     # Set k to zero to effectively remove from the system. We will add another torsion force later.
-                    force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
+                    set_torsion_k_to_zero(force, i)
 
     
         # now add the bonds and angles that have not been added yet as new forces.
@@ -426,27 +449,28 @@ def get_contribution(openmm_system:'openmm.System', xyz:np.ndarray, force:Union[
 
 def get_improper_contribution(openmm_system:'openmm.System', xyz:np.ndarray, molecule):
         """
-        Only works if the impropers are given as PeriodicTorsionForce in the openmm system.
+        Only works if the impropers are given as PeriodicTorsionForce in the openmm system or, for systems created from a GROMACS top file, as harmonic impropers (GROMACS function type 2, e.g. CHARMM), which OpenMM represents as a CustomTorsionForce named 'HarmonicTorsionForce'.
         """
         import openmm
 
         openmm_system = copy.deepcopy(openmm_system)
 
         # calculate the contribution from improper torsions in the system:
-        # remove all forces but periodic torsions (we assume that impropers are periodic torsions)
-        openmm_system = remove_forces_from_system(openmm_system, keep=['PeriodicTorsionForce'])
+        # remove all forces but periodic and harmonic torsions (we assume that impropers are periodic or harmonic torsions)
+        for i in reversed(range(openmm_system.getNumForces())):
+            force = openmm_system.getForce(i)
+            if not (isinstance(force, openmm.PeriodicTorsionForce) or is_harmonic_torsion_force(force)):
+                openmm_system.removeForce(i)
 
         # get a list of sets of improper torsion tuples:
         improper_set = {tuple(sorted(t)) for t in molecule.impropers}
 
         # set all ks to zero that are not impropers:
         for force in openmm_system.getForces():
-            if not isinstance(force, openmm.PeriodicTorsionForce):
-                raise NotImplementedError(f"Removed all but PeriodicTorsionForce, but found a different force: {force.__class__.__name__}")
             for i in range(force.getNumTorsions()):
-                atom1, atom2, atom3, atom4, periodicity, phase, k = force.getTorsionParameters(i)
+                atom1, atom2, atom3, atom4 = force.getTorsionParameters(i)[:4]
                 if not tuple(sorted((molecule.atoms[atom1], molecule.atoms[atom2], molecule.atoms[atom3], molecule.atoms[atom4]))) in improper_set:
-                    force.setTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, 0)
+                    set_torsion_k_to_zero(force, i)
 
 
         # get energy and gradient. these are now only sourced from improper torsions.
