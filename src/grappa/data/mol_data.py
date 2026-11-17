@@ -177,10 +177,25 @@ class MolData():
         self._validate()
 
 
+    @staticmethod
+    def center_energy(energy:np.ndarray)->np.ndarray:
+        """
+        Returns the energies minus their mean over the finite entries, computed in float64.
+        Absolute QM energies of molecules with heavy atoms reach 1e6 kcal/mol (e.g. -2.15e6 kcal/mol for a bromine-containing molecule), where neighbouring float32 values are 0.25 kcal/mol apart. Subtracting the mean before the conversion to float32 keeps the energy differences between conformations, which are all that grappa uses.
+        Non-finite entries stay non-finite. If no entry is finite, the energies are returned unchanged.
+        """
+        energy = np.asarray(energy, dtype=np.float64)
+        finite = np.isfinite(energy)
+        if not finite.any():
+            return energy
+        return energy - energy[finite].mean()
+
+
     def to_dgl(self, max_element=constants.MAX_ELEMENT, exclude_feats:List[str]=[])->DGLGraph:
         """
         Converts the molecule to a dgl graph with node features. The elements are one-hot encoded.
         Also creates entries 'xyz', 'energy_qm' and 'gradient_qm' in the global node type g and in the atom node type n1 respectively. The shapes are different than in the class attributes, namely (1, n_confs) and (n_atoms, n_confs, 3) respectively. (This is done because feature tensors must have len == num_nodes)
+        The energies in the graph are shifted by their mean over the conformations (see center_energy), since grappa only uses energy differences between the conformations of a molecule and absolute energies would lose their sub-kcal/mol digits in float32.
 
         The dgl graph has the following node types:
             - g: global
@@ -200,6 +215,7 @@ class MolData():
         # write all stored energy and gradient contributions in the shape (1, n_confs) and (n_atoms, n_confs, 3) respectively
         for ff_name, ff_dict in self.ff_energy.items():
             for k, v in ff_dict.items():
+                v = self.center_energy(v)
                 if ff_name == "qm":
                     assert k == "total", "Only total qm energy is supported."
                     g.nodes['g'].data[f'energy_{ff_name}'] = torch.tensor(v.reshape(1, -1), dtype=torch.float32)
